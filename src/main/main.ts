@@ -61,7 +61,7 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     // create an empty mapping of files to tags
     let filesToTags: { [key: string]: mm.IAudioMetadata } = {};
     // for (let i = 0; i < 100; i += 1) {
-    for (let i = 0; i < 200; i += 1) {
+    for (let i = 0; i < files.length; i += 1) {
       let metadata;
       try {
         // eslint-disable-next-line no-await-in-loop
