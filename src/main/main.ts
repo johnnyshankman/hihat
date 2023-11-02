@@ -14,7 +14,6 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import fs from 'fs';
 import * as mm from 'music-metadata';
-import NodeID3 from 'node-id3';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
@@ -34,9 +33,7 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate('pong'));
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
-ipcMain.on('select-dirs', async (event, arg): Promise<any> => {
+ipcMain.on('select-dirs', async (event): Promise<any> => {
   if (!mainWindow) {
     return;
   }
@@ -47,7 +44,7 @@ ipcMain.on('select-dirs', async (event, arg): Promise<any> => {
   // passsing directoryPath and callback function
   fs.readdir(result.filePaths[0], async (err, files) => {
     // create an empty mapping of files to tags
-    const filesToTags: { [key: string]: any } = {};
+    const filesToTags: { [key: string]: mm.IAudioMetadata } = {};
 
     for (let i = 0; i < files.length; i += 1) {
       let metadata;
@@ -59,8 +56,8 @@ ipcMain.on('select-dirs', async (event, arg): Promise<any> => {
       }
 
       console.log(metadata);
-      // add the file to the mapping
-      filesToTags[files[i]] = metadata;
+
+      if (metadata) filesToTags[files[i]] = metadata;
     }
 
     // event.returnValue = result.filePaths;

@@ -1,12 +1,14 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
+import { IAudioMetadata } from 'music-metadata';
 import placeholder from '../../assets/placeholder.svg';
 import './App.css';
-
-// console.log(
-//   dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'] }),
-// );
+import { useState } from 'react';
 
 function MainDash() {
+  const [songMapping, setSongMapping] = useState<{
+    [key: string]: IAudioMetadata;
+  }>();
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex justify-center p-4 space-x-4 md:flex-row">
@@ -42,22 +44,22 @@ function MainDash() {
             </tr>
           </thead>
           <tbody className="[&amp;_tr:last-child]:border-0 ">
-            {Array.from({ length: 100 }, (_, i) => (
+            {Object.keys(songMapping || {}).map((song) => (
               <tr
-                key={i}
+                key={song}
                 className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted py-1 divide-x divide-slate-50"
               >
                 <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
-                  Hey Jude
+                  {songMapping?.[song].common.title}
                 </td>
                 <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
-                  The Beatles
+                  {songMapping?.[song].common.artist}
                 </td>
                 <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
-                  The White Album
+                  {songMapping?.[song].common.album}
                 </td>
                 <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
-                  7:11
+                  {songMapping?.[song].format.duration}
                 </td>
               </tr>
             ))}
@@ -93,7 +95,8 @@ function MainDash() {
             onClick={async () => {
               window.electron.ipcRenderer.once('select-dirs', (arg) => {
                 // eslint-disable-next-line no-console
-                console.log(arg);
+                console.log('finished', arg);
+                setSongMapping(arg);
               });
               window.electron.ipcRenderer.sendMessage('select-dirs');
             }}
