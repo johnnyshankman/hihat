@@ -10,7 +10,7 @@ export default function ContinuousSlider({
 }: {
   onChange: (event: Event, newValue: number | number[]) => void;
 }) {
-  const [value, setValue] = React.useState<number>(30);
+  const [value, setValue] = React.useState<number>(100);
 
   const handleChange = (event: Event, newValue: number | number[]) => {
     setValue(newValue as number);
@@ -20,7 +20,7 @@ export default function ContinuousSlider({
   return (
     <Box sx={{ width: 200 }}>
       <Stack spacing={2} direction="row" sx={{ mb: 1 }} alignItems="center">
-        <VolumeDown />
+        <VolumeDown fontSize="small" />
         <Slider
           size="small"
           color="secondary"
@@ -28,7 +28,7 @@ export default function ContinuousSlider({
           value={value}
           onChange={handleChange}
         />
-        <VolumeUp />
+        <VolumeUp fontSize="small" />
       </Stack>
     </Box>
   );

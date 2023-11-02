@@ -1,24 +1,59 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { IAudioMetadata } from 'music-metadata';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
+import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
+import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
+import PauseRounded from '@mui/icons-material/PauseRounded';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
+
 import placeholder from '../../assets/placeholder.svg';
 import './App.css';
 
 function MainDash() {
+  const audioTagRef = useRef<HTMLAudioElement>(null);
+
   const [songMapping, setSongMapping] = useState<{
     [key: string]: IAudioMetadata;
   }>();
-
-  const audioTagRef = useRef<HTMLAudioElement>(null);
-
   const [currentSongTime, setCurrentSongTime] = useState(0);
-
+  const [paused, setPaused] = useState(false);
   const [currentSong, setCurrentSong] = useState<string>();
   const [currentSongMetadata, setCurrentSongMetadata] =
     useState<IAudioMetadata>();
+  const [currentSongDataURL, setCurrentSongDataURL] = useState<string>();
+
+  useEffect(() => {
+    window.electron.ipcRenderer.once('initialize', (arg) => {
+      // eslint-disable-next-line no-console
+      console.log('start up', arg);
+      // @ts-ignore
+      setSongMapping(arg);
+    });
+  }, []);
+
+  const bufferToDataUrl = async (
+    buffer: Buffer,
+    format: string,
+  ): Promise<string> => {
+    const uint8Array = new Uint8Array((buffer as any).data);
+    const blob = new Blob([uint8Array], { type: format });
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+
+    const res = (await new Promise((resolve) => {
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+    })) as string;
+
+    return res;
+  };
 
   function convertToMMSS(timeInSeconds: number) {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -29,24 +64,26 @@ function MainDash() {
       .padStart(2, '0')}`;
   }
 
-  const playSong = (song: string, meta: IAudioMetadata) => {
+  const playSong = async (song: string, meta: IAudioMetadata) => {
     setCurrentSong(song);
     setCurrentSongMetadata(meta);
+
+    if (meta.common.picture?.length) {
+      // set the current song data url using the meta data, base64 encoded
+      setCurrentSongDataURL(
+        await bufferToDataUrl(
+          meta.common.picture[0].data,
+          meta.common.picture[0].format,
+        ),
+      );
+    }
   };
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex justify-center p-4 space-x-4 md:flex-row">
+      <div className="flex justify-center p-4 pb-8 space-x-4 md:flex-row">
         <img
-          src={
-            currentSongMetadata && currentSongMetadata.common.picture
-              ? `data:${
-                  currentSongMetadata.common.picture[0].format
-                };base64,${currentSongMetadata.common.picture[0].data.toString(
-                  'base64',
-                )}`
-              : placeholder
-          }
+          src={currentSongDataURL || placeholder}
           height="200"
           width="200"
           alt="Album Art"
@@ -56,23 +93,59 @@ function MainDash() {
             objectFit: 'cover',
           }}
         />
+        <button
+          onClick={async () => {
+            // todo: add a progress response
+            window.electron.ipcRenderer.once('select-dirs', (arg) => {
+              // eslint-disable-next-line no-console
+              console.log('finished', arg);
+              // @ts-ignore
+              setSongMapping(arg);
+            });
+            window.electron.ipcRenderer.sendMessage('select-dirs');
+          }}
+          type="button"
+          aria-label="play"
+          className="absolute top-4 right-4 items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+        >
+          <svg
+            key="0"
+            className=" h-5 w-5 text-black dark:text-white"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M9 18V5l12-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="18" cy="16" r="3" />
+          </svg>
+        </button>
       </div>
 
       <div className="w-full overflow-auto">
-        <table className="w-full max-h-full caption-bottom text-sm p-1 overflow-auto">
+        <table className="w-full max-h-full caption-bottom text-[10px] p-1 overflow-auto">
           <thead className="sticky top-0 bg-white outline outline-offset-0 outline-1 outline-slate-100">
-            <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted divide-x divide-slate-50">
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&amp;:has([role=checkbox])]:pr-0 text-xs">
+            <tr className="transition-colors divide-slate-50">
+              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-muted/50 data-[state=selected]:bg-muted text-muted-foreground [&amp;:has([role=checkbox])]:pr-0">
                 Song
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&amp;:has([role=checkbox])]:pr-0 text-xs">
+              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-muted/50 data-[state=selected]:bg-muted text-muted-foreground [&amp;:has([role=checkbox])]:pr-0">
                 Artist
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&amp;:has([role=checkbox])]:pr-0 text-xs">
+              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-muted/50 data-[state=selected]:bg-muted text-muted-foreground [&amp;:has([role=checkbox])]:pr-0">
                 Album
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&amp;:has([role=checkbox])]:pr-0 text-xs">
-                Duration
+              <th
+                aria-label="duration"
+                className="py-1 px-4 text-left align-middle font-medium hover:bg-muted/50 data-[state=selected]:bg-muted text-muted-foreground [&amp;:has([role=checkbox])]:pr-0"
+              >
+                <AccessTimeIcon fontSize="inherit" />
               </th>
             </tr>
           </thead>
@@ -80,23 +153,23 @@ function MainDash() {
             {Object.keys(songMapping || {}).map((song) => (
               <tr
                 key={song}
-                onDoubleClick={() => {
+                onDoubleClick={async () => {
                   // eslint-disable-next-line no-console
                   console.log('double click');
-                  playSong(song, songMapping[song]);
+                  await playSong(song, songMapping[song]);
                 }}
-                className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted py-1 divide-x divide-slate-50"
+                className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted py-1 divide-slate-50"
               >
-                <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
+                <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
                   {songMapping?.[song].common.title}
                 </td>
-                <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
+                <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
                   {songMapping?.[song].common.artist}
                 </td>
-                <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
+                <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
                   {songMapping?.[song].common.album}
                 </td>
-                <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
+                <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
                   {convertToMMSS(songMapping?.[song].format.duration || 0)}
                 </td>
               </tr>
@@ -106,81 +179,36 @@ function MainDash() {
       </div>
 
       <div className="fixed inset-x-0 border-t bottom-0 bg-white shadow-md p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            aria-label="previous"
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className=" w-4 h-4"
-            >
-              <path d="m12 19-7-7 7-7" />
-              <path d="M19 12H5" />
-            </svg>
-          </button>
-
-          <button
-            onClick={async () => {
-              // todo: add a progress response
-              window.electron.ipcRenderer.once('select-dirs', (arg) => {
-                // eslint-disable-next-line no-console
-                console.log('finished', arg);
-                // @ts-ignore
-                setSongMapping(arg);
-              });
-              window.electron.ipcRenderer.sendMessage('select-dirs');
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mt: -1,
+          }}
+        >
+          <IconButton aria-label="previous song">
+            <FastRewindRounded fontSize="medium" htmlColor="#000" />
+          </IconButton>
+          <IconButton
+            aria-label={paused ? 'play' : 'pause'}
+            onClick={() => {
+              setPaused(!paused);
+              audioTagRef.current!.paused
+                ? audioTagRef.current!.play()
+                : audioTagRef.current!.pause();
             }}
-            type="button"
-            aria-label="play"
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className=" w-4 h-4"
-            >
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            aria-label="next"
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className=" w-4 h-4"
-            >
-              <path d="M5 12h14" />
-              <path d="m12 5 7 7-7 7" />
-            </svg>
-          </button>
-        </div>
+            {paused ? (
+              <PlayArrowRounded sx={{ fontSize: '2rem' }} htmlColor="#000" />
+            ) : (
+              <PauseRounded sx={{ fontSize: '2rem' }} htmlColor="#000" />
+            )}
+          </IconButton>
+          <IconButton aria-label="next song">
+            <FastForwardRounded fontSize="medium" htmlColor="#000" />
+          </IconButton>
+        </Box>
         <LinearProgressBar
           value={currentSongTime}
           onManualChange={(e: number) => {
@@ -201,7 +229,7 @@ function MainDash() {
       <audio
         className="hidden"
         src={`file://${currentSong}`}
-        autoPlay
+        autoPlay={!paused}
         onTimeUpdate={(e) => {
           setCurrentSongTime(e.currentTarget.currentTime);
         }}

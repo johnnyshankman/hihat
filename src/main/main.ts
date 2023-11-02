@@ -25,6 +25,15 @@ class AppUpdater {
   }
 }
 
+function parseData(fp: string) {
+  const defaultData = {};
+  try {
+    return JSON.parse(fs.readFileSync(fp, 'utf8'));
+  } catch (error) {
+    return defaultData;
+  }
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 ipcMain.on('ipc-example', async (event, arg) => {
@@ -52,10 +61,8 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
         // eslint-disable-next-line no-await-in-loop
         metadata = await mm.parseFile(`${result.filePaths[0]}/${files[i]}`);
       } catch (e) {
-        console.log(e);
+        // console.log(e);
       }
-
-      console.log(metadata);
 
       if (metadata)
         filesToTags[`${result.filePaths[0]}/${files[i]}`] = metadata;
@@ -64,6 +71,12 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     // event.returnValue = result.filePaths;
     // lets make this reply with the nice object
     event.reply('select-dirs', filesToTags);
+
+    const dataPath = app.getPath('userData');
+    const filePath = path.join(dataPath, 'config.json');
+    // const contents = parseData(filePath);
+    // console.log('already existed', contents);
+    fs.writeFileSync(filePath, JSON.stringify(filesToTags));
   });
 });
 
@@ -119,6 +132,17 @@ const createWindow = async () => {
   });
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (!mainWindow) {
+      throw new Error('"mainWindow" is not defined');
+    }
+
+    const dataPath = app.getPath('userData');
+    const filePath = path.join(dataPath, 'config.json');
+    const contents = parseData(filePath);
+    mainWindow.webContents.send('initialize', contents);
+  });
 
   mainWindow.on('ready-to-show', () => {
     if (!mainWindow) {
