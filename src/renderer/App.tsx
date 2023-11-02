@@ -1,7 +1,9 @@
+/* eslint-disable jsx-a11y/media-has-caption */
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { IAudioMetadata } from 'music-metadata';
-import AudioPlayer from 'react-audio-player';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import ContinuousSlider from './ContinuousSlider';
+import LinearProgressBar from './LinearProgressBar';
 import placeholder from '../../assets/placeholder.svg';
 import './App.css';
 
@@ -9,6 +11,10 @@ function MainDash() {
   const [songMapping, setSongMapping] = useState<{
     [key: string]: IAudioMetadata;
   }>();
+
+  const audioTagRef = useRef<HTMLAudioElement>(null);
+
+  const [currentSongTime, setCurrentSongTime] = useState(0);
 
   const [currentSong, setCurrentSong] = useState<string>();
   const [currentSongMetadata, setCurrentSongMetadata] =
@@ -175,59 +181,32 @@ function MainDash() {
             </svg>
           </button>
         </div>
-        <div className="w-1/3 h-1 bg-gray-200 rounded-full relative">
-          <div
-            className="h-full bg-blue-500 rounded-full"
-            style={{
-              // @dev: controls the progress bar inner filling
-              width: '25%',
+        <LinearProgressBar
+          value={currentSongTime}
+          onManualChange={(e: number) => {
+            setCurrentSongTime(e);
+            if (audioTagRef?.current) {
+              audioTagRef.current.currentTime = e;
+            }
+          }}
+        />
+        <div className="flex items-center">
+          <ContinuousSlider
+            onChange={(event, value) => {
+              audioTagRef.current!.volume = (value as number) / 100;
             }}
           />
-          <p className="text-xs text-center absolute w-full bottom-full mb-1">
-            1:15
-          </p>
-        </div>
-        <div className="flex items-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className=" w-4 h-4"
-          >
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-          </svg>
-          <div className="w-16 h-1 mx-2 bg-gray-200 rounded-full">
-            <div
-              className="h-full bg-green-500 rounded-full"
-              style={{
-                // @dev: controls the volume bar inner filling
-                width: '75%',
-              }}
-            />
-          </div>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className=" w-4 h-4"
-          >
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-          </svg>
         </div>
       </div>
-      <AudioPlayer src={`file://${currentSong}`} autoPlay />
+      <audio
+        className="hidden"
+        src={`file://${currentSong}`}
+        autoPlay
+        onTimeUpdate={(e) => {
+          setCurrentSongTime(e.currentTarget.currentTime);
+        }}
+        ref={audioTagRef}
+      />
     </div>
   );
 }
