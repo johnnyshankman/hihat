@@ -161,7 +161,7 @@ function MainDash() {
           onClick={importSongs}
           type="button"
           aria-label="play"
-          className="absolute top-4 right-4 items-center justify-center
+          className="absolute top-6 right-4 items-center justify-center
           rounded-md text-sm font-medium ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
@@ -311,7 +311,7 @@ export default function App() {
         <Route
           path="/"
           element={
-            <div className="mt-10 nodrag max-h-full">
+            <div className="container">
               <MainDash />
             </div>
           }
