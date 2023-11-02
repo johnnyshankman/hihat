@@ -42,6 +42,12 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate('pong'));
 });
 
+// ipcMain.on('save-data', async (event, arg) => {
+//   const dataPath = app.getPath('userData');
+//   const filePath = path.join(dataPath, 'config.json');
+//   fs.writeFileSync(filePath, JSON.stringify(arg));
+// });
+
 ipcMain.on('select-dirs', async (event): Promise<any> => {
   if (!mainWindow) {
     return;
@@ -53,30 +59,59 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
   // passsing directoryPath and callback function
   fs.readdir(result.filePaths[0], async (err, files) => {
     // create an empty mapping of files to tags
-    const filesToTags: { [key: string]: mm.IAudioMetadata } = {};
-
-    for (let i = 0; i < 100; i += 1) {
+    let filesToTags: { [key: string]: mm.IAudioMetadata } = {};
+    // for (let i = 0; i < 100; i += 1) {
+    for (let i = 0; i < files.length; i += 1) {
+      console.log('processing file number ', i);
       let metadata;
       try {
         // eslint-disable-next-line no-await-in-loop
         metadata = await mm.parseFile(`${result.filePaths[0]}/${files[i]}`);
       } catch (e) {
-        // console.log(e);
+        console.log(e);
       }
 
       if (metadata)
         filesToTags[`${result.filePaths[0]}/${files[i]}`] = metadata;
     }
 
+    // reorder filesToTags keys by artist and then album and then track number within that album
+    const orderedFilesToTags: { [key: string]: mm.IAudioMetadata } = {};
+    Object.keys(filesToTags)
+      .sort((a, b) => {
+        const artistA = filesToTags[a].common.artist;
+        const artistB = filesToTags[b].common.artist;
+        const albumA = filesToTags[a].common.album;
+        const albumB = filesToTags[b].common.album;
+        const trackA = filesToTags[a].common.track.no;
+        const trackB = filesToTags[b].common.track.no;
+        // handle null cases
+        if (!artistA) return -1;
+        if (!artistB) return 1;
+        if (!albumA) return -1;
+        if (!albumB) return 1;
+        if (!trackA) return -1;
+        if (!trackB) return 1;
+
+        // reorder filesToTags keys by artist and then album and then track number within that album
+        if (artistA < artistB) return -1;
+        if (artistA > artistB) return 1;
+        if (albumA < albumB) return -1;
+        if (albumA > albumB) return 1;
+        if (trackA < trackB) return -1;
+        if (trackA > trackB) return 1;
+        return 0;
+      })
+      .forEach((key) => {
+        orderedFilesToTags[key] = filesToTags[key];
+      });
+
+    filesToTags = {};
+
     // event.returnValue = result.filePaths;
     // lets make this reply with the nice object
-    event.reply('select-dirs', filesToTags);
-
-    const dataPath = app.getPath('userData');
-    const filePath = path.join(dataPath, 'config.json');
-    // const contents = parseData(filePath);
-    // console.log('already existed', contents);
-    fs.writeFileSync(filePath, JSON.stringify(filesToTags));
+    event.reply('select-dirs', orderedFilesToTags);
+    console.log(process.memoryUsage().heapUsed);
   });
 });
 

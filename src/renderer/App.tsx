@@ -9,6 +9,10 @@ import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
 import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
 import PauseRounded from '@mui/icons-material/PauseRounded';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 
@@ -24,10 +28,12 @@ function MainDash() {
   const [currentSongTime, setCurrentSongTime] = useState(0);
   const [paused, setPaused] = useState(false);
   const [currentSong, setCurrentSong] = useState<string>();
+  const [showImportingProgress, setShowImportingProgress] = useState(false);
   const [currentSongMetadata, setCurrentSongMetadata] =
     useState<IAudioMetadata>();
   const [currentSongDataURL, setCurrentSongDataURL] = useState<string>();
 
+  // some day i'd like to get this working again but my library config breaks the heap size
   useEffect(() => {
     window.electron.ipcRenderer.once('initialize', (arg) => {
       // eslint-disable-next-line no-console
@@ -41,8 +47,7 @@ function MainDash() {
     buffer: Buffer,
     format: string,
   ): Promise<string> => {
-    const uint8Array = new Uint8Array((buffer as any).data);
-    const blob = new Blob([uint8Array], { type: format });
+    const blob = new Blob([buffer], { type: format });
     const reader = new FileReader();
     reader.readAsDataURL(blob);
 
@@ -79,8 +84,48 @@ function MainDash() {
     }
   };
 
+  const playNextSong = async () => {
+    if (!songMapping) return;
+    const keys = Object.keys(songMapping);
+    const currentSongIndex = keys.indexOf(currentSong || '');
+    const nextSongIndex = currentSongIndex + 1;
+    if (nextSongIndex >= keys.length) {
+      return;
+    }
+    const nextSong = keys[nextSongIndex];
+    const nextSongMeta = songMapping[nextSong];
+    await playSong(nextSong, nextSongMeta);
+  };
+
+  const playPreviousSong = async () => {
+    if (!songMapping) return;
+    const keys = Object.keys(songMapping);
+    const currentSongIndex = keys.indexOf(currentSong || '');
+    const previousSongIndex = currentSongIndex - 1;
+    if (previousSongIndex < 0) {
+      return;
+    }
+    const previousSong = keys[previousSongIndex];
+    const previousSongMeta = songMapping[previousSong];
+    await playSong(previousSong, previousSongMeta);
+  };
+
   return (
     <div className="h-full flex flex-col">
+      <Dialog
+        className="flex flex-col items-center justify-center content-center"
+        onClose={() => {
+          setShowImportingProgress(false);
+        }}
+        open={showImportingProgress}
+      >
+        <DialogTitle>Importing</DialogTitle>
+        <CircularProgress
+          size={30}
+          className="mx-auto mt-2 mb-6"
+          color="inherit"
+        />
+      </Dialog>
       <div className="flex justify-center p-4 pb-8 space-x-4 md:flex-row">
         <img
           src={currentSongDataURL || placeholder}
@@ -96,11 +141,13 @@ function MainDash() {
         <button
           onClick={async () => {
             // todo: add a progress response
+            setShowImportingProgress(true);
             window.electron.ipcRenderer.once('select-dirs', (arg) => {
               // eslint-disable-next-line no-console
               console.log('finished', arg);
               // @ts-ignore
               setSongMapping(arg);
+              setShowImportingProgress(false);
             });
             window.electron.ipcRenderer.sendMessage('select-dirs');
           }}
@@ -130,7 +177,7 @@ function MainDash() {
 
       <div className="w-full overflow-auto">
         <table className="w-full max-h-full caption-bottom text-[10px] p-1 overflow-auto">
-          <thead className="sticky top-0 bg-white outline outline-offset-0 outline-1 outline-slate-100">
+          <thead className="sticky top-0 z-50 bg-white outline outline-offset-0 outline-1 outline-slate-100">
             <tr className="transition-colors divide-slate-50">
               <th className="py-1 px-4 text-left align-middle font-medium hover:bg-muted/50 data-[state=selected]:bg-muted text-muted-foreground [&amp;:has([role=checkbox])]:pr-0">
                 Song
@@ -187,13 +234,14 @@ function MainDash() {
             mt: -1,
           }}
         >
-          <IconButton aria-label="previous song">
+          <IconButton aria-label="previous song" onClick={playPreviousSong}>
             <FastRewindRounded fontSize="medium" htmlColor="#000" />
           </IconButton>
           <IconButton
             aria-label={paused ? 'play' : 'pause'}
             onClick={() => {
               setPaused(!paused);
+              // eslint-disable-next-line no-unused-expressions
               audioTagRef.current!.paused
                 ? audioTagRef.current!.play()
                 : audioTagRef.current!.pause();
@@ -205,7 +253,7 @@ function MainDash() {
               <PauseRounded sx={{ fontSize: '2rem' }} htmlColor="#000" />
             )}
           </IconButton>
-          <IconButton aria-label="next song">
+          <IconButton aria-label="next song" onClick={playNextSong}>
             <FastForwardRounded fontSize="medium" htmlColor="#000" />
           </IconButton>
         </Box>

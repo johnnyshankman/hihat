@@ -65,6 +65,7 @@
     }
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.0.0-alpha.0",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
     "electron-updater": "^6.1.4",
