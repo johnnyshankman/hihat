@@ -135,14 +135,16 @@ function MainDash() {
         className="flex flex-col items-center justify-center content-center p-10"
         open={showImportingProgress}
       >
-        <DialogTitle>Importing</DialogTitle>
-        <CircularProgress
-          size={32}
-          className="mx-auto mt-2 mb-6"
-          color="inherit"
-        />
-        <div className="flex w-full justify-center p-2 mb-2">
-          <TinyText>{`${songsImported} / ${totalSongs}`}</TinyText>
+        <div className="flex flex-col items-center px-20">
+          <DialogTitle>Importing</DialogTitle>
+          <CircularProgress
+            size={40}
+            className="mx-auto mt-2 mb-6"
+            color="inherit"
+          />
+          <div className="flex w-full justify-center p-2 mb-2">
+            <TinyText>{`${songsImported} / ${totalSongs}`}</TinyText>
+          </div>
         </div>
       </Dialog>
       <div className="flex justify-center p-4 pb-8 space-x-4 md:flex-row">
@@ -306,7 +308,14 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<MainDash />} />
+        <Route
+          path="/"
+          element={
+            <div className="mt-10 nodrag max-h-full">
+              <MainDash />
+            </div>
+          }
+        />
       </Routes>
     </Router>
   );

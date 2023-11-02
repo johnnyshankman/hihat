@@ -161,15 +161,8 @@ const createWindow = async () => {
     width: 1024,
     height: 728,
     icon: getAssetPath('icons/1024x1024.png'),
+    frame: false,
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      // color of titile bar
-      color: '#0d0d0d',
-      // color of titile bar control
-      symbolColor: '#74b1be',
-      // height of titile bar
-      height: 32,
-    },
     webPreferences: {
       webSecurity: false,
       preload: app.isPackaged
@@ -177,6 +170,8 @@ const createWindow = async () => {
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
+
+  // mainWindow.setIgnoreMouseEvents(true);
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 

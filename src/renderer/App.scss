@@ -14,6 +14,15 @@
   color: white;
 }
 
+html {
+  -webkit-app-region: drag;
+}
+
+.nodrag {
+  -webkit-app-region: no-drag;
+  overflow: hidden;
+}
+
 table {
   border-spacing: 0;
   outline: none;
