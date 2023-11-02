@@ -1,5 +1,6 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { IAudioMetadata } from 'music-metadata';
+import AudioPlayer from 'react-audio-player';
 import { useState } from 'react';
 import placeholder from '../../assets/placeholder.svg';
 import './App.css';
@@ -8,6 +9,10 @@ function MainDash() {
   const [songMapping, setSongMapping] = useState<{
     [key: string]: IAudioMetadata;
   }>();
+
+  const [currentSong, setCurrentSong] = useState<string>();
+  const [currentSongMetadata, setCurrentSongMetadata] =
+    useState<IAudioMetadata>();
 
   function convertToMMSS(timeInSeconds: number) {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -18,11 +23,24 @@ function MainDash() {
       .padStart(2, '0')}`;
   }
 
+  const playSong = (song: string, meta: IAudioMetadata) => {
+    setCurrentSong(song);
+    setCurrentSongMetadata(meta);
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex justify-center p-4 space-x-4 md:flex-row">
         <img
-          src={placeholder}
+          src={
+            currentSongMetadata && currentSongMetadata.common.picture
+              ? `data:${
+                  currentSongMetadata.common.picture[0].format
+                };base64,${currentSongMetadata.common.picture[0].data.toString(
+                  'base64',
+                )}`
+              : placeholder
+          }
           height="200"
           width="200"
           alt="Album Art"
@@ -52,10 +70,15 @@ function MainDash() {
               </th>
             </tr>
           </thead>
-          <tbody className="[&amp;_tr:last-child]:border-0 ">
+          <tbody className="[&amp;_tr:last-child]:border-0">
             {Object.keys(songMapping || {}).map((song) => (
               <tr
                 key={song}
+                onDoubleClick={() => {
+                  // eslint-disable-next-line no-console
+                  console.log('double click');
+                  playSong(song, songMapping[song]);
+                }}
                 className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted py-1 divide-x divide-slate-50"
               >
                 <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
@@ -102,9 +125,11 @@ function MainDash() {
 
           <button
             onClick={async () => {
+              // todo: add a progress response
               window.electron.ipcRenderer.once('select-dirs', (arg) => {
                 // eslint-disable-next-line no-console
                 console.log('finished', arg);
+                // @ts-ignore
                 setSongMapping(arg);
               });
               window.electron.ipcRenderer.sendMessage('select-dirs');
@@ -202,6 +227,7 @@ function MainDash() {
           </svg>
         </div>
       </div>
+      <AudioPlayer src={`file://${currentSong}`} autoPlay />
     </div>
   );
 }

@@ -125,6 +125,7 @@
     "node-id3": "^0.2.6",
     "postcss-loader": "^7.3.3",
     "prettier": "^3.0.3",
+    "react-audio-player": "^0.17.0",
     "react-refresh": "^0.14.0",
     "react-test-renderer": "^18.2.0",
     "rimraf": "^5.0.1",

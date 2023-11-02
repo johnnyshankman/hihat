@@ -46,7 +46,7 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     // create an empty mapping of files to tags
     const filesToTags: { [key: string]: mm.IAudioMetadata } = {};
 
-    for (let i = 0; i < files.length; i += 1) {
+    for (let i = 0; i < 100; i += 1) {
       let metadata;
       try {
         // eslint-disable-next-line no-await-in-loop
@@ -57,7 +57,8 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
 
       console.log(metadata);
 
-      if (metadata) filesToTags[files[i]] = metadata;
+      if (metadata)
+        filesToTags[`${result.filePaths[0]}/${files[i]}`] = metadata;
     }
 
     // event.returnValue = result.filePaths;
@@ -110,6 +111,7 @@ const createWindow = async () => {
     height: 728,
     icon: getAssetPath('icons/1024x1024.png'),
     webPreferences: {
+      webSecurity: false,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
