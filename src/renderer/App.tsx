@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { IAudioMetadata } from 'music-metadata';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
@@ -12,12 +12,21 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
+import Typography from '@mui/material/Typography';
+import { styled } from '@mui/material/styles';
 
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 
 import placeholder from '../../assets/placeholder.svg';
-import './App.css';
+import './App.scss';
+
+const TinyText = styled(Typography)({
+  fontSize: '0.75rem',
+  opacity: 0.38,
+  fontWeight: 500,
+  letterSpacing: 0.2,
+});
 
 function MainDash() {
   const audioTagRef = useRef<HTMLAudioElement>(null);
@@ -32,16 +41,8 @@ function MainDash() {
   const [currentSongMetadata, setCurrentSongMetadata] =
     useState<IAudioMetadata>();
   const [currentSongDataURL, setCurrentSongDataURL] = useState<string>();
-
-  // some day i'd like to get this working again but my library config breaks the heap size
-  useEffect(() => {
-    window.electron.ipcRenderer.once('initialize', (arg) => {
-      // eslint-disable-next-line no-console
-      console.log('start up', arg);
-      // @ts-ignore
-      setSongMapping(arg);
-    });
-  }, []);
+  const [songsImported, setSongsImported] = useState(0);
+  const [totalSongs, setTotalSongs] = useState(0);
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -110,54 +111,65 @@ function MainDash() {
     await playSong(previousSong, previousSongMeta);
   };
 
+  const importSongs = async () => {
+    // todo: add a progress response
+    setShowImportingProgress(true);
+    window.electron.ipcRenderer.on('song-imported', (args) => {
+      setSongsImported(args.songsImported);
+      setTotalSongs(args.totalSongs);
+    });
+
+    window.electron.ipcRenderer.once('select-dirs', (arg) => {
+      // eslint-disable-next-line no-console
+      console.log('finished', arg);
+      // @ts-ignore
+      setSongMapping(arg);
+      setShowImportingProgress(false);
+    });
+    window.electron.ipcRenderer.sendMessage('select-dirs');
+  };
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col dark">
       <Dialog
-        className="flex flex-col items-center justify-center content-center"
-        onClose={() => {
-          setShowImportingProgress(false);
-        }}
+        className="flex flex-col items-center justify-center content-center p-10"
         open={showImportingProgress}
       >
         <DialogTitle>Importing</DialogTitle>
         <CircularProgress
-          size={30}
+          size={32}
           className="mx-auto mt-2 mb-6"
           color="inherit"
         />
+        <div className="flex w-full justify-center p-2 mb-2">
+          <TinyText>{`${songsImported} / ${totalSongs}`}</TinyText>
+        </div>
       </Dialog>
       <div className="flex justify-center p-4 pb-8 space-x-4 md:flex-row">
         <img
           src={currentSongDataURL || placeholder}
-          height="200"
-          width="200"
           alt="Album Art"
-          className="object-cover rounded-lg shadow-md"
+          className="object-cover rounded-lg shadow-md w-1/3"
           style={{
             aspectRatio: '200/200',
             objectFit: 'cover',
           }}
         />
         <button
-          onClick={async () => {
-            // todo: add a progress response
-            setShowImportingProgress(true);
-            window.electron.ipcRenderer.once('select-dirs', (arg) => {
-              // eslint-disable-next-line no-console
-              console.log('finished', arg);
-              // @ts-ignore
-              setSongMapping(arg);
-              setShowImportingProgress(false);
-            });
-            window.electron.ipcRenderer.sendMessage('select-dirs');
-          }}
+          onClick={importSongs}
           type="button"
           aria-label="play"
-          className="absolute top-4 right-4 items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+          className="absolute top-4 right-4 items-center justify-center
+          rounded-md text-sm font-medium ring-offset-background transition-colors
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+          focus-visible:ring-offset-2 disabled:pointer-events-none
+          disabled:opacity-50 border border-neutral-800 bg-background
+          hover:bg-white hover:text-black
+          h-10 px-4 py-2"
         >
           <svg
             key="0"
-            className=" h-5 w-5 text-black dark:text-white"
+            className=" h-5 w-5"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -176,21 +188,21 @@ function MainDash() {
       </div>
 
       <div className="w-full overflow-auto">
-        <table className="w-full max-h-full caption-bottom text-[10px] p-1 overflow-auto">
-          <thead className="sticky top-0 z-50 bg-white outline outline-offset-0 outline-1 outline-slate-100">
-            <tr className="transition-colors divide-slate-50">
-              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-muted/50 data-[state=selected]:bg-muted text-muted-foreground [&amp;:has([role=checkbox])]:pr-0">
+        <table className="w-full max-h-full caption-bottom text-[11px] p-1 overflow-auto">
+          <thead className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 outline-neutral-800">
+            <tr className="transition-colors divide-neutral-50">
+              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
                 Song
               </th>
-              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-muted/50 data-[state=selected]:bg-muted text-muted-foreground [&amp;:has([role=checkbox])]:pr-0">
+              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
                 Artist
               </th>
-              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-muted/50 data-[state=selected]:bg-muted text-muted-foreground [&amp;:has([role=checkbox])]:pr-0">
+              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
                 Album
               </th>
               <th
                 aria-label="duration"
-                className="py-1 px-4 text-left align-middle font-medium hover:bg-muted/50 data-[state=selected]:bg-muted text-muted-foreground [&amp;:has([role=checkbox])]:pr-0"
+                className="py-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
               >
                 <AccessTimeIcon fontSize="inherit" />
               </th>
@@ -205,7 +217,7 @@ function MainDash() {
                   console.log('double click');
                   await playSong(song, songMapping[song]);
                 }}
-                className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted py-1 divide-slate-50"
+                className="border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
               >
                 <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
                   {songMapping?.[song].common.title}
@@ -225,17 +237,19 @@ function MainDash() {
         </table>
       </div>
 
-      <div className="fixed inset-x-0 border-t bottom-0 bg-white shadow-md p-4 flex items-center justify-between">
+      <div className="fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-2 flex items-center justify-between">
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'start',
+            width: '33%',
+            flex: 1,
             mt: -1,
           }}
         >
           <IconButton aria-label="previous song" onClick={playPreviousSong}>
-            <FastRewindRounded fontSize="medium" htmlColor="#000" />
+            <FastRewindRounded fontSize="medium" htmlColor="#fff" />
           </IconButton>
           <IconButton
             aria-label={paused ? 'play' : 'pause'}
@@ -248,17 +262,18 @@ function MainDash() {
             }}
           >
             {paused ? (
-              <PlayArrowRounded sx={{ fontSize: '2rem' }} htmlColor="#000" />
+              <PlayArrowRounded sx={{ fontSize: '2rem' }} htmlColor="#fff" />
             ) : (
-              <PauseRounded sx={{ fontSize: '2rem' }} htmlColor="#000" />
+              <PauseRounded sx={{ fontSize: '2rem' }} htmlColor="#fff" />
             )}
           </IconButton>
           <IconButton aria-label="next song" onClick={playNextSong}>
-            <FastForwardRounded fontSize="medium" htmlColor="#000" />
+            <FastForwardRounded fontSize="medium" htmlColor="#fff" />
           </IconButton>
         </Box>
         <LinearProgressBar
           value={currentSongTime}
+          title={currentSongMetadata?.common.title || 'No song selected'}
           onManualChange={(e: number) => {
             setCurrentSongTime(e);
             if (audioTagRef?.current) {
@@ -266,7 +281,7 @@ function MainDash() {
             }
           }}
         />
-        <div className="flex items-center">
+        <div className="flex justify-end flex-1">
           <ContinuousSlider
             onChange={(event, value) => {
               audioTagRef.current!.volume = (value as number) / 100;

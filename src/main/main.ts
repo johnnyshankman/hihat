@@ -62,7 +62,6 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     let filesToTags: { [key: string]: mm.IAudioMetadata } = {};
     // for (let i = 0; i < 100; i += 1) {
     for (let i = 0; i < files.length; i += 1) {
-      console.log('processing file number ', i);
       let metadata;
       try {
         // eslint-disable-next-line no-await-in-loop
@@ -73,6 +72,11 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
 
       if (metadata)
         filesToTags[`${result.filePaths[0]}/${files[i]}`] = metadata;
+
+      event.reply('song-imported', {
+        songsImported: i,
+        totalSongs: files.length,
+      });
     }
 
     // reorder filesToTags keys by artist and then album and then track number within that album
@@ -111,7 +115,6 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     // event.returnValue = result.filePaths;
     // lets make this reply with the nice object
     event.reply('select-dirs', orderedFilesToTags);
-    console.log(process.memoryUsage().heapUsed);
   });
 });
 

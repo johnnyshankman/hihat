@@ -6,7 +6,7 @@ export type Channels =
   | 'ipc-example'
   | 'select-dirs'
   | 'initialize'
-  | 'save-data';
+  | 'song-imported';
 
 const electronHandler = {
   ipcRenderer: {

@@ -153,8 +153,8 @@
     "webpack-merge": "^5.9.0"
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.erb.ElectronReact",
+    "productName": "hihat",
+    "appId": "org.erb.hihat",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
