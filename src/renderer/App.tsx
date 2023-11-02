@@ -1,13 +1,22 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { IAudioMetadata } from 'music-metadata';
+import { useState } from 'react';
 import placeholder from '../../assets/placeholder.svg';
 import './App.css';
-import { useState } from 'react';
 
 function MainDash() {
   const [songMapping, setSongMapping] = useState<{
     [key: string]: IAudioMetadata;
   }>();
+
+  function convertToMMSS(timeInSeconds: number) {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    // Ensuring the format is two-digits both for minutes and seconds
+    return `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}`;
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -59,7 +68,7 @@ function MainDash() {
                   {songMapping?.[song].common.album}
                 </td>
                 <td className="py-1.5 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0 text-xs">
-                  {songMapping?.[song].format.duration}
+                  {convertToMMSS(songMapping?.[song].format.duration || 0)}
                 </td>
               </tr>
             ))}
