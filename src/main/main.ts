@@ -197,7 +197,7 @@ const createWindow = async () => {
     }
 
     const dataPath = app.getPath('userData');
-    const filePath = path.join(dataPath, 'config.json');
+    const filePath = path.join(dataPath, 'userConfig.json');
     const contents = parseData(filePath);
     mainWindow.webContents.send('initialize', contents);
   });

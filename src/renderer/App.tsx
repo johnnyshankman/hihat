@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { IAudioMetadata, IPicture } from 'music-metadata';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
@@ -43,6 +43,16 @@ function MainDash() {
   const [songMapping, setSongMapping] = useState<{
     [key: string]: IAudioMetadata;
   }>();
+
+  // some day i'd like to get this working again but my library config breaks the heap size
+  useEffect(() => {
+    window.electron.ipcRenderer.once('initialize', (arg) => {
+      // eslint-disable-next-line no-console
+      console.log('start up', arg);
+      // @ts-ignore
+      setSongMapping(arg);
+    });
+  }, []);
 
   const bufferToDataUrl = async (
     buffer: Buffer,
