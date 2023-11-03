@@ -47,6 +47,7 @@ export default function LinearProgressBar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          marginBottom: '10px',
         }}
       >
         <TinyText>{title}</TinyText>
@@ -65,6 +66,7 @@ export default function LinearProgressBar({
         }}
         sx={{
           color: 'rgba(133, 133, 133)',
+          bottom: 6,
         }}
       />
       <Box
@@ -72,7 +74,6 @@ export default function LinearProgressBar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          mt: '-18px',
         }}
       >
         <TinyText>{convertToMMSS(position)}</TinyText>

@@ -153,11 +153,11 @@ function MainDash() {
             style={{
               aspectRatio: '1/1',
             }}
-            className="relative w-1/4 md:w-1/3 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
+            className="relative max-w-[280px] w-1/3 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
           >
             <div className="inset-0 h-full w-full flex items-center justify-center">
               <svg
-                className=" text-neutral-300 w-20 h-20 animate-bounce"
+                className=" text-neutral-300 w-1/5 h-1/5 animate-bounce"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -180,7 +180,7 @@ function MainDash() {
           <img
             src={currentSongDataURL}
             alt="Album Art"
-            className="object-cover rounded-lg shadow-md w-1/4 md:w-1/3"
+            className="object-cover rounded-lg shadow-md w-1/4 md:w-1/3 max-h-1/2"
             style={{
               aspectRatio: '200/200',
               objectFit: 'cover',
