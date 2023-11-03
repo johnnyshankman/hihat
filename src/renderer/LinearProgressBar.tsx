@@ -47,7 +47,7 @@ export default function LinearProgressBar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '10px',
+          marginBottom: '2px',
         }}
       >
         <TinyText>{title}</TinyText>
@@ -66,7 +66,7 @@ export default function LinearProgressBar({
         }}
         sx={{
           color: 'rgba(133, 133, 133)',
-          bottom: 6,
+          padding: '8px 0',
         }}
       />
       <Box
