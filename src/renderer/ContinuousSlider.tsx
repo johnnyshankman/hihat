@@ -27,6 +27,7 @@ export default function ContinuousSlider({
           aria-label="Volume"
           value={value}
           onChange={handleChange}
+          sx={{ color: 'rgb(133,133,133)' }}
         />
         <VolumeUp fontSize="small" />
       </Stack>

@@ -13,12 +13,12 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
-import { styled } from '@mui/material/styles';
+import { styled, ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 
-import placeholder from '../../assets/placeholder.svg';
 import './App.scss';
 
 const TinyText = styled(Typography)({
@@ -148,15 +148,45 @@ function MainDash() {
         </div>
       </Dialog>
       <div className="flex justify-center p-4 pb-8 space-x-4 md:flex-row">
-        <img
-          src={currentSongDataURL || placeholder}
-          alt="Album Art"
-          className="object-cover rounded-lg shadow-md w-1/4 md:w-1/3"
-          style={{
-            aspectRatio: '200/200',
-            objectFit: 'cover',
-          }}
-        />
+        {!currentSongDataURL && (
+          <div
+            style={{
+              aspectRatio: '1/1',
+            }}
+            className="relative w-1/4 md:w-1/3 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
+          >
+            <div className="inset-0 h-full w-full flex items-center justify-center">
+              <svg
+                className=" text-neutral-300 w-20 h-20 animate-bounce"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+              </svg>
+              <TinyText className="absolute bottom-3 left-3">hihat</TinyText>
+            </div>
+          </div>
+        )}
+        {currentSongDataURL && (
+          <img
+            src={currentSongDataURL}
+            alt="Album Art"
+            className="object-cover rounded-lg shadow-md w-1/4 md:w-1/3"
+            style={{
+              aspectRatio: '200/200',
+              objectFit: 'cover',
+            }}
+          />
+        )}
         <button
           onClick={importSongs}
           type="button"
@@ -250,11 +280,16 @@ function MainDash() {
             mt: -1,
           }}
         >
-          <IconButton aria-label="previous song" onClick={playPreviousSong}>
-            <FastRewindRounded fontSize="medium" htmlColor="#fff" />
+          <IconButton
+            aria-label="previous song"
+            onClick={playPreviousSong}
+            color="inherit"
+          >
+            <FastRewindRounded fontSize="medium" />
           </IconButton>
           <IconButton
             aria-label={paused ? 'play' : 'pause'}
+            color="inherit"
             onClick={() => {
               setPaused(!paused);
               // eslint-disable-next-line no-unused-expressions
@@ -264,13 +299,17 @@ function MainDash() {
             }}
           >
             {paused ? (
-              <PlayArrowRounded sx={{ fontSize: '2rem' }} htmlColor="#fff" />
+              <PlayArrowRounded sx={{ fontSize: '2rem' }} />
             ) : (
-              <PauseRounded sx={{ fontSize: '2rem' }} htmlColor="#fff" />
+              <PauseRounded sx={{ fontSize: '2rem' }} />
             )}
           </IconButton>
-          <IconButton aria-label="next song" onClick={playNextSong}>
-            <FastForwardRounded fontSize="medium" htmlColor="#fff" />
+          <IconButton
+            aria-label="next song"
+            onClick={playNextSong}
+            color="inherit"
+          >
+            <FastForwardRounded fontSize="medium" />
           </IconButton>
         </Box>
         <LinearProgressBar
@@ -305,6 +344,12 @@ function MainDash() {
   );
 }
 
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+  },
+});
+
 export default function App() {
   return (
     <Router>
@@ -313,7 +358,10 @@ export default function App() {
           path="/"
           element={
             <div className="shell">
-              <MainDash />
+              <ThemeProvider theme={darkTheme}>
+                <CssBaseline />
+                <MainDash />
+              </ThemeProvider>
             </div>
           }
         />
