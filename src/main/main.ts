@@ -42,11 +42,11 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate('pong'));
 });
 
-// ipcMain.on('save-data', async (event, arg) => {
-//   const dataPath = app.getPath('userData');
-//   const filePath = path.join(dataPath, 'config.json');
-//   fs.writeFileSync(filePath, JSON.stringify(arg));
-// });
+ipcMain.on('get-album-art', async (event, arg) => {
+  const filePath = arg.path;
+  const metadata = await mm.parseFile(filePath);
+  event.reply('get-album-art', metadata.common.picture?.[0] || '');
+});
 
 ipcMain.on('select-dirs', async (event): Promise<any> => {
   if (!mainWindow) {

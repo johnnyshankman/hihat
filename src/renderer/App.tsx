@@ -74,15 +74,17 @@ function MainDash() {
     setCurrentSong(song);
     setCurrentSongMetadata(meta);
 
-    if (meta.common.picture?.length) {
-      // set the current song data url using the meta data, base64 encoded
-      setCurrentSongDataURL(
-        await bufferToDataUrl(
-          meta.common.picture[0].data,
-          meta.common.picture[0].format,
-        ),
-      );
-    }
+    window.electron.ipcRenderer.send('get-album-art', {
+      path: song,
+    });
+
+    // set the current song data url using the meta data, base64 encoded
+    setCurrentSongDataURL(
+      await bufferToDataUrl(
+        meta.common.picture[0].data,
+        meta.common.picture[0].format,
+      ),
+    );
 
     setPaused(false);
   };
