@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
-import { IAudioMetadata } from 'music-metadata';
+import { IAudioMetadata, IPicture } from 'music-metadata';
 import { useState, useRef } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
@@ -74,17 +74,15 @@ function MainDash() {
     setCurrentSong(song);
     setCurrentSongMetadata(meta);
 
-    window.electron.ipcRenderer.send('get-album-art', {
+    window.electron.ipcRenderer.sendMessage('get-album-art', {
       path: song,
     });
 
-    // set the current song data url using the meta data, base64 encoded
-    setCurrentSongDataURL(
-      await bufferToDataUrl(
-        meta.common.picture[0].data,
-        meta.common.picture[0].format,
-      ),
-    );
+    window.electron.ipcRenderer.once('get-album-art', async (event, arg) => {
+      const pic = event as IPicture;
+      const url = await bufferToDataUrl(pic.data, pic.format);
+      setCurrentSongDataURL(url);
+    });
 
     setPaused(false);
   };
