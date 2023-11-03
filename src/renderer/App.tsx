@@ -31,18 +31,18 @@ const TinyText = styled(Typography)({
 function MainDash() {
   const audioTagRef = useRef<HTMLAudioElement>(null);
 
-  const [songMapping, setSongMapping] = useState<{
-    [key: string]: IAudioMetadata;
-  }>();
   const [currentSongTime, setCurrentSongTime] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(true);
   const [currentSong, setCurrentSong] = useState<string>();
   const [showImportingProgress, setShowImportingProgress] = useState(false);
-  const [currentSongMetadata, setCurrentSongMetadata] =
-    useState<IAudioMetadata>();
   const [currentSongDataURL, setCurrentSongDataURL] = useState<string>();
   const [songsImported, setSongsImported] = useState(0);
   const [totalSongs, setTotalSongs] = useState(0);
+  const [currentSongMetadata, setCurrentSongMetadata] =
+    useState<IAudioMetadata>();
+  const [songMapping, setSongMapping] = useState<{
+    [key: string]: IAudioMetadata;
+  }>();
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -61,14 +61,14 @@ function MainDash() {
     return res;
   };
 
-  function convertToMMSS(timeInSeconds: number) {
+  const convertToMMSS = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
     // Ensuring the format is two-digits both for minutes and seconds
     return `${minutes.toString().padStart(2, '0')}:${seconds
       .toString()
       .padStart(2, '0')}`;
-  }
+  };
 
   const playSong = async (song: string, meta: IAudioMetadata) => {
     setCurrentSong(song);
@@ -83,6 +83,8 @@ function MainDash() {
         ),
       );
     }
+
+    setPaused(false);
   };
 
   const playNextSong = async () => {
@@ -180,7 +182,7 @@ function MainDash() {
           <img
             src={currentSongDataURL}
             alt="Album Art"
-            className="object-cover rounded-lg shadow-md w-1/4 md:w-1/3 max-h-1/2"
+            className="object-cover rounded-lg shadow-md max-w-[280px] w-1/3"
             style={{
               aspectRatio: '200/200',
               objectFit: 'cover',
@@ -291,6 +293,8 @@ function MainDash() {
             aria-label={paused ? 'play' : 'pause'}
             color="inherit"
             onClick={() => {
+              4;
+
               setPaused(!paused);
               // eslint-disable-next-line no-unused-expressions
               audioTagRef.current!.paused
@@ -314,6 +318,7 @@ function MainDash() {
         </Box>
         <LinearProgressBar
           value={currentSongTime}
+          max={currentSongMetadata?.format.duration || 0}
           title={currentSongMetadata?.common.title || 'No song selected'}
           artist={currentSongMetadata?.common.artist || '--'}
           onManualChange={(e: number) => {
@@ -335,6 +340,7 @@ function MainDash() {
         className="hidden"
         src={`file://${currentSong}`}
         autoPlay={!paused}
+        onEnded={playNextSong}
         onTimeUpdate={(e) => {
           setCurrentSongTime(e.currentTarget.currentTime);
         }}

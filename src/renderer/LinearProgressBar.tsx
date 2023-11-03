@@ -1,6 +1,5 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
-import LinearProgress from '@mui/material/LinearProgress';
 import Slider from '@mui/material/Slider';
 import { styled } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
@@ -18,13 +17,14 @@ export default function LinearProgressBar({
   onManualChange,
   title,
   artist,
+  max,
 }: {
   value: number;
   onManualChange: (value: number) => void;
   title: string;
   artist: string;
+  max: number;
 }) {
-  const duration = 200; // seconds
   const [position, setPosition] = React.useState(32);
 
   function convertToMMSS(timeInSeconds: number) {
@@ -59,7 +59,7 @@ export default function LinearProgressBar({
         value={position}
         min={0}
         step={1}
-        max={duration}
+        max={max}
         onChange={(_, val) => {
           setPosition(val as number);
           onManualChange(val as number);
@@ -78,7 +78,7 @@ export default function LinearProgressBar({
       >
         <TinyText>{convertToMMSS(position)}</TinyText>
         <TinyText>{artist}</TinyText>
-        <TinyText>-{convertToMMSS(duration - position)}</TinyText>
+        <TinyText>-{convertToMMSS(max - position)}</TinyText>
       </Box>
     </Box>
   );
