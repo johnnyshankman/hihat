@@ -151,7 +151,7 @@ function MainDash() {
         <img
           src={currentSongDataURL || placeholder}
           alt="Album Art"
-          className="object-cover rounded-lg shadow-md w-1/3"
+          className="object-cover rounded-lg shadow-md w-1/4 md:w-1/3"
           style={{
             aspectRatio: '200/200',
             objectFit: 'cover',
@@ -276,6 +276,7 @@ function MainDash() {
         <LinearProgressBar
           value={currentSongTime}
           title={currentSongMetadata?.common.title || 'No song selected'}
+          artist={currentSongMetadata?.common.artist || '--'}
           onManualChange={(e: number) => {
             setCurrentSongTime(e);
             if (audioTagRef?.current) {
@@ -311,7 +312,7 @@ export default function App() {
         <Route
           path="/"
           element={
-            <div className="container">
+            <div className="shell">
               <MainDash />
             </div>
           }

@@ -17,10 +17,12 @@ export default function LinearProgressBar({
   value,
   onManualChange,
   title,
+  artist,
 }: {
   value: number;
   onManualChange: (value: number) => void;
   title: string;
+  artist: string;
 }) {
   const duration = 200; // seconds
   const [position, setPosition] = React.useState(32);
@@ -45,7 +47,6 @@ export default function LinearProgressBar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          mb: '-3px',
         }}
       >
         <TinyText>{title}</TinyText>
@@ -64,6 +65,7 @@ export default function LinearProgressBar({
         sx={{
           color: 'rgba(255, 255, 255, 0.5)',
           height: 4,
+          bottom: 6,
           '& .MuiSlider-thumb': {
             width: 8,
             height: 8,
@@ -89,10 +91,11 @@ export default function LinearProgressBar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          mt: -2,
+          mt: '-18px',
         }}
       >
         <TinyText>{convertToMMSS(position)}</TinyText>
+        <TinyText>{artist}</TinyText>
         <TinyText>-{convertToMMSS(duration - position)}</TinyText>
       </Box>
     </Box>
