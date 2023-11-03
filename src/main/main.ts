@@ -59,7 +59,7 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
   // passsing directoryPath and callback function
   fs.readdir(result.filePaths[0], async (err, files) => {
     // create an empty mapping of files to tags
-    let filesToTags: { [key: string]: mm.IAudioMetadata } = {};
+    let filesToTags: { [key: string]: Partial<mm.IAudioMetadata> } = {};
     // for (let i = 0; i < 100; i += 1) {
     for (let i = 0; i < files.length; i += 1) {
       let metadata;
@@ -71,7 +71,17 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
       }
 
       if (metadata)
-        filesToTags[`${result.filePaths[0]}/${files[i]}`] = metadata;
+        filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
+          common: {
+            ...metadata.common,
+            picture: [],
+            lyrics: [],
+          },
+          format: {
+            ...metadata.format,
+            duration: metadata.format.duration,
+          },
+        };
 
       event.reply('song-imported', {
         songsImported: i,
@@ -80,15 +90,16 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     }
 
     // reorder filesToTags keys by artist and then album and then track number within that album
-    const orderedFilesToTags: { [key: string]: mm.IAudioMetadata } = {};
+    const orderedFilesToTags: { [key: string]: Partial<mm.IAudioMetadata> } =
+      {};
     Object.keys(filesToTags)
       .sort((a, b) => {
-        const artistA = filesToTags[a].common.artist;
-        const artistB = filesToTags[b].common.artist;
-        const albumA = filesToTags[a].common.album;
-        const albumB = filesToTags[b].common.album;
-        const trackA = filesToTags[a].common.track.no;
-        const trackB = filesToTags[b].common.track.no;
+        const artistA = filesToTags[a].common?.artist;
+        const artistB = filesToTags[b].common?.artist;
+        const albumA = filesToTags[a].common?.album;
+        const albumB = filesToTags[b].common?.album;
+        const trackA = filesToTags[a].common?.track.no;
+        const trackB = filesToTags[b].common?.track.no;
         // handle null cases
         if (!artistA) return -1;
         if (!artistB) return 1;
@@ -115,6 +126,11 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     // event.returnValue = result.filePaths;
     // lets make this reply with the nice object
     event.reply('select-dirs', orderedFilesToTags);
+
+    // write the json file to the user data directory as userConfig.json
+    const dataPath = app.getPath('userData');
+    const filePath = path.join(dataPath, 'userConfig.json');
+    fs.writeFileSync(filePath, JSON.stringify(orderedFilesToTags));
   });
 });
 
