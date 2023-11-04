@@ -261,6 +261,7 @@ function MainDash() {
                   console.log('double click');
                   await playSong(song, songMapping[song]);
                 }}
+                data-state={song === currentSong ? 'selected' : undefined}
                 className="border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
               >
                 <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
