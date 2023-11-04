@@ -281,7 +281,7 @@ function MainDash() {
         </table>
       </div>
 
-      <div className="fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-2 flex items-center justify-between">
+      <div className="fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3 flex items-center justify-between">
         <Box
           sx={{
             display: 'flex',
