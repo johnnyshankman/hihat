@@ -199,13 +199,13 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [React-url]: https://reactjs.org/
 [Electron.js]: https://img.shields.io/badge/Electron-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [Electron-url]: https://www.electronjs.org/
-[Tailwind.js]: https://img.shields.io/badge/Tailwind-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[Tailwind.js]: https://img.shields.io/badge/Tailwind-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
 [Tailwind-url]: https://tailwindcss.com/
 [ElectronReactBoilerplate]: https://img.shields.io/badge/Electron-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [ElectronReactBoilerplate-url]: https://electron-react-boilerplate.js.org/
-[MusicMetadata.js]: https://img.shields.io/badge/MusicMetadata-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[MusicMetadata.js]: https://img.shields.io/badge/MusicMetadata-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
 [MusicMetadata-url]: https://github.com/borewit/music-metadata#readme
-[MaterialUI.js]: https://img.shields.io/badge/MusicMetadata-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[MaterialUI.js]: https://img.shields.io/badge/MaterialUI-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
 [MaterialUI-url]: https://mui.com/material-ui/
 
 
