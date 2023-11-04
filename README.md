@@ -17,9 +17,8 @@
     <a href="https://github.com/johnnyshankman/hihat/issues">Request Feature</a>
   </p>
 
-  <p align="center">
+
     ![Build](https://github.com/johnnyshankman/hihat/actions/workflows/build.yml/badge.svg)
-  </p>
 </div>
 
 
