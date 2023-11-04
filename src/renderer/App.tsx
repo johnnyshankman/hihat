@@ -33,7 +33,7 @@ const TinyText = styled(Typography)({
 function MainDash() {
   const audioTagRef = useRef<HTMLAudioElement>(null);
   const fixedPlayerHeight = 78;
-  const rowHeight = 24.5;
+  const rowHeight = 25.5;
   const { width, height, ref } = useResizeDetector();
   const [rowContainerHeight, setRowContainerHeight] = useState(0);
 
@@ -54,30 +54,31 @@ function MainDash() {
   useEffect(() => {
     const artContainerHeight =
       document.querySelector('.art')?.clientHeight || 0;
+    const playerHeight = document.querySelector('.player')?.clientHeight || 0;
 
     if (height) {
       setRowContainerHeight(
-        height - fixedPlayerHeight - artContainerHeight - rowHeight,
+        height - playerHeight - artContainerHeight - rowHeight,
       );
     }
-  }, [height]);
+  }, [height, width]);
 
-  // some day i'd like to get this working again but my library config breaks the heap size
   useEffect(() => {
-    const artContainerHeight =
-      document.querySelector('.art')?.clientHeight || 0;
-
-    if (height) {
-      setRowContainerHeight(
-        height - fixedPlayerHeight - artContainerHeight - rowHeight,
-      );
-    }
-
     window.electron.ipcRenderer.once('initialize', (arg) => {
       // eslint-disable-next-line no-console
       console.log('start up', arg);
       // @ts-ignore
       setSongMapping(arg);
+
+      const artContainerHeight =
+        document.querySelector('.art')?.clientHeight || 0;
+      const playerHeight = document.querySelector('.player')?.clientHeight || 0;
+
+      if (height) {
+        setRowContainerHeight(
+          height - playerHeight - artContainerHeight - rowHeight,
+        );
+      }
     });
   }, []);
 
@@ -151,16 +152,13 @@ function MainDash() {
   };
 
   const importSongs = async () => {
-    // todo: add a progress response
     setShowImportingProgress(true);
     window.electron.ipcRenderer.on('song-imported', (args) => {
-      setSongsImported(args.songsImported);
-      setTotalSongs(args.totalSongs);
+      setSongsImported((args as any).songsImported);
+      setTotalSongs((args as any).totalSongs);
     });
 
     window.electron.ipcRenderer.once('select-dirs', (arg) => {
-      // eslint-disable-next-line no-console
-      console.log('finished', arg);
       // @ts-ignore
       setSongMapping(arg);
       setShowImportingProgress(false);
@@ -168,13 +166,21 @@ function MainDash() {
     window.electron.ipcRenderer.sendMessage('select-dirs');
   };
 
-  const renderRow = ({ index, key, style }) => {
+  const renderSongRow = ({
+    index,
+    key,
+    style,
+  }: {
+    index: number;
+    key: string;
+    style: any;
+  }) => {
     if (!songMapping) return null;
 
     const song = Object.keys(songMapping)[index];
 
     return (
-      <tr
+      <div
         key={key}
         style={style}
         onDoubleClick={async () => {
@@ -183,21 +189,21 @@ function MainDash() {
           await playSong(song, songMapping[song]);
         }}
         data-state={song === currentSong ? 'selected' : undefined}
-        className="border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
+        className="flex w-full items-center border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
       >
-        <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <div className="whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
           {songMapping?.[song].common.title}
-        </td>
-        <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        </div>
+        <div className="whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
           {songMapping?.[song].common.artist}
-        </td>
-        <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        </div>
+        <div className="whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
           {songMapping?.[song].common.album}
-        </td>
-        <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        </div>
+        <div className="w-14 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
           {convertToMMSS(songMapping?.[song].format.duration || 0)}
-        </td>
-      </tr>
+        </div>
+      </div>
     );
   };
 
@@ -262,7 +268,7 @@ function MainDash() {
         <button
           onClick={importSongs}
           type="button"
-          aria-label="play"
+          aria-label="import library"
           className="absolute top-6 right-4 items-center justify-center
           rounded-md text-sm font-medium ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
@@ -292,62 +298,37 @@ function MainDash() {
       </div>
 
       <div className="w-full overflow-auto">
-        <div className="w-full table max-h-full caption-bottom text-[11px] p-1">
-          <div className="table-header-group sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 outline-neutral-800">
-            <tr className="transition-colors divide-neutral-50">
-              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
+        <div className="w-full text-[11px]">
+          <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 outline-neutral-800">
+            <div className="flex transition-colors divide-neutral-50">
+              <div className="py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
                 Song
-              </th>
-              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
+              </div>
+              <div className="py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
                 Artist
-              </th>
-              <th className="py-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
+              </div>
+              <div className="py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
                 Album
-              </th>
-              <th
+              </div>
+              <div
                 aria-label="duration"
-                className="py-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+                className="py-1 w-14 text-center px-4 mr-2 align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
               >
                 <AccessTimeIcon fontSize="inherit" />
-              </th>
-            </tr>
+              </div>
+            </div>
           </div>
-          {/* {Object.keys(songMapping || {}).map((song) => (
-              <tr
-                key={song}
-                onDoubleClick={async () => {
-                  // eslint-disable-next-line no-console
-                  console.log('double click');
-                  await playSong(song, songMapping[song]);
-                }}
-                data-state={song === currentSong ? 'selected' : undefined}
-                className="border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
-              >
-                <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-                  {songMapping?.[song].common.title}
-                </td>
-                <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-                  {songMapping?.[song].common.artist}
-                </td>
-                <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-                  {songMapping?.[song].common.album}
-                </td>
-                <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-                  {convertToMMSS(songMapping?.[song].format.duration || 0)}
-                </td>
-              </tr>
-            ))} */}
           <List
-            width={1200}
+            width={width}
             height={rowContainerHeight}
-            rowRenderer={renderRow}
+            rowRenderer={renderSongRow}
             rowCount={Object.keys(songMapping || {}).length}
-            rowHeight={25.5}
+            rowHeight={rowHeight}
           />
         </div>
       </div>
 
-      <div className="fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3 flex items-center justify-between">
+      <div className="player fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3 flex items-center justify-between">
         <Box
           sx={{
             display: 'flex',
@@ -369,8 +350,6 @@ function MainDash() {
             aria-label={paused ? 'play' : 'pause'}
             color="inherit"
             onClick={() => {
-              4;
-
               setPaused(!paused);
               // eslint-disable-next-line no-unused-expressions
               audioTagRef.current!.paused

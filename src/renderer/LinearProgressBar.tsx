@@ -76,9 +76,11 @@ export default function LinearProgressBar({
           marginTop: '-8px',
         }}
       >
-        <TinyText>{convertToMMSS(position)}</TinyText>
-        <TinyText>{artist}</TinyText>
-        <TinyText>-{convertToMMSS(max - position)}</TinyText>
+        <TinyText aria-label="current-time">{convertToMMSS(position)}</TinyText>
+        <TinyText aria-label="current-artist">{artist}</TinyText>
+        <TinyText aria-label="current-max-time">
+          -{convertToMMSS(max - position)}
+        </TinyText>
       </Box>
     </Box>
   );
