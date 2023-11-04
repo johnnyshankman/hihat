@@ -356,6 +356,12 @@ function MainDash() {
           setCurrentSongTime(e.currentTarget.currentTime);
         }}
         ref={audioTagRef}
+        onPause={() => {
+          setPaused(true);
+        }}
+        onPlay={() => {
+          setPaused(false);
+        }}
       />
     </div>
   );
