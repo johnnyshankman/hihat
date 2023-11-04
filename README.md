@@ -10,7 +10,7 @@
   <h3 align="center">hihat</h3>
 
   <p align="center">
-    A lightweight elegant music folder player for desktop build on Electron and React.
+    A lightweight music media player for desktop built on Electron and React.
     <br />
     <br />
     <a href="https://github.com/johnnyshankman/hihat/issues">Report Bug</a>
