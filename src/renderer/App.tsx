@@ -17,6 +17,7 @@ import { styled, ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { List } from 'react-virtualized';
 import { useResizeDetector } from 'react-resize-detector';
+import LinearProgress from '@mui/material/LinearProgress';
 
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
@@ -215,17 +216,22 @@ function MainDash() {
       >
         <div className="flex flex-col items-center px-20">
           <DialogTitle>Importing</DialogTitle>
-          <CircularProgress
-            size={40}
-            className="mx-auto mt-2 mb-6"
-            color="inherit"
-          />
+          <Box sx={{ width: '100%', marginBottom: '12px' }}>
+            <LinearProgress
+              variant="determinate"
+              color="inherit"
+              value={(songsImported / totalSongs) * 100}
+            />
+          </Box>
           <div className="flex w-full justify-center p-2 mb-2">
             <TinyText>{`${songsImported} / ${totalSongs}`}</TinyText>
           </div>
         </div>
       </Dialog>
       <div className="flex art justify-center p-4 pb-8 space-x-4 md:flex-row">
+        {/**
+         * @dev either show the animated placeholder, or the album art
+         */}
         {!currentSongDataURL && (
           <div
             style={{
@@ -310,6 +316,10 @@ function MainDash() {
               <div className="py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
                 Album
               </div>
+              {/**
+               * @dev slightly diff size to accomodate the lack of scroll bar
+               * next to it, unlike a normal row.
+               */}
               <div
                 aria-label="duration"
                 className="py-1 w-14 text-center px-4 mr-2 align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
@@ -318,6 +328,9 @@ function MainDash() {
               </div>
             </div>
           </div>
+          {/**
+           * @dev since the list could be 1000s of songs long we must virtualize it
+           */}
           <List
             width={width}
             height={rowContainerHeight}
