@@ -12,6 +12,7 @@
   <p align="center">
     A lightweight elegant music folder player for desktop build on Electron and React.
     <br />
+    <br />
     <a href="https://github.com/johnnyshankman/hihat/issues">Report Bug</a>
     ·
     <a href="https://github.com/johnnyshankman/hihat/issues">Request Feature</a>
