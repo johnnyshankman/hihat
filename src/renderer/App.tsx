@@ -9,7 +9,6 @@ import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
 import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
 import PauseRounded from '@mui/icons-material/PauseRounded';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
@@ -33,7 +32,6 @@ const TinyText = styled(Typography)({
 
 function MainDash() {
   const audioTagRef = useRef<HTMLAudioElement>(null);
-  const fixedPlayerHeight = 78;
   const rowHeight = 25.5;
   const { width, height, ref } = useResizeDetector();
   const [rowContainerHeight, setRowContainerHeight] = useState(0);
@@ -51,7 +49,11 @@ function MainDash() {
     [key: string]: IAudioMetadata;
   }>();
 
-  // use useEffect to update the row container height when the window is resized
+  /**
+   * @dev useEffect to update the row container height when
+   * the window is resized in any way. that way our virtualized table
+   * always has the right size and right amount of rows visible.
+   */
   useEffect(() => {
     const artContainerHeight =
       document.querySelector('.art')?.clientHeight || 0;
@@ -64,10 +66,18 @@ function MainDash() {
     }
   }, [height, width]);
 
+  /**
+   * @dev useEffect as a single mount callback
+   * to initialize the song mapping and set the row container height
+   * to the correct initial value.
+   */
   useEffect(() => {
     window.electron.ipcRenderer.once('initialize', (arg) => {
-      // @ts-ignore
-      setSongMapping(arg);
+      setSongMapping(
+        arg as any as {
+          [key: string]: IAudioMetadata;
+        },
+      );
 
       const artContainerHeight =
         document.querySelector('.art')?.clientHeight || 0;
@@ -79,7 +89,7 @@ function MainDash() {
         );
       }
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -98,29 +108,38 @@ function MainDash() {
     return res;
   };
 
+  /**
+   * @dev self explanatory, converts to '00:00' format a la itunes
+   */
   const convertToMMSS = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
-    // Ensuring the format is two-digits both for minutes and seconds
     return `${minutes.toString().padStart(2, '0')}:${seconds
       .toString()
       .padStart(2, '0')}`;
   };
 
+  /**
+   * @dev update the current song and metadata then let the song play.
+   *      in the bg request and set the album art from main process.
+   */
   const playSong = async (song: string, meta: IAudioMetadata) => {
     setCurrentSong(song);
     setCurrentSongMetadata(meta);
 
+    // request the album art for the file from the main process
     window.electron.ipcRenderer.sendMessage('get-album-art', {
       path: song,
     });
 
-    window.electron.ipcRenderer.once('get-album-art', async (event, arg) => {
+    // set the current song data url when the main process responds
+    window.electron.ipcRenderer.once('get-album-art', async (event) => {
       const pic = event as IPicture;
       const url = await bufferToDataUrl(pic.data, pic.format);
       setCurrentSongDataURL(url);
     });
 
+    // play the song regardless of when the main process responds
     setPaused(false);
   };
 
@@ -150,6 +169,9 @@ function MainDash() {
     await playSong(previousSong, previousSongMeta);
   };
 
+  /**
+   * @dev allow user to select a directory and import all songs within it
+   */
   const importSongs = async () => {
     setShowImportingProgress(true);
     window.electron.ipcRenderer.on('song-imported', (args) => {
@@ -158,13 +180,19 @@ function MainDash() {
     });
 
     window.electron.ipcRenderer.once('select-dirs', (arg) => {
-      // @ts-ignore
-      setSongMapping(arg);
+      setSongMapping(
+        arg as any as {
+          [key: string]: IAudioMetadata;
+        },
+      );
       setShowImportingProgress(false);
     });
     window.electron.ipcRenderer.sendMessage('select-dirs');
   };
 
+  /**
+   * @dev render the row for the virtualized table, reps a single song
+   */
   const renderSongRow = ({
     index,
     key,
@@ -400,6 +428,13 @@ function MainDash() {
           />
         </div>
       </div>
+
+      {/**
+       * @dev this is the audio tag that plays the song.
+       * it is hidden and only used to play the song, as well as
+       * hook into the current time, pause, and play states.
+       * never let the user click on this directly.
+       * */}
       <audio
         className="hidden"
         src={`file://${currentSong}`}
@@ -420,6 +455,9 @@ function MainDash() {
   );
 }
 
+/**
+ * @dev forces all google material ui components to use the dark theme
+ */
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
@@ -434,6 +472,10 @@ export default function App() {
           path="/"
           element={
             <div className="shell">
+              {/**
+               * @dev themeprovder and cssbaseline are used to render
+               * all google material ui components in dark mode
+               */}
               <ThemeProvider theme={darkTheme}>
                 <CssBaseline />
                 <MainDash />
