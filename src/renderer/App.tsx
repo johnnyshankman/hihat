@@ -15,6 +15,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
 import { styled, ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { List } from 'react-virtualized';
+import { useResizeDetector } from 'react-resize-detector';
 
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
@@ -30,6 +32,10 @@ const TinyText = styled(Typography)({
 
 function MainDash() {
   const audioTagRef = useRef<HTMLAudioElement>(null);
+  const fixedPlayerHeight = 78;
+  const rowHeight = 24.5;
+  const { width, height, ref } = useResizeDetector();
+  const [rowContainerHeight, setRowContainerHeight] = useState(0);
 
   const [currentSongTime, setCurrentSongTime] = useState(0);
   const [paused, setPaused] = useState(true);
@@ -44,8 +50,29 @@ function MainDash() {
     [key: string]: IAudioMetadata;
   }>();
 
+  // use useEffect to update the row container height when the window is resized
+  useEffect(() => {
+    const artContainerHeight =
+      document.querySelector('.art')?.clientHeight || 0;
+
+    if (height) {
+      setRowContainerHeight(
+        height - fixedPlayerHeight - artContainerHeight - rowHeight,
+      );
+    }
+  }, [height]);
+
   // some day i'd like to get this working again but my library config breaks the heap size
   useEffect(() => {
+    const artContainerHeight =
+      document.querySelector('.art')?.clientHeight || 0;
+
+    if (height) {
+      setRowContainerHeight(
+        height - fixedPlayerHeight - artContainerHeight - rowHeight,
+      );
+    }
+
     window.electron.ipcRenderer.once('initialize', (arg) => {
       // eslint-disable-next-line no-console
       console.log('start up', arg);
@@ -141,8 +168,41 @@ function MainDash() {
     window.electron.ipcRenderer.sendMessage('select-dirs');
   };
 
+  const renderRow = ({ index, key, style }) => {
+    if (!songMapping) return null;
+
+    const song = Object.keys(songMapping)[index];
+
+    return (
+      <tr
+        key={key}
+        style={style}
+        onDoubleClick={async () => {
+          // eslint-disable-next-line no-console
+          console.log('double click');
+          await playSong(song, songMapping[song]);
+        }}
+        data-state={song === currentSong ? 'selected' : undefined}
+        className="border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
+      >
+        <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+          {songMapping?.[song].common.title}
+        </td>
+        <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+          {songMapping?.[song].common.artist}
+        </td>
+        <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+          {songMapping?.[song].common.album}
+        </td>
+        <td className="py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+          {convertToMMSS(songMapping?.[song].format.duration || 0)}
+        </td>
+      </tr>
+    );
+  };
+
   return (
-    <div className="h-full flex flex-col dark">
+    <div className="h-full flex flex-col dark" ref={ref}>
       <Dialog
         className="flex flex-col items-center justify-center content-center p-10"
         open={showImportingProgress}
@@ -159,7 +219,7 @@ function MainDash() {
           </div>
         </div>
       </Dialog>
-      <div className="flex justify-center p-4 pb-8 space-x-4 md:flex-row">
+      <div className="flex art justify-center p-4 pb-8 space-x-4 md:flex-row">
         {!currentSongDataURL && (
           <div
             style={{
@@ -232,8 +292,8 @@ function MainDash() {
       </div>
 
       <div className="w-full overflow-auto">
-        <table className="w-full max-h-full caption-bottom text-[11px] p-1 overflow-auto">
-          <thead className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 outline-neutral-800">
+        <div className="w-full table max-h-full caption-bottom text-[11px] p-1">
+          <div className="table-header-group sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 outline-neutral-800">
             <tr className="transition-colors divide-neutral-50">
               <th className="py-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
                 Song
@@ -251,9 +311,8 @@ function MainDash() {
                 <AccessTimeIcon fontSize="inherit" />
               </th>
             </tr>
-          </thead>
-          <tbody className="[&amp;_tr:last-child]:border-0">
-            {Object.keys(songMapping || {}).map((song) => (
+          </div>
+          {/* {Object.keys(songMapping || {}).map((song) => (
               <tr
                 key={song}
                 onDoubleClick={async () => {
@@ -277,9 +336,15 @@ function MainDash() {
                   {convertToMMSS(songMapping?.[song].format.duration || 0)}
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            ))} */}
+          <List
+            width={1200}
+            height={rowContainerHeight}
+            rowRenderer={renderRow}
+            rowCount={Object.keys(songMapping || {}).length}
+            rowHeight={25.5}
+          />
+        </div>
       </div>
 
       <div className="fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3 flex items-center justify-between">
