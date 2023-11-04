@@ -1,7 +1,5 @@
 <a name="readme-top"></a>
 
-![Build](https://github.com/johnnyshankman/hihat/actions/workflows/build.yml/badge.svg)
-
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
@@ -17,6 +15,10 @@
     <a href="https://github.com/johnnyshankman/hihat/issues">Report Bug</a>
     ·
     <a href="https://github.com/johnnyshankman/hihat/issues">Request Feature</a>
+  </p>
+
+  <p align="center">
+    ![Build](https://github.com/johnnyshankman/hihat/actions/workflows/build.yml/badge.svg)
   </p>
 </div>
 
@@ -189,7 +191,7 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [issues-url]: https://github.com/johnnyshankman/hihat/issues
 [license-shield]: https://img.shields.io/github/license/johnnyshankman/hihat.svg?style=for-the-badge
 [license-url]: https://github.com/johnnyshankman/hihat/blob/master/LICENSE.txt
-[product-screenshot]: readme-images/hihat.png.png
+[product-screenshot]: readme-images/hihat.png
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [React-url]: https://reactjs.org/
 [Electron.js]: https://img.shields.io/badge/Electron-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
