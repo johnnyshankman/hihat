@@ -54,13 +54,11 @@
 
 [![hihat Screen Shot][product-screenshot]](https://whitelights.co)
 
-hihat is a simple, elegant music player for desktop built with Electron and React. It is meant to be used with a large folder of music files. It is not meant to be a replacement for Spotify or Apple Music, but rather a way to play your music files in a simple, elegant way, similar to the way you would use iTunes or Windows Media Player.
+hihat is a simple music folder player for desktop. It is not meant to be a complete replacement for Spotify or Apple Music, but rather a way to play your music files in a simple, elegant way, similar to the way you would use iTunes or Windows Media Player in the early 2000s.
 
-See [The Chromium Project](https://www.chromium.org/audio-video/) for information on supported audio formats, as well as the [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats. Almost every format under the sun should be supported, and can be mixed and matched in the same folder.
+As a music file hoarder myself. I found myself extremely disappointed with the featureset of modern media players like VLC (no album art display) and Spotify (doesn't show enough songs in one window).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 ### Built With
 
@@ -74,6 +72,12 @@ This project was built with the following technologies:
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
+### Supported Audio Formats and Metadata Formats
+
+Almost every format under the sun should be supported, and can be mixed and matched in the same folder. The app does not currently support displaying songs from more than one folder at a time yet.
+
+* See [The Chromium Project](https://www.chromium.org/audio-video/) for information on supported audio formats.
+* See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats. 
 
 <!-- GETTING STARTED -->
 ## Getting Started
