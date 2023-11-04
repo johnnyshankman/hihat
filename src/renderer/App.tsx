@@ -66,8 +66,6 @@ function MainDash() {
 
   useEffect(() => {
     window.electron.ipcRenderer.once('initialize', (arg) => {
-      // eslint-disable-next-line no-console
-      console.log('start up', arg);
       // @ts-ignore
       setSongMapping(arg);
 
@@ -185,8 +183,6 @@ function MainDash() {
         key={key}
         style={style}
         onDoubleClick={async () => {
-          // eslint-disable-next-line no-console
-          console.log('double click');
           await playSong(song, songMapping[song]);
         }}
         data-state={song === currentSong ? 'selected' : undefined}
