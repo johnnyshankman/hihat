@@ -80,8 +80,8 @@ Almost every format under the sun should be supported, and can be mixed and matc
 * See [The Chromium Project](https://www.chromium.org/audio-video/) for information on supported audio formats.
 * See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats. 
 
-
-
+<br />
+<br />
 <!-- GETTING STARTED -->
 ## Getting Started
 
