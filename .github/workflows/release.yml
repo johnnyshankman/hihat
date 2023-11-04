@@ -18,8 +18,11 @@ jobs:
     - name: Lint
       run: yarn lint
 
+    - name: Build
+      run: yarn build
+
     - name: Package
-      run: yarn build && yarn package-ci
+      run: yarn package-ci
 
     - name: get-npm-version
       id: package-version
