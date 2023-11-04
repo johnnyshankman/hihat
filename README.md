@@ -16,12 +16,9 @@
     ·
     <a href="https://github.com/johnnyshankman/hihat/issues">Request Feature</a>
   </p>
-
-
-    ![Build](https://github.com/johnnyshankman/hihat/actions/workflows/build.yml/badge.svg)
 </div>
 
-
+![Build](https://github.com/johnnyshankman/hihat/actions/workflows/build.yml/badge.svg)
 
 <!-- TABLE OF CONTENTS -->
 <details>
