@@ -54,9 +54,9 @@
 
 [![hihat Screen Shot][product-screenshot]](https://whitelights.co)
 
-hihat is a simple music folder player for desktop. It is not meant to be a complete replacement for Spotify or Apple Music, but rather a way to play your music files in a simple, elegant way, similar to the way you would use iTunes or Windows Media Player in the early 2000s.
+hihat is a simple a way to play your music files, similar to the way you would use iTunes or Windows Media Player in the early 2000s.
 
-As a music file hoarder myself. I found myself extremely disappointed with the featureset of modern media players like VLC (no album art display) and Spotify (doesn't show enough songs in one window).
+As a music file hoarder myself. I found myself extremely disappointed with the featureset of modern media players like VLC (no album art display) and Spotify (doesn't show enough songs in one window), so I built this. It's fully responsive, dark mode by default (as we all know music lovers are night owls), and doens't have any frills or thrills.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -66,6 +66,7 @@ This project was built with the following technologies:
 
 * [![Electron][Electron.js]][Electron-url]
 * [![React][React.js]][React-url]
+* [![Google Material UI][MaterialUI.js]][MaterialUI-url]
 * [![Tailwind][Tailwind.js]][Tailwind-url]
 * [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
 
@@ -204,6 +205,8 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [ElectronReactBoilerplate-url]: https://electron-react-boilerplate.js.org/
 [MusicMetadata.js]: https://img.shields.io/badge/MusicMetadata-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [MusicMetadata-url]: https://github.com/borewit/music-metadata#readme
+[MaterialUI.js]: https://img.shields.io/badge/MusicMetadata-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[MaterialUI-url]: https://mui.com/material-ui/
 
 
 
