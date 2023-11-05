@@ -141,7 +141,8 @@ _Simply hit the icon in the top right, select a folder, wait for the import proc
 - [ ] Multiple playlists
 - [ ] Shuffle
 - [ ] OSX song info in the menu bar tray (not sure the name of this thing)
-    ![Screenshot 2023-11-04 at 10 50 26 PM](https://github.com/johnnyshankman/hihat/assets/6632701/c0c2e249-08bd-46d0-9487-3e89be56ff4f)
+    
+![Screenshot 2023-11-04 at 10 50 26 PM](https://github.com/johnnyshankman/hihat/assets/6632701/c0c2e249-08bd-46d0-9487-3e89be56ff4f)
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
 
