@@ -157,9 +157,7 @@ export default class MenuBuilder {
         {
           label: 'Documentation',
           click() {
-            shell.openExternal(
-              'https://github.com/johnnyshankman/hihat/tree/main/docs#readme',
-            );
+            shell.openExternal('https://github.com/johnnyshankman/hihat');
           },
         },
         {
@@ -232,9 +230,7 @@ export default class MenuBuilder {
           {
             label: 'Documentation',
             click() {
-              shell.openExternal(
-                'https://github.com/johnnyshankman/hihat/tree/main/docs#readme',
-              );
+              shell.openExternal('https://github.com/johnnyshankman/hihat');
             },
           },
           {
