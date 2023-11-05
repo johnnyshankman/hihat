@@ -356,7 +356,7 @@ function MainDash() {
            * @dev since the list could be 1000s of songs long we must virtualize it
            */}
           <List
-            width={width}
+            width={width || 0}
             height={rowContainerHeight}
             rowRenderer={renderSongRow}
             rowCount={Object.keys(songMapping || {}).length}
