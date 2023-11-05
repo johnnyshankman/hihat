@@ -272,6 +272,7 @@ function MainDash() {
     window.electron.ipcRenderer.once('select-dirs', (arg) => {
       const typedArg = arg as StoreStructure;
       setLibrary(typedArg.library);
+      setFilteredLibrary(typedArg.library);
       setShowImportingProgress(false);
     });
     window.electron.ipcRenderer.sendMessage('select-dirs');
