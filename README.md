@@ -98,7 +98,7 @@ This is a bare bones app meant for use with big folders of music, such as someth
 <!-- GETTING STARTED -->
 ## Getting Started
 
-To get a local copy up and running follow these steps.
+_Follow the steps below to install the local development environment and serve the development application locally._
 
 ### Prerequisites
 
@@ -114,8 +114,6 @@ This is an example of how to list things you need to use the software and how to
 
 ### Installation
 
-_Follow the steps below to install the local development environment and serve the development application locally._
-
 1. Clone the repo
    ```sh
    git clone https://github.com/johnnyshankman/hihat.git
@@ -124,9 +122,12 @@ _Follow the steps below to install the local development environment and serve t
    ```sh
    yarn install
    ```
-4. Run the app in development with hot reloading
+
+### Running Local App
+
+1. Run the app in development with hot reloading
    ```sh
-   yarn dev
+   yarn start
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
