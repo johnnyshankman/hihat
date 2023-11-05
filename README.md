@@ -91,9 +91,7 @@ Almost every format under the sun should be supported, and can be mixed'n'matche
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-This is a very bare bones app meant for use with a gigantic folder of music files, such as something you might end up with if you are an avid user of SpotDL. It is not meant to be a replacement for Spotify or Apple Music, but rather a way to play your music files in a simple, elegant way, similar to the way you would use iTunes or Windows Media Player.
-
-_Simply hit the icon in the top right, select a folder, wait for the import proces to finish, and use as you would any other media player._
+This is a bare bones app meant for use with big folders of music, such as something you might end up with if you used to use iTunes. _Simply hit the import icon in the top right, select a folder, wait for the import proces to finish, and use as you would any other media player._
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
