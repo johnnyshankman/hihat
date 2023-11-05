@@ -17,7 +17,7 @@
     ·
     <a href="https://github.com/johnnyshankman/hihat/issues">Request Feature</a>
     ·
-    <a href="https://github.com/johnnyshankman/hihat/releases/latest">OSX Download</a>
+    <a href="https://github.com/johnnyshankman/hihat/releases/latest">Downloads</a>
   </p>
   <p align="center">
     <img src="https://github.com/johnnyshankman/hihat/actions/workflows/build.yml/badge.svg" alt="Badge" width="105" height="20">
