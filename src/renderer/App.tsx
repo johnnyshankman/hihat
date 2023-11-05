@@ -22,6 +22,7 @@ import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 
+// @TODO: doesn't respect nesting/scss like it should
 import './App.scss';
 
 const TinyText = styled(Typography)({
@@ -49,48 +50,6 @@ function MainDash() {
   const [songMapping, setSongMapping] = useState<{
     [key: string]: IAudioMetadata;
   }>();
-
-  /**
-   * @dev useEffect to update the row container height when
-   * the window is resized in any way. that way our virtualized table
-   * always has the right size and right amount of rows visible.
-   */
-  useEffect(() => {
-    const artContainerHeight =
-      document.querySelector('.art')?.clientHeight || 0;
-    const playerHeight = document.querySelector('.player')?.clientHeight || 0;
-
-    if (height) {
-      setRowContainerHeight(
-        height - playerHeight - artContainerHeight - rowHeight,
-      );
-    }
-  }, [height, width]);
-
-  /**
-   * @dev useEffect as a single mount callback
-   * to initialize the song mapping and set the row container height
-   * to the correct initial value.
-   */
-  useEffect(() => {
-    window.electron.ipcRenderer.once('initialize', (arg) => {
-      setSongMapping(
-        arg as any as {
-          [key: string]: IAudioMetadata;
-        },
-      );
-
-      const artContainerHeight =
-        document.querySelector('.art')?.clientHeight || 0;
-      const playerHeight = document.querySelector('.player')?.clientHeight || 0;
-
-      if (height) {
-        setRowContainerHeight(
-          height - playerHeight - artContainerHeight - rowHeight,
-        );
-      }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -125,6 +84,26 @@ function MainDash() {
    *      in the bg request and set the album art from main process.
    */
   const playSong = async (song: string, meta: IAudioMetadata) => {
+    // update the navigator
+    if (
+      navigator.mediaSession.metadata?.title &&
+      meta.common.title &&
+      navigator.mediaSession.metadata?.artist &&
+      meta.common.artist &&
+      navigator.mediaSession.metadata?.album &&
+      meta.common.album
+    ) {
+      navigator.mediaSession.metadata.title = meta.common.title;
+      navigator.mediaSession.metadata.artist = meta.common.artist;
+      navigator.mediaSession.metadata.album = meta.common.album;
+    } else {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: meta.common.title,
+        artist: meta.common.artist,
+        album: meta.common.album,
+      });
+    }
+
     setCurrentSong(song);
     setCurrentSongMetadata(meta);
 
@@ -138,6 +117,15 @@ function MainDash() {
       const pic = event as IPicture;
       const url = await bufferToDataUrl(pic.data, pic.format);
       setCurrentSongDataURL(url);
+      if (navigator.mediaSession.metadata?.artwork) {
+        navigator.mediaSession.metadata.artwork = [
+          {
+            src: url,
+            sizes: '192x192',
+            type: pic.format,
+          },
+        ];
+      }
     });
 
     // play the song regardless of when the main process responds
@@ -232,6 +220,55 @@ function MainDash() {
       </div>
     );
   };
+
+  /**
+   * @dev useEffect to update the row container height when
+   * the window is resized in any way. that way our virtualized table
+   * always has the right size and right amount of rows visible.
+   */
+  useEffect(() => {
+    const artContainerHeight =
+      document.querySelector('.art')?.clientHeight || 0;
+    const playerHeight = document.querySelector('.player')?.clientHeight || 0;
+
+    if (height) {
+      setRowContainerHeight(
+        height - playerHeight - artContainerHeight - rowHeight,
+      );
+    }
+  }, [height, width]);
+
+  /**
+   * @dev useEffect as a single mount callback
+   * to initialize the song mapping and set the row container height
+   * to the correct initial value.
+   */
+  useEffect(() => {
+    window.electron.ipcRenderer.once('initialize', (arg) => {
+      setSongMapping(
+        arg as any as {
+          [key: string]: IAudioMetadata;
+        },
+      );
+
+      const artContainerHeight =
+        document.querySelector('.art')?.clientHeight || 0;
+      const playerHeight = document.querySelector('.player')?.clientHeight || 0;
+
+      if (height) {
+        setRowContainerHeight(
+          height - playerHeight - artContainerHeight - rowHeight,
+        );
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  navigator.mediaSession.setActionHandler('previoustrack', () => {
+    playPreviousSong();
+  });
+  navigator.mediaSession.setActionHandler('nexttrack', () => {
+    playNextSong();
+  });
 
   return (
     <div className="h-full flex flex-col dark" ref={ref}>
