@@ -81,7 +81,7 @@ This project was built with the following technologies:
 Almost every format under the sun should be supported, and can be mixed and matched in the same folder. The app does not currently support displaying songs from more than one folder at a time yet.
 
 * See [The Chromium Project](https://www.chromium.org/audio-video/) for information on supported audio formats.
-* See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats. 
+* See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -144,8 +144,9 @@ _Simply hit the icon in the top right, select a folder, wait for the import proc
 - [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Multiple playlists
 - [ ] Shuffle
+- [ ] Fix the player UX on really really thin windows (under 300px)
 - [ ] OSX song info in the menu bar tray (not sure the name of this thing)
-    
+
 ![Screenshot 2023-11-04 at 10 50 26 PM](https://github.com/johnnyshankman/hihat/assets/6632701/c0c2e249-08bd-46d0-9487-3e89be56ff4f)
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
