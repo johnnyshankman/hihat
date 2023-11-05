@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
-import { IAudioMetadata, IPicture } from 'music-metadata';
+import { IPicture } from 'music-metadata';
 import { useState, useRef, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
@@ -18,12 +18,41 @@ import { List } from 'react-virtualized';
 import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
 import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
-
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 
 // @TODO: doesn't respect nesting/scss like it should
 import './App.scss';
+
+type SongSkeletonStructure = {
+  common: {
+    artist?: string;
+    album?: string;
+    title?: string;
+    track?: {
+      no: number | null;
+      of: number | null;
+    };
+    picture?: IPicture[];
+    lyrics?: string[];
+  };
+  format: {
+    duration?: number;
+  };
+};
+
+type Playlist = {
+  name: string;
+  songs: string[];
+};
+
+// @TODO: put this somewhere common between renderer and main process
+type StoreStructure = {
+  library: {
+    [key: string]: SongSkeletonStructure;
+  };
+  playlists: Playlist[];
+};
 
 const TinyText = styled(Typography)({
   fontSize: '0.75rem',
@@ -46,10 +75,8 @@ function MainDash() {
   const [songsImported, setSongsImported] = useState(0);
   const [totalSongs, setTotalSongs] = useState(0);
   const [currentSongMetadata, setCurrentSongMetadata] =
-    useState<IAudioMetadata>();
-  const [songMapping, setSongMapping] = useState<{
-    [key: string]: IAudioMetadata;
-  }>();
+    useState<SongSkeletonStructure>();
+  const [library, setLibrary] = useState<StoreStructure['library']>();
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -83,7 +110,7 @@ function MainDash() {
    * @dev update the current song and metadata then let the song play.
    *      in the bg request and set the album art from main process.
    */
-  const playSong = async (song: string, meta: IAudioMetadata) => {
+  const playSong = async (song: string, meta: SongSkeletonStructure) => {
     // update the navigator
     if (
       navigator.mediaSession.metadata?.title &&
@@ -133,28 +160,28 @@ function MainDash() {
   };
 
   const playNextSong = async () => {
-    if (!songMapping) return;
-    const keys = Object.keys(songMapping);
+    if (!library) return;
+    const keys = Object.keys(library);
     const currentSongIndex = keys.indexOf(currentSong || '');
     const nextSongIndex = currentSongIndex + 1;
     if (nextSongIndex >= keys.length) {
       return;
     }
     const nextSong = keys[nextSongIndex];
-    const nextSongMeta = songMapping[nextSong];
+    const nextSongMeta = library[nextSong];
     await playSong(nextSong, nextSongMeta);
   };
 
   const playPreviousSong = async () => {
-    if (!songMapping) return;
-    const keys = Object.keys(songMapping);
+    if (!library) return;
+    const keys = Object.keys(library);
     const currentSongIndex = keys.indexOf(currentSong || '');
     const previousSongIndex = currentSongIndex - 1;
     if (previousSongIndex < 0) {
       return;
     }
     const previousSong = keys[previousSongIndex];
-    const previousSongMeta = songMapping[previousSong];
+    const previousSongMeta = library[previousSong];
     await playSong(previousSong, previousSongMeta);
   };
 
@@ -169,11 +196,8 @@ function MainDash() {
     });
 
     window.electron.ipcRenderer.once('select-dirs', (arg) => {
-      setSongMapping(
-        arg as any as {
-          [key: string]: IAudioMetadata;
-        },
-      );
+      const typedArg = arg as StoreStructure;
+      setLibrary(typedArg.library);
       setShowImportingProgress(false);
     });
     window.electron.ipcRenderer.sendMessage('select-dirs');
@@ -191,31 +215,31 @@ function MainDash() {
     key: string;
     style: any;
   }) => {
-    if (!songMapping) return null;
+    if (!library) return null;
 
-    const song = Object.keys(songMapping)[index];
+    const song = Object.keys(library)[index];
 
     return (
       <div
         key={key}
         style={style}
         onDoubleClick={async () => {
-          await playSong(song, songMapping[song]);
+          await playSong(song, library[song]);
         }}
         data-state={song === currentSong ? 'selected' : undefined}
         className="flex w-full items-center border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
       >
         <div className="whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {songMapping?.[song].common.title}
+          {library?.[song].common.title}
         </div>
         <div className="whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {songMapping?.[song].common.artist}
+          {library?.[song].common.artist}
         </div>
         <div className="whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {songMapping?.[song].common.album}
+          {library?.[song].common.album}
         </div>
         <div className="w-14 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {convertToMMSS(songMapping?.[song].format.duration || 0)}
+          {convertToMMSS(library?.[song].format.duration || 0)}
         </div>
       </div>
     );
@@ -244,12 +268,9 @@ function MainDash() {
    * to the correct initial value.
    */
   useEffect(() => {
-    window.electron.ipcRenderer.once('initialize', (arg) => {
-      setSongMapping(
-        arg as any as {
-          [key: string]: IAudioMetadata;
-        },
-      );
+    window.electron.ipcRenderer.once('initialize', (arg: unknown) => {
+      const typedArg = arg as StoreStructure;
+      setLibrary(typedArg.library);
 
       const artContainerHeight =
         document.querySelector('.art')?.clientHeight || 0;
@@ -381,7 +402,7 @@ function MainDash() {
             width={width || 0}
             height={rowContainerHeight}
             rowRenderer={renderSongRow}
-            rowCount={Object.keys(songMapping || {}).length}
+            rowCount={Object.keys(library || {}).length}
             rowHeight={rowHeight}
           />
         </div>
