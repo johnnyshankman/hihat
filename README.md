@@ -68,6 +68,7 @@ This project was built with the following technologies:
 
 * [![Electron][Electron.js]][Electron-url]
 * [![React][React.js]][React-url]
+* [![Electron React Boilerplate][ElectronReactBoilerplate.js]][ElectronReactBoilerplate-url]
 * [![Typescript][Typescript.js]][Typescript-url]
 * [![Google Material UI][MaterialUI.js]][MaterialUI-url]
 * [![Tailwind][Tailwind.js]][Tailwind-url]
@@ -212,7 +213,7 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [Electron-url]: https://www.electronjs.org/
 [Tailwind.js]: https://img.shields.io/badge/Tailwind-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
 [Tailwind-url]: https://tailwindcss.com/
-[ElectronReactBoilerplate]: https://img.shields.io/badge/Electron-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[ElectronReactBoilerplate]: https://img.shields.io/badge/ReactElectronBoilerplate-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [ElectronReactBoilerplate-url]: https://electron-react-boilerplate.js.org/
 [MusicMetadata.js]: https://img.shields.io/badge/MusicMetadata-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
 [MusicMetadata-url]: https://github.com/borewit/music-metadata
