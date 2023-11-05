@@ -253,7 +253,7 @@ function MainDash() {
           </div>
         </div>
       </Dialog>
-      <div className="flex art justify-center p-4 pb-8 space-x-4 md:flex-row">
+      <div className="flex art drag justify-center p-4 pb-8 space-x-4 md:flex-row">
         {/**
          * @dev either show the animated placeholder, or the album art
          */}
@@ -300,7 +300,7 @@ function MainDash() {
           onClick={importSongs}
           type="button"
           aria-label="import library"
-          className="absolute top-6 right-4 items-center justify-center
+          className="nodrag absolute top-6 right-4 items-center justify-center
           rounded-md font-medium ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
@@ -350,7 +350,7 @@ function MainDash() {
         </div>
       </div>
 
-      <div className="player gap-4 fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3 flex items-center justify-between">
+      <div className="player drag gap-4 fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3 flex items-center justify-between">
         <Box
           sx={{
             display: 'flex',
