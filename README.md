@@ -207,7 +207,7 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [ElectronReactBoilerplate]: https://img.shields.io/badge/Electron-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [ElectronReactBoilerplate-url]: https://electron-react-boilerplate.js.org/
 [MusicMetadata.js]: https://img.shields.io/badge/MusicMetadata-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
-[MusicMetadata-url]: https://github.com/borewit/music-metadata#readme
+[MusicMetadata-url]: https://github.com/borewit/music-metadata
 [MaterialUI.js]: https://img.shields.io/badge/MaterialUI-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
 [MaterialUI-url]: https://mui.com/material-ui/
 [Typescript.js]: https://img.shields.io/badge/Typescript-20232A?style=for-the-badge&logo=typescript&logoColor=007ACC
