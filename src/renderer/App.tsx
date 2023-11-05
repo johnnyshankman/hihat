@@ -302,9 +302,7 @@ function MainDash() {
     const playerHeight = document.querySelector('.player')?.clientHeight || 0;
 
     if (height) {
-      setRowContainerHeight(
-        height - playerHeight - artContainerHeight - rowHeight,
-      );
+      setRowContainerHeight(height - playerHeight - artContainerHeight);
     }
   }, [height, width]);
 
@@ -324,9 +322,7 @@ function MainDash() {
       const playerHeight = document.querySelector('.player')?.clientHeight || 0;
 
       if (height) {
-        setRowContainerHeight(
-          height - playerHeight - artContainerHeight - rowHeight,
-        );
+        setRowContainerHeight(height - playerHeight - artContainerHeight);
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
