@@ -17,6 +17,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { List } from 'react-virtualized';
 import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
+import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
 
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
@@ -300,30 +301,14 @@ function MainDash() {
           type="button"
           aria-label="import library"
           className="absolute top-6 right-4 items-center justify-center
-          rounded-md text-sm font-medium ring-offset-background transition-colors
+          rounded-md font-medium ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
           disabled:opacity-50 border border-neutral-800 bg-background
           hover:bg-white hover:text-black
-          h-10 px-4 py-2"
+          px-4 py-2.5"
         >
-          <svg
-            key="0"
-            className=" h-5 w-5"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M9 18V5l12-2v13" />
-            <circle cx="6" cy="18" r="3" />
-            <circle cx="18" cy="16" r="3" />
-          </svg>
+          <LibraryAddOutlined />
         </button>
       </div>
 
