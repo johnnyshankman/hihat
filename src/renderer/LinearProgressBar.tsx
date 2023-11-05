@@ -41,7 +41,7 @@ export default function LinearProgressBar({
   }, [value]);
 
   return (
-    <Box sx={{ width: '33%' }}>
+    <Box sx={{ width: '33%', display: 'flex', flexDirection: 'column' }}>
       <Box
         sx={{
           display: 'flex',
@@ -51,29 +51,35 @@ export default function LinearProgressBar({
       >
         <TinyText>{title}</TinyText>
       </Box>
-      <Slider
-        color="primary"
-        aria-label="time-indicator"
-        size="small"
-        value={position}
-        min={0}
-        step={1}
-        max={max}
-        onChange={(_, val) => {
-          setPosition(val as number);
-          onManualChange(val as number);
-        }}
+      <Box
         sx={{
-          color: 'rgba(133, 133, 133)',
-          padding: '8px 0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-      />
+      >
+        <Slider
+          color="primary"
+          aria-label="time-indicator"
+          size="small"
+          value={position}
+          min={0}
+          step={1}
+          max={max}
+          onChange={(_, val) => {
+            setPosition(val as number);
+            onManualChange(val as number);
+          }}
+          sx={{
+            color: 'rgba(133, 133, 133)',
+          }}
+        />
+      </Box>
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginTop: '-8px',
         }}
       >
         <TinyText aria-label="current-time">{convertToMMSS(position)}</TinyText>

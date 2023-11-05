@@ -18,8 +18,8 @@ export default function ContinuousSlider({
   };
 
   return (
-    <Box sx={{ width: 200 }}>
-      <Stack spacing={2} direction="row" sx={{ mb: 1 }} alignItems="center">
+    <Box sx={{ width: '100%', maxWidth: 200 }}>
+      <Stack spacing={1} direction="row" sx={{ mb: 1 }} alignItems="center">
         <VolumeDown fontSize="small" />
         <Slider
           size="small"

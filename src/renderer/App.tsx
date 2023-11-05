@@ -350,15 +350,13 @@ function MainDash() {
         </div>
       </div>
 
-      <div className="player fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3 flex items-center justify-between">
+      <div className="player gap-4 fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3 flex items-center justify-between">
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'start',
-            width: '33%',
             flex: 1,
-            mt: -1,
           }}
         >
           <IconButton
@@ -405,7 +403,7 @@ function MainDash() {
             }
           }}
         />
-        <div className="flex justify-end flex-1">
+        <div className="flex justify-end flex-1 mt-2">
           <ContinuousSlider
             onChange={(event, value) => {
               audioTagRef.current!.volume = (value as number) / 100;
