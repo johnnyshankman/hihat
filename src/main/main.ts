@@ -9,6 +9,36 @@ import * as mm from 'music-metadata';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
+type SongSkeletonStructure = {
+  common: {
+    artist?: string;
+    album?: string;
+    title?: string;
+    track?: {
+      no: number | null;
+      of: number | null;
+    };
+    picture?: mm.IPicture[];
+    lyrics?: string[];
+  };
+  format: {
+    duration?: number;
+  };
+};
+
+type Playlist = {
+  name: string;
+  songs: string[];
+};
+
+// @TODO: put this somewhere common between renderer and main process
+type StoreStructure = {
+  library: {
+    [key: string]: SongSkeletonStructure;
+  };
+  playlists: Playlist[];
+};
+
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
@@ -142,14 +172,18 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     });
 
   filesToTags = {};
+  const initialStore = {
+    library: orderedFilesToTags,
+    playlists: [],
+  } as StoreStructure;
 
-  event.reply('select-dirs', orderedFilesToTags);
+  event.reply('select-dirs', initialStore);
 
   // write the json file to the user data directory as userConfig.json
   // for caching purposes, we use this during future startups of the app.
   const dataPath = app.getPath('userData');
   const filePath = path.join(dataPath, 'userConfig.json');
-  fs.writeFileSync(filePath, JSON.stringify(orderedFilesToTags));
+  fs.writeFileSync(filePath, JSON.stringify(initialStore));
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -234,7 +268,7 @@ const createWindow = async () => {
     const dataPath = app.getPath('userData');
     const filePath = path.join(dataPath, 'userConfig.json');
     const contents = parseData(filePath);
-    mainWindow.webContents.send('initialize', contents);
+    mainWindow.webContents.send('initialize', contents as StoreStructure);
   });
 
   mainWindow.on('ready-to-show', () => {
