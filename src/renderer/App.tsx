@@ -430,8 +430,8 @@ function MainDash() {
               inputProps={{ 'aria-label': 'search' }}
               onChange={handleSearch}
               sx={{
-                fontSize: '12px',
-                padding: '6px 0',
+                fontSize: '14px',
+                padding: '4px 0',
               }}
             />
           </Search>
