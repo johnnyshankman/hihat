@@ -437,7 +437,7 @@ function MainDash() {
        * */}
       <audio
         className="hidden"
-        src={`file://${currentSong}`}
+        src={`my-magic-protocol://getMediaFile/${currentSong}`}
         autoPlay={!paused}
         onEnded={playNextSong}
         onTimeUpdate={(e) => {

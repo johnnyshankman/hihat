@@ -9,7 +9,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog, protocol } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import fs from 'fs';
@@ -35,12 +35,6 @@ function parseData(fp: string) {
 }
 
 let mainWindow: BrowserWindow | null = null;
-
-ipcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
-});
 
 ipcMain.on('get-album-art', async (event, arg) => {
   const filePath = arg.path;
@@ -164,6 +158,16 @@ const createWindow = async () => {
     await installExtensions();
   }
 
+  protocol.registerFileProtocol('my-magic-protocol', (request, callback) => {
+    const url = request.url.replace('my-magic-protocol://getMediaFile/', '');
+    try {
+      return callback(url);
+    } catch (error) {
+      console.error(error);
+      return callback(404);
+    }
+  });
+
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
     : path.join(__dirname, '../../assets');
@@ -180,7 +184,6 @@ const createWindow = async () => {
     frame: false,
     titleBarStyle: 'hidden',
     webPreferences: {
-      webSecurity: false,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
