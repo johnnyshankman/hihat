@@ -140,7 +140,7 @@ This is an example of how to list things you need to use the software and how to
 - [x] Autoplay
 - [x] Virtualized Lists for opitmal rendering
 - [x] Cache imported songs from previous session
-- [ ] Minimalist search/find solution for larger librarys
+- [x] Minimalist search/find solution for larger librarys
 - [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Multiple playlists
 - [ ] Shuffle

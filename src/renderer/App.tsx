@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { IPicture } from 'music-metadata';
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
@@ -12,12 +12,19 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
-import { styled, ThemeProvider, createTheme } from '@mui/material/styles';
+import {
+  styled,
+  ThemeProvider,
+  createTheme,
+  alpha,
+} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { List } from 'react-virtualized';
 import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
 import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
+import InputBase from '@mui/material/InputBase';
+import SearchIcon from '@mui/icons-material/Search';
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 
@@ -63,6 +70,49 @@ const TinyText = styled(Typography)({
   letterSpacing: 0.2,
 });
 
+const Search = styled('div')(({ theme }) => ({
+  position: 'relative',
+  borderRadius: theme.shape.borderRadius,
+  border: '1px solid rgb(40, 40, 40)',
+  backgroundColor: '#0D0D0D',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.common.white, 0.25),
+  },
+  marginLeft: 0,
+  width: '100px',
+  [theme.breakpoints.up('sm')]: {
+    marginLeft: theme.spacing(1),
+    width: 'auto',
+  },
+}));
+
+const SearchIconWrapper = styled('div')(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: '100%',
+  position: 'absolute',
+  pointerEvents: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}));
+
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  color: 'inherit',
+  '& .MuiInputBase-input': {
+    padding: theme.spacing(1, 1, 1, 0),
+    // vertical padding + font size from searchIcon
+    paddingLeft: `calc(1em + ${theme.spacing(3.5)})`,
+    transition: theme.transitions.create('width'),
+    width: '100%',
+    [theme.breakpoints.up('sm')]: {
+      width: '12ch',
+      '&:focus': {
+        width: '20ch',
+      },
+    },
+  },
+}));
+
 function MainDash() {
   const audioTagRef = useRef<HTMLAudioElement>(null);
   const rowHeight = 25.5;
@@ -79,6 +129,8 @@ function MainDash() {
   const [currentSongMetadata, setCurrentSongMetadata] =
     useState<SongSkeletonStructure>();
   const [library, setLibrary] = useState<StoreStructure['library']>();
+  const [filteredLibrary, setFilteredLibrary] =
+    useState<StoreStructure['library']>();
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -161,29 +213,49 @@ function MainDash() {
     setPaused(false);
   };
 
-  const playNextSong = async () => {
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
     if (!library) return;
-    const keys = Object.keys(library);
+    const filtered = Object.keys(library).filter((song) => {
+      const meta = library[song];
+      return (
+        meta.common.title?.toLowerCase().includes(query.toLowerCase()) ||
+        meta.common.artist?.toLowerCase().includes(query.toLowerCase()) ||
+        meta.common.album?.toLowerCase().includes(query.toLowerCase())
+      );
+    });
+
+    const filteredLib: StoreStructure['library'] = {};
+    filtered.forEach((song) => {
+      filteredLib[song] = library[song];
+    });
+
+    setFilteredLibrary(filteredLib);
+  };
+
+  const playNextSong = async () => {
+    if (!filteredLibrary) return;
+    const keys = Object.keys(filteredLibrary);
     const currentSongIndex = keys.indexOf(currentSong || '');
     const nextSongIndex = currentSongIndex + 1;
     if (nextSongIndex >= keys.length) {
       return;
     }
     const nextSong = keys[nextSongIndex];
-    const nextSongMeta = library[nextSong];
+    const nextSongMeta = filteredLibrary[nextSong];
     await playSong(nextSong, nextSongMeta);
   };
 
   const playPreviousSong = async () => {
-    if (!library) return;
-    const keys = Object.keys(library);
+    if (!filteredLibrary) return;
+    const keys = Object.keys(filteredLibrary);
     const currentSongIndex = keys.indexOf(currentSong || '');
     const previousSongIndex = currentSongIndex - 1;
     if (previousSongIndex < 0) {
       return;
     }
     const previousSong = keys[previousSongIndex];
-    const previousSongMeta = library[previousSong];
+    const previousSongMeta = filteredLibrary[previousSong];
     await playSong(previousSong, previousSongMeta);
   };
 
@@ -217,31 +289,31 @@ function MainDash() {
     key: string;
     style: any;
   }) => {
-    if (!library) return null;
+    if (!filteredLibrary) return null;
 
-    const song = Object.keys(library)[index];
+    const song = Object.keys(filteredLibrary)[index];
 
     return (
       <div
         key={key}
         style={style}
         onDoubleClick={async () => {
-          await playSong(song, library[song]);
+          await playSong(song, filteredLibrary[song]);
         }}
         data-state={song === currentSong ? 'selected' : undefined}
         className="flex w-full items-center border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
       >
         <div className="whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {library?.[song].common.title}
+          {filteredLibrary?.[song].common.title}
         </div>
         <div className="whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {library?.[song].common.artist}
+          {filteredLibrary?.[song].common.artist}
         </div>
         <div className="whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {library?.[song].common.album}
+          {filteredLibrary?.[song].common.album}
         </div>
         <div className="w-14 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {convertToMMSS(library?.[song].format.duration || 0)}
+          {convertToMMSS(filteredLibrary?.[song].format.duration || 0)}
         </div>
       </div>
     );
@@ -273,6 +345,7 @@ function MainDash() {
     window.electron.ipcRenderer.once('initialize', (arg: unknown) => {
       const typedArg = arg as StoreStructure;
       setLibrary(typedArg.library);
+      setFilteredLibrary(typedArg.library);
 
       const artContainerHeight =
         document.querySelector('.art')?.clientHeight || 0;
@@ -360,7 +433,7 @@ function MainDash() {
           onClick={importSongs}
           type="button"
           aria-label="import library"
-          className="nodrag absolute top-6 right-4 items-center justify-center
+          className="nodrag absolute top-4 right-4 items-center justify-center
           rounded-md font-medium ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
@@ -370,6 +443,27 @@ function MainDash() {
         >
           <LibraryAddOutlined />
         </button>
+
+        <Box className="absolute top-[70px] md:top-4 md:right-20 right-4 w-auto text-white">
+          <Search
+            sx={{
+              borderRadius: '0.375rem',
+            }}
+          >
+            <SearchIconWrapper>
+              <SearchIcon fontSize="inherit" color="inherit" />
+            </SearchIconWrapper>
+            <StyledInputBase
+              placeholder="Search…"
+              inputProps={{ 'aria-label': 'search' }}
+              onChange={handleSearch}
+              sx={{
+                fontSize: '12px',
+                padding: '6px 0',
+              }}
+            />
+          </Search>
+        </Box>
       </div>
 
       <div className="w-full overflow-auto">
@@ -404,7 +498,7 @@ function MainDash() {
             width={width || 0}
             height={rowContainerHeight}
             rowRenderer={renderSongRow}
-            rowCount={Object.keys(library || {}).length}
+            rowCount={Object.keys(filteredLibrary || {}).length}
             rowHeight={rowHeight}
           />
         </div>
