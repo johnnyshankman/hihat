@@ -200,7 +200,7 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [product-screenshot]: readme-images/hihat.png
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [React-url]: https://reactjs.org/
-[Electron.js]: https://img.shields.io/badge/Electron-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[Electron.js]: https://img.shields.io/badge/Electron-20232A?style=for-the-badge&logo=electron&logoColor=61DAFB
 [Electron-url]: https://www.electronjs.org/
 [Tailwind.js]: https://img.shields.io/badge/Tailwind-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
 [Tailwind-url]: https://tailwindcss.com/
