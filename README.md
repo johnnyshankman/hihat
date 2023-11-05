@@ -54,9 +54,11 @@
 
 [![hihat Screen Shot][product-screenshot]](https://whitelights.co)
 
-hihat is a simple a way to play your music files, similar to the way you would use iTunes or Windows Media Player in the early 2000s.
+hihat is a simple a way to play your music library, similar to the way you would use iTunes or Windows Media Player in the early 2000s.
 
-As a music file hoarder myself. I found myself extremely disappointed with the featureset of modern media players like VLC (no album art display) and Spotify (doesn't show enough songs in one window), so I built this. It's fully responsive, dark mode by default (as we all know music lovers are night owls), and doens't have any frills or thrills.
+As a music file hoarder myself. I found myself extremely disappointed with the featureset of modern media players like VLC (no album art display) and Spotify (doesn't show enough songs in one window), so I built this. It's fully responsive, dark mode by default (as we all know music lovers are night owls), and doesn't have any frills.
+
+Supports basically all file types and library folder structures.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
