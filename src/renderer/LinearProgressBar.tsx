@@ -72,6 +72,7 @@ export default function LinearProgressBar({
           }}
           sx={{
             color: 'rgba(133, 133, 133)',
+            padding: '10px 0',
           }}
         />
       </Box>
