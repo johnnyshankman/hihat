@@ -61,8 +61,6 @@ export default class MenuBuilder {
           selector: 'orderFrontStandardAboutPanel:',
         },
         { type: 'separator' },
-        { label: 'Services', submenu: [] },
-        { type: 'separator' },
         {
           label: 'hide hihat',
           accelerator: 'Command+H',
