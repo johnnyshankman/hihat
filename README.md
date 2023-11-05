@@ -210,7 +210,7 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [MusicMetadata-url]: https://github.com/borewit/music-metadata#readme
 [MaterialUI.js]: https://img.shields.io/badge/MaterialUI-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
 [MaterialUI-url]: https://mui.com/material-ui/
-[Typescript.js]: https://img.shields.io/badge/MaterialUI-20232A?style=for-the-badge&logo=typescript&logoColor=61DAFB
+[Typescript.js]: https://img.shields.io/badge/Typescript-20232A?style=for-the-badge&logo=typescript&logoColor=00FF00
 [Typescript-url]: https://typescriptlang.org
 
 
