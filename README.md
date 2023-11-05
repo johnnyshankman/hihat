@@ -147,7 +147,7 @@ _Simply hit the icon in the top right, select a folder, wait for the import proc
 - [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Multiple playlists
 - [ ] Shuffle
-- [ ] Fix the player UX on really really thin windows (under 300px)
+- [x] Fix the player UX on thin windows (400px)
 - [ ] OSX song info in the menu bar tray (not sure the name of this thing)
 
 ![Screenshot 2023-11-04 at 10 50 26 PM](https://github.com/johnnyshankman/hihat/assets/6632701/c0c2e249-08bd-46d0-9487-3e89be56ff4f)
