@@ -10,7 +10,7 @@
   <h3 align="center">hihat</h3>
 
   <p align="center">
-    A minimalist music library player for desktop.
+    A minimalist music player for OSX
     <br />
     <br />
     <a href="https://github.com/johnnyshankman/hihat/issues">Report Bug</a>
