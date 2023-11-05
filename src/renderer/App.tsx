@@ -21,6 +21,8 @@ import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 
+// @TODO: add js-search for filtering library https://github.com/bvaughn/js-search
+
 // @TODO: doesn't respect nesting/scss like it should
 import './App.scss';
 
