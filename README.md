@@ -58,7 +58,7 @@
 
 hihat is a simple a way to play your music library, similar to the way you would play your library with iTunes or Windows Media Player in the early 2000s.
 
-As a music file hoarder I've found myself extremely disappointed with the UX of modern media players like VLC (no album art display) and Spotify (shows very few songs in the window), so I built this. 
+As a music file hoarder I've found myself extremely disappointed with the UX of modern media players like VLC (no album art display) and Spotify (shows very few songs on screen), so I built this. 
 
 It's fully responsive, dark mode by default, and supports essentially every filetype and library folder structure.
 
@@ -81,7 +81,7 @@ This project was built with the following technologies:
 
 ### Supported Audio Formats and Metadata Formats
 
-Almost every format under the sun should be supported, and can be mixed and matched in the same folder. The app does not currently support displaying songs from more than one folder at a time yet.
+Almost every format under the sun should be supported, and can be mixed'n'matched in the same library directory.
 
 * See [The Chromium Project](https://www.chromium.org/audio-video/) for information on supported audio formats.
 * See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
