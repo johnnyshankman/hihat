@@ -66,6 +66,7 @@ This project was built with the following technologies:
 
 * [![Electron][Electron.js]][Electron-url]
 * [![React][React.js]][React-url]
+* [![Typescript][Typescript.js]][Typescript-url]
 * [![Google Material UI][MaterialUI.js]][MaterialUI-url]
 * [![Tailwind][Tailwind.js]][Tailwind-url]
 * [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
@@ -209,6 +210,8 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [MusicMetadata-url]: https://github.com/borewit/music-metadata#readme
 [MaterialUI.js]: https://img.shields.io/badge/MaterialUI-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
 [MaterialUI-url]: https://mui.com/material-ui/
+[Typescript.js]: https://img.shields.io/badge/MaterialUI-20232A?style=for-the-badge&logo=typescript&logoColor=61DAFB
+[Typescript-url]: https://typescriptlang.org
 
 
 
