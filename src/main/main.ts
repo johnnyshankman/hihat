@@ -1,13 +1,5 @@
 /* eslint global-require: off, no-console: off, promise/always-return: off */
 
-/**
- * This module executes inside of electron's main process. You can start
- * electron renderer process from here and communicate with the other processes
- * through IPC.
- *
- * When running `npm run build` or `npm run build:main`, this file is compiled to
- * `./src/main.js` using webpack. This gives us some performance wins.
- */
 import path from 'path';
 import { app, BrowserWindow, shell, ipcMain, dialog, protocol } from 'electron';
 import { autoUpdater } from 'electron-updater';
@@ -36,12 +28,23 @@ function parseData(fp: string) {
 
 let mainWindow: BrowserWindow | null = null;
 
+/**
+ * @dev for requesting album art data from music metadata
+ *      which is much too large to send over the IPC for every song
+ *      during initialization, so we lazy load it when the user
+ *     clicks on a song.
+ */
 ipcMain.on('get-album-art', async (event, arg) => {
   const filePath = arg.path;
   const metadata = await mm.parseFile(filePath);
   event.reply('get-album-art', metadata.common.picture?.[0] || '');
 });
 
+/**
+ * @dev for requesting the directory of music the user wants to import
+ *      and then importing it into the app as well as cache'ing it
+ *     in the user's app data directory.
+ */
 ipcMain.on('select-dirs', async (event): Promise<any> => {
   if (!mainWindow) {
     return;
@@ -50,11 +53,10 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     properties: ['openDirectory'],
   });
 
-  // passsing directoryPath and callback function
   fs.readdir(result.filePaths[0], async (err, files) => {
-    // create an empty mapping of files to tags
+    // create an empty mapping of files to tags we want to cache and import
     let filesToTags: { [key: string]: Partial<mm.IAudioMetadata> } = {};
-    // for (let i = 0; i < 100; i += 1) {
+
     for (let i = 0; i < files.length; i += 1) {
       let metadata;
       try {
@@ -83,7 +85,7 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
       });
     }
 
-    // reorder filesToTags keys by artist and then album and then track number within that album
+    // sort filesToTags by artist, album, and track number
     const orderedFilesToTags: { [key: string]: Partial<mm.IAudioMetadata> } =
       {};
     Object.keys(filesToTags)
@@ -102,7 +104,6 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
         if (!trackA) return -1;
         if (!trackB) return 1;
 
-        // reorder filesToTags keys by artist and then album and then track number within that album
         if (artistA < artistB) return -1;
         if (artistA > artistB) return 1;
         if (albumA < albumB) return -1;
@@ -117,11 +118,10 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
 
     filesToTags = {};
 
-    // event.returnValue = result.filePaths;
-    // lets make this reply with the nice object
     event.reply('select-dirs', orderedFilesToTags);
 
     // write the json file to the user data directory as userConfig.json
+    // for caching purposes, we use this during future startups of the app.
     const dataPath = app.getPath('userData');
     const filePath = path.join(dataPath, 'userConfig.json');
     fs.writeFileSync(filePath, JSON.stringify(orderedFilesToTags));
@@ -158,6 +158,11 @@ const createWindow = async () => {
     await installExtensions();
   }
 
+  /**
+   * @dev create a custom protocol to handle requests for media files
+   *      from the renderer process. This is necessary because the
+   *     renderer process cannot access the file system directly.
+   */
   protocol.registerFileProtocol('my-magic-protocol', (request, callback) => {
     const url = request.url.replace('my-magic-protocol://getMediaFile/', '');
     try {
@@ -190,8 +195,6 @@ const createWindow = async () => {
     },
   });
 
-  // mainWindow.setIgnoreMouseEvents(true);
-
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -199,6 +202,11 @@ const createWindow = async () => {
       throw new Error('"mainWindow" is not defined');
     }
 
+    /**
+     * @dev read the userConfig.json file from the user data directory
+     *     and send the contents to the renderer process to initialize
+     *    the app.
+     */
     const dataPath = app.getPath('userData');
     const filePath = path.join(dataPath, 'userConfig.json');
     const contents = parseData(filePath);
