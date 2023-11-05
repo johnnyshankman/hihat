@@ -27,41 +27,10 @@ import InputBase from '@mui/material/InputBase';
 import SearchIcon from '@mui/icons-material/Search';
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
-
-// @TODO: add js-search for filtering library https://github.com/bvaughn/js-search
+import { StoreStructure, SongSkeletonStructure } from '../common/common';
 
 // @TODO: doesn't respect nesting/scss like it should
 import './App.scss';
-
-type SongSkeletonStructure = {
-  common: {
-    artist?: string;
-    album?: string;
-    title?: string;
-    track?: {
-      no: number | null;
-      of: number | null;
-    };
-    picture?: IPicture[];
-    lyrics?: string[];
-  };
-  format: {
-    duration?: number;
-  };
-};
-
-type Playlist = {
-  name: string;
-  songs: string[];
-};
-
-// @TODO: put this somewhere common between renderer and main process
-type StoreStructure = {
-  library: {
-    [key: string]: SongSkeletonStructure;
-  };
-  playlists: Playlist[];
-};
 
 const TinyText = styled(Typography)({
   fontSize: '0.75rem',
@@ -117,8 +86,8 @@ function MainDash() {
   const audioTagRef = useRef<HTMLAudioElement>(null);
   const rowHeight = 25.5;
   const { width, height, ref } = useResizeDetector();
-  const [rowContainerHeight, setRowContainerHeight] = useState(0);
 
+  const [rowContainerHeight, setRowContainerHeight] = useState(0);
   const [currentSongTime, setCurrentSongTime] = useState(0);
   const [paused, setPaused] = useState(true);
   const [currentSong, setCurrentSong] = useState<string>();
@@ -128,7 +97,9 @@ function MainDash() {
   const [totalSongs, setTotalSongs] = useState(0);
   const [currentSongMetadata, setCurrentSongMetadata] =
     useState<SongSkeletonStructure>();
+  // the constant source of truth for the library, invisible to the UX
   const [library, setLibrary] = useState<StoreStructure['library']>();
+  // the UX layer for the `library`, filtered by search
   const [filteredLibrary, setFilteredLibrary] =
     useState<StoreStructure['library']>();
 

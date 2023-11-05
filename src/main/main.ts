@@ -8,36 +8,7 @@ import fs from 'fs';
 import * as mm from 'music-metadata';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-
-type SongSkeletonStructure = {
-  common: {
-    artist?: string;
-    album?: string;
-    title?: string;
-    track?: {
-      no: number | null;
-      of: number | null;
-    };
-    picture?: mm.IPicture[];
-    lyrics?: string[];
-  };
-  format: {
-    duration?: number;
-  };
-};
-
-type Playlist = {
-  name: string;
-  songs: string[];
-};
-
-// @TODO: put this somewhere common between renderer and main process
-type StoreStructure = {
-  library: {
-    [key: string]: SongSkeletonStructure;
-  };
-  playlists: Playlist[];
-};
+import { StoreStructure, SongSkeletonStructure } from '../common/common';
 
 class AppUpdater {
   constructor() {
@@ -110,7 +81,7 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
   const files = findAllFilesRecursively(result.filePaths[0]);
 
   // create an empty mapping of files to tags we want to cache and import
-  let filesToTags: { [key: string]: Partial<mm.IAudioMetadata> } = {};
+  let filesToTags: { [key: string]: SongSkeletonStructure } = {};
 
   for (let i = 0; i < files.length; i += 1) {
     let metadata;
@@ -133,7 +104,7 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
           ...metadata.format,
           duration: metadata.format.duration,
         },
-      };
+      } as SongSkeletonStructure;
 
     event.reply('song-imported', {
       songsImported: i,
@@ -142,15 +113,15 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
   }
 
   // sort filesToTags by artist, album, and track number
-  const orderedFilesToTags: { [key: string]: Partial<mm.IAudioMetadata> } = {};
+  const orderedFilesToTags: { [key: string]: SongSkeletonStructure } = {};
   Object.keys(filesToTags)
     .sort((a, b) => {
       const artistA = filesToTags[a].common?.artist;
       const artistB = filesToTags[b].common?.artist;
       const albumA = filesToTags[a].common?.album;
       const albumB = filesToTags[b].common?.album;
-      const trackA = filesToTags[a].common?.track.no;
-      const trackB = filesToTags[b].common?.track.no;
+      const trackA = filesToTags[a].common?.track?.no;
+      const trackB = filesToTags[b].common?.track?.no;
       // handle null cases
       if (!artistA) return -1;
       if (!artistB) return 1;
