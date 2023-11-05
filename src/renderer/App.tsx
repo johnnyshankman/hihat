@@ -378,9 +378,9 @@ function MainDash() {
             }}
           >
             {paused ? (
-              <PlayArrowRounded sx={{ fontSize: '2rem' }} />
+              <PlayArrowRounded sx={{ fontSize: '3rem' }} />
             ) : (
-              <PauseRounded sx={{ fontSize: '2rem' }} />
+              <PauseRounded sx={{ fontSize: '3rem' }} />
             )}
           </IconButton>
           <IconButton
