@@ -139,7 +139,7 @@ _Simply hit the icon in the top right, select a folder, wait for the import proc
 - [x] Virtualized Lists for opitmal rendering
 - [x] Cache imported songs from previous session
 - [ ] Minimalist search/find solution for larger librarys
-- [ ] Recursive file finding for itunes-like libraries with nested folders
+- [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Multiple playlists
 - [ ] Shuffle
 - [ ] OSX song info in the menu bar tray (not sure the name of this thing)
