@@ -40,6 +40,30 @@ ipcMain.on('get-album-art', async (event, arg) => {
   event.reply('get-album-art', metadata.common.picture?.[0] || '');
 });
 
+const findAllFilesRecursively = (dir: string) => {
+  const result = [];
+
+  const files = [dir];
+  do {
+    const filepath = files.pop();
+
+    if (!filepath) {
+      break;
+    }
+
+    const stat = fs.lstatSync(filepath);
+    if (stat.isDirectory()) {
+      fs.readdirSync(filepath).forEach((f) =>
+        files.push(path.join(filepath, f)),
+      );
+    } else if (stat.isFile()) {
+      result.push(path.relative(dir, filepath));
+    }
+  } while (files.length !== 0);
+
+  return result;
+};
+
 /**
  * @dev for requesting the directory of music the user wants to import
  *      and then importing it into the app as well as cache'ing it
@@ -53,79 +77,79 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
     properties: ['openDirectory'],
   });
 
-  fs.readdir(result.filePaths[0], async (err, files) => {
-    // create an empty mapping of files to tags we want to cache and import
-    let filesToTags: { [key: string]: Partial<mm.IAudioMetadata> } = {};
+  const files = findAllFilesRecursively(result.filePaths[0]);
 
-    for (let i = 0; i < files.length; i += 1) {
-      let metadata;
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        metadata = await mm.parseFile(`${result.filePaths[0]}/${files[i]}`);
-      } catch (e) {
-        console.log(e);
-      }
+  // create an empty mapping of files to tags we want to cache and import
+  let filesToTags: { [key: string]: Partial<mm.IAudioMetadata> } = {};
 
-      if (metadata)
-        filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
-          common: {
-            ...metadata.common,
-            picture: [],
-            lyrics: [],
-          },
-          format: {
-            ...metadata.format,
-            duration: metadata.format.duration,
-          },
-        };
+  for (let i = 0; i < files.length; i += 1) {
+    let metadata;
 
-      event.reply('song-imported', {
-        songsImported: i,
-        totalSongs: files.length,
-      });
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      metadata = await mm.parseFile(`${result.filePaths[0]}/${files[i]}`);
+    } catch (e) {
+      console.log(e);
     }
 
-    // sort filesToTags by artist, album, and track number
-    const orderedFilesToTags: { [key: string]: Partial<mm.IAudioMetadata> } =
-      {};
-    Object.keys(filesToTags)
-      .sort((a, b) => {
-        const artistA = filesToTags[a].common?.artist;
-        const artistB = filesToTags[b].common?.artist;
-        const albumA = filesToTags[a].common?.album;
-        const albumB = filesToTags[b].common?.album;
-        const trackA = filesToTags[a].common?.track.no;
-        const trackB = filesToTags[b].common?.track.no;
-        // handle null cases
-        if (!artistA) return -1;
-        if (!artistB) return 1;
-        if (!albumA) return -1;
-        if (!albumB) return 1;
-        if (!trackA) return -1;
-        if (!trackB) return 1;
+    if (metadata)
+      filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
+        common: {
+          ...metadata.common,
+          picture: [],
+          lyrics: [],
+        },
+        format: {
+          ...metadata.format,
+          duration: metadata.format.duration,
+        },
+      };
 
-        if (artistA < artistB) return -1;
-        if (artistA > artistB) return 1;
-        if (albumA < albumB) return -1;
-        if (albumA > albumB) return 1;
-        if (trackA < trackB) return -1;
-        if (trackA > trackB) return 1;
-        return 0;
-      })
-      .forEach((key) => {
-        orderedFilesToTags[key] = filesToTags[key];
-      });
+    event.reply('song-imported', {
+      songsImported: i,
+      totalSongs: files.length,
+    });
+  }
 
-    filesToTags = {};
+  // sort filesToTags by artist, album, and track number
+  const orderedFilesToTags: { [key: string]: Partial<mm.IAudioMetadata> } = {};
+  Object.keys(filesToTags)
+    .sort((a, b) => {
+      const artistA = filesToTags[a].common?.artist;
+      const artistB = filesToTags[b].common?.artist;
+      const albumA = filesToTags[a].common?.album;
+      const albumB = filesToTags[b].common?.album;
+      const trackA = filesToTags[a].common?.track.no;
+      const trackB = filesToTags[b].common?.track.no;
+      // handle null cases
+      if (!artistA) return -1;
+      if (!artistB) return 1;
+      if (!albumA) return -1;
+      if (!albumB) return 1;
+      if (!trackA) return -1;
+      if (!trackB) return 1;
 
-    event.reply('select-dirs', orderedFilesToTags);
+      if (artistA < artistB) return -1;
+      if (artistA > artistB) return 1;
+      if (albumA < albumB) return -1;
+      if (albumA > albumB) return 1;
+      if (trackA < trackB) return -1;
+      if (trackA > trackB) return 1;
+      return 0;
+    })
+    .forEach((key) => {
+      orderedFilesToTags[key] = filesToTags[key];
+    });
 
-    // write the json file to the user data directory as userConfig.json
-    // for caching purposes, we use this during future startups of the app.
-    const dataPath = app.getPath('userData');
-    const filePath = path.join(dataPath, 'userConfig.json');
-    fs.writeFileSync(filePath, JSON.stringify(orderedFilesToTags));
-  });
+  filesToTags = {};
+
+  event.reply('select-dirs', orderedFilesToTags);
+
+  // write the json file to the user data directory as userConfig.json
+  // for caching purposes, we use this during future startups of the app.
+  const dataPath = app.getPath('userData');
+  const filePath = path.join(dataPath, 'userConfig.json');
+  fs.writeFileSync(filePath, JSON.stringify(orderedFilesToTags));
 });
 
 if (process.env.NODE_ENV === 'production') {
