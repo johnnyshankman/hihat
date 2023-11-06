@@ -73,6 +73,7 @@ As a music file hoarder I've found myself extremely disappointed with the UX of 
 * dark mode by default
 * support for all music file types
 * support for nested folders (like legacy itunes music libraries)
+* support for mixing and matching filetypes in the same library
 * osx menu bar player integration
 * no library size limit
 * library cacheing
