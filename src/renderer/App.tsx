@@ -24,7 +24,6 @@ import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
 import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
 import InputBase from '@mui/material/InputBase';
-import SearchIcon from '@mui/icons-material/Search';
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 import { StoreStructure, SongSkeletonStructure } from '../common/common';
@@ -53,16 +52,6 @@ const Search = styled('div')(({ theme }) => ({
     marginLeft: theme.spacing(1),
     width: 'auto',
   },
-}));
-
-const SearchIconWrapper = styled('div')(({ theme }) => ({
-  padding: theme.spacing(0, 2),
-  height: '100%',
-  position: 'absolute',
-  pointerEvents: 'none',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
 }));
 
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
