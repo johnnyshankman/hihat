@@ -58,9 +58,22 @@
 
 hihat is a simple a way to play your music library, similar to the way you would play your library with iTunes or Windows Media Player in the early 2000s.
 
-As a music file hoarder I've found myself extremely disappointed with the UX of modern media players like VLC (no album art display) and Spotify (shows very few songs on screen), so I built this.
+Remember playing a song and seeing the album art nice and big? Remember when the song would play the second after you double clicked? Remember zen of listening offline?
 
-It's fully responsive, dark mode by default, and supports essentially every filetype and library folder structure.
+As a music file hoarder I've found myself extremely disappointed with the UX of modern media players like VLC (no album art display) and Spotify (shows very few songs on screen), so I built this to make me happy again.
+
+Core Feature Set:
+* album art front and center
+* compact UX for viewing many songs at once
+* fully responsive
+* dark mode by default
+* support for all music file types
+* support for nested folders (like legacy itunes music libraries)
+* osx menu bar player integration
+* no library size limit
+* library cacheing
+* keyboard media shortcut support
+* itunes-like sorting default (artist -> album -> track number)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
