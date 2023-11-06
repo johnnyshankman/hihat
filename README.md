@@ -60,7 +60,7 @@ hihat is a simple a way to play your music library, similar to the way you would
 
 Remember the zen of listening offline? This brings that back. No share links, no lag, no tiny album art -- just music.
 
-As a music file hoarder I've found myself extremely disappointed with the UX of modern media players like VLC (no album art display) and Spotify (shows very few songs on screen), so I built this to make me happy again.
+As a music file hoarder I've found myself extremely disappointed with the UX of modern media players like VLC (no album art display), Spotify (shows very few songs on screen) and Evermusic (no cacheing and slow ux), so I built this to make me happy again.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
