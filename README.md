@@ -62,7 +62,11 @@ Remember playing a song and seeing the album art nice and big? Remember when the
 
 As a music file hoarder I've found myself extremely disappointed with the UX of modern media players like VLC (no album art display) and Spotify (shows very few songs on screen), so I built this to make me happy again.
 
-Core Feature Set:
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### Core Features
+
+hihat was built with the following features in mint:
 * album art front and center
 * compact UX for viewing many songs at once
 * fully responsive
