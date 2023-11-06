@@ -68,9 +68,9 @@ const SearchIconWrapper = styled('div')(({ theme }) => ({
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
   color: 'inherit',
   '& .MuiInputBase-input': {
-    padding: theme.spacing(1, 1, 1, 0),
+    padding: theme.spacing(1, 0.5, 1, 0),
     // vertical padding + font size from searchIcon
-    paddingLeft: `calc(1em + ${theme.spacing(3.5)})`,
+    paddingLeft: `calc(0em + ${theme.spacing(3)})`,
     transition: theme.transitions.create('width'),
     width: '100%',
     [theme.breakpoints.up('sm')]: {
@@ -402,25 +402,23 @@ function MainDash() {
           type="button"
           aria-label="import library"
           className="nodrag absolute top-4 right-4 items-center justify-center
-          rounded-md font-medium ring-offset-background transition-colors
+          rounded-md text-[18px] ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
           disabled:opacity-50 border border-neutral-800 bg-background
           hover:bg-white hover:text-black
-          px-4 py-2.5"
+          px-4 py-2"
         >
-          <LibraryAddOutlined />
+          <LibraryAddOutlined fontSize="inherit" />
         </button>
 
         <Box className="absolute top-[70px] md:top-4 md:right-20 right-4 w-auto text-white">
           <Search
             sx={{
               borderRadius: '0.375rem',
+              fontSize: '18px',
             }}
           >
-            <SearchIconWrapper>
-              <SearchIcon fontSize="inherit" color="inherit" />
-            </SearchIconWrapper>
             <StyledInputBase
               placeholder="Search…"
               inputProps={{ 'aria-label': 'search' }}
