@@ -60,7 +60,7 @@
 
 Remember the zen of listening offline? This brings that back. No share links, no lag, no tiny album art -- just music.
 
-As a music file hoarder I've found myself extremely disappointed with the UX of modern media players like VLC (no album art display), Spotify (shows very few songs on screen) and Evermusic (no cacheing and slow ux), so I built this to make me happy again.
+As a music file hoarder I've found myself extremely disappointed with the UX of modern media players. VLC has no album art display, Spotify shows very few songs on screen, and Evermusic has both problems, so I built this to make me happy again.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
