@@ -56,7 +56,7 @@
 
 [![hihat Screen Shot][product-screenshot]](https://whitelights.co)
 
-*hihat* is a simple a way to play your music library, similar to the way you would play your library with iTunes or Windows Media Player in the early 2000s.
+*hihat* is a simple a way to play your music library, similar to the way you would with iTunes or Windows Media Player in the early 2000s.
 
 Remember the zen of listening offline? This brings that back. No share links, no lag, no tiny album art -- just music.
 
