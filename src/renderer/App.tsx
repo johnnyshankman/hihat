@@ -238,6 +238,91 @@ function MainDash() {
     window.electron.ipcRenderer.sendMessage('select-dirs');
   };
 
+  const filterByTitle = () => {
+    if (!library) return;
+    if (!filteredLibrary) return;
+
+    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
+      const aTitle = filteredLibrary[a].common.title || '';
+      const bTitle = filteredLibrary[b].common.title || '';
+      return aTitle.localeCompare(bTitle);
+    });
+
+    const filteredLib: StoreStructure['library'] = {};
+    filtered.forEach((song) => {
+      filteredLib[song] = library[song];
+    });
+
+    setFilteredLibrary(filteredLib);
+  };
+
+  const filterByArtist = () => {
+    if (!library) return;
+    if (!filteredLibrary) return;
+
+    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
+      const artistA = filteredLibrary[a].common?.artist;
+      const artistB = filteredLibrary[b].common?.artist;
+      const albumA = filteredLibrary[a].common?.album;
+      const albumB = filteredLibrary[b].common?.album;
+      const trackA = filteredLibrary[a].common?.track?.no;
+      const trackB = filteredLibrary[b].common?.track?.no;
+      // handle null cases
+      if (!artistA) return -1;
+      if (!artistB) return 1;
+      if (!albumA) return -1;
+      if (!albumB) return 1;
+      if (!trackA) return -1;
+      if (!trackB) return 1;
+
+      if (artistA < artistB) return -1;
+      if (artistA > artistB) return 1;
+      if (albumA < albumB) return -1;
+      if (albumA > albumB) return 1;
+      if (trackA < trackB) return -1;
+      if (trackA > trackB) return 1;
+      return 0;
+    });
+
+    const filteredLib: StoreStructure['library'] = {};
+    filtered.forEach((song) => {
+      filteredLib[song] = library[song];
+    });
+
+    setFilteredLibrary(filteredLib);
+  };
+
+  const filterByAlbum = () => {
+    if (!library) return;
+    if (!filteredLibrary) return;
+
+    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
+      // sort by album, then track number
+      const albumA = filteredLibrary[a].common?.album;
+      const albumB = filteredLibrary[b].common?.album;
+      const trackA = filteredLibrary[a].common?.track?.no;
+      const trackB = filteredLibrary[b].common?.track?.no;
+      // handle null cases
+      if (!albumA) return -1;
+      if (!albumB) return 1;
+      if (!trackA) return -1;
+      if (!trackB) return 1;
+
+      if (albumA < albumB) return -1;
+      if (albumA > albumB) return 1;
+      if (trackA < trackB) return -1;
+      if (trackA > trackB) return 1;
+      return 0;
+    });
+
+    const filteredLib: StoreStructure['library'] = {};
+    filtered.forEach((song) => {
+      filteredLib[song] = library[song];
+    });
+
+    setFilteredLibrary(filteredLib);
+  };
+
   /**
    * @dev render the row for the virtualized table, reps a single song
    */
@@ -425,25 +510,38 @@ function MainDash() {
         <div className="w-full text-[11px]">
           <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 outline-neutral-800">
             <div className="flex transition-colors divide-neutral-50">
-              <div className="select-none py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
+              <button
+                onClick={filterByTitle}
+                type="button"
+                className="select-none py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+              >
                 Song
-              </div>
-              <div className="select-none py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
+              </button>
+              <button
+                onClick={filterByArtist}
+                type="button"
+                className="select-none py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+              >
                 Artist
-              </div>
-              <div className="select-none py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0">
+              </button>
+              <button
+                onClick={filterByAlbum}
+                type="button"
+                className="select-none py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+              >
                 Album
-              </div>
+              </button>
               {/**
                * @dev slightly diff size to accomodate the lack of scroll bar
                * next to it, unlike a normal row.
                */}
-              <div
+              <button
+                type="button"
                 aria-label="duration"
                 className="select-none py-1 w-14 text-center px-4 mr-2 align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
               >
                 <AccessTimeIcon fontSize="inherit" />
-              </div>
+              </button>
             </div>
           </div>
           {/**
