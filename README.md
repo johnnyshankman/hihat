@@ -112,6 +112,8 @@ Almost every format under the sun should be supported, and can be mixed'n'matche
 
 This is a bare bones app meant for use with big folders of music, such as something you might end up with if you used to use iTunes. _Simply hit the import icon in the top right, select a folder, wait for the import proces to finish, and use as you would any other media player._
 
+Every time you boot the app from then on in, it'll load your library automagically!
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- GETTING STARTED -->
