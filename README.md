@@ -165,6 +165,7 @@ This is an example of how to list things you need to use the software and how to
 - [x] Minimalist search/filter solution
 - [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Multiple playlists
+- [ ] Update library with skip pre-existing files
 - [x] Shuffle
 - [x] Resort by column
 - [x] Support keyboard previous/next
