@@ -58,9 +58,11 @@
 
 *hihat* is a simple a way to play your music library, similar to the way you would with iTunes or Windows Media Player in the early 2000s.
 
-Remember the zen of listening offline? This brings that back. No share links, no lag, no tiny album art -- just music.
+Remember the zen of listening offline? This brings that vibe back. No share links, no lag, no social feeds -- just music.
 
-As a music file hoarder I've found myself extremely disappointed with the UX of modern media players. VLC has no album art display, Spotify shows very few songs on screen, and Evermusic has both problems. All of them have odd filetype and library structure constraints. Boo! so I built this to make me happy again.
+I built this to make music listening easy again.
+
+Unlike other players like VLC and Spotify, in *hihat* can see your album art front and center, you can see many songs at once, and it's fully responsive down to 320px wide, so you can use it in the slimmest of spots on your screen.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -68,17 +70,18 @@ As a music file hoarder I've found myself extremely disappointed with the UX of 
 
 *hihat* was built with the following features in mind:
 * album art front and center
-* compact UX for viewing many songs at once
-* fully responsive
+* compact UX displays many songs at once
+* fully responsive down to 320px wide
 * dark mode by default
-* support for all music file types
-* support for nested folders (like legacy itunes music libraries)
-* support for mixing and matching filetypes in the same library
+* supports all music file types
+* supports nested folders (like legacy itunes music libraries)
+* supports mixing and matching filetypes in the same library
 * osx menu bar player integration
-* no library size limit
+* supports infinite library size
 * library cacheing
 * keyboard media shortcut support
-* itunes-like sorting default (artist -> album -> track number)
+* iTunes-like sorting
+* fuzzy search
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
