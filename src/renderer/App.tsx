@@ -12,6 +12,8 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
+import FilterListIcon from '@mui/icons-material/FilterList';
+
 import {
   styled,
   ThemeProvider,
@@ -59,7 +61,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
   '& .MuiInputBase-input': {
     padding: theme.spacing(1, 0.5, 1, 0),
     // vertical padding + font size from searchIcon
-    paddingLeft: `calc(0em + ${theme.spacing(3)})`,
+    paddingLeft: `calc(0em + ${theme.spacing(2)})`,
     transition: theme.transitions.create('width'),
     width: '100%',
     [theme.breakpoints.up('sm')]: {
@@ -91,6 +93,12 @@ function MainDash() {
   // the UX layer for the `library`, filtered by search
   const [filteredLibrary, setFilteredLibrary] =
     useState<StoreStructure['library']>();
+  const [filterType, setFilterType] = useState<'title' | 'artist' | 'album'>(
+    'artist',
+  );
+  const [filterDirection, setFilterDirection] = useState<'asc' | 'desc'>(
+    'desc',
+  );
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -242,10 +250,17 @@ function MainDash() {
     if (!library) return;
     if (!filteredLibrary) return;
 
+    // flip the filter direction
+    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
+
     const filtered = Object.keys(filteredLibrary).sort((a, b) => {
       const aTitle = filteredLibrary[a].common.title || '';
       const bTitle = filteredLibrary[b].common.title || '';
-      return aTitle.localeCompare(bTitle);
+      const val = aTitle.localeCompare(bTitle);
+      if (filterDirection === 'desc') {
+        return val * -1;
+      }
+      return val;
     });
 
     const filteredLib: StoreStructure['library'] = {};
@@ -254,11 +269,15 @@ function MainDash() {
     });
 
     setFilteredLibrary(filteredLib);
+    setFilterType('title');
   };
 
   const filterByArtist = () => {
     if (!library) return;
     if (!filteredLibrary) return;
+
+    // flip the filter direction
+    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
 
     const filtered = Object.keys(filteredLibrary).sort((a, b) => {
       const artistA = filteredLibrary[a].common?.artist;
@@ -268,15 +287,17 @@ function MainDash() {
       const trackA = filteredLibrary[a].common?.track?.no;
       const trackB = filteredLibrary[b].common?.track?.no;
       // handle null cases
-      if (!artistA) return -1;
-      if (!artistB) return 1;
+      if (!artistA) return filterDirection === 'asc' ? -1 : 1;
+      if (!artistB) return filterDirection === 'asc' ? 1 : -1;
+
       if (!albumA) return -1;
       if (!albumB) return 1;
       if (!trackA) return -1;
       if (!trackB) return 1;
 
-      if (artistA < artistB) return -1;
-      if (artistA > artistB) return 1;
+      if (artistA < artistB) return filterDirection === 'asc' ? -1 : 1;
+      if (artistA > artistB) return filterDirection === 'asc' ? 1 : -1;
+
       if (albumA < albumB) return -1;
       if (albumA > albumB) return 1;
       if (trackA < trackB) return -1;
@@ -290,11 +311,15 @@ function MainDash() {
     });
 
     setFilteredLibrary(filteredLib);
+    setFilterType('artist');
   };
 
   const filterByAlbum = () => {
     if (!library) return;
     if (!filteredLibrary) return;
+
+    // flip the filter direction
+    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
 
     const filtered = Object.keys(filteredLibrary).sort((a, b) => {
       // sort by album, then track number
@@ -303,15 +328,17 @@ function MainDash() {
       const trackA = filteredLibrary[a].common?.track?.no;
       const trackB = filteredLibrary[b].common?.track?.no;
       // handle null cases
-      if (!albumA) return -1;
-      if (!albumB) return 1;
+      if (!albumA) return filterDirection === 'asc' ? -1 : 1;
+      if (!albumB) return filterDirection === 'asc' ? 1 : -1;
       if (!trackA) return -1;
       if (!trackB) return 1;
 
-      if (albumA < albumB) return -1;
-      if (albumA > albumB) return 1;
+      if (albumA < albumB) return filterDirection === 'asc' ? -1 : 1;
+      if (albumA > albumB) return filterDirection === 'asc' ? 1 : -1;
+
       if (trackA < trackB) return -1;
       if (trackA > trackB) return 1;
+
       return 0;
     });
 
@@ -321,6 +348,7 @@ function MainDash() {
     });
 
     setFilteredLibrary(filteredLib);
+    setFilterType('album');
   };
 
   /**
@@ -483,7 +511,13 @@ function MainDash() {
           hover:bg-white hover:text-black
           px-4 py-2"
         >
-          <LibraryAddOutlined fontSize="inherit" />
+          <LibraryAddOutlined
+            fontSize="inherit"
+            sx={{
+              position: 'relative',
+              bottom: '2px',
+            }}
+          />
         </button>
 
         <Box className="absolute top-[70px] md:top-4 md:right-20 right-4 w-auto text-white">
@@ -509,27 +543,55 @@ function MainDash() {
       <div className="w-full overflow-auto">
         <div className="w-full text-[11px]">
           <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 outline-neutral-800">
-            <div className="flex transition-colors divide-neutral-50">
+            <div className="flex transition-colors divide-neutral-800 divide-x">
               <button
                 onClick={filterByTitle}
                 type="button"
-                className="select-none py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+                className="select-none flex leading-[1em] items-center py-1.5 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
               >
                 Song
+                {/* if this is the selected filter add an up or down arrow represending the filter direction */}
+                {filterType === 'title' && (
+                  <span
+                    className={`${
+                      filterDirection === 'asc' ? 'rotate-180' : ''
+                    } inline-block ml-2`}
+                  >
+                    <FilterListIcon fontSize="inherit" />
+                  </span>
+                )}
               </button>
               <button
                 onClick={filterByArtist}
                 type="button"
-                className="select-none py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+                className="select-none flex leading-[1em] items-center py-1.5 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
               >
                 Artist
+                {filterType === 'artist' && (
+                  <span
+                    className={`${
+                      filterDirection === 'asc' ? 'rotate-180' : ''
+                    } inline-block ml-2`}
+                  >
+                    <FilterListIcon fontSize="inherit" />
+                  </span>
+                )}
               </button>
               <button
                 onClick={filterByAlbum}
                 type="button"
-                className="select-none py-1 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+                className="select-none flex leading-[1em] items-center py-1.5 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
               >
                 Album
+                {filterType === 'album' && (
+                  <span
+                    className={`${
+                      filterDirection === 'asc' ? 'rotate-180' : ''
+                    } inline-block ml-2`}
+                  >
+                    <FilterListIcon fontSize="inherit" />
+                  </span>
+                )}
               </button>
               {/**
                * @dev slightly diff size to accomodate the lack of scroll bar
@@ -538,7 +600,7 @@ function MainDash() {
               <button
                 type="button"
                 aria-label="duration"
-                className="select-none py-1 w-14 text-center px-4 mr-2 align-middle font-medium hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+                className="select-none flex leading-[1em] items-center py-1.5 w-14 text-center px-4 mr-2 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
               >
                 <AccessTimeIcon fontSize="inherit" />
               </button>
