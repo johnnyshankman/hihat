@@ -264,8 +264,8 @@ function MainDash() {
     setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
 
     const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      const aTitle = filteredLibrary[a].common.title || '';
-      const bTitle = filteredLibrary[b].common.title || '';
+      const aTitle = filteredLibrary[a].common.title?.toLowerCase() || '';
+      const bTitle = filteredLibrary[b].common.title?.toLowerCase() || '';
       const val = aTitle.localeCompare(bTitle);
       if (filterDirection === 'desc') {
         return val * -1;
@@ -290,10 +290,10 @@ function MainDash() {
     setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
 
     const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      const artistA = filteredLibrary[a].common?.artist;
-      const artistB = filteredLibrary[b].common?.artist;
-      const albumA = filteredLibrary[a].common?.album;
-      const albumB = filteredLibrary[b].common?.album;
+      const artistA = filteredLibrary[a].common?.artist?.toLowerCase();
+      const artistB = filteredLibrary[b].common?.artist?.toLowerCase();
+      const albumA = filteredLibrary[a].common?.album?.toLowerCase();
+      const albumB = filteredLibrary[b].common?.album?.toLowerCase();
       const trackA = filteredLibrary[a].common?.track?.no;
       const trackB = filteredLibrary[b].common?.track?.no;
       // handle null cases
@@ -333,8 +333,8 @@ function MainDash() {
 
     const filtered = Object.keys(filteredLibrary).sort((a, b) => {
       // sort by album, then track number
-      const albumA = filteredLibrary[a].common?.album;
-      const albumB = filteredLibrary[b].common?.album;
+      const albumA = filteredLibrary[a].common?.album?.toLowerCase();
+      const albumB = filteredLibrary[b].common?.album?.toLowerCase();
       const trackA = filteredLibrary[a].common?.track?.no;
       const trackB = filteredLibrary[b].common?.track?.no;
       // handle null cases

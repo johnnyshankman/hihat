@@ -116,10 +116,10 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
   const orderedFilesToTags: { [key: string]: SongSkeletonStructure } = {};
   Object.keys(filesToTags)
     .sort((a, b) => {
-      const artistA = filesToTags[a].common?.artist;
-      const artistB = filesToTags[b].common?.artist;
-      const albumA = filesToTags[a].common?.album;
-      const albumB = filesToTags[b].common?.album;
+      const artistA = filesToTags[a].common?.artist?.toLowerCase();
+      const artistB = filesToTags[b].common?.artist?.toLowerCase();
+      const albumA = filesToTags[a].common?.album?.toLowerCase();
+      const albumB = filesToTags[b].common?.album?.toLowerCase();
       const trackA = filesToTags[a].common?.track?.no;
       const trackB = filesToTags[b].common?.track?.no;
       // handle null cases
