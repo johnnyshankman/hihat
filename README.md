@@ -62,7 +62,7 @@ Remember the zen of listening offline? This brings that vibe back. No share link
 
 I built this to make music listening easy again.
 
-Unlike other players like VLC and Spotify, in *hihat* can see your album art front and center, you can see many songs at once, and it's fully responsive down to 320px wide, so you can use it in the slimmest of spots on your screen.
+Unlike VLC and Spotify, in *hihat* can see your album art front and center, you can see many songs at once, and it's fully responsive down to 320px wide, so you can use it in the slimmest of spots on your screen.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
