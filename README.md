@@ -162,7 +162,7 @@ This is an example of how to list things you need to use the software and how to
 - [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Multiple playlists
 - [ ] Shuffle
-- [ ] Resort by column
+- [x] Resort by column
 - [x] Support keyboard previous/next
 - [x] Fix the player UX on thin windows (400px)
 - [x] OSX song info in the menu bar tray thing
