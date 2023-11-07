@@ -13,8 +13,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
 import FilterListIcon from '@mui/icons-material/FilterList';
-// import ShuffleIcon from '@mui/icons-material/Shuffle';
-// import ShuffleOnIcon from '@mui/icons-material/ShuffleOn';
 import {
   styled,
   ThemeProvider,
@@ -100,6 +98,7 @@ function MainDash() {
   const [filterDirection, setFilterDirection] = useState<'asc' | 'desc'>(
     'desc',
   );
+  const [shuffle, setShuffle] = useState(false);
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -212,6 +211,16 @@ function MainDash() {
     }
     const nextSong = keys[nextSongIndex];
     const nextSongMeta = filteredLibrary[nextSong];
+
+    // @dev: if shuffle is on, pick a random song
+    if (shuffle) {
+      const randomIndex = Math.floor(Math.random() * keys.length);
+      const randomSong = keys[randomIndex];
+      const randomSongMeta = filteredLibrary[randomSong];
+      await playSong(randomSong, randomSongMeta);
+      return;
+    }
+
     await playSong(nextSong, nextSongMeta);
   };
 
@@ -625,7 +634,12 @@ function MainDash() {
         </div>
       </div>
 
-      <div className="player flex flex-col sm:flex-row items-center justify-between drag gap-4 fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3">
+      <div
+        className="player flex flex-col sm:flex-row items-center
+      justify-between drag gap-1 sm:gap-4 fixed inset-x-0 border-t
+      border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-1 sm:py-3
+      "
+      >
         <Box
           sx={{
             display: 'flex',
@@ -637,6 +651,7 @@ function MainDash() {
           <IconButton
             aria-label="previous song"
             onClick={playPreviousSong}
+            disabled={!currentSongMetadata}
             color="inherit"
           >
             <FastRewindRounded fontSize="medium" />
@@ -644,6 +659,7 @@ function MainDash() {
           <IconButton
             aria-label={paused ? 'play' : 'pause'}
             color="inherit"
+            disabled={!currentSongMetadata}
             onClick={() => {
               setPaused(!paused);
               // eslint-disable-next-line no-unused-expressions
@@ -661,13 +677,11 @@ function MainDash() {
           <IconButton
             aria-label="next song"
             onClick={playNextSong}
+            disabled={!currentSongMetadata}
             color="inherit"
           >
             <FastForwardRounded fontSize="medium" />
           </IconButton>
-          {/* <IconButton>
-            <ShuffleIcon fontSize="small" />
-          </IconButton> */}
         </Box>
         <LinearProgressBar
           value={currentSongTime}
@@ -681,10 +695,13 @@ function MainDash() {
             }
           }}
         />
-        <div className="flex sm:justify-end justify-center flex-1 mt-2 sm:w-auto w-full">
+        <div className="flex relative sm:justify-end justify-center flex-1 mt-2 mb-1 sm:w-auto w-full">
           <ContinuousSlider
             onChange={(event, value) => {
               audioTagRef.current!.volume = (value as number) / 100;
+            }}
+            onShuffleChange={(value) => {
+              setShuffle(value);
             }}
           />
         </div>
