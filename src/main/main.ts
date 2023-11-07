@@ -194,8 +194,11 @@ const createWindow = async () => {
    */
   protocol.registerFileProtocol('my-magic-protocol', (request, callback) => {
     const url = request.url.replace('my-magic-protocol://getMediaFile/', '');
+    // @dev: for things like japanese characters we have to convert %E7 back to a character
+    const decodedUrl = decodeURIComponent(url);
     try {
-      return callback(url);
+      console.log(decodedUrl);
+      return callback(decodedUrl);
     } catch (error) {
       console.error(error);
       return callback(404);
