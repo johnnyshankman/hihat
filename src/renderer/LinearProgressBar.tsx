@@ -41,7 +41,10 @@ export default function LinearProgressBar({
   }, [value]);
 
   return (
-    <Box sx={{ width: '33%', display: 'flex', flexDirection: 'column' }}>
+    <Box
+      className="sm:w-1/3 w-full sm:px-0 px-4"
+      sx={{ display: 'flex', flexDirection: 'column' }}
+    >
       <Box
         sx={{
           display: 'flex',

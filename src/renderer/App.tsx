@@ -13,7 +13,8 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
 import FilterListIcon from '@mui/icons-material/FilterList';
-
+// import ShuffleIcon from '@mui/icons-material/Shuffle';
+// import ShuffleOnIcon from '@mui/icons-material/ShuffleOn';
 import {
   styled,
   ThemeProvider,
@@ -524,7 +525,6 @@ function MainDash() {
           <Search
             sx={{
               borderRadius: '0.375rem',
-              fontSize: '18px',
             }}
           >
             <StyledInputBase
@@ -554,7 +554,9 @@ function MainDash() {
                 {filterType === 'title' && (
                   <span
                     className={`${
-                      filterDirection === 'asc' ? 'rotate-180' : ''
+                      filterDirection === 'asc'
+                        ? 'rotate-180'
+                        : 'relative bottom-[2px]'
                     } inline-block ml-2`}
                   >
                     <FilterListIcon fontSize="inherit" />
@@ -570,7 +572,9 @@ function MainDash() {
                 {filterType === 'artist' && (
                   <span
                     className={`${
-                      filterDirection === 'asc' ? 'rotate-180' : ''
+                      filterDirection === 'asc'
+                        ? 'rotate-180'
+                        : 'relative bottom-[2px]'
                     } inline-block ml-2`}
                   >
                     <FilterListIcon fontSize="inherit" />
@@ -586,7 +590,9 @@ function MainDash() {
                 {filterType === 'album' && (
                   <span
                     className={`${
-                      filterDirection === 'asc' ? 'rotate-180' : ''
+                      filterDirection === 'asc'
+                        ? 'rotate-180'
+                        : 'relative bottom-[2px]'
                     } inline-block ml-2`}
                   >
                     <FilterListIcon fontSize="inherit" />
@@ -619,7 +625,7 @@ function MainDash() {
         </div>
       </div>
 
-      <div className="player drag gap-4 fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3 flex items-center justify-between">
+      <div className="player flex flex-col sm:flex-row items-center justify-between drag gap-4 fixed inset-x-0 border-t border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-3">
         <Box
           sx={{
             display: 'flex',
@@ -659,6 +665,9 @@ function MainDash() {
           >
             <FastForwardRounded fontSize="medium" />
           </IconButton>
+          {/* <IconButton>
+            <ShuffleIcon fontSize="small" />
+          </IconButton> */}
         </Box>
         <LinearProgressBar
           value={currentSongTime}
@@ -672,7 +681,7 @@ function MainDash() {
             }
           }}
         />
-        <div className="flex justify-end flex-1 mt-2">
+        <div className="flex sm:justify-end justify-center flex-1 mt-2 sm:w-auto w-full">
           <ContinuousSlider
             onChange={(event, value) => {
               audioTagRef.current!.volume = (value as number) / 100;
