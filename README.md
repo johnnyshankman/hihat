@@ -70,15 +70,16 @@ Unlike VLC or Spotify, in *hihat* can see your album art front and center, you c
 * album art front and center
 * compact UX displays many songs at once
 * fully responsive down to 320px wide
-* dark mode by default
+* dark mode
 * supports all music file types
 * supports nested folders (like legacy itunes music libraries)
 * supports mixing and matching filetypes in the same library
-* osx menu bar player integration
 * supports infinite library size
-* library cacheing
+* osx menu bar player integration
+* library saved between sessions
 * keyboard media shortcut support
 * iTunes-like sorting
+* shuffle
 * fuzzy search
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -164,7 +165,7 @@ This is an example of how to list things you need to use the software and how to
 - [x] Minimalist search/filter solution
 - [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Multiple playlists
-- [ ] Shuffle
+- [x] Shuffle
 - [x] Resort by column
 - [x] Support keyboard previous/next
 - [x] Fix the player UX on thin windows (400px)
