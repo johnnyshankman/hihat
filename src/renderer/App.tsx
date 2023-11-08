@@ -260,6 +260,12 @@ function MainDash() {
     });
     // once the import is complete, update the store/data
     window.electron.ipcRenderer.once('select-library', (arg) => {
+      // exit early if the user cancels the import or the args are malformed
+      if (!arg || !(arg as any)?.library) {
+        setShowImportingProgress(false);
+        return;
+      }
+
       const typedArg = arg as StoreStructure;
 
       // reset the library, the filtered library, the current song, and pause.
@@ -275,7 +281,13 @@ function MainDash() {
       requestAndSetAlbumArtForSong(firstSong);
       setPaused(true);
       setInitialScrollIndex(2);
+
+      window.setTimeout(() => {
+        setSongsImported(0);
+        setTotalSongs(0);
+      }, 1000);
     });
+
     // request that the user selects a directory and that main process processes
     window.electron.ipcRenderer.sendMessage('select-library');
   };

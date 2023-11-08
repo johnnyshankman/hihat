@@ -95,6 +95,11 @@ ipcMain.on('select-library', async (event): Promise<any> => {
     return;
   }
 
+  if (result.canceled) {
+    event.reply('select-library', {});
+    return;
+  }
+
   const files = findAllFilesRecursively(result.filePaths[0]);
 
   // create an empty mapping of files to tags we want to cache and import
