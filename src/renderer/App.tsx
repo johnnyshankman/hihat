@@ -236,6 +236,17 @@ function MainDash() {
 
   const playPreviousSong = async () => {
     if (!filteredLibrary) return;
+
+    if (!paused && currentSong && currentSongMetadata && currentSongTime > 2) {
+      // @dev start the song over by:
+      // 1. swapping in a blank song reference for a split second
+      // 2. then swapping back in the current song
+      setCurrentSong('');
+      window.setTimeout(() => {
+        playSong(currentSong, currentSongMetadata);
+      }, 100);
+      return;
+    }
     const keys = Object.keys(filteredLibrary);
     const currentSongIndex = keys.indexOf(currentSong || '');
     const previousSongIndex = currentSongIndex - 1;

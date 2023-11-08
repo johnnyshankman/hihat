@@ -164,8 +164,9 @@ This is an example of how to list things you need to use the software and how to
 - [x] Cache imported songs from previous session
 - [x] Minimalist search/filter solution
 - [x] Recursive file finding for itunes-like libraries with nested folders
-- [ ] Multiple playlists
-- [ ] Update library with skip pre-existing files
+- [ ] Playlists
+- [ ] Update/import skips pre-existing files
+- [ ] OBS-friendly hooks for streamers
 - [x] On reboot, scroll to last played song, queue it up as well
 - [x] Shuffle
 - [x] Resort by column
