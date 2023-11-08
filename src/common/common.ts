@@ -27,4 +27,5 @@ export type StoreStructure = {
     [key: string]: SongSkeletonStructure;
   };
   playlists: Playlist[];
+  lastPlayedSong: string; // a key into "library"
 };

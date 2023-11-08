@@ -38,6 +38,16 @@ let mainWindow: BrowserWindow | null = null;
 ipcMain.on('get-album-art', async (event, arg) => {
   const filePath = arg.path;
   const metadata = await mm.parseFile(filePath);
+  // write the filePath to the userConfig's lastPlayedSong field
+  const userConfig = parseData(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+  ) as StoreStructure;
+  userConfig.lastPlayedSong = filePath;
+  fs.writeFileSync(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+    JSON.stringify(userConfig),
+  );
+
   event.reply('get-album-art', metadata.common.picture?.[0] || '');
 });
 
@@ -70,13 +80,20 @@ const findAllFilesRecursively = (dir: string) => {
  *      and then importing it into the app as well as cache'ing it
  *     in the user's app data directory.
  */
-ipcMain.on('select-dirs', async (event): Promise<any> => {
+ipcMain.on('select-library', async (event): Promise<any> => {
   if (!mainWindow) {
     return;
   }
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openDirectory'],
-  });
+
+  let result;
+  try {
+    result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+    });
+  } catch (e) {
+    console.log(e);
+    return;
+  }
 
   const files = findAllFilesRecursively(result.filePaths[0]);
 
@@ -93,7 +110,7 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
       console.log(e);
     }
 
-    if (metadata)
+    if (metadata && metadata.format.duration && metadata.common.title) {
       filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
         common: {
           ...metadata.common,
@@ -105,6 +122,7 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
           duration: metadata.format.duration,
         },
       } as SongSkeletonStructure;
+    }
 
     event.reply('song-imported', {
       songsImported: i,
@@ -146,9 +164,10 @@ ipcMain.on('select-dirs', async (event): Promise<any> => {
   const initialStore = {
     library: orderedFilesToTags,
     playlists: [],
+    lastPlayedSong: '',
   } as StoreStructure;
 
-  event.reply('select-dirs', initialStore);
+  event.reply('select-library', initialStore);
 
   // write the json file to the user data directory as userConfig.json
   // for caching purposes, we use this during future startups of the app.
