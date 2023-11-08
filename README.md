@@ -166,7 +166,7 @@ This is an example of how to list things you need to use the software and how to
 - [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Multiple playlists
 - [ ] Update library with skip pre-existing files
-- [ ] On reboot, scroll to last played song
+- [x] On reboot, scroll to last played song, queue it up as well
 - [x] Shuffle
 - [x] Resort by column
 - [x] Support keyboard previous/next
