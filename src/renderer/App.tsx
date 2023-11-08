@@ -99,6 +99,7 @@ function MainDash() {
     'desc',
   );
   const [shuffle, setShuffle] = useState(false);
+  const [initialScrollIndex, setInitialScrollIndex] = useState(0);
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -128,9 +129,57 @@ function MainDash() {
       .padStart(2, '0')}`;
   };
 
+  const onGetAlbumArtResponse = async (event) => {
+    const pic = event as IPicture;
+    const url = await bufferToDataUrl(pic.data, pic.format);
+    setCurrentSongDataURL(url);
+    if (navigator.mediaSession.metadata?.artwork) {
+      navigator.mediaSession.metadata.artwork = [
+        {
+          src: url,
+          sizes: '192x192',
+          type: pic.format,
+        },
+      ];
+    }
+  };
+
+  const requestAndSetAlbumArtForSong = (song: string) => {
+    // request the album art for the file from the main process
+    // this will also set the `lastPlayedSong` in the userConfig
+    window.electron.ipcRenderer.sendMessage('get-album-art', {
+      path: song,
+    });
+
+    // set the current song data url when the main process responds
+    window.electron.ipcRenderer.once('get-album-art', onGetAlbumArtResponse);
+  };
+
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    if (!library) return;
+    const filtered = Object.keys(library).filter((song) => {
+      const meta = library[song];
+      return (
+        meta.common.title?.toLowerCase().includes(query.toLowerCase()) ||
+        meta.common.artist?.toLowerCase().includes(query.toLowerCase()) ||
+        meta.common.album?.toLowerCase().includes(query.toLowerCase())
+      );
+    });
+
+    const filteredLib: StoreStructure['library'] = {};
+    filtered.forEach((song) => {
+      filteredLib[song] = library[song];
+    });
+
+    setFilteredLibrary(filteredLib);
+  };
+
   /**
    * @dev update the current song and metadata then let the song play.
    *      in the bg request and set the album art from main process.
+   *      the main process handler for the album art also saves the
+   *      last played song into the userConfig for persistence.
    */
   const playSong = async (song: string, meta: SongSkeletonStructure) => {
     // update the navigator
@@ -156,49 +205,10 @@ function MainDash() {
     setCurrentSong(song);
     setCurrentSongMetadata(meta);
 
-    // request the album art for the file from the main process
-    window.electron.ipcRenderer.sendMessage('get-album-art', {
-      path: song,
-    });
-
-    // set the current song data url when the main process responds
-    window.electron.ipcRenderer.once('get-album-art', async (event) => {
-      const pic = event as IPicture;
-      const url = await bufferToDataUrl(pic.data, pic.format);
-      setCurrentSongDataURL(url);
-      if (navigator.mediaSession.metadata?.artwork) {
-        navigator.mediaSession.metadata.artwork = [
-          {
-            src: url,
-            sizes: '192x192',
-            type: pic.format,
-          },
-        ];
-      }
-    });
+    requestAndSetAlbumArtForSong(song);
 
     // play the song regardless of when the main process responds
     setPaused(false);
-  };
-
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const query = event.target.value;
-    if (!library) return;
-    const filtered = Object.keys(library).filter((song) => {
-      const meta = library[song];
-      return (
-        meta.common.title?.toLowerCase().includes(query.toLowerCase()) ||
-        meta.common.artist?.toLowerCase().includes(query.toLowerCase()) ||
-        meta.common.album?.toLowerCase().includes(query.toLowerCase())
-      );
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = library[song];
-    });
-
-    setFilteredLibrary(filteredLib);
   };
 
   const playNextSong = async () => {
@@ -242,18 +252,44 @@ function MainDash() {
    */
   const importSongs = async () => {
     setShowImportingProgress(true);
+
+    // updates the UX with the progress of the import
     window.electron.ipcRenderer.on('song-imported', (args) => {
       setSongsImported((args as any).songsImported);
       setTotalSongs((args as any).totalSongs);
     });
+    // once the import is complete, update the store/data
+    window.electron.ipcRenderer.once('select-library', (arg) => {
+      // exit early if the user cancels the import or the args are malformed
+      if (!arg || !(arg as any)?.library) {
+        setShowImportingProgress(false);
+        return;
+      }
 
-    window.electron.ipcRenderer.once('select-dirs', (arg) => {
       const typedArg = arg as StoreStructure;
+
+      // reset the library, the filtered library, the current song, and pause.
       setLibrary(typedArg.library);
       setFilteredLibrary(typedArg.library);
       setShowImportingProgress(false);
+      // set current song to the first song in the library
+      const firstSong = Object.keys(typedArg.library)[0];
+      const firstSongMeta = typedArg.library[firstSong];
+
+      setCurrentSong(firstSong);
+      setCurrentSongMetadata(firstSongMeta);
+      requestAndSetAlbumArtForSong(firstSong);
+      setPaused(true);
+      setInitialScrollIndex(2);
+
+      window.setTimeout(() => {
+        setSongsImported(0);
+        setTotalSongs(0);
+      }, 1000);
     });
-    window.electron.ipcRenderer.sendMessage('select-dirs');
+
+    // request that the user selects a directory and that main process processes
+    window.electron.ipcRenderer.sendMessage('select-library');
   };
 
   const filterByTitle = () => {
@@ -374,9 +410,7 @@ function MainDash() {
     style: any;
   }) => {
     if (!filteredLibrary) return null;
-
     const song = Object.keys(filteredLibrary)[index];
-
     return (
       <div
         key={key}
@@ -435,6 +469,18 @@ function MainDash() {
 
       if (height) {
         setRowContainerHeight(height - playerHeight - artContainerHeight);
+      }
+
+      if (typedArg.lastPlayedSong) {
+        setCurrentSong(typedArg.lastPlayedSong);
+        setCurrentSongMetadata(typedArg.library[typedArg.lastPlayedSong]);
+        requestAndSetAlbumArtForSong(typedArg.lastPlayedSong);
+
+        // now find the index of the song within the library
+        const songIndex = Object.keys(typedArg.library).findIndex(
+          (song) => song === typedArg.lastPlayedSong,
+        );
+        setInitialScrollIndex(songIndex);
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -630,6 +676,10 @@ function MainDash() {
             rowRenderer={renderSongRow}
             rowCount={Object.keys(filteredLibrary || {}).length}
             rowHeight={rowHeight}
+            scrollToAlignment="center"
+            scrollToIndex={
+              initialScrollIndex > 0 ? initialScrollIndex : undefined
+            }
           />
         </div>
       </div>

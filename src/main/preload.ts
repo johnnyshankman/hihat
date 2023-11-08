@@ -4,7 +4,7 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 export type Channels =
   | 'ipc-example'
-  | 'select-dirs'
+  | 'select-library'
   | 'initialize'
   | 'get-album-art'
   | 'song-imported';
