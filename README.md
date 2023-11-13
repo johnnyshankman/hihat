@@ -68,7 +68,7 @@ Unlike VLC or Spotify, in *hihat* can see your album art front and center, you c
 
 *hihat* was built with the following features in mind:
 * album art front and center
-* compact UX to display many songs at once
+* display many songs at once
 * responsive UX down to 320px wide
 * dark mode
 * fast filtering search
