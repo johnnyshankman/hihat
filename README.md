@@ -60,7 +60,7 @@
 
 Remember the zen of listening offline? *hihat* aims to bring that vibe back. No links, no lag, no social feeds -- just music.
 
-Unlike VLC or Spotify, in *hihat* can see your album art front and center, you can see many songs at once, and it's fully responsive down to 320px wide, so you can use it in the slimmest of spots on your screen.
+Unlike VLC or Spotify, in *hihat* can see your album art front and center, you can see many songs at once, and it's fully responsive down to 320px wide so that you can use it in the slimmest of spots on your screen.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
