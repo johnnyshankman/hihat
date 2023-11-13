@@ -68,19 +68,20 @@ Unlike VLC or Spotify, in *hihat* can see your album art front and center, you c
 
 *hihat* was built with the following features in mind:
 * album art front and center
-* compact UX displays many songs at once
-* fully responsive down to 320px wide
+* compact UX to display many songs at once
+* responsive UX down to 320px wide
 * dark mode
-* supports all music file types
-* supports nested folders (like legacy itunes music libraries)
-* supports mixing and matching filetypes in the same library
-* supports infinite library size
-* osx menu bar player integration
-* library saved between sessions
+* fast filtering search
+* mix filetypes in one library
+* support all music filetypes
+* support nested folders (ex: itunes music libraries)
+* support infinite library size
+* osx menu bar integration
+* library cache'ing between sessions
 * keyboard media shortcut support
-* iTunes-like sorting
-* shuffle
-* fuzzy search
+* shuffle & repeat
+* sort by song, artist, and album
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
