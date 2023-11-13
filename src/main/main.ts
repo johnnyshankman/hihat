@@ -102,7 +102,7 @@ ipcMain.on('select-library', async (event): Promise<any> => {
 
   const files = findAllFilesRecursively(result.filePaths[0]);
 
-  // create an empty mapping of files to tags we want to cache and import
+  // create an empty mapping of files to tags we want to cache and re-import on boot
   let filesToTags: { [key: string]: SongSkeletonStructure } = {};
 
   for (let i = 0; i < files.length; i += 1) {
@@ -135,7 +135,7 @@ ipcMain.on('select-library', async (event): Promise<any> => {
     });
   }
 
-  // sort filesToTags by artist, album, and track number
+  // sort filesToTags by artist, album, then track number
   const orderedFilesToTags: { [key: string]: SongSkeletonStructure } = {};
   Object.keys(filesToTags)
     .sort((a, b) => {
@@ -145,7 +145,7 @@ ipcMain.on('select-library', async (event): Promise<any> => {
       const albumB = filesToTags[b].common?.album?.toLowerCase();
       const trackA = filesToTags[a].common?.track?.no;
       const trackB = filesToTags[b].common?.track?.no;
-      // handle null cases
+
       if (!artistA) return -1;
       if (!artistB) return 1;
       if (!albumA) return -1;
@@ -175,7 +175,7 @@ ipcMain.on('select-library', async (event): Promise<any> => {
   event.reply('select-library', initialStore);
 
   // write the json file to the user data directory as userConfig.json
-  // for caching purposes, we use this during future startups of the app.
+  // for caching purposes. we re-use this during future boots of the app.
   const dataPath = app.getPath('userData');
   const filePath = path.join(dataPath, 'userConfig.json');
   fs.writeFileSync(filePath, JSON.stringify(initialStore));
@@ -214,11 +214,11 @@ const createWindow = async () => {
   /**
    * @dev create a custom protocol to handle requests for media files
    *      from the renderer process. This is necessary because the
-   *     renderer process cannot access the file system directly.
+   *      renderer process cannot access the file system directly.
    */
   protocol.registerFileProtocol('my-magic-protocol', (request, callback) => {
     const url = request.url.replace('my-magic-protocol://getMediaFile/', '');
-    // @dev: for things like japanese characters we have to convert %E7 back to a character
+    // @dev: for things like japanese characters we have to decode things like %E7
     const decodedUrl = decodeURIComponent(url);
     try {
       console.log(decodedUrl);
@@ -237,6 +237,16 @@ const createWindow = async () => {
     return path.join(RESOURCES_PATH, ...paths);
   };
 
+  /**
+   * @dev create the main window of the app. This is the window that
+   *      the user will interact with. It is a BrowserWindow instance.
+   *      We also set the icon for the app here.
+   *      We also set the preload script here. This is a script that
+   *      runs in the renderer process before any other scripts run.
+   *      We use this to set up the ipcRenderer and other things that
+   *      we need to use in the renderer + main processes.
+   * @see https://www.electronjs.org/docs/api/browser-window
+   */
   mainWindow = new BrowserWindow({
     show: false,
     width: 1024,
