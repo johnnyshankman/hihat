@@ -32,7 +32,7 @@ jobs:
       uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        automatic_release_tag: ${{ steps.package-version.outputs.current-version }}
+        automatic_release_tag: ${GITHUB_REF##*/}
         prerelease: false
         files: |
           release/build/*.zip
