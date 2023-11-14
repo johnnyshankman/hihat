@@ -72,6 +72,7 @@ Unlike VLC or Spotify, in *hihat* can see your album art front and center, you c
 * responsive UX down to 320px wide
 * dark mode
 * fast filtering search
+* fast library imports
 * mix filetypes in one library
 * support all music filetypes
 * support nested folders (ex: itunes music libraries)
@@ -116,6 +117,7 @@ This is a bare bones app meant for use with big folders of music, such as someth
 
 Every time you boot the app from then on in, it'll load your library automagically!
 
+If you ever need to update your library, simply reimport. *hihat* will only import new files, and will update any metadata changes. This process is quick and takes about 1min per 10,000 songs in your library (100k songs = 10mins of processing).
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- GETTING STARTED -->
