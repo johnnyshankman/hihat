@@ -139,8 +139,12 @@ ipcMain.on('select-library', async (event): Promise<any> => {
   const orderedFilesToTags: { [key: string]: SongSkeletonStructure } = {};
   Object.keys(filesToTags)
     .sort((a, b) => {
-      const artistA = filesToTags[a].common?.artist?.toLowerCase();
-      const artistB = filesToTags[b].common?.artist?.toLowerCase();
+      const artistA = filesToTags[a].common?.artist
+        ?.toLowerCase()
+        .replace(/^the /, '');
+      const artistB = filesToTags[b].common?.artist
+        ?.toLowerCase()
+        .replace(/^the /, '');
       const albumA = filesToTags[a].common?.album?.toLowerCase();
       const albumB = filesToTags[b].common?.album?.toLowerCase();
       const trackA = filesToTags[a].common?.track?.no;

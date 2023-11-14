@@ -349,8 +349,12 @@ function MainDash() {
     setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
 
     const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      const artistA = filteredLibrary[a].common?.artist?.toLowerCase();
-      const artistB = filteredLibrary[b].common?.artist?.toLowerCase();
+      const artistA = filteredLibrary[a].common?.artist
+        ?.toLowerCase()
+        .replace(/^the /, '');
+      const artistB = filteredLibrary[b].common?.artist
+        ?.toLowerCase()
+        .replace(/^the /, '');
       const albumA = filteredLibrary[a].common?.album?.toLowerCase();
       const albumB = filteredLibrary[b].common?.album?.toLowerCase();
       const trackA = filteredLibrary[a].common?.track?.no;
