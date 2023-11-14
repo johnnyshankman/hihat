@@ -10,10 +10,6 @@ jobs:
         node-version: '16.x'
         cache: 'yarn'
 
-    - name: get-npm-version
-      id: package-version
-      uses: martinbeentjes/npm-get-version-action@v1.3.1
-
     - name: Install dependencies
       run: |
         echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
