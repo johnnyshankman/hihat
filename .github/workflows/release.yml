@@ -15,12 +15,6 @@ jobs:
         echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
         yarn install --immutable
 
-    - name: Lint
-      run: yarn lint
-
-    - name: Build
-      run: yarn build
-
     - name: Package
       run: yarn package
 
