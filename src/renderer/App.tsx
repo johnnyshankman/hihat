@@ -85,6 +85,8 @@ function MainDash() {
   const [currentSongDataURL, setCurrentSongDataURL] = useState<string>();
   const [songsImported, setSongsImported] = useState(0);
   const [totalSongs, setTotalSongs] = useState(0);
+  const [estimatedTimeRemainingString, setEstimatedTimeRemainingString] =
+    useState('');
   const [currentSongMetadata, setCurrentSongMetadata] =
     useState<SongSkeletonStructure>();
   // the constant source of truth for the library, invisible to the UX
@@ -268,6 +270,16 @@ function MainDash() {
     window.electron.ipcRenderer.on('song-imported', (args) => {
       setSongsImported((args as any).songsImported);
       setTotalSongs((args as any).totalSongs);
+      // completion time is roughly 5ms per song
+      const estimatedTimeRemaining = Math.floor(
+        ((args as any).totalSongs - (args as any).songsImported) * 5,
+      );
+
+      // convert the estimated time remaining in ms to a human readable format
+      const minutes = Math.floor(estimatedTimeRemaining / 60000);
+      // if it is less than one minute say `less than a minute`
+      const seconds = minutes < 1 ? 'est: < 1min' : `est: ${minutes}mins...`;
+      setEstimatedTimeRemainingString(seconds);
     });
     // once the import is complete, update the store/data
     window.electron.ipcRenderer.once('select-library', (arg) => {
@@ -509,7 +521,7 @@ function MainDash() {
         className="flex flex-col items-center justify-center content-center p-10"
         open={showImportingProgress}
       >
-        <div className="flex flex-col items-center px-20">
+        <div className="flex flex-col items-center px-20 pb-6">
           <DialogTitle>Importing</DialogTitle>
           <Box sx={{ width: '100%', marginBottom: '12px' }}>
             <LinearProgress
@@ -518,8 +530,11 @@ function MainDash() {
               value={(songsImported / totalSongs) * 100}
             />
           </Box>
-          <div className="flex w-full justify-center p-2 mb-2">
-            <TinyText>{`${songsImported} / ${totalSongs}`}</TinyText>
+          <div className="flex w-full justify-center mt-1 px-2 ">
+            <TinyText>{`${songsImported} / ${totalSongs} songs`}</TinyText>
+          </div>
+          <div className="flex w-full justify-center px-2">
+            <TinyText>{`[${estimatedTimeRemainingString}]`}</TinyText>
           </div>
         </div>
       </Dialog>
