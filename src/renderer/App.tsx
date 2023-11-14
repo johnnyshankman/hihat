@@ -48,7 +48,7 @@ const Search = styled('div')(({ theme }) => ({
     backgroundColor: alpha(theme.palette.common.white, 0.25),
   },
   marginLeft: 0,
-  width: '100px',
+  width: '80px',
   [theme.breakpoints.up('sm')]: {
     marginLeft: theme.spacing(1),
     width: 'auto',
@@ -57,6 +57,11 @@ const Search = styled('div')(({ theme }) => ({
 
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
   color: 'inherit',
+  fontSize: '12px',
+  padding: '4px 0',
+  [theme.breakpoints.up('sm')]: {
+    fontSize: '13px',
+  },
   '& .MuiInputBase-input': {
     padding: theme.spacing(1, 0.5, 1, 0),
     // vertical padding + font size from searchIcon
@@ -606,20 +611,16 @@ function MainDash() {
           />
         </button>
 
-        <Box className="absolute top-[70px] md:top-4 md:right-20 right-4 w-auto text-white">
+        <Box className="absolute h-[45px] top-[70px] md:top-4 md:right-20 right-4 w-auto text-white">
           <Search
             sx={{
               borderRadius: '0.375rem',
             }}
           >
             <StyledInputBase
-              placeholder="Search…"
+              placeholder="Search"
               inputProps={{ 'aria-label': 'search' }}
               onChange={handleSearch}
-              sx={{
-                fontSize: '14px',
-                padding: '4px 0',
-              }}
             />
           </Search>
         </Box>
