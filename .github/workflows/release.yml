@@ -22,7 +22,7 @@ jobs:
       uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        automatic_release_tag: ${{ env.GITHUB_REF_NAME }}
+        automatic_release_tag: ${GITHUB_REF_NAME}
         prerelease: false
         files: |
           release/build/*.zip
