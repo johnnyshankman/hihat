@@ -1,0 +1,28 @@
+name: Release Latest
+on: [workflow_dispatch]
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '16.x'
+
+    - name: Install dependencies
+      run: |
+        echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+        npm ci
+
+    - name: Package
+      run: npm run package
+
+    - name: Publish Release on Github
+      uses: marvinpinto/action-automatic-releases@latest
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        automatic_release_tag: "latest"
+        prerelease: false
+        files: |
+          release/build/*.zip
+          release/build/*.dmg
