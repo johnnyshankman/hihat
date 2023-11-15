@@ -225,7 +225,6 @@ const createWindow = async () => {
     // @dev: for things like japanese characters we have to decode things like %E7
     const decodedUrl = decodeURIComponent(url);
     try {
-      console.log(decodedUrl);
       return callback(decodedUrl);
     } catch (error) {
       console.error(error);
