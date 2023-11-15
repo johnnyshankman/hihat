@@ -66,13 +66,13 @@
     }
   },
   "dependencies": {
-    "@tanstack/react-virtual": "^3.0.0-alpha.0",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
     "electron-updater": "^6.1.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.16.0"
+    "react-router-dom": "^6.16.0",
+    "source-map-support": "^0.5.21"
   },
   "devDependencies": {
     "@electron/notarize": "^2.1.0",
