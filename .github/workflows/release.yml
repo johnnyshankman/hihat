@@ -8,15 +8,14 @@ jobs:
     - uses: actions/setup-node@v3
       with:
         node-version: '16.x'
-        cache: 'yarn'
 
     - name: Install dependencies
       run: |
         echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-        yarn install --immutable
+        npm ci
 
     - name: Package
-      run: yarn package
+      run: npm run package
 
     - name: Publish Release on Github
       uses: marvinpinto/action-automatic-releases@latest
@@ -26,3 +25,4 @@ jobs:
         prerelease: false
         files: |
           release/build/*.zip
+          release/build/*.dmg

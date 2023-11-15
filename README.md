@@ -132,10 +132,6 @@ This is an example of how to list things you need to use the software and how to
   ```sh
   npm install npm@latest -g
   ```
-* yarn
-  ```sh
-  npm install --global yarn
-  ```
 
 ### Installation
 
@@ -143,16 +139,16 @@ This is an example of how to list things you need to use the software and how to
    ```sh
    git clone https://github.com/johnnyshankman/hihat.git
    ```
-3. Install NPM packages with Yarn
+3. Install NPM packages
    ```sh
-   yarn install
+   npm install
    ```
 
 ### Running Local App
 
 1. Run the app in development with hot reloading
    ```sh
-   yarn start
+   npm run start
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

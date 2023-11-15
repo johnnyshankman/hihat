@@ -11,15 +11,14 @@ jobs:
     - uses: actions/setup-node@v3
       with:
         node-version: '16.x'
-        cache: 'yarn'
 
     - name: Install dependencies
       run: |
         echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-        yarn install --immutable
+        npm ci
 
     - name: Lint
-      run: yarn lint
+      run: npm run lint
 
     - name: Build
-      run: yarn build
+      run: npm run build
