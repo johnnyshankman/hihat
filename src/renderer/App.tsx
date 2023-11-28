@@ -283,7 +283,8 @@ function MainDash() {
       // convert the estimated time remaining in ms to a human readable format
       const minutes = Math.floor(estimatedTimeRemaining / 60000);
       // if it is less than one minute say `less than a minute`
-      const seconds = minutes < 1 ? 'est: < 1min' : `est: ${minutes}mins...`;
+      const seconds =
+        minutes < 1 ? 'Time Left: < 1min' : `Time Left: ${minutes}mins...`;
       setEstimatedTimeRemainingString(seconds);
     });
     // once the import is complete, update the store/data
@@ -531,7 +532,7 @@ function MainDash() {
         open={showImportingProgress}
       >
         <div className="flex flex-col items-center px-20 pb-6">
-          <DialogTitle>Importing</DialogTitle>
+          <DialogTitle>Importing Songs</DialogTitle>
           <Box sx={{ width: '100%', marginBottom: '12px' }}>
             <LinearProgress
               variant="determinate"
@@ -540,7 +541,7 @@ function MainDash() {
             />
           </Box>
           <div className="flex w-full justify-center mt-1 px-2 ">
-            <TinyText>{`${songsImported} / ${totalSongs} songs`}</TinyText>
+            <TinyText>{`${songsImported} / ${totalSongs}`}</TinyText>
           </div>
           <div className="flex w-full justify-center px-2">
             <TinyText>{`[${
