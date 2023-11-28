@@ -543,7 +543,9 @@ function MainDash() {
             <TinyText>{`${songsImported} / ${totalSongs} songs`}</TinyText>
           </div>
           <div className="flex w-full justify-center px-2">
-            <TinyText>{`[${estimatedTimeRemainingString}]`}</TinyText>
+            <TinyText>{`[${
+              estimatedTimeRemainingString || 'Calculating...'
+            }]`}</TinyText>
           </div>
         </div>
       </Dialog>
