@@ -66,24 +66,22 @@ Unlike VLC or Spotify, in *hihat* can see your album art front and center, you c
 
 ### Core Features
 
-*hihat* was built with the following features in mind:\
-* no internet connection required
-* album art front and center
-* display many songs at once
-* responsive UX down to 320px wide
-* dark mode
-* fast filtering search
-* fast library imports
-* mix filetypes in one library
-* support all music filetypes
-* support nested folders (ex: itunes music libraries)
-* support infinite library size
-* osx menu bar integration
-* library cache'ing between sessions
-* keyboard media shortcut support
+*hihat* has the following core features:
+* 100% offline
+* dark mode by default
+* support for all screen sizes
+* large album art
+* compact song and library interface
+* fast search
+* fast import
 * shuffle & repeat
-* sort by song, artist, and album
-
+* sort by song, artist, and/or album
+* infinite library size
+* supports all file types
+* mix 'n match file types
+* nested folder library support (legacy iTunes libraries)
+* OSX menu bar integration
+* supports keyboard media shortcuts
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
