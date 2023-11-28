@@ -10,7 +10,7 @@
   <h3 align="center">hihat</h3>
 
   <p align="center">
-    A minimalist music player for OSX
+    A minimalist offline music player for OSX
     <br />
     <br />
     <a href="https://github.com/johnnyshankman/hihat/issues">Report Bug</a>
@@ -56,7 +56,7 @@
 
 [![hihat Screen Shot][product-screenshot]](https://whitelights.co)
 
-*hihat* is a simple a way to play your music library, similar to the way you would with iTunes or Windows Media Player in the early 2000s.
+*hihat* is a simple a way to play your music library offline, similar to the way you would with iTunes or Windows Media Player in the early 2000s.
 
 Remember the zen of listening offline? *hihat* aims to bring that vibe back. No links, no lag, no social feeds -- just music.
 
@@ -66,7 +66,8 @@ Unlike VLC or Spotify, in *hihat* can see your album art front and center, you c
 
 ### Core Features
 
-*hihat* was built with the following features in mind:
+*hihat* was built with the following features in mind:\
+* no internet connection required
 * album art front and center
 * display many songs at once
 * responsive UX down to 320px wide
