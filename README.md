@@ -164,10 +164,11 @@ This is an example of how to list things you need to use the software and how to
 - [x] Minimalist search/filter solution
 - [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Playlists
-- [ ] Update/import skips pre-existing files
+- [x] Update/import skips pre-existing files
 - [ ] OBS-friendly hooks for streamers
 - [x] On reboot, scroll to last played song, queue it up as well
 - [x] Shuffle
+- [ ] Repeat
 - [x] Resort by column
 - [x] Support keyboard previous/next
 - [x] Fix the player UX on thin windows (400px)
