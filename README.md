@@ -54,11 +54,11 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![hihat Screen Shot][product-screenshot]](https://whitelights.co)
-
 *hihat* is a simple a way to play your music library offline, similar to iTunes or Windows Media Player in the early 2000s.
 
 Remember the zen of listening offline? *hihat* aims to bring that back. No links, no lag, no social feeds -- just music. All within a compact and responsive design.
+
+[![hihat Screen Shot][product-screenshot]](https://whitelights.co)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
