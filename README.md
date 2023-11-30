@@ -112,11 +112,12 @@ Almost every format under the sun should be supported, and can be mixed'n'matche
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-This is a bare bones app meant for use with big folders of music, such as something you might end up with if you used to use iTunes. _Simply hit the import icon in the top right, select a folder, wait for the import proces to finish, and use as you would any other media player._
+This is a bare bones app meant for use with big folders of music, such as something you might end up with if you used to use iTunes. 
 
-Every time you boot the app from then on in, it'll load your library automagically!
+_Simply hit the import icon in the top right, select a folder, and wait for the import proces to finish. You can then use hiaht as you would any other media player._
 
-If you ever need to update your library, simply reimport. *hihat* will only import new files, and will update any metadata changes. This process is quick and takes about 1min per 10,000 songs in your library (100k songs = 10mins of processing).
+If you ever need to update your library, simply reimport. This process is quick and takes about 1min per 10,000 songs in your library (100k songs = 10mins of processing).
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- GETTING STARTED -->
