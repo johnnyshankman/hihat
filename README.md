@@ -58,7 +58,7 @@
 
 Remember the zen of listening offline? *hihat* aims to bring that back. 
 
-No links, no lag, no social feeds -- just music. All in a compact and responsive design.
+No links, no lag, no social feeds -- just music.
 
 [![hihat Screen Shot][product-screenshot]](https://whitelights.co)
 
