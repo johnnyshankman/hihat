@@ -175,6 +175,7 @@ This is an example of how to list things you need to use the software and how to
 - [ ] Ability to "hide" songs you don't actually want to see
 - [ ] Ability to "open in finder" so you can delete the song file itself
 - [ ] Ability to edit metadata of MP3s using a modal
+- [ ] Ability to insert new songs or albums without updating the whole library
 
 ![Screenshot 2023-11-04 at 10 50 26 PM](https://github.com/johnnyshankman/hihat/assets/6632701/c0c2e249-08bd-46d0-9487-3e89be56ff4f)
 
