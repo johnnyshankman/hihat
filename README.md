@@ -75,7 +75,7 @@ No links, no notifications, no lag, no social media, and no ads.
 * shuffle & repeat
 * sort by song, artist, and/or album
 * infinite library size
-* supports all file types
+* all file types
 * mix 'n match file types
 * nested folder library support (legacy iTunes libraries)
 * OSX menu bar integration
@@ -100,7 +100,7 @@ This project was built with the following technologies:
 
 ### Supported Audio Formats and Metadata Formats
 
-Almost every format under the sun should be supported, and can be mixed'n'matched in the same library directory.
+Almost every format under the sun should be supported, and they can all be mixed together into the same library seamlessly.
 
 * See [The Chromium Project](https://www.chromium.org/audio-video/) for information on supported audio formats.
 * See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
