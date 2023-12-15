@@ -72,11 +72,12 @@ Just music.
 * support for all screen sizes
 * large album art
 * compact song and library interface
-* fast search
-* fast import
-* shuffle & repeat
 * iTunes-like sort [artist -> album -> track #] by default
 * Classic sort by song, artist, or album
+* fast search
+* fast import
+* song shuffle
+* song repeat
 * infinite library size
 * all file types
 * mix 'n match file types
