@@ -161,17 +161,17 @@ This is an example of how to list things you need to use the software and how to
 - [x] Cache imported songs from previous session
 - [x] Minimalist search/filter solution
 - [x] Recursive file finding for itunes-like libraries with nested folders
-- [ ] Playlists
+- [ ] Playlists (TBD if I'll ever do this, a ton of work is required)
 - [x] Update/import skips pre-existing files
-- [ ] OBS-friendly hooks for streamers
 - [x] On reboot, scroll to last played song, queue it up as well
-- [x] Shuffle
-- [ ] Repeat
+- [x] Shuffle songs
+- [x] Repeat song
 - [x] Resort by column
 - [x] Support keyboard previous/next
 - [x] Fix the player UX on thin windows (400px)
 - [x] OSX song info in the menu bar tray thing
 - [ ] Copy/save album art for sharing
+- [ ] OBS extension for streaming songs
 - [ ] Ability to "hide" songs you don't actually want to see
 - [ ] Ability to "open in finder" so you can delete the song file itself
 - [ ] Ability to edit metadata of MP3s using a modal
