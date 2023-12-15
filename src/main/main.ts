@@ -102,12 +102,12 @@ ipcMain.on('select-additions', async (event): Promise<any> => {
 
   const files = findAllFilesRecursively(result.filePaths[0]);
 
-  // let filesToTags be the pre-existing library of fiels to tags
   const dataPath = app.getPath('userData');
   const filePath = path.join(dataPath, 'userConfig.json');
   const contents = parseData(filePath);
   let filesToTags = contents.library;
 
+  // TODO: copy over songs from chosen directory to the main library directory
   for (let i = 0; i < files.length; i += 1) {
     let metadata;
 
