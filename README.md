@@ -78,8 +78,8 @@ Just music.
 * fast import
 * song shuffle
 * song repeat
-* infinite library size
-* all file types
+* no library size limiations
+* no file type limitations
 * mix 'n match file types
 * nested folder library support (legacy iTunes libraries)
 * OSX menu bar integration
