@@ -83,7 +83,7 @@ Just music.
 * mix 'n match file types
 * nested folder library support (legacy iTunes libraries)
 * OSX menu bar integration
-* supports keyboard media shortcuts
+* Media Keys support
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
