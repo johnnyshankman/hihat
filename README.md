@@ -75,7 +75,8 @@ Just music.
 * fast search
 * fast import
 * shuffle & repeat
-* sort by song, artist, and/or album
+* iTunes-like sort [artist -> album -> track #] by default
+* Classic sort by song, artist, or album
 * infinite library size
 * all file types
 * mix 'n match file types
