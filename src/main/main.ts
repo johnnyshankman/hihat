@@ -76,6 +76,116 @@ const findAllFilesRecursively = (dir: string) => {
 };
 
 /**
+ * @dev for requesting the directory of music to shim into the existing
+ *      library etc. like select-library but it adds new new songs and then
+ *      re-sorts the library struct.
+ */
+ipcMain.on('select-additions', async (event): Promise<any> => {
+  if (!mainWindow) {
+    return;
+  }
+
+  let result;
+  try {
+    result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+    });
+  } catch (e) {
+    console.log(e);
+    return;
+  }
+
+  if (result.canceled) {
+    event.reply('select-library', {});
+    return;
+  }
+
+  const files = findAllFilesRecursively(result.filePaths[0]);
+
+  // let filesToTags be the pre-existing library of fiels to tags
+  const dataPath = app.getPath('userData');
+  const filePath = path.join(dataPath, 'userConfig.json');
+  const contents = parseData(filePath);
+  let filesToTags = contents.library;
+
+  for (let i = 0; i < files.length; i += 1) {
+    let metadata;
+
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      metadata = await mm.parseFile(`${result.filePaths[0]}/${files[i]}`);
+    } catch (e) {
+      console.log(e);
+    }
+
+    if (metadata && metadata.format.duration && metadata.common.title) {
+      filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
+        common: {
+          ...metadata.common,
+          picture: [],
+          lyrics: [],
+        },
+        format: {
+          ...metadata.format,
+          duration: metadata.format.duration,
+        },
+      } as SongSkeletonStructure;
+    }
+
+    event.reply('song-imported', {
+      songsImported: i,
+      totalSongs: files.length,
+    });
+  }
+
+  // sort filesToTags by artist, album, then track number
+  const orderedFilesToTags: { [key: string]: SongSkeletonStructure } = {};
+  Object.keys(filesToTags)
+    .sort((a, b) => {
+      const artistA = filesToTags[a].common?.artist
+        ?.toLowerCase()
+        .replace(/^the /, '');
+      const artistB = filesToTags[b].common?.artist
+        ?.toLowerCase()
+        .replace(/^the /, '');
+      const albumA = filesToTags[a].common?.album?.toLowerCase();
+      const albumB = filesToTags[b].common?.album?.toLowerCase();
+      const trackA = filesToTags[a].common?.track?.no;
+      const trackB = filesToTags[b].common?.track?.no;
+
+      if (!artistA) return -1;
+      if (!artistB) return 1;
+      if (!albumA) return -1;
+      if (!albumB) return 1;
+      if (!trackA) return -1;
+      if (!trackB) return 1;
+
+      if (artistA < artistB) return -1;
+      if (artistA > artistB) return 1;
+      if (albumA < albumB) return -1;
+      if (albumA > albumB) return 1;
+      if (trackA < trackB) return -1;
+      if (trackA > trackB) return 1;
+      return 0;
+    })
+    .forEach((key) => {
+      orderedFilesToTags[key] = filesToTags[key];
+    });
+
+  filesToTags = {};
+  const initialStore = {
+    library: orderedFilesToTags,
+    playlists: [],
+    lastPlayedSong: '',
+    hiddenSongs: '',
+  } as StoreStructure;
+
+  event.reply('select-additions', initialStore);
+
+  fs.writeFileSync(filePath, JSON.stringify(initialStore));
+});
+
+/**
  * @dev for requesting the directory of music the user wants to import
  *      and then importing it into the app as well as cache'ing it
  *     in the user's app data directory.
@@ -174,6 +284,7 @@ ipcMain.on('select-library', async (event): Promise<any> => {
     library: orderedFilesToTags,
     playlists: [],
     lastPlayedSong: '',
+    hiddenSongs: '',
   } as StoreStructure;
 
   event.reply('select-library', initialStore);
