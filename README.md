@@ -10,7 +10,7 @@
   <h3 align="center">hihat</h3>
 
   <p align="center">
-    A minimalist music player for OSX
+    A minimalist offline music player for OSX
     <br />
     <br />
     <a href="https://github.com/johnnyshankman/hihat/issues">Report Bug</a>
@@ -56,33 +56,30 @@
 
 [![hihat Screen Shot][product-screenshot]](https://whitelights.co)
 
-*hihat* is a simple a way to play your music library, similar to the way you would with iTunes or Windows Media Player in the early 2000s.
+*hihat* is a free and simple a way to play your music library offline, similar to iTunes or Windows Media Player from the early 2000s.
 
-Remember the zen of listening offline? *hihat* aims to bring that vibe back. No links, no lag, no social feeds -- just music.
-
-Unlike VLC or Spotify, in *hihat* can see your album art front and center, you can see many songs at once, and it's fully responsive down to 320px wide so that you can use it in the slimmest of spots on your screen.
+No links, no notifications, no lag, no social media, and no ads.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Core Features
 
-*hihat* was built with the following features in mind:
-* album art front and center
-* display many songs at once
-* responsive UX down to 320px wide
-* dark mode
-* fast filtering search
-* fast library imports
-* mix filetypes in one library
-* support all music filetypes
-* support nested folders (ex: itunes music libraries)
-* support infinite library size
-* osx menu bar integration
-* library cache'ing between sessions
-* keyboard media shortcut support
+*hihat* has the following core features:
+* 100% offline
+* dark mode by default
+* support for all screen sizes
+* large album art
+* compact song and library interface
+* fast search
+* fast import
 * shuffle & repeat
-* sort by song, artist, and album
-
+* sort by song, artist, and/or album
+* infinite library size
+* all file types
+* mix 'n match file types
+* nested folder library support (legacy iTunes libraries)
+* OSX menu bar integration
+* supports keyboard media shortcuts
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -103,7 +100,7 @@ This project was built with the following technologies:
 
 ### Supported Audio Formats and Metadata Formats
 
-Almost every format under the sun should be supported, and can be mixed'n'matched in the same library directory.
+Almost every format under the sun should be supported, and they can all be mixed together into the same library seamlessly.
 
 * See [The Chromium Project](https://www.chromium.org/audio-video/) for information on supported audio formats.
 * See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
@@ -113,11 +110,12 @@ Almost every format under the sun should be supported, and can be mixed'n'matche
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-This is a bare bones app meant for use with big folders of music, such as something you might end up with if you used to use iTunes. _Simply hit the import icon in the top right, select a folder, wait for the import proces to finish, and use as you would any other media player._
+This is a bare bones app meant for use with big folders of music, such as something you might end up with if you used to use iTunes. 
 
-Every time you boot the app from then on in, it'll load your library automagically!
+_Simply hit the import icon in the top right, select a folder, and wait for the import proces to finish. You can then use hiaht as you would any other media player._
 
-If you ever need to update your library, simply reimport. *hihat* will only import new files, and will update any metadata changes. This process is quick and takes about 1min per 10,000 songs in your library (100k songs = 10mins of processing).
+If you ever need to update your library, simply reimport. This process is quick and takes about 1min per 10,000 songs in your library (100k songs = 10mins of processing).
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- GETTING STARTED -->
@@ -156,7 +154,7 @@ This is an example of how to list things you need to use the software and how to
 
 
 <!-- ROADMAP -->
-## Roadmap
+## Roadmap of Features
 
 - [x] Autoplay Next Song
 - [x] Virtualized Lists for opitmal rendering
@@ -164,14 +162,20 @@ This is an example of how to list things you need to use the software and how to
 - [x] Minimalist search/filter solution
 - [x] Recursive file finding for itunes-like libraries with nested folders
 - [ ] Playlists
-- [ ] Update/import skips pre-existing files
+- [x] Update/import skips pre-existing files
 - [ ] OBS-friendly hooks for streamers
 - [x] On reboot, scroll to last played song, queue it up as well
 - [x] Shuffle
+- [ ] Repeat
 - [x] Resort by column
 - [x] Support keyboard previous/next
 - [x] Fix the player UX on thin windows (400px)
 - [x] OSX song info in the menu bar tray thing
+- [ ] Copy/save album art for sharing
+- [ ] Ability to "hide" songs you don't actually want to see
+- [ ] Ability to "open in finder" so you can delete the song file itself
+- [ ] Ability to edit metadata of MP3s using a modal
+- [ ] Ability to insert new songs or albums without updating the whole library
 
 ![Screenshot 2023-11-04 at 10 50 26 PM](https://github.com/johnnyshankman/hihat/assets/6632701/c0c2e249-08bd-46d0-9487-3e89be56ff4f)
 
