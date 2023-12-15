@@ -672,7 +672,7 @@ function MainDash() {
 
       <div className="w-full overflow-auto">
         <div className="w-full text-[11px]">
-          <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 outline-neutral-800">
+          <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
             <div className="flex transition-colors divide-neutral-800 divide-x">
               <button
                 onClick={filterByTitle}

@@ -23,11 +23,6 @@ html {
   -webkit-app-region: drag;
 }
 
-.nodrag {
-  -webkit-app-region: no-drag;
-  overflow: hidden;
-}
-
 .shell {
   height: calc(100% - 1.5rem);
   -webkit-app-region: no-drag;
@@ -39,6 +34,20 @@ table {
   outline: none;
   border: none;
 }
+
+.nodrag {
+  -webkit-app-region: no-drag;
+  overflow: hidden;
+}
+
+.drag {
+  -webkit-app-region: drag;
+
+  & * {
+    -webkit-app-region: no-drag;
+  }
+}
+
 
 @layer base {
   :root {
@@ -110,29 +119,22 @@ table {
 
 /* Width */
 ::-webkit-scrollbar {
-  width: 12px;
+  width: 14px;
   height: 5px;
 }
 
 /* Track */
 ::-webkit-scrollbar-track {
-  background: rgba(123,123,123);
+  background: rgba(33,33,33);
 }
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
+  background: #0d0d0d;
+  border: 1px solid rgb(123,123,123)
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: #2d2d2d;
-}
-
-.drag {
-  -webkit-app-region: drag;
-}
-
-.drag * {
-  -webkit-app-region: no-drag;
+  border: 1px solid white;
 }
