@@ -106,6 +106,7 @@ function MainDash() {
     'desc',
   );
   const [shuffle, setShuffle] = useState(false);
+  const [repeating, setRepeating] = useState(false);
   const [initialScrollIndex, setInitialScrollIndex] = useState(0);
 
   const bufferToDataUrl = async (
@@ -218,18 +219,46 @@ function MainDash() {
     setPaused(false);
   };
 
+  // @dev: hack, play blank song then play the song again to start it over
+  const startCurrentSongOver = async () => {
+    return new Promise((resolve, reject) => {
+      if (currentSong && currentSongMetadata) {
+        setCurrentSong('');
+        window.setTimeout(() => {
+          playSong(currentSong, currentSongMetadata);
+          resolve(null);
+        }, 100);
+      } else {
+        reject();
+      }
+    });
+  };
+
   const playNextSong = async () => {
     if (!filteredLibrary) return;
+
     const keys = Object.keys(filteredLibrary);
     const currentSongIndex = keys.indexOf(currentSong || '');
     const nextSongIndex = currentSongIndex + 1;
+
+    // @dev: if user has reached the end of their library, play 0th song
     if (nextSongIndex >= keys.length) {
+      const song = keys[0];
+      const songMeta = filteredLibrary[song];
+      await playSong(song, songMeta);
       return;
     }
+
     const nextSong = keys[nextSongIndex];
     const nextSongMeta = filteredLibrary[nextSong];
 
-    // @dev: if shuffle is on, pick a random song
+    // @dev: if repeating is on, repeat the same song and return early
+    if (repeating && currentSong && currentSongMetadata) {
+      await startCurrentSongOver();
+      return;
+    }
+
+    // @dev: if shuffle is on, pick a random song and return early
     if (shuffle) {
       const randomIndex = Math.floor(Math.random() * keys.length);
       const randomSong = keys[randomIndex];
@@ -238,28 +267,39 @@ function MainDash() {
       return;
     }
 
+    // @dev: if neither shuffle nor repeating is on, play next song in library
     await playSong(nextSong, nextSongMeta);
   };
 
   const playPreviousSong = async () => {
     if (!filteredLibrary) return;
 
+    // @dev: if the song is > 2s into playtime, just start it over.
     if (!paused && currentSong && currentSongMetadata && currentSongTime > 2) {
-      // @dev start the song over by:
-      // 1. swapping in a blank song reference for a split second
-      // 2. then swapping back in the current song
-      setCurrentSong('');
-      window.setTimeout(() => {
-        playSong(currentSong, currentSongMetadata);
-      }, 100);
+      await startCurrentSongOver();
       return;
     }
+
     const keys = Object.keys(filteredLibrary);
     const currentSongIndex = keys.indexOf(currentSong || '');
     const previousSongIndex = currentSongIndex - 1;
+
+    // @dev: if the user has reached the beginning of their library, wrap to the end
     if (previousSongIndex < 0) {
+      const lastSong = keys[keys.length - 1];
+      const lastSongMeta = filteredLibrary[lastSong];
+      await playSong(lastSong, lastSongMeta);
       return;
     }
+
+    // @dev: if repeating is on, repeat the same song and return early
+    if (repeating && currentSong && currentSongMetadata) {
+      await startCurrentSongOver();
+      return;
+    }
+
+    // @TODO: previous during shuffle does not work bc we don't hold a history of songs
+
     const previousSong = keys[previousSongIndex];
     const previousSongMeta = filteredLibrary[previousSong];
     await playSong(previousSong, previousSongMeta);
@@ -287,6 +327,7 @@ function MainDash() {
         minutes < 1 ? 'Time Left: < 1min' : `Time Left: ${minutes}mins...`;
       setEstimatedTimeRemainingString(seconds);
     });
+
     // once the import is complete, update the store/data
     window.electron.ipcRenderer.once('select-library', (arg) => {
       // exit early if the user cancels the import or the args are malformed
@@ -786,6 +827,9 @@ function MainDash() {
             }}
             onShuffleChange={(value) => {
               setShuffle(value);
+            }}
+            onRepeatingChange={(value) => {
+              setRepeating(value);
             }}
           />
         </div>
