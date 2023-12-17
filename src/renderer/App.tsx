@@ -647,24 +647,24 @@ function MainDash() {
           onClick={importSongs}
           type="button"
           aria-label="import library"
-          className="nodrag absolute top-4 right-4 items-center justify-center
+          className="nodrag absolute top-[56px] md:top-4 right-4 items-center justify-center
           rounded-md text-[18px] ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
           disabled:opacity-50 border border-neutral-800 bg-black
           hover:bg-white hover:text-black
-          px-4 py-2 text-sm"
+          px-4 py-[7px] text-sm"
         >
           <LibraryAddOutlined
             fontSize="inherit"
             sx={{
               position: 'relative',
-              bottom: '2px',
+              bottom: '1px',
             }}
           />
         </button>
 
-        <Box className="absolute h-[45px] top-[70px] md:top-4 md:right-20 right-4 w-auto text-white">
+        <Box className="absolute h-[45px] top-4 md:top-4 md:right-[4.4rem] right-4 w-auto text-white">
           <Search
             sx={{
               borderRadius: '0.375rem',
