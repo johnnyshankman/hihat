@@ -659,7 +659,7 @@ function MainDash() {
             fontSize="inherit"
             sx={{
               position: 'relative',
-              bottom: '3px',
+              bottom: '2px',
             }}
           />
         </button>
