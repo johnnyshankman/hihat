@@ -73,7 +73,7 @@ Just music.
 * large album art
 * compact library interface
 * iTunes-like sort [artist -> album -> track #] by default
-* Classic sort by song, artist, or album
+* normal sort by song, artist, or album
 * fast search
 * fast import
 * song shuffle
