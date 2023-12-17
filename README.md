@@ -58,7 +58,7 @@
 
 *hihat* is a free and simple way to play your music offline, similar to iTunes or Windows Media Player from the early 2000s.
 
-No socials, no lag, and no ads.
+No socials, no lag, no ads.
 
 Just music.
 
