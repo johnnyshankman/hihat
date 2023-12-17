@@ -75,7 +75,11 @@ export default function LinearProgressBar({
           }}
           sx={{
             color: 'rgba(133, 133, 133)',
-            padding: '8px 0',
+            padding: '6px 0',
+            '& .MuiSlider-thumb': {
+              height: 8,
+              width: 8,
+            },
           }}
         />
       </Box>

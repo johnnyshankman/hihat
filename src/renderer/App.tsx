@@ -28,29 +28,33 @@ import InputBase from '@mui/material/InputBase';
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 import { StoreStructure, SongSkeletonStructure } from '../common/common';
-
-// @TODO: doesn't respect nesting/scss like it should
 import './App.scss';
+import SearchIcon from '@mui/icons-material/Search';
 
-const TinyText = styled(Typography)({
-  fontSize: '0.75rem',
-  opacity: 0.38,
-  fontWeight: 500,
-  letterSpacing: 0.2,
-});
+const SearchIconWrapper = styled('div')(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: '100%',
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  pointerEvents: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}));
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
   borderRadius: theme.shape.borderRadius,
   border: '1px solid rgb(40, 40, 40)',
-  backgroundColor: '#0D0D0D',
   '&:hover': {
     backgroundColor: alpha(theme.palette.common.white, 0.25),
   },
+  background: 'black',
+
   marginLeft: 0,
   width: '80px',
   [theme.breakpoints.up('sm')]: {
-    marginLeft: theme.spacing(1),
     width: 'auto',
   },
 }));
@@ -59,13 +63,10 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
   color: 'inherit',
   fontSize: '12px',
   padding: '4px 0',
-  [theme.breakpoints.up('sm')]: {
-    fontSize: '13px',
-  },
   '& .MuiInputBase-input': {
-    padding: theme.spacing(1, 0.5, 1, 0),
     // vertical padding + font size from searchIcon
-    paddingLeft: `calc(0em + ${theme.spacing(2)})`,
+    paddingLeft: `calc(1em + ${theme.spacing(0.5)})`,
+    paddingRight: `calc(1em + ${theme.spacing(4)})`,
     transition: theme.transitions.create('width'),
     width: '100%',
     [theme.breakpoints.up('sm')]: {
@@ -76,6 +77,13 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
     },
   },
 }));
+
+const TinyText = styled(Typography)({
+  fontSize: '0.75rem',
+  opacity: 0.38,
+  fontWeight: 500,
+  letterSpacing: 0.2,
+});
 
 function MainDash() {
   const audioTagRef = useRef<HTMLAudioElement>(null);
@@ -522,7 +530,7 @@ function MainDash() {
     const playerHeight = document.querySelector('.player')?.clientHeight || 0;
 
     if (height) {
-      setRowContainerHeight(height - playerHeight - artContainerHeight);
+      setRowContainerHeight(height - playerHeight - artContainerHeight - 1);
     }
   }, [height, width]);
 
@@ -591,6 +599,7 @@ function MainDash() {
           </div>
         </div>
       </Dialog>
+
       <div className="flex art drag justify-center p-4 pb-8 space-x-4 md:flex-row">
         {/**
          * @dev either show the animated placeholder, or the album art
@@ -642,15 +651,15 @@ function MainDash() {
           rounded-md text-[18px] ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
-          disabled:opacity-50 border border-neutral-800 bg-background
+          disabled:opacity-50 border border-neutral-800 bg-black
           hover:bg-white hover:text-black
-          px-4 py-2"
+          px-4 py-2 text-sm"
         >
           <LibraryAddOutlined
             fontSize="inherit"
             sx={{
               position: 'relative',
-              bottom: '2px',
+              bottom: '3px',
             }}
           />
         </button>
@@ -666,12 +675,15 @@ function MainDash() {
               inputProps={{ 'aria-label': 'search' }}
               onChange={handleSearch}
             />
+            <SearchIconWrapper className="text-[16px]">
+              <SearchIcon fontSize="inherit" />
+            </SearchIconWrapper>
           </Search>
         </Box>
       </div>
 
       <div className="w-full overflow-auto">
-        <div className="w-full text-[11px]">
+        <div className="w-full text-[11px]  mb-[1px]">
           <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
             <div className="flex transition-colors divide-neutral-800 divide-x">
               <button
@@ -762,7 +774,7 @@ function MainDash() {
       <div
         className="player flex flex-col sm:flex-row items-center
       justify-between drag gap-1 sm:gap-4 fixed inset-x-0 border-t
-      border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-1 sm:py-3
+      border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 py-1 sm:py-2
       "
       >
         <Box
