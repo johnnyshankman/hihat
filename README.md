@@ -71,7 +71,7 @@ Just music.
 * dark mode by default
 * support for all screen sizes
 * large album art
-* compact song and library interface
+* compact library interface
 * iTunes-like sort [artist -> album -> track #] by default
 * Classic sort by song, artist, or album
 * fast search
