@@ -403,21 +403,14 @@ function MainDash() {
         return;
       }
 
-      const typedArg = arg as StoreStructure;
+      const typedArg = arg as StoreStructure & { scrollToIndex: number };
 
       // reset the library, the filtered library, the current song, and pause.
       setLibrary(typedArg.library);
       setFilteredLibrary(typedArg.library);
       setShowImportingProgress(false);
-      // set current song to the first song in the library
-      const firstSong = Object.keys(typedArg.library)[0];
-      const firstSongMeta = typedArg.library[firstSong];
-
-      setCurrentSong(firstSong);
-      setCurrentSongMetadata(firstSongMeta);
-      requestAndSetAlbumArtForSong(firstSong);
-      setPaused(true);
-      setInitialScrollIndex(2);
+      // scroll one of the new songs into view
+      setInitialScrollIndex(typedArg.scrollToIndex);
 
       window.setTimeout(() => {
         setSongsImported(0);
