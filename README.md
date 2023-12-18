@@ -126,7 +126,7 @@ If you ever need to update your library, hit the other icon in the top right lab
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- GETTING STARTED -->
-## Getting Started
+## Getting Started As A Contributor
 
 _Follow the steps below to install the local development environment and serve the development application locally._
 
