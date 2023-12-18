@@ -1,7 +1,15 @@
 /* eslint global-require: off, no-console: off, promise/always-return: off */
 
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, dialog, protocol } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  dialog,
+  protocol,
+  IpcMainEvent,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import fs from 'fs';
@@ -75,12 +83,10 @@ const findAllFilesRecursively = (dir: string) => {
   return result;
 };
 
-/**
- * @dev for requesting the directory of music the user wants to import
- *      and then importing it into the app as well as cache'ing it
- *     in the user's app data directory.
- */
-ipcMain.on('select-library', async (event): Promise<any> => {
+const setLibraryOrAddToLibrary = async (
+  event: IpcMainEvent,
+  addToExisting: boolean,
+) => {
   if (!mainWindow) {
     return;
   }
@@ -96,7 +102,7 @@ ipcMain.on('select-library', async (event): Promise<any> => {
   }
 
   if (result.canceled) {
-    event.reply('select-library', {});
+    event.reply('add-to-library', {});
     return;
   }
 
@@ -104,6 +110,22 @@ ipcMain.on('select-library', async (event): Promise<any> => {
 
   // create an empty mapping of files to tags we want to cache and re-import on boot
   let filesToTags: { [key: string]: SongSkeletonStructure } = {};
+
+  let destRootFolder = '';
+
+  // import the current library from the userConfig.json file
+  if (addToExisting) {
+    const userConfig = parseData(
+      path.join(app.getPath('userData'), 'userConfig.json'),
+    ) as StoreStructure;
+    filesToTags = userConfig.library;
+
+    // take a random song out of the existing library
+    const dest = Object.keys(filesToTags)[0];
+    console.log('dest', dest);
+    // set destRootFolder to the folder that the random song is in
+    destRootFolder = dest.substring(0, dest.lastIndexOf('/'));
+  }
 
   for (let i = 0; i < files.length; i += 1) {
     let metadata;
@@ -127,6 +149,14 @@ ipcMain.on('select-library', async (event): Promise<any> => {
           duration: metadata.format.duration,
         },
       } as SongSkeletonStructure;
+    }
+
+    if (addToExisting) {
+      // copy the file to the existing library folder where songs are found
+      const src = `${result.filePaths[0]}/${files[i]}`;
+      console.log(`${destRootFolder}/${files[i]}`);
+      const dest = `${destRootFolder}/${files[i]}`;
+      fs.copyFileSync(src, dest);
     }
 
     event.reply('song-imported', {
@@ -169,20 +199,37 @@ ipcMain.on('select-library', async (event): Promise<any> => {
       orderedFilesToTags[key] = filesToTags[key];
     });
 
-  filesToTags = {};
   const initialStore = {
     library: orderedFilesToTags,
     playlists: [],
     lastPlayedSong: '',
   } as StoreStructure;
 
-  event.reply('select-library', initialStore);
+  event.reply('add-to-library', initialStore);
 
   // write the json file to the user data directory as userConfig.json
   // for caching purposes. we re-use this during future boots of the app.
   const dataPath = app.getPath('userData');
   const filePath = path.join(dataPath, 'userConfig.json');
   fs.writeFileSync(filePath, JSON.stringify(initialStore));
+};
+
+/**
+ * @dev for requesting the directory of music the user wants to import
+ *      and then importing it into the app as well as cache'ing it
+ *     in the user's app data directory.
+ */
+ipcMain.on('add-to-library', async (event): Promise<any> => {
+  await setLibraryOrAddToLibrary(event, true);
+});
+
+/**
+ * @dev for requesting the directory of music the user wants to import
+ *      and then importing it into the app as well as cache'ing it
+ *     in the user's app data directory.
+ */
+ipcMain.on('select-library', async (event): Promise<any> => {
+  await setLibraryOrAddToLibrary(event, false);
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -254,6 +301,7 @@ const createWindow = async () => {
     show: false,
     width: 1024,
     height: 1024,
+    minWidth: 360,
     icon: getAssetPath('icons/1024x1024.png'),
     frame: false,
     titleBarStyle: 'hidden',
