@@ -33,6 +33,11 @@ import LinearProgressBar from './LinearProgressBar';
 import { StoreStructure, SongSkeletonStructure } from '../common/common';
 import './App.scss';
 
+/**
+ * @TODO this is a monolithic file and needs refactoring into smaller components
+ * but since this is a personal project i've lazily put that off.
+ */
+
 const SearchIconWrapper = styled('div')(({ theme }) => ({
   padding: theme.spacing(0, 1.5),
   height: '100%',
