@@ -147,7 +147,7 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [ ] Copy/save album art for sharing
 - [ ] OBS extension for streaming songs
 - [ ] Ability to "hide" songs you don't actually want to see
-- [ ] Ability to "open in finder" so you can delete the song file itself
+- [x] Ability to "open in finder" so you can see the song file
 - [ ] Ability to edit metadata of MP3s using a modal
 - [x] Ability to insert new songs or albums without updating the whole library
 
