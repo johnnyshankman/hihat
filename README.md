@@ -54,7 +54,8 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![hihat Screen Shot][product-screenshot]](https://whitelights.co)
+[![hihat desktop preview][product-screenshot]](https://whitelights.co)
+[![hihat small preview][product-screenshot-small]](https://whitelights.co)
 
 *hihat* is a free and simple way to play your music offline, similar to iTunes or Windows Media Player from the early 2000s.
 
@@ -244,6 +245,7 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [license-shield]: https://img.shields.io/github/license/johnnyshankman/hihat.svg?style=for-the-badge
 [license-url]: https://github.com/johnnyshankman/hihat/blob/master/LICENSE.txt
 [product-screenshot]: readme-images/hihat-preview.png
+[product-screenshot-small]: readme-images/hihat-preview-small.png
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [React-url]: https://reactjs.org/
 [Electron.js]: https://img.shields.io/badge/Electron-20232A?style=for-the-badge&logo=electron&logoColor=61DAFB
