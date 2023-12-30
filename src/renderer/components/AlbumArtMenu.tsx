@@ -5,10 +5,12 @@ type AlbumArtMenuProps = {
   anchorEl: HTMLElement | null;
   onClose: () => void;
   song: string;
+  mouseX: number;
+  mouseY: number;
 };
 
 export default function AlbumArtMenu(props: AlbumArtMenuProps) {
-  const { anchorEl, onClose, song } = props;
+  const { anchorEl, onClose, song, mouseX, mouseY } = props;
 
   const copyAlbumArt = () => {
     window.electron.ipcRenderer.sendMessage('copy-art-to-clipboard', {
@@ -30,6 +32,8 @@ export default function AlbumArtMenu(props: AlbumArtMenuProps) {
         vertical: 'center',
         horizontal: 'center',
       }}
+      anchorReference="anchorPosition"
+      anchorPosition={{ top: mouseY, left: mouseX }}
     >
       <MenuItem
         sx={{

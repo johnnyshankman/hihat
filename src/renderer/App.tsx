@@ -130,7 +130,9 @@ function MainDash() {
   const [shuffle, setShuffle] = useState(false);
   const [repeating, setRepeating] = useState(false);
   const [initialScrollIndex, setInitialScrollIndex] = useState(0);
-  const [showAlbumArtMenu, setShowAlbumArtMenu] = useState(false);
+  const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<
+    { mouseX: number; mouseY: number } | undefined
+  >(undefined);
   const [volume, setVolume] = useState(100);
 
   const bufferToDataUrl = async (
@@ -550,6 +552,8 @@ function MainDash() {
         song: string;
         anchorEl: HTMLElement | null;
         songInfo: SongSkeletonStructure;
+        mouseX: number;
+        mouseY: number;
       }
     | undefined
   >(undefined);
@@ -581,6 +585,8 @@ function MainDash() {
             song,
             anchorEl: e.currentTarget,
             songInfo: filteredLibrary[song],
+            mouseX: e.clientX - 2,
+            mouseY: e.clientY - 4,
           });
         }}
         data-state={song === currentSong ? 'selected' : undefined}
@@ -727,14 +733,19 @@ function MainDash() {
               }}
               onContextMenu={(e) => {
                 e.preventDefault();
-                setShowAlbumArtMenu(true);
+                setShowAlbumArtMenu({
+                  mouseX: e.clientX - 2,
+                  mouseY: e.clientY - 4,
+                });
               }}
             />
             {showAlbumArtMenu && currentSong && (
               <AlbumArtMenu
                 anchorEl={document.querySelector('.album-art')}
+                mouseX={showAlbumArtMenu.mouseX}
+                mouseY={showAlbumArtMenu.mouseY}
                 onClose={() => {
-                  setShowAlbumArtMenu(false);
+                  setShowAlbumArtMenu(undefined);
                 }}
                 song={currentSong}
               />
@@ -1083,6 +1094,8 @@ function MainDash() {
           onClose={() => {
             setSongMenu(undefined);
           }}
+          mouseX={songMenu.mouseX}
+          mouseY={songMenu.mouseY}
           song={songMenu?.song}
           songInfo={songMenu?.songInfo}
         />

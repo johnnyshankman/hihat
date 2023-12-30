@@ -7,10 +7,12 @@ type SongMenuProps = {
   onClose: () => void;
   song: string;
   songInfo: SongSkeletonStructure;
+  mouseX: number;
+  mouseY: number;
 };
 
 export default function ReusableSongMenu(props: SongMenuProps) {
-  const { anchorEl, onClose, song, songInfo } = props;
+  const { anchorEl, onClose, song, songInfo, mouseX, mouseY } = props;
 
   const showPathInFinder = () => {
     window.electron.ipcRenderer.sendMessage('show-in-finder', {
@@ -46,6 +48,8 @@ export default function ReusableSongMenu(props: SongMenuProps) {
         vertical: 'bottom',
         horizontal: 'right',
       }}
+      anchorReference="anchorPosition"
+      anchorPosition={{ top: mouseY, left: mouseX }}
     >
       <MenuItem
         sx={{
