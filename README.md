@@ -56,7 +56,7 @@
 
 [![hihat desktop preview][product-screenshot]](https://whitelights.co)
 
- <img src="https://github.com/johnnyshankman/hihat/readme-images/hihat-preview-small.png" alt="small preview" width="360">
+ <img src="/readme-images/hihat-preview-small.png" alt="small preview" width="360">
 
 *hihat* is a free and simple way to play your music offline, similar to iTunes or Windows Media Player from the early 2000s.
 
