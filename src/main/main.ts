@@ -17,6 +17,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import fs from 'fs';
 import * as mm from 'music-metadata';
+import { File } from 'node-taglib-sharp';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import { StoreStructure, SongSkeletonStructure } from '../common/common';
@@ -322,6 +323,33 @@ const selectLibrary = async (event: IpcMainEvent) => {
   const filePath = path.join(dataPath, 'userConfig.json');
   fs.writeFileSync(filePath, JSON.stringify(initialStore));
 };
+
+/**
+ * @dev for requesting the modification of a tag of a media file
+ *      and then modifying it in the app as well as cache'ing it
+ *      in the user's app data directory.
+ */
+ipcMain.on('modify-tag-of-file', async (event, arg): Promise<any> => {
+  const filePath = arg.song as string;
+  const file = File.createFromPath(filePath);
+  // @ts-ignore - `tag` is not supposed to be indexed into use array syntax
+  file.tag[arg.tag] = arg.value;
+  file.save();
+
+  // now modify the userConfig.json file to reflect the changes
+  const userConfig = parseData(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+  ) as StoreStructure;
+  // @ts-ignore - `common` is not supposed to be indexed into use array syntax
+  userConfig.library[filePath].common[arg.key] = arg.value;
+  fs.writeFileSync(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+    JSON.stringify(userConfig),
+  );
+
+  // reply with the updated song info
+  event.reply('modify-tag-of-file', userConfig.library[filePath]);
+});
 
 /**
  * @dev for requesting the directory of music the user wants to import
