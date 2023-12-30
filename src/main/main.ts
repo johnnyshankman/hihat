@@ -11,6 +11,7 @@ import {
   IpcMainEvent,
   OpenDialogReturnValue,
   clipboard,
+  nativeImage,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
@@ -53,6 +54,7 @@ ipcMain.on('get-album-art', async (event, arg) => {
     path.join(app.getPath('userData'), 'userConfig.json'),
   ) as StoreStructure;
   userConfig.lastPlayedSong = filePath;
+
   fs.writeFileSync(
     path.join(app.getPath('userData'), 'userConfig.json'),
     JSON.stringify(userConfig),
@@ -345,6 +347,16 @@ ipcMain.on('show-in-finder', async (event, arg): Promise<any> => {
 
 ipcMain.on('copy-to-clipboard', async (event, arg): Promise<any> => {
   clipboard.writeText(arg.text);
+});
+
+ipcMain.on('copy-art-to-clipboard', async (event, arg): Promise<any> => {
+  const filePath = arg.song;
+  const metadata = await mm.parseFile(filePath);
+  if (metadata.common.picture?.[0].data) {
+    clipboard.writeImage(
+      nativeImage.createFromBuffer(metadata.common.picture?.[0].data),
+    );
+  }
 });
 
 if (process.env.NODE_ENV === 'production') {

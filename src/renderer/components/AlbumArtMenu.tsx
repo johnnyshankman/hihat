@@ -1,0 +1,44 @@
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+
+type AlbumArtMenuProps = {
+  anchorEl: HTMLElement | null;
+  onClose: () => void;
+  song: string;
+};
+
+export default function AlbumArtMenu(props: AlbumArtMenuProps) {
+  const { anchorEl, onClose, song } = props;
+
+  const copyAlbumArt = () => {
+    window.electron.ipcRenderer.sendMessage('copy-art-to-clipboard', {
+      song,
+    });
+    onClose();
+  };
+
+  return (
+    <Menu
+      id="basic-menu"
+      anchorEl={anchorEl}
+      open
+      MenuListProps={{
+        'aria-labelledby': 'basic-button',
+      }}
+      onClose={onClose}
+      anchorOrigin={{
+        vertical: 'center',
+        horizontal: 'center',
+      }}
+    >
+      <MenuItem
+        sx={{
+          fontSize: '11px',
+        }}
+        onClick={copyAlbumArt}
+      >
+        Copy Image
+      </MenuItem>
+    </Menu>
+  );
+}

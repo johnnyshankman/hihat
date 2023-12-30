@@ -3,7 +3,6 @@ import MenuItem from '@mui/material/MenuItem';
 import { SongSkeletonStructure } from '../../common/common';
 
 type SongMenuProps = {
-  open: boolean;
   anchorEl: HTMLElement | null;
   onClose: () => void;
   song: string;
@@ -11,7 +10,7 @@ type SongMenuProps = {
 };
 
 export default function ReusableSongMenu(props: SongMenuProps) {
-  const { open, anchorEl, onClose, song, songInfo } = props;
+  const { anchorEl, onClose, song, songInfo } = props;
 
   const showPathInFinder = () => {
     window.electron.ipcRenderer.sendMessage('show-in-finder', {
@@ -31,7 +30,7 @@ export default function ReusableSongMenu(props: SongMenuProps) {
     <Menu
       id="basic-menu"
       anchorEl={anchorEl}
-      open={open}
+      open
       MenuListProps={{
         'aria-labelledby': 'basic-button',
       }}

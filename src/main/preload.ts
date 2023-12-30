@@ -8,6 +8,7 @@ export type Channels =
   | 'initialize'
   | 'get-album-art'
   | 'copy-to-clipboard'
+  | 'copy-art-to-clipboard'
   | 'show-in-finder'
   | 'song-imported';
 

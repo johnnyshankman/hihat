@@ -33,6 +33,7 @@ import LinearProgressBar from './components/LinearProgressBar';
 import { StoreStructure, SongSkeletonStructure } from '../common/common';
 import './App.scss';
 import ReusableSongMenu from './components/ReusableSongMenu';
+import AlbumArtMenu from './components/AlbumArtMenu';
 
 /**
  * @TODO this is a monolithic file and needs refactoring into smaller components
@@ -124,6 +125,7 @@ function MainDash() {
   const [shuffle, setShuffle] = useState(false);
   const [repeating, setRepeating] = useState(false);
   const [initialScrollIndex, setInitialScrollIndex] = useState(0);
+  const [showAlbumArtMenu, setShowAlbumArtMenu] = useState(false);
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -708,15 +710,31 @@ function MainDash() {
           </div>
         )}
         {currentSongDataURL && (
-          <img
-            src={currentSongDataURL}
-            alt="Album Art"
-            className="object-cover rounded-lg shadow-md max-w-[280px] w-1/3"
-            style={{
-              aspectRatio: '200/200',
-              objectFit: 'cover',
-            }}
-          />
+          <>
+            <img
+              src={currentSongDataURL}
+              alt="Album Art"
+              className="album-art object-cover rounded-lg shadow-md max-w-[280px] w-1/3"
+              style={{
+                aspectRatio: '200/200',
+                objectFit: 'cover',
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setShowAlbumArtMenu(true);
+              }}
+            />
+            {showAlbumArtMenu && currentSong && (
+              <AlbumArtMenu
+                open
+                anchorEl={document.querySelector('.album-art')}
+                onClose={() => {
+                  setShowAlbumArtMenu(false);
+                }}
+                song={currentSong}
+              />
+            )}
+          </>
         )}
 
         <Tooltip title="Import Library">
@@ -953,7 +971,7 @@ function MainDash() {
        */}
       {songMenu && (
         <ReusableSongMenu
-          open={!!songMenu}
+          open
           anchorEl={songMenu?.anchorEl}
           onClose={() => {
             setSongMenu(undefined);
