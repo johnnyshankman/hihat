@@ -10,6 +10,7 @@ import {
   protocol,
   IpcMainEvent,
   OpenDialogReturnValue,
+  clipboard,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
@@ -336,6 +337,14 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
  */
 ipcMain.on('select-library', async (event): Promise<any> => {
   await selectLibrary(event);
+});
+
+ipcMain.on('show-in-finder', async (event, arg): Promise<any> => {
+  shell.showItemInFolder(arg.path);
+});
+
+ipcMain.on('copy-to-clipboard', async (event, arg): Promise<any> => {
+  clipboard.writeText(arg.text);
 });
 
 if (process.env.NODE_ENV === 'production') {

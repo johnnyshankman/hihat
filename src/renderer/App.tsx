@@ -32,6 +32,7 @@ import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 import { StoreStructure, SongSkeletonStructure } from '../common/common';
 import './App.scss';
+import ReusableSongMenu from './components/ReusableSongMenu';
 
 /**
  * @TODO this is a monolithic file and needs refactoring into smaller components
@@ -536,6 +537,15 @@ function MainDash() {
     setFilterType('album');
   };
 
+  const [songMenu, setSongMenu] = useState<
+    | {
+        song: string;
+        anchorEl: HTMLElement | null;
+        songInfo: SongSkeletonStructure;
+      }
+    | undefined
+  >(undefined);
+
   /**
    * @dev render the row for the virtualized table, reps a single song
    */
@@ -556,6 +566,14 @@ function MainDash() {
         style={style}
         onDoubleClick={async () => {
           await playSong(song, filteredLibrary[song]);
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setSongMenu({
+            song,
+            anchorEl: e.currentTarget,
+            songInfo: filteredLibrary[song],
+          });
         }}
         data-state={song === currentSong ? 'selected' : undefined}
         className="flex w-full items-center border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
@@ -929,6 +947,21 @@ function MainDash() {
           />
         </div>
       </div>
+
+      {/**
+       * @dev this is the menu that pops up when the user right clicks on a song
+       */}
+      {songMenu && (
+        <ReusableSongMenu
+          open={!!songMenu}
+          anchorEl={songMenu?.anchorEl}
+          onClose={() => {
+            setSongMenu(undefined);
+          }}
+          song={songMenu?.song}
+          songInfo={songMenu?.songInfo}
+        />
+      )}
 
       {/**
        * @dev this is the audio tag that plays the song.
