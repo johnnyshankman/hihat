@@ -26,6 +26,13 @@ export default function ReusableSongMenu(props: SongMenuProps) {
     onClose();
   };
 
+  const copyAlbumArt = () => {
+    window.electron.ipcRenderer.sendMessage('copy-art-to-clipboard', {
+      song,
+    });
+    onClose();
+  };
+
   return (
     <Menu
       id="basic-menu"
@@ -55,6 +62,14 @@ export default function ReusableSongMenu(props: SongMenuProps) {
         onClick={copyInfoToClipboard}
       >
         Copy Info
+      </MenuItem>
+      <MenuItem
+        sx={{
+          fontSize: '11px',
+        }}
+        onClick={copyAlbumArt}
+      >
+        Copy Album Art
       </MenuItem>
     </Menu>
   );
