@@ -631,6 +631,32 @@ function MainDash() {
     playNextSong();
   });
 
+  const [startY, setStartY] = useState(0);
+
+  const mouseMoveHandler = (e) => {
+    const deltaY = e.clientY - startY;
+    const artContainerHeight =
+      document.querySelector('.art')?.clientHeight || 0;
+    const newHeight = artContainerHeight + deltaY;
+
+    // TODO: if the generated height is larger than some max height, don't update
+    //       the row container height. this is to prevent the librarty from
+    //       taking up the entire screen and making album art impossible to see.
+    setRowContainerHeight(newHeight);
+  };
+
+  const stopTableHeaderDrag = () => {
+    window.removeEventListener('mousemove', mouseMoveHandler);
+  };
+
+  const startTableHeaderDrag = (
+    event: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+  ) => {
+    setStartY(event.clientY);
+    window.addEventListener('mousemove', mouseMoveHandler);
+    window.addEventListener('mouseup', stopTableHeaderDrag);
+  };
+
   return (
     <div className="h-full flex flex-col dark" ref={ref}>
       <Dialog
@@ -765,9 +791,26 @@ function MainDash() {
         </Box>
       </div>
 
+      {/**
+       * @dev the table the songs
+       */}
       <div className="w-full overflow-auto">
         <div className="w-full text-[11px]  mb-[1px]">
+          {/**
+           * @dev the sticky header for the table
+           */}
           <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
+            <button
+              type="button"
+              aria-label="drag to resize"
+              className="border-neutral-800 w-full h-4 bg-neutral-800"
+              onMouseDown={(event) => {
+                startTableHeaderDrag(event);
+              }}
+              onMouseUp={() => {
+                stopTableHeaderDrag();
+              }}
+            />
             <div className="flex transition-colors divide-neutral-800 divide-x">
               <button
                 onClick={filterByTitle}
@@ -838,7 +881,7 @@ function MainDash() {
             </div>
           </div>
           {/**
-           * @dev since the list could be 1000s of songs long we must virtualize it
+           * @dev the virtualized list/table of songs
            */}
           <List
             width={width || 0}
@@ -854,6 +897,11 @@ function MainDash() {
         </div>
       </div>
 
+      {/**
+       * @dev the player at the bottom of the screen for controlling the song
+       *      and the volume. this is always visible. also contains
+       *      the shuffle and repeat buttons.s
+       */}
       <div
         className="player flex flex-col sm:flex-row items-center
       justify-between drag gap-1 sm:gap-4 fixed inset-x-0 border-t
