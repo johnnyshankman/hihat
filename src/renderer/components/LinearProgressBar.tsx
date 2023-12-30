@@ -52,7 +52,17 @@ export default function LinearProgressBar({
           justifyContent: 'center',
         }}
       >
-        <TinyText>{title}</TinyText>
+        <TinyText
+          sx={{
+            margin: 0,
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+          }}
+          aria-label="current-title"
+        >
+          {title}
+        </TinyText>
       </Box>
       <Box
         sx={{
@@ -71,7 +81,7 @@ export default function LinearProgressBar({
           max={max}
           onChange={(_, val) => {
             setPosition(val as number);
-            onManualChange(val as number);
+            onManualChange(mval as number);
           }}
           sx={{
             color: 'rgba(133, 133, 133)',
@@ -88,10 +98,21 @@ export default function LinearProgressBar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 1,
         }}
       >
         <TinyText aria-label="current-time">{convertToMMSS(position)}</TinyText>
-        <TinyText aria-label="current-artist">{artist}</TinyText>
+        <TinyText
+          sx={{
+            margin: 0,
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+          }}
+          aria-label="current-artist"
+        >
+          {artist}
+        </TinyText>
         <TinyText aria-label="current-max-time">
           -{convertToMMSS(max - position)}
         </TinyText>
