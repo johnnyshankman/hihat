@@ -32,7 +32,10 @@ export default function ContinuousSlider({
           aria-label="Volume"
           value={value}
           onChange={handleChange}
-          sx={{ color: 'rgb(133,133,133)' }}
+          sx={{
+            color: 'rgb(133,133,133)',
+            '.MuiSlider-thumb': { height: 10, width: 10 },
+          }}
         />
         <VolumeUp fontSize="small" />
       </Stack>
