@@ -81,7 +81,7 @@ export default function LinearProgressBar({
           max={max}
           onChange={(_, val) => {
             setPosition(val as number);
-            onManualChange(mval as number);
+            onManualChange(val as number);
           }}
           sx={{
             color: 'rgba(133, 133, 133)',
