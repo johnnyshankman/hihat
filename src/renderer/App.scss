@@ -1,5 +1,5 @@
-/*
- * @NOTE: Prepend a `~` to css file paths that are in your node_modules
+/**
+ * @NOTE: Prepend a `~` to css file paths that are in node_modules
  *        See https://github.com/webpack-contrib/sass-loader#imports
  */
 
@@ -29,10 +29,14 @@ html {
   overflow: hidden;
 }
 
-table {
-  border-spacing: 0;
+// removes the default yellow focus outline
+div:focus {
   outline: none;
-  border: none;
+}
+
+// removes the default yellow focus outline
+button:focus {
+  outline: none;
 }
 
 .nodrag {
@@ -117,10 +121,9 @@ table {
   }
 }
 
-/* Width */
+/* Scrollbar Width */
 ::-webkit-scrollbar {
   width: 14px;
-  height: 5px;
 }
 
 /* Track */
@@ -134,7 +137,7 @@ table {
   border: 1px solid rgb(123,123,123)
 }
 
-/* Handle on hover */
+/* Handle on Hover */
 ::-webkit-scrollbar-thumb:hover {
   border: 1px solid white;
 }
