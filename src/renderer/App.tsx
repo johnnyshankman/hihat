@@ -20,6 +20,7 @@ import ShuffleOnIcon from '@mui/icons-material/ShuffleOn';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import Stack from '@mui/material/Stack';
 import RepeatOnIcon from '@mui/icons-material/RepeatOn';
+import MenuIcon from '@mui/icons-material/Menu';
 import {
   styled,
   ThemeProvider,
@@ -39,6 +40,7 @@ import { StoreStructure, SongSkeletonStructure } from '../common/common';
 import './App.scss';
 import ReusableSongMenu from './components/ReusableSongMenu';
 import AlbumArtMenu from './components/AlbumArtMenu';
+import PlaylistDrawer from './components/TemporaryDrawer';
 
 /**
  * @TODO this is a monolithic file and needs refactoring into smaller components
@@ -134,6 +136,7 @@ function MainDash() {
     { mouseX: number; mouseY: number } | undefined
   >(undefined);
   const [volume, setVolume] = useState(100);
+  const [playlistDrawerOpen, setPlaylistDrawerOpen] = useState(false);
 
   const bufferToDataUrl = async (
     buffer: Buffer,
@@ -689,11 +692,47 @@ function MainDash() {
         </div>
       </Dialog>
 
+      <PlaylistDrawer
+        open={playlistDrawerOpen}
+        onClose={() => setPlaylistDrawerOpen(false)}
+        onToggle={() => setPlaylistDrawerOpen(!playlistDrawerOpen)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            setPlaylistDrawerOpen(false);
+          }
+        }}
+      />
+
       <div className="flex art drag justify-center p-4 pb-8 space-x-4 md:flex-row">
+        <Tooltip title="Playlists">
+          <button
+            onClick={() => {
+              setPlaylistDrawerOpen(!playlistDrawerOpen);
+            }}
+            type="button"
+            aria-label="playlists"
+            className="nodrag absolute top-[60px] md:top-13 right-4 items-center justify-center
+          rounded-md text-[18px] ring-offset-background transition-colors
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+          focus-visible:ring-offset-2 disabled:pointer-events-none
+          disabled:opacity-50 border border-neutral-800 bg-black
+          hover:bg-white hover:text-black
+          px-4 py-[7px] text-sm"
+          >
+            <MenuIcon
+              fontSize="inherit"
+              sx={{
+                position: 'relative',
+                bottom: '1px',
+              }}
+            />
+          </button>
+        </Tooltip>
+
         {/**
          * @dev either show the animated placeholder, or the album art
          */}
-        {!currentSongDataURL && (
+        {!currentSongDataURL ? (
           <div
             style={{
               aspectRatio: '1/1',
@@ -720,8 +759,7 @@ function MainDash() {
               <TinyText className="absolute bottom-3 left-3">hihat</TinyText>
             </div>
           </div>
-        )}
-        {currentSongDataURL && (
+        ) : (
           <>
             <img
               src={currentSongDataURL}
