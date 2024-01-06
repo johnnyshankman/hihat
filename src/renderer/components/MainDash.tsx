@@ -31,6 +31,8 @@ import LinearProgressBar from './LinearProgressBar';
 import { StoreStructure, SongSkeletonStructure } from '../../common/common';
 import ReusableSongMenu from './ReusableSongMenu';
 import AlbumArtMenu from './AlbumArtMenu';
+import useStoreStructure from '../store/main';
+import { bufferToDataUrl, convertToMMSS } from '../utils/utils';
 
 /**
  * @TODO this is a monolithic file and needs refactoring into smaller components
@@ -91,11 +93,51 @@ const TinyText = styled(Typography)({
   letterSpacing: 0.2,
 });
 
+const ROW_HEIGHT = 25.5;
+
+type SongMenuState =
+  | {
+      song: string;
+      anchorEl: HTMLElement | null;
+      songInfo: SongSkeletonStructure;
+      mouseX: number;
+      mouseY: number;
+    }
+  | undefined;
+
+type AlbumArtMenuState =
+  | {
+      mouseX: number;
+      mouseY: number;
+    }
+  | undefined;
+
+type FilterTypes = 'title' | 'artist' | 'album';
+type FilterDirections = 'asc' | 'desc';
+
 export default function MainDash() {
-  const audioTagRef = useRef<HTMLAudioElement>(null);
-  const rowHeight = 25.5;
+  /**
+   * @dev external hookds
+   */
   const { width, height, ref } = useResizeDetector();
 
+  /**
+   * @dev store hooks
+   */
+  const storeLibrary = useStoreStructure((store) => store.library);
+  const setLibraryInStore = useStoreStructure((store) => store.setLibrary);
+  const setLastPlayedSongInStoreAndOnServer = useStoreStructure(
+    (store) => store.setLastPlayedSong,
+  );
+
+  /**
+   * @dev refs
+   */
+  const audioTagRef = useRef<HTMLAudioElement>(null);
+
+  /**
+   * @dev state
+   */
   const [rowContainerHeight, setRowContainerHeight] = useState(0);
   const [currentSongTime, setCurrentSongTime] = useState(0);
   const [paused, setPaused] = useState(true);
@@ -108,54 +150,20 @@ export default function MainDash() {
     useState('');
   const [currentSongMetadata, setCurrentSongMetadata] =
     useState<SongSkeletonStructure>();
-  // the constant source of truth for the library, invisible to the UX
-  const [library, setLibrary] = useState<StoreStructure['library']>();
-  // the UX layer for the `library`, filtered by search
   const [filteredLibrary, setFilteredLibrary] =
     useState<StoreStructure['library']>();
-  const [filterType, setFilterType] = useState<'title' | 'artist' | 'album'>(
-    'artist',
-  );
-  const [filterDirection, setFilterDirection] = useState<'asc' | 'desc'>(
-    'desc',
-  );
+  const [filterType, setFilterType] = useState<FilterTypes>('artist');
+  const [filterDirection, setFilterDirection] =
+    useState<FilterDirections>('desc');
   const [shuffle, setShuffle] = useState(false);
   const [repeating, setRepeating] = useState(false);
   const [initialScrollIndex, setInitialScrollIndex] = useState(0);
-  const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<
-    { mouseX: number; mouseY: number } | undefined
-  >(undefined);
+  const [showAlbumArtMenu, setShowAlbumArtMenu] =
+    useState<AlbumArtMenuState>(undefined);
   const [volume, setVolume] = useState(100);
+  const [songMenu, setSongMenu] = useState<SongMenuState>(undefined);
 
-  const bufferToDataUrl = async (
-    buffer: Buffer,
-    format: string,
-  ): Promise<string> => {
-    const blob = new Blob([buffer], { type: format });
-    const reader = new FileReader();
-    reader.readAsDataURL(blob);
-
-    const res = (await new Promise((resolve) => {
-      reader.onloadend = () => {
-        resolve(reader.result as string);
-      };
-    })) as string;
-
-    return res;
-  };
-
-  /**
-   * @dev self explanatory, converts to '00:00' format a la itunes
-   */
-  const convertToMMSS = (timeInSeconds: number) => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = Math.floor(timeInSeconds % 60);
-    return `${minutes.toString().padStart(2, '0')}:${seconds
-      .toString()
-      .padStart(2, '0')}`;
-  };
-
-  const onGetAlbumArtResponse = async (event) => {
+  const onGetAlbumArtResponse = async (event: unknown) => {
     const pic = event as IPicture;
     const url = await bufferToDataUrl(pic.data, pic.format);
     setCurrentSongDataURL(url);
@@ -172,10 +180,7 @@ export default function MainDash() {
 
   const requestAndSetAlbumArtForSong = (song: string) => {
     // request the album art for the file from the main process
-    // this will also set the `lastPlayedSong` in the userConfig
-    window.electron.ipcRenderer.sendMessage('get-album-art', {
-      path: song,
-    });
+    window.electron.ipcRenderer.sendMessage('get-album-art', song);
 
     // set the current song data url when the main process responds
     window.electron.ipcRenderer.once('get-album-art', onGetAlbumArtResponse);
@@ -183,9 +188,9 @@ export default function MainDash() {
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
-    if (!library) return;
-    const filtered = Object.keys(library).filter((song) => {
-      const meta = library[song];
+    if (!storeLibrary) return;
+    const filtered = Object.keys(storeLibrary).filter((song) => {
+      const meta = storeLibrary[song];
       return (
         meta.common.title?.toLowerCase().includes(query.toLowerCase()) ||
         meta.common.artist?.toLowerCase().includes(query.toLowerCase()) ||
@@ -195,7 +200,7 @@ export default function MainDash() {
 
     const filteredLib: StoreStructure['library'] = {};
     filtered.forEach((song) => {
-      filteredLib[song] = library[song];
+      filteredLib[song] = storeLibrary[song];
     });
 
     setFilteredLibrary(filteredLib);
@@ -232,6 +237,7 @@ export default function MainDash() {
     setCurrentSongMetadata(meta);
 
     requestAndSetAlbumArtForSong(song);
+    setLastPlayedSongInStoreAndOnServer(song);
 
     // play the song regardless of when the main process responds
     setPaused(false);
@@ -357,7 +363,7 @@ export default function MainDash() {
       const typedArg = arg as StoreStructure;
 
       // reset the library, the filtered library, the current song, and pause.
-      setLibrary(typedArg.library);
+      setLibraryInStore(typedArg.library);
       setFilteredLibrary(typedArg.library);
       setShowImportingProgress(false);
       // set current song to the first song in the library
@@ -414,7 +420,7 @@ export default function MainDash() {
       const typedArg = arg as StoreStructure & { scrollToIndex: number };
 
       // reset the library, the filtered library, the current song, and pause.
-      setLibrary(typedArg.library);
+      setLibraryInStore(typedArg.library);
       setFilteredLibrary(typedArg.library);
       setShowImportingProgress(false);
       // scroll one of the new songs into view
@@ -431,7 +437,7 @@ export default function MainDash() {
   };
 
   const filterByTitle = () => {
-    if (!library) return;
+    if (!storeLibrary) return;
     if (!filteredLibrary) return;
 
     // flip the filter direction
@@ -449,7 +455,7 @@ export default function MainDash() {
 
     const filteredLib: StoreStructure['library'] = {};
     filtered.forEach((song) => {
-      filteredLib[song] = library[song];
+      filteredLib[song] = storeLibrary[song];
     });
 
     setFilteredLibrary(filteredLib);
@@ -457,7 +463,7 @@ export default function MainDash() {
   };
 
   const filterByArtist = () => {
-    if (!library) return;
+    if (!storeLibrary) return;
     if (!filteredLibrary) return;
 
     // flip the filter direction
@@ -495,7 +501,7 @@ export default function MainDash() {
 
     const filteredLib: StoreStructure['library'] = {};
     filtered.forEach((song) => {
-      filteredLib[song] = library[song];
+      filteredLib[song] = storeLibrary[song];
     });
 
     setFilteredLibrary(filteredLib);
@@ -503,7 +509,7 @@ export default function MainDash() {
   };
 
   const filterByAlbum = () => {
-    if (!library) return;
+    if (!storeLibrary) return;
     if (!filteredLibrary) return;
 
     // flip the filter direction
@@ -532,23 +538,12 @@ export default function MainDash() {
 
     const filteredLib: StoreStructure['library'] = {};
     filtered.forEach((song) => {
-      filteredLib[song] = library[song];
+      filteredLib[song] = storeLibrary[song];
     });
 
     setFilteredLibrary(filteredLib);
     setFilterType('album');
   };
-
-  const [songMenu, setSongMenu] = useState<
-    | {
-        song: string;
-        anchorEl: HTMLElement | null;
-        songInfo: SongSkeletonStructure;
-        mouseX: number;
-        mouseY: number;
-      }
-    | undefined
-  >(undefined);
 
   /**
    * @dev render the row for the virtualized table, reps a single song
@@ -623,7 +618,7 @@ export default function MainDash() {
   useEffect(() => {
     window.electron.ipcRenderer.once('initialize', (arg: unknown) => {
       const typedArg = arg as StoreStructure;
-      setLibrary(typedArg.library);
+      setLibraryInStore(typedArg.library);
       setFilteredLibrary(typedArg.library);
 
       const artContainerHeight =
@@ -938,7 +933,7 @@ export default function MainDash() {
             height={rowContainerHeight}
             rowRenderer={renderSongRow}
             rowCount={Object.keys(filteredLibrary || {}).length}
-            rowHeight={rowHeight}
+            rowHeight={ROW_HEIGHT}
             scrollToAlignment="center"
             scrollToIndex={
               initialScrollIndex > 0 ? initialScrollIndex : undefined

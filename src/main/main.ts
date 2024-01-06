@@ -42,26 +42,35 @@ function parseData(fp: string) {
 let mainWindow: BrowserWindow | null = null;
 
 /**
- * @dev for requesting album art data from music metadata
- *      which is much too large to send over the IPC for every song
- *      during initialization, so we lazy load it when the user
- *     clicks on a song.
+ * @dev for requesting album art data. taking every music metadata album art
+ *      in library and sending it over is much too large for the IPC
+ *      so we lazy the art for one song at a time when the user clicks on a song
+ *      via this event.
  */
 ipcMain.on('get-album-art', async (event, arg) => {
-  const filePath = arg.path;
-  const metadata = await mm.parseFile(filePath);
-  // write the filePath to the userConfig's lastPlayedSong field
+  const songFilePath = arg;
+  const metadata = await mm.parseFile(songFilePath);
+  event.reply('get-album-art', metadata.common.picture?.[0] || '');
+});
+
+/**
+ * @dev sets lastPlayedSong in the userConfig.json file to provided arg.path
+ */
+ipcMain.on('set-last-played-song', async (event, arg: string) => {
+  const songFilePath = arg;
   const userConfig = parseData(
     path.join(app.getPath('userData'), 'userConfig.json'),
   ) as StoreStructure;
-  userConfig.lastPlayedSong = filePath;
-
+  userConfig.lastPlayedSong = songFilePath;
   fs.writeFileSync(
     path.join(app.getPath('userData'), 'userConfig.json'),
     JSON.stringify(userConfig),
   );
 
-  event.reply('get-album-art', metadata.common.picture?.[0] || '');
+  console.log('hi');
+  event.reply('set-last-played-song');
+
+  console.log(userConfig);
 });
 
 const findAllFilesRecursively = (dir: string) => {
