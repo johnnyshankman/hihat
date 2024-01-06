@@ -13,7 +13,7 @@ export type Channels =
   | 'show-in-finder'
   | 'song-imported';
 
-export type ArgsBase = Record<Channels, any>;
+export type ArgsBase = Record<Channels, unknown>;
 
 export interface SendMessageArgs extends ArgsBase {
   'select-library': undefined;
