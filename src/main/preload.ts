@@ -5,6 +5,7 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 export type Channels =
   | 'select-library'
   | 'add-to-library'
+  | 'set-last-played-song'
   | 'initialize'
   | 'get-album-art'
   | 'copy-to-clipboard'
@@ -13,6 +14,9 @@ export type Channels =
   | 'song-imported';
 
 const electronHandler = {
+  /**
+   * @TODO: give these better type handles so we know what we're sending around
+   */
   ipcRenderer: {
     sendMessage(channel: Channels, ...args: unknown[]) {
       ipcRenderer.send(channel, ...args);
