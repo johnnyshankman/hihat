@@ -6,11 +6,9 @@ import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
 import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
 import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
 import PauseRounded from '@mui/icons-material/PauseRounded';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
-import FilterListIcon from '@mui/icons-material/FilterList';
 import AddIcon from '@mui/icons-material/Add';
 import Tooltip from '@mui/material/Tooltip';
 import { IconButton } from '@mui/material';
@@ -20,7 +18,6 @@ import RepeatIcon from '@mui/icons-material/Repeat';
 import Stack from '@mui/material/Stack';
 import RepeatOnIcon from '@mui/icons-material/RepeatOn';
 import { styled, alpha } from '@mui/material/styles';
-import { List } from 'react-virtualized';
 import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
 import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
@@ -29,15 +26,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 import { StoreStructure, SongSkeletonStructure } from '../../common/common';
-import ReusableSongMenu from './ReusableSongMenu';
 import AlbumArtMenu from './AlbumArtMenu';
-import useStoreStructure from '../store/main';
-import { bufferToDataUrl, convertToMMSS } from '../utils/utils';
-
-/**
- * @TODO this is a monolithic file and needs refactoring into smaller components
- * but since this is a personal project i've lazily put that off.
- */
+import useMainStore from '../store/main';
+import { bufferToDataUrl } from '../utils/utils';
+import usePlayerStore from '../store/player';
+import LibraryList from './LibraryList';
 
 const SearchIconWrapper = styled('div')(({ theme }) => ({
   padding: theme.spacing(0, 1.5),
@@ -93,27 +86,12 @@ const TinyText = styled(Typography)({
   letterSpacing: 0.2,
 });
 
-const ROW_HEIGHT = 25.5;
-
-type SongMenuState =
-  | {
-      song: string;
-      anchorEl: HTMLElement | null;
-      songInfo: SongSkeletonStructure;
-      mouseX: number;
-      mouseY: number;
-    }
-  | undefined;
-
 type AlbumArtMenuState =
   | {
       mouseX: number;
       mouseY: number;
     }
   | undefined;
-
-type FilterTypes = 'title' | 'artist' | 'album';
-type FilterDirections = 'asc' | 'desc';
 
 export default function MainDash() {
   /**
@@ -124,10 +102,36 @@ export default function MainDash() {
   /**
    * @dev store hooks
    */
-  const storeLibrary = useStoreStructure((store) => store.library);
-  const setLibraryInStore = useStoreStructure((store) => store.setLibrary);
-  const setLastPlayedSongInStoreAndOnServer = useStoreStructure(
+  const storeLibrary = useMainStore((store) => store.library);
+  const setLibraryInStore = useMainStore((store) => store.setLibrary);
+  const setLastPlayedSongInStoreAndOnServer = useMainStore(
     (store) => store.setLastPlayedSong,
+  );
+  const volume = usePlayerStore((store) => store.volume);
+  const setVolume = usePlayerStore((store) => store.setVolume);
+  const paused = usePlayerStore((store) => store.paused);
+  const setPaused = usePlayerStore((store) => store.setPaused);
+  const shuffle = usePlayerStore((store) => store.shuffle);
+  const setShuffle = usePlayerStore((store) => store.setShuffle);
+  const repeating = usePlayerStore((store) => store.repeating);
+  const setRepeating = usePlayerStore((store) => store.setRepeating);
+  const currentSong = usePlayerStore((store) => store.currentSong);
+  const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
+  const currentSongDataURL = usePlayerStore(
+    (store) => store.currentSongDataURL,
+  );
+  const setCurrentSongDataURL = usePlayerStore(
+    (store) => store.setCurrentSongDataURL,
+  );
+  const currentSongMetadata = usePlayerStore(
+    (store) => store.currentSongMetadata,
+  );
+  const setCurrentSongMetadata = usePlayerStore(
+    (store) => store.setCurrentSongMetadata,
+  );
+  const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
+  const setFilteredLibrary = usePlayerStore(
+    (store) => store.setFilteredLibrary,
   );
 
   /**
@@ -140,28 +144,16 @@ export default function MainDash() {
    */
   const [rowContainerHeight, setRowContainerHeight] = useState(0);
   const [currentSongTime, setCurrentSongTime] = useState(0);
-  const [paused, setPaused] = useState(true);
-  const [currentSong, setCurrentSong] = useState<string>();
+
   const [showImportingProgress, setShowImportingProgress] = useState(false);
-  const [currentSongDataURL, setCurrentSongDataURL] = useState<string>();
   const [songsImported, setSongsImported] = useState(0);
   const [totalSongs, setTotalSongs] = useState(0);
   const [estimatedTimeRemainingString, setEstimatedTimeRemainingString] =
     useState('');
-  const [currentSongMetadata, setCurrentSongMetadata] =
-    useState<SongSkeletonStructure>();
-  const [filteredLibrary, setFilteredLibrary] =
-    useState<StoreStructure['library']>();
-  const [filterType, setFilterType] = useState<FilterTypes>('artist');
-  const [filterDirection, setFilterDirection] =
-    useState<FilterDirections>('desc');
-  const [shuffle, setShuffle] = useState(false);
-  const [repeating, setRepeating] = useState(false);
+
   const [initialScrollIndex, setInitialScrollIndex] = useState(0);
   const [showAlbumArtMenu, setShowAlbumArtMenu] =
     useState<AlbumArtMenuState>(undefined);
-  const [volume, setVolume] = useState(100);
-  const [songMenu, setSongMenu] = useState<SongMenuState>(undefined);
 
   const onGetAlbumArtResponse = async (event: unknown) => {
     const pic = event as IPicture;
@@ -436,165 +428,6 @@ export default function MainDash() {
     window.electron.ipcRenderer.sendMessage('add-to-library');
   };
 
-  const filterByTitle = () => {
-    if (!storeLibrary) return;
-    if (!filteredLibrary) return;
-
-    // flip the filter direction
-    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
-
-    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      const aTitle = filteredLibrary[a].common.title?.toLowerCase() || '';
-      const bTitle = filteredLibrary[b].common.title?.toLowerCase() || '';
-      const val = aTitle.localeCompare(bTitle);
-      if (filterDirection === 'desc') {
-        return val * -1;
-      }
-      return val;
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
-
-    setFilteredLibrary(filteredLib);
-    setFilterType('title');
-  };
-
-  const filterByArtist = () => {
-    if (!storeLibrary) return;
-    if (!filteredLibrary) return;
-
-    // flip the filter direction
-    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
-
-    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      const artistA = filteredLibrary[a].common?.artist
-        ?.toLowerCase()
-        .replace(/^the /, '');
-      const artistB = filteredLibrary[b].common?.artist
-        ?.toLowerCase()
-        .replace(/^the /, '');
-      const albumA = filteredLibrary[a].common?.album?.toLowerCase();
-      const albumB = filteredLibrary[b].common?.album?.toLowerCase();
-      const trackA = filteredLibrary[a].common?.track?.no;
-      const trackB = filteredLibrary[b].common?.track?.no;
-      // handle null cases
-      if (!artistA) return filterDirection === 'asc' ? -1 : 1;
-      if (!artistB) return filterDirection === 'asc' ? 1 : -1;
-
-      if (!albumA) return -1;
-      if (!albumB) return 1;
-      if (!trackA) return -1;
-      if (!trackB) return 1;
-
-      if (artistA < artistB) return filterDirection === 'asc' ? -1 : 1;
-      if (artistA > artistB) return filterDirection === 'asc' ? 1 : -1;
-
-      if (albumA < albumB) return -1;
-      if (albumA > albumB) return 1;
-      if (trackA < trackB) return -1;
-      if (trackA > trackB) return 1;
-      return 0;
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
-
-    setFilteredLibrary(filteredLib);
-    setFilterType('artist');
-  };
-
-  const filterByAlbum = () => {
-    if (!storeLibrary) return;
-    if (!filteredLibrary) return;
-
-    // flip the filter direction
-    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
-
-    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      // sort by album, then track number
-      const albumA = filteredLibrary[a].common?.album?.toLowerCase();
-      const albumB = filteredLibrary[b].common?.album?.toLowerCase();
-      const trackA = filteredLibrary[a].common?.track?.no;
-      const trackB = filteredLibrary[b].common?.track?.no;
-      // handle null cases
-      if (!albumA) return filterDirection === 'asc' ? -1 : 1;
-      if (!albumB) return filterDirection === 'asc' ? 1 : -1;
-      if (!trackA) return -1;
-      if (!trackB) return 1;
-
-      if (albumA < albumB) return filterDirection === 'asc' ? -1 : 1;
-      if (albumA > albumB) return filterDirection === 'asc' ? 1 : -1;
-
-      if (trackA < trackB) return -1;
-      if (trackA > trackB) return 1;
-
-      return 0;
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
-
-    setFilteredLibrary(filteredLib);
-    setFilterType('album');
-  };
-
-  /**
-   * @dev render the row for the virtualized table, reps a single song
-   */
-  const renderSongRow = ({
-    index,
-    key,
-    style,
-  }: {
-    index: number;
-    key: string;
-    style: any;
-  }) => {
-    if (!filteredLibrary) return null;
-    const song = Object.keys(filteredLibrary)[index];
-    return (
-      <div
-        key={key}
-        style={style}
-        onDoubleClick={async () => {
-          await playSong(song, filteredLibrary[song]);
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          setSongMenu({
-            song,
-            anchorEl: e.currentTarget,
-            songInfo: filteredLibrary[song],
-            mouseX: e.clientX - 2,
-            mouseY: e.clientY - 4,
-          });
-        }}
-        data-state={song === currentSong ? 'selected' : undefined}
-        className="flex w-full items-center border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
-      >
-        <div className="select-none whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {filteredLibrary?.[song].common.title}
-        </div>
-        <div className="select-none whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {filteredLibrary?.[song].common.artist}
-        </div>
-        <div className="select-none whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {filteredLibrary?.[song].common.album}
-        </div>
-        <div className="select-none w-14 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
-          {convertToMMSS(filteredLibrary?.[song].format.duration || 0)}
-        </div>
-      </div>
-    );
-  };
-
   /**
    * @dev useEffect to update the row container height when
    * the window is resized in any way. that way our virtualized table
@@ -701,22 +534,6 @@ export default function MainDash() {
           </div>
         </div>
       </Dialog>
-
-      {/**
-       * @dev this is the menu that pops up when the user right clicks on a song
-       */}
-      {songMenu && (
-        <ReusableSongMenu
-          anchorEl={songMenu?.anchorEl}
-          onClose={() => {
-            setSongMenu(undefined);
-          }}
-          mouseX={songMenu.mouseX}
-          mouseY={songMenu.mouseY}
-          song={songMenu?.song}
-          songInfo={songMenu?.songInfo}
-        />
-      )}
 
       {/**
        * @dev this is the top third of the screen with the artwork and import buttons
@@ -852,95 +669,12 @@ export default function MainDash() {
       {/**
        * @dev this is the middle third of the screen with the song list
        */}
-      <div className="w-full overflow-auto">
-        <div className="w-full text-[11px]  mb-[1px]">
-          <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
-            <div className="flex transition-colors divide-neutral-800 divide-x">
-              <button
-                onClick={filterByTitle}
-                type="button"
-                className="select-none flex leading-[1em] items-center py-1.5 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-              >
-                Song
-                {/* if this is the selected filter add an up or down arrow represending the filter direction */}
-                {filterType === 'title' && (
-                  <span
-                    className={`${
-                      filterDirection === 'asc'
-                        ? 'rotate-180'
-                        : 'relative bottom-[2px]'
-                    } inline-block ml-2`}
-                  >
-                    <FilterListIcon fontSize="inherit" />
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={filterByArtist}
-                type="button"
-                className="select-none flex leading-[1em] items-center py-1.5 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-              >
-                Artist
-                {filterType === 'artist' && (
-                  <span
-                    className={`${
-                      filterDirection === 'asc'
-                        ? 'rotate-180'
-                        : 'relative bottom-[2px]'
-                    } inline-block ml-2`}
-                  >
-                    <FilterListIcon fontSize="inherit" />
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={filterByAlbum}
-                type="button"
-                className="select-none flex leading-[1em] items-center py-1.5 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-              >
-                Album
-                {filterType === 'album' && (
-                  <span
-                    className={`${
-                      filterDirection === 'asc'
-                        ? 'rotate-180'
-                        : 'relative bottom-[2px]'
-                    } inline-block ml-2`}
-                  >
-                    <FilterListIcon fontSize="inherit" />
-                  </span>
-                )}
-              </button>
-              {/**
-               * @dev slightly diff size to accomodate the lack of scroll bar
-               * next to it, unlike a normal row.
-               */}
-              <button
-                type="button"
-                aria-label="duration"
-                className="select-none flex leading-[1em] items-center py-1.5 w-14 text-center px-4 mr-2 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-              >
-                <AccessTimeIcon fontSize="inherit" />
-              </button>
-            </div>
-          </div>
-
-          {/**
-           * @dev since the list could be 1000s of songs long we must virtualize it
-           */}
-          <List
-            width={width || 0}
-            height={rowContainerHeight}
-            rowRenderer={renderSongRow}
-            rowCount={Object.keys(filteredLibrary || {}).length}
-            rowHeight={ROW_HEIGHT}
-            scrollToAlignment="center"
-            scrollToIndex={
-              initialScrollIndex > 0 ? initialScrollIndex : undefined
-            }
-          />
-        </div>
-      </div>
+      <LibraryList
+        width={width || 0}
+        rowContainerHeight={rowContainerHeight}
+        initialScrollIndex={initialScrollIndex}
+        playSong={playSong}
+      />
 
       {/**
        * this the bottom third of the screen with the static player
@@ -1064,9 +798,9 @@ export default function MainDash() {
          */}
         <LinearProgressBar
           value={currentSongTime}
-          max={currentSongMetadata?.format.duration || 0}
-          title={currentSongMetadata?.common.title || 'No song selected'}
-          artist={currentSongMetadata?.common.artist || '--'}
+          max={currentSongMetadata?.format?.duration || 0}
+          title={currentSongMetadata?.common?.title || 'No song selected'}
+          artist={currentSongMetadata?.common?.artist || '--'}
           onManualChange={(e: number) => {
             setCurrentSongTime(e);
             if (audioTagRef?.current) {
