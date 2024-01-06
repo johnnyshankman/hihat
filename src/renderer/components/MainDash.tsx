@@ -4,14 +4,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
-import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import Tooltip from '@mui/material/Tooltip';
-import { styled, alpha } from '@mui/material/styles';
 import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
 import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
-import InputBase from '@mui/material/InputBase';
 import SearchIcon from '@mui/icons-material/Search';
 import { StoreStructure, SongSkeletonStructure } from '../../common/common';
 import AlbumArtMenu from './AlbumArtMenu';
@@ -20,60 +17,12 @@ import { bufferToDataUrl } from '../utils/utils';
 import usePlayerStore from '../store/player';
 import LibraryList from './LibraryList';
 import StaticPlayer from './StaticPlayer';
-
-const SearchIconWrapper = styled('div')(({ theme }) => ({
-  padding: theme.spacing(0, 1.5),
-  height: '100%',
-  position: 'absolute',
-  top: 0,
-  right: 0,
-  pointerEvents: 'none',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-}));
-
-const Search = styled('div')(({ theme }) => ({
-  position: 'relative',
-  borderRadius: theme.shape.borderRadius,
-  border: '1px solid rgb(40, 40, 40)',
-  '&:hover': {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
-  },
-  background: 'black',
-
-  marginLeft: 0,
-  width: '104px',
-  [theme.breakpoints.up('sm')]: {
-    width: 'auto',
-  },
-}));
-
-const StyledInputBase = styled(InputBase)(({ theme }) => ({
-  color: 'inherit',
-  fontSize: '12px',
-  padding: '4px 0',
-  '& .MuiInputBase-input': {
-    // vertical padding + font size from searchIcon
-    paddingLeft: `calc(1em + ${theme.spacing(0.5)})`,
-    paddingRight: `calc(1em + ${theme.spacing(2.5)})`,
-    transition: theme.transitions.create('width'),
-    width: '100%',
-    [theme.breakpoints.up('sm')]: {
-      width: '12ch',
-      '&:focus': {
-        width: '20ch',
-      },
-    },
-  },
-}));
-
-const TinyText = styled(Typography)({
-  fontSize: '0.75rem',
-  opacity: 0.38,
-  fontWeight: 500,
-  letterSpacing: 0.2,
-});
+import {
+  Search,
+  SearchIconWrapper,
+  StyledInputBase,
+  TinyText,
+} from './SimpleStyledMaterialUIComponents';
 
 type AlbumArtMenuState =
   | {
@@ -132,17 +81,26 @@ export default function MainDash() {
    * @dev state
    */
   const [rowContainerHeight, setRowContainerHeight] = useState(0);
-
   const [showImportingProgress, setShowImportingProgress] = useState(false);
   const [songsImported, setSongsImported] = useState(0);
   const [totalSongs, setTotalSongs] = useState(0);
   const [estimatedTimeRemainingString, setEstimatedTimeRemainingString] =
     useState('');
-
   const [initialScrollIndex, setInitialScrollIndex] = useState(0);
   const [showAlbumArtMenu, setShowAlbumArtMenu] =
     useState<AlbumArtMenuState>(undefined);
 
+  /**
+   * @def start functions
+   */
+
+  /**
+   * This function is called when the main process responds to the 'get-album'art'
+   * IPC request/event. It takes the IPicture and converts it to a data url.
+   * It then sets the current song data url in the player store.
+   * It also sets the album art in the navigator media session metadata (if it exists).
+   * @param event an IPicture
+   */
   const onGetAlbumArtResponse = async (event: unknown) => {
     const pic = event as IPicture;
     const url = await bufferToDataUrl(pic.data, pic.format);

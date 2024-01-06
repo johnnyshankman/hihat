@@ -1,16 +1,7 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
-import { styled } from '@mui/material/styles';
-import Typography from '@mui/material/Typography';
-
-const TinyText = styled(Typography)({
-  fontSize: '0.75rem',
-  textAlign: 'center',
-  opacity: 0.5,
-  fontWeight: 500,
-  letterSpacing: 0.2,
-});
+import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
 
 export default function LinearProgressBar({
   value,
@@ -52,7 +43,7 @@ export default function LinearProgressBar({
           justifyContent: 'center',
         }}
       >
-        <TinyText
+        <LessOpaqueTinyText
           sx={{
             margin: 0,
             textOverflow: 'ellipsis',
@@ -62,7 +53,7 @@ export default function LinearProgressBar({
           aria-label="current-title"
         >
           {title}
-        </TinyText>
+        </LessOpaqueTinyText>
       </Box>
       <Box
         sx={{
@@ -101,8 +92,10 @@ export default function LinearProgressBar({
           gap: 1,
         }}
       >
-        <TinyText aria-label="current-time">{convertToMMSS(position)}</TinyText>
-        <TinyText
+        <LessOpaqueTinyText aria-label="current-time">
+          {convertToMMSS(position)}
+        </LessOpaqueTinyText>
+        <LessOpaqueTinyText
           sx={{
             margin: 0,
             textOverflow: 'ellipsis',
@@ -112,10 +105,10 @@ export default function LinearProgressBar({
           aria-label="current-artist"
         >
           {artist}
-        </TinyText>
-        <TinyText aria-label="current-max-time">
+        </LessOpaqueTinyText>
+        <LessOpaqueTinyText aria-label="current-max-time">
           -{convertToMMSS(max - position)}
-        </TinyText>
+        </LessOpaqueTinyText>
       </Box>
     </Box>
   );
