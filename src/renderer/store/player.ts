@@ -9,6 +9,9 @@ interface PlayerStore {
   shuffle: boolean;
   repeating: boolean;
   volume: number;
+  currentSongTime: number;
+  filteredLibrary: { [key: string]: SongSkeletonStructure };
+
   deleteEverything: () => void;
   setVolume: (volume: number) => void;
   setPaused: (paused: boolean) => void;
@@ -17,7 +20,7 @@ interface PlayerStore {
   setCurrentSong: (song: string) => void;
   setCurrentSongDataURL: (dataURL: string) => void;
   setCurrentSongMetadata: (metadata: SongSkeletonStructure) => void;
-  filteredLibrary: { [key: string]: SongSkeletonStructure };
+  setCurrentSongTime: (time: number) => void;
   setFilteredLibrary: (filteredLibrary: {
     [key: string]: SongSkeletonStructure;
   }) => void;
@@ -31,6 +34,9 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   shuffle: false,
   repeating: false,
   volume: 100,
+  currentSongTime: 0,
+  filteredLibrary: {},
+
   deleteEverything: () => set({}, true),
   setVolume: (volume) => set({ volume }),
   setPaused: (paused) => set({ paused }),
@@ -39,8 +45,8 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   setCurrentSong: (currentSong) => set({ currentSong }),
   setCurrentSongDataURL: (currentSongDataURL) => set({ currentSongDataURL }),
   setCurrentSongMetadata: (currentSongMetadata) => set({ currentSongMetadata }),
-  filteredLibrary: {},
   setFilteredLibrary: (filteredLibrary) => set({ filteredLibrary }),
+  setCurrentSongTime: (currentSongTime) => set({ currentSongTime }),
 }));
 
 export default usePlayerStore;

@@ -2,35 +2,24 @@
 import { IPicture } from 'music-metadata';
 import React, { useState, useRef, useEffect } from 'react';
 import Box from '@mui/material/Box';
-import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
-import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
-import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
-import PauseRounded from '@mui/icons-material/PauseRounded';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import Tooltip from '@mui/material/Tooltip';
-import { IconButton } from '@mui/material';
-import ShuffleIcon from '@mui/icons-material/Shuffle';
-import ShuffleOnIcon from '@mui/icons-material/ShuffleOn';
-import RepeatIcon from '@mui/icons-material/Repeat';
-import Stack from '@mui/material/Stack';
-import RepeatOnIcon from '@mui/icons-material/RepeatOn';
 import { styled, alpha } from '@mui/material/styles';
 import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
 import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
 import InputBase from '@mui/material/InputBase';
 import SearchIcon from '@mui/icons-material/Search';
-import ContinuousSlider from './ContinuousSlider';
-import LinearProgressBar from './LinearProgressBar';
 import { StoreStructure, SongSkeletonStructure } from '../../common/common';
 import AlbumArtMenu from './AlbumArtMenu';
 import useMainStore from '../store/main';
 import { bufferToDataUrl } from '../utils/utils';
 import usePlayerStore from '../store/player';
 import LibraryList from './LibraryList';
+import StaticPlayer from './StaticPlayer';
 
 const SearchIconWrapper = styled('div')(({ theme }) => ({
   padding: theme.spacing(0, 1.5),
@@ -107,14 +96,10 @@ export default function MainDash() {
   const setLastPlayedSongInStoreAndOnServer = useMainStore(
     (store) => store.setLastPlayedSong,
   );
-  const volume = usePlayerStore((store) => store.volume);
-  const setVolume = usePlayerStore((store) => store.setVolume);
   const paused = usePlayerStore((store) => store.paused);
   const setPaused = usePlayerStore((store) => store.setPaused);
   const shuffle = usePlayerStore((store) => store.shuffle);
-  const setShuffle = usePlayerStore((store) => store.setShuffle);
   const repeating = usePlayerStore((store) => store.repeating);
-  const setRepeating = usePlayerStore((store) => store.setRepeating);
   const currentSong = usePlayerStore((store) => store.currentSong);
   const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const currentSongDataURL = usePlayerStore(
@@ -133,6 +118,10 @@ export default function MainDash() {
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
   );
+  const currentSongTime = usePlayerStore((store) => store.currentSongTime);
+  const setCurrentSongTime = usePlayerStore(
+    (store) => store.setCurrentSongTime,
+  );
 
   /**
    * @dev refs
@@ -143,7 +132,6 @@ export default function MainDash() {
    * @dev state
    */
   const [rowContainerHeight, setRowContainerHeight] = useState(0);
-  const [currentSongTime, setCurrentSongTime] = useState(0);
 
   const [showImportingProgress, setShowImportingProgress] = useState(false);
   const [songsImported, setSongsImported] = useState(0);
@@ -666,9 +654,6 @@ export default function MainDash() {
         </Box>
       </div>
 
-      {/**
-       * @dev this is the middle third of the screen with the song list
-       */}
       <LibraryList
         width={width || 0}
         rowContainerHeight={rowContainerHeight}
@@ -676,186 +661,11 @@ export default function MainDash() {
         playSong={playSong}
       />
 
-      {/**
-       * this the bottom third of the screen with the static player
-       */}
-      <div
-        className="player flex flex-col sm:flex-row items-center
-        justify-between drag gap-1 sm:gap-10 fixed inset-x-0 border-t
-        border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 pb-4 pt-0 sm:pb-2 sm:pt-2
-        "
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            width: '100%',
-            alignItems: 'center',
-            justifyContent: 'flex-center',
-            flex: 1,
-          }}
-        >
-          {/**
-           * @dev this is the mobile version of the shuffle, repeat, play button, and volume slider
-           */}
-          <div className="flex sm:hidden flex-row first-letter:align-start justify-start items-center">
-            <IconButton
-              sx={{
-                fontSize: '1rem',
-                color: 'rgb(133,133,133)',
-              }}
-              onClick={() => {
-                const newValue = !repeating;
-                setRepeating(newValue);
-              }}
-            >
-              {repeating ? (
-                <RepeatOnIcon fontSize="inherit" />
-              ) : (
-                <RepeatIcon fontSize="inherit" />
-              )}
-            </IconButton>
-            <IconButton
-              sx={{
-                fontSize: '1rem',
-                color: 'rgb(133,133,133)',
-              }}
-              onClick={() => {
-                const newValue = !shuffle;
-                setShuffle(newValue);
-              }}
-            >
-              {shuffle ? (
-                <ShuffleOnIcon fontSize="inherit" />
-              ) : (
-                <ShuffleIcon fontSize="inherit" />
-              )}
-            </IconButton>
-          </div>
-
-          {/**
-           * @dev this is the play button on all sizes
-           */}
-          <Stack
-            spacing={0}
-            direction="row"
-            alignItems="center"
-            justifyContent="center"
-            justifyItems="center"
-          >
-            <IconButton
-              aria-label="previous song"
-              onClick={playPreviousSong}
-              disabled={!currentSongMetadata}
-              color="inherit"
-            >
-              <FastRewindRounded fontSize="medium" />
-            </IconButton>
-            <IconButton
-              aria-label={paused ? 'play' : 'pause'}
-              color="inherit"
-              disabled={!currentSongMetadata}
-              onClick={() => {
-                setPaused(!paused);
-                // eslint-disable-next-line no-unused-expressions
-                audioTagRef.current!.paused
-                  ? audioTagRef.current!.play()
-                  : audioTagRef.current!.pause();
-              }}
-            >
-              {paused ? (
-                <PlayArrowRounded sx={{ fontSize: '3rem' }} />
-              ) : (
-                <PauseRounded sx={{ fontSize: '3rem' }} />
-              )}
-            </IconButton>
-            <IconButton
-              aria-label="next song"
-              onClick={playNextSong}
-              disabled={!currentSongMetadata}
-              color="inherit"
-            >
-              <FastForwardRounded fontSize="medium" />
-            </IconButton>
-          </Stack>
-
-          {/**
-           * @dev this is the volume slider on mobile and desktop
-           */}
-          <div className="flex sm:hidden justify-end flex-1 mt-1 mb-1">
-            <ContinuousSlider
-              value={volume}
-              onChange={(event, value) => {
-                audioTagRef.current!.volume = (value as number) / 100;
-                setVolume(value as number);
-              }}
-            />
-          </div>
-        </Box>
-
-        {/**
-         * @dev this is song progress bar on mobile and desktop
-         */}
-        <LinearProgressBar
-          value={currentSongTime}
-          max={currentSongMetadata?.format?.duration || 0}
-          title={currentSongMetadata?.common?.title || 'No song selected'}
-          artist={currentSongMetadata?.common?.artist || '--'}
-          onManualChange={(e: number) => {
-            setCurrentSongTime(e);
-            if (audioTagRef?.current) {
-              audioTagRef.current.currentTime = e;
-            }
-          }}
-        />
-
-        {/**
-         * @dev this is the desktop version of the shuffle, repeat, play button
-         */}
-        <div className="sm:flex hidden gap-2 relative justify-end flex-1 mt-2 mb-1 w-full">
-          <div className="flex flex-row relative bottom-0.5">
-            <IconButton
-              sx={{
-                fontSize: '1rem',
-                color: 'rgb(133,133,133)',
-              }}
-              onClick={() => {
-                const newValue = !repeating;
-                setRepeating(newValue);
-              }}
-            >
-              {repeating ? (
-                <RepeatOnIcon fontSize="inherit" />
-              ) : (
-                <RepeatIcon fontSize="inherit" />
-              )}
-            </IconButton>
-            <IconButton
-              sx={{
-                fontSize: '1rem',
-                color: 'rgb(133,133,133)',
-              }}
-              onClick={() => {
-                const newValue = !shuffle;
-                setShuffle(newValue);
-              }}
-            >
-              {shuffle ? (
-                <ShuffleOnIcon fontSize="inherit" />
-              ) : (
-                <ShuffleIcon fontSize="inherit" />
-              )}
-            </IconButton>
-          </div>
-          <ContinuousSlider
-            value={volume}
-            onChange={(event, value) => {
-              audioTagRef.current!.volume = (value as number) / 100;
-              setVolume(value as number);
-            }}
-          />
-        </div>
-      </div>
+      <StaticPlayer
+        audioTagRef={audioTagRef}
+        playPreviousSong={playPreviousSong}
+        playNextSong={playNextSong}
+      />
     </div>
   );
 }
