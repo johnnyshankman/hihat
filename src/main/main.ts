@@ -239,7 +239,7 @@ const selectLibrary = async (event: IpcMainEvent) => {
   }
 
   if (result.canceled) {
-    event.reply('select-library', {});
+    event.reply('select-library');
     return;
   }
 

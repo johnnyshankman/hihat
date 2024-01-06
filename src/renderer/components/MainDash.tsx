@@ -1,5 +1,4 @@
 /* eslint-disable jsx-a11y/media-has-caption */
-import { IPicture } from 'music-metadata';
 import React, { useState, useRef, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
@@ -95,33 +94,29 @@ export default function MainDash() {
    */
 
   /**
-   * This function is called when the main process responds to the 'get-album'art'
-   * IPC request/event. It takes the IPicture and converts it to a data url.
+   * It takes the IPicture and converts it to a data url.
    * It then sets the current song data url in the player store.
    * It also sets the album art in the navigator media session metadata (if it exists).
    * @param event an IPicture
    */
-  const onGetAlbumArtResponse = async (event: unknown) => {
-    const pic = event as IPicture;
-    const url = await bufferToDataUrl(pic.data, pic.format);
-    setCurrentSongDataURL(url);
-    if (navigator.mediaSession.metadata?.artwork) {
-      navigator.mediaSession.metadata.artwork = [
-        {
-          src: url,
-          sizes: '192x192',
-          type: pic.format,
-        },
-      ];
-    }
-  };
-
   const requestAndSetAlbumArtForSong = (song: string) => {
     // request the album art for the file from the main process
     window.electron.ipcRenderer.sendMessage('get-album-art', song);
 
     // set the current song data url when the main process responds
-    window.electron.ipcRenderer.once('get-album-art', onGetAlbumArtResponse);
+    window.electron.ipcRenderer.once('get-album-art', async (event) => {
+      const url = await bufferToDataUrl(event.data, event.format);
+      setCurrentSongDataURL(url);
+      if (navigator.mediaSession.metadata?.artwork) {
+        navigator.mediaSession.metadata.artwork = [
+          {
+            src: url,
+            sizes: '192x192',
+            type: event.format,
+          },
+        ];
+      }
+    });
   };
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -275,11 +270,11 @@ export default function MainDash() {
 
     // updates the UX with the progress of the import
     window.electron.ipcRenderer.on('song-imported', (args) => {
-      setSongsImported((args as any).songsImported);
-      setTotalSongs((args as any).totalSongs);
+      setSongsImported(args.songsImported);
+      setTotalSongs(args.totalSongs);
       // completion time is roughly 5ms per song
       const estimatedTimeRemaining = Math.floor(
-        ((args as any).totalSongs - (args as any).songsImported) * 5,
+        (args.totalSongs - args.songsImported) * 5,
       );
 
       // convert the estimated time remaining in ms to a human readable format
@@ -350,19 +345,17 @@ export default function MainDash() {
     // once the import is complete, update the store/data
     window.electron.ipcRenderer.once('add-to-library', (arg) => {
       // exit early if the user cancels the import or the args are malformed
-      if (!arg || !(arg as any)?.library) {
+      if (!arg || !arg.library) {
         setShowImportingProgress(false);
         return;
       }
 
-      const typedArg = arg as StoreStructure & { scrollToIndex: number };
-
       // reset the library, the filtered library, the current song, and pause.
-      setLibraryInStore(typedArg.library);
-      setFilteredLibrary(typedArg.library);
+      setLibraryInStore(arg.library);
+      setFilteredLibrary(arg.library);
       setShowImportingProgress(false);
       // scroll one of the new songs into view
-      setInitialScrollIndex(typedArg.scrollToIndex);
+      setInitialScrollIndex(arg.scrollToIndex);
 
       window.setTimeout(() => {
         setSongsImported(0);

@@ -1,6 +1,6 @@
-// Disable no-unused-vars, broken for spread args
-/* eslint no-unused-vars: off */
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { IPicture } from 'music-metadata';
+import { StoreStructure } from '../common/common';
 
 export type Channels =
   | 'select-library'
@@ -13,24 +13,58 @@ export type Channels =
   | 'show-in-finder'
   | 'song-imported';
 
+export type ArgsBase = Record<Channels, any>;
+
+export interface SendMessageArgs extends ArgsBase {
+  'select-library': undefined;
+  'add-to-library': undefined;
+  'get-album-art': string;
+  'set-last-played-song': string;
+  'copy-art-to-clipboard': {
+    song: string;
+  };
+  'copy-to-clipboard': {
+    text: string;
+  };
+  'show-in-finder': {
+    path: string;
+  };
+}
+
+export interface ResponseArgs extends ArgsBase {
+  'add-to-library': StoreStructure & { scrollToIndex: number };
+  'select-library': StoreStructure | undefined;
+  initialize: StoreStructure;
+  'get-album-art': IPicture;
+  'song-imported': {
+    songsImported: number;
+    totalSongs: number;
+  };
+}
+
 const electronHandler = {
-  /**
-   * @TODO: give these better type handles so we know what we're sending around
-   */
   ipcRenderer: {
-    sendMessage(channel: Channels, ...args: unknown[]) {
+    sendMessage<T extends Channels>(channel: T, ...args: SendMessageArgs[T][]) {
       ipcRenderer.send(channel, ...args);
     },
-    on(channel: Channels, func: (...args: unknown[]) => void) {
-      const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
-        func(...args);
+    on<T extends Channels>(
+      channel: T,
+      func: (...args: ResponseArgs[T][]) => void,
+    ) {
+      const subscription = (
+        _event: IpcRendererEvent,
+        ...args: ResponseArgs[T][]
+      ) => func(...args);
       ipcRenderer.on(channel, subscription);
 
       return () => {
         ipcRenderer.removeListener(channel, subscription);
       };
     },
-    once(channel: Channels, func: (...args: unknown[]) => void) {
+    once<T extends Channels>(
+      channel: T,
+      func: (...args: ResponseArgs[T][]) => void,
+    ) {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
   },
