@@ -657,6 +657,32 @@ export default function MainDash() {
 
   return (
     <div className="h-full flex flex-col dark" ref={ref}>
+      {/**
+       * @dev this is the audio tag that plays the song.
+       * it is hidden and only used to play the song, as well as
+       * hook into the current time, pause, and play states.
+       * never let the user click on this directly.
+       * */}
+      <audio
+        className="hidden"
+        src={`my-magic-protocol://getMediaFile/${currentSong}`}
+        autoPlay={!paused}
+        onEnded={playNextSong}
+        onTimeUpdate={(e) => {
+          setCurrentSongTime(e.currentTarget.currentTime);
+        }}
+        ref={audioTagRef}
+        onPause={() => {
+          setPaused(true);
+        }}
+        onPlay={() => {
+          setPaused(false);
+        }}
+      />
+
+      {/**
+       * @dev this is the import progress dialog/modal
+       */}
       <Dialog
         className="flex flex-col items-center justify-center content-center p-10"
         open={showImportingProgress}
@@ -681,11 +707,31 @@ export default function MainDash() {
         </div>
       </Dialog>
 
+      {/**
+       * @dev this is the menu that pops up when the user right clicks on a song
+       */}
+      {songMenu && (
+        <ReusableSongMenu
+          anchorEl={songMenu?.anchorEl}
+          onClose={() => {
+            setSongMenu(undefined);
+          }}
+          mouseX={songMenu.mouseX}
+          mouseY={songMenu.mouseY}
+          song={songMenu?.song}
+          songInfo={songMenu?.songInfo}
+        />
+      )}
+
+      {/**
+       * @dev this is the top third of the screen with the artwork and import buttons
+       *      and search bar etc
+       */}
       <div className="flex art drag justify-center p-4 pb-8 space-x-4 md:flex-row">
         {/**
          * @dev either show the animated placeholder, or the album art
          */}
-        {!currentSongDataURL && (
+        {!currentSongDataURL ? (
           <div
             style={{
               aspectRatio: '1/1',
@@ -712,8 +758,7 @@ export default function MainDash() {
               <TinyText className="absolute bottom-3 left-3">hihat</TinyText>
             </div>
           </div>
-        )}
-        {currentSongDataURL && (
+        ) : (
           <>
             <img
               src={currentSongDataURL}
@@ -809,6 +854,9 @@ export default function MainDash() {
         </Box>
       </div>
 
+      {/**
+       * @dev this is the middle third of the screen with the song list
+       */}
       <div className="w-full overflow-auto">
         <div className="w-full text-[11px]  mb-[1px]">
           <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
@@ -899,6 +947,9 @@ export default function MainDash() {
         </div>
       </div>
 
+      {/**
+       * this the bottom third of the screen with the static player
+       */}
       <div
         className="player flex flex-col sm:flex-row items-center
         justify-between drag gap-1 sm:gap-10 fixed inset-x-0 border-t
@@ -1076,45 +1127,6 @@ export default function MainDash() {
           />
         </div>
       </div>
-
-      {/**
-       * @dev this is the menu that pops up when the user right clicks on a song
-       */}
-      {songMenu && (
-        <ReusableSongMenu
-          anchorEl={songMenu?.anchorEl}
-          onClose={() => {
-            setSongMenu(undefined);
-          }}
-          mouseX={songMenu.mouseX}
-          mouseY={songMenu.mouseY}
-          song={songMenu?.song}
-          songInfo={songMenu?.songInfo}
-        />
-      )}
-
-      {/**
-       * @dev this is the audio tag that plays the song.
-       * it is hidden and only used to play the song, as well as
-       * hook into the current time, pause, and play states.
-       * never let the user click on this directly.
-       * */}
-      <audio
-        className="hidden"
-        src={`my-magic-protocol://getMediaFile/${currentSong}`}
-        autoPlay={!paused}
-        onEnded={playNextSong}
-        onTimeUpdate={(e) => {
-          setCurrentSongTime(e.currentTarget.currentTime);
-        }}
-        ref={audioTagRef}
-        onPause={() => {
-          setPaused(true);
-        }}
-        onPlay={() => {
-          setPaused(false);
-        }}
-      />
     </div>
   );
 }
