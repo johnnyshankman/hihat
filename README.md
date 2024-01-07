@@ -98,6 +98,7 @@ This project was built with the following technologies:
 * [![Electron React Boilerplate][ElectronReactBoilerplate.js]][ElectronReactBoilerplate-url]
 * [![Typescript][Typescript.js]][Typescript-url]
 * [![Google Material UI][MaterialUI.js]][MaterialUI-url]
+* [![zustand][zustand.js]][zustand-url]
 * [![Tailwind][Tailwind.js]][Tailwind-url]
 * [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
 
@@ -261,6 +262,8 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [MaterialUI-url]: https://mui.com/material-ui/
 [Typescript.js]: https://img.shields.io/badge/Typescript-20232A?style=for-the-badge&logo=typescript&logoColor=007ACC
 [Typescript-url]: https://typescriptlang.org
+[zustand.js]: https://img.shields.io/badge/Zustand-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
+[zustand-url]: [https://typescriptlang.org](https://github.com/pmndrs/zustand)https://github.com/pmndrs/zustand
 
 
 
