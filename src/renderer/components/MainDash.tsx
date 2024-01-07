@@ -288,20 +288,18 @@ export default function MainDash() {
     // once the import is complete, update the store/data
     window.electron.ipcRenderer.once('select-library', (arg) => {
       // exit early if the user cancels the import or the args are malformed
-      if (!arg || !(arg as any)?.library) {
+      if (!arg || arg.library) {
         setShowImportingProgress(false);
         return;
       }
 
-      const typedArg = arg as StoreStructure;
-
       // reset the library, the filtered library, the current song, and pause.
-      setLibraryInStore(typedArg.library);
-      setFilteredLibrary(typedArg.library);
+      setLibraryInStore(arg.library);
+      setFilteredLibrary(arg.library);
       setShowImportingProgress(false);
       // set current song to the first song in the library
-      const firstSong = Object.keys(typedArg.library)[0];
-      const firstSongMeta = typedArg.library[firstSong];
+      const firstSong = Object.keys(arg.library)[0];
+      const firstSongMeta = arg.library[firstSong];
 
       setCurrentSong(firstSong);
       setCurrentSongMetadata(firstSongMeta);
@@ -388,10 +386,9 @@ export default function MainDash() {
    * to the correct initial value.
    */
   useEffect(() => {
-    window.electron.ipcRenderer.once('initialize', (arg: unknown) => {
-      const typedArg = arg as StoreStructure;
-      setLibraryInStore(typedArg.library);
-      setFilteredLibrary(typedArg.library);
+    window.electron.ipcRenderer.once('initialize', (arg) => {
+      setLibraryInStore(arg.library);
+      setFilteredLibrary(arg.library);
 
       const artContainerHeight =
         document.querySelector('.art')?.clientHeight || 0;
@@ -401,14 +398,14 @@ export default function MainDash() {
         setRowContainerHeight(height - playerHeight - artContainerHeight);
       }
 
-      if (typedArg.lastPlayedSong) {
-        setCurrentSong(typedArg.lastPlayedSong);
-        setCurrentSongMetadata(typedArg.library[typedArg.lastPlayedSong]);
-        requestAndSetAlbumArtForSong(typedArg.lastPlayedSong);
+      if (arg.lastPlayedSong) {
+        setCurrentSong(arg.lastPlayedSong);
+        setCurrentSongMetadata(arg.library[arg.lastPlayedSong]);
+        requestAndSetAlbumArtForSong(arg.lastPlayedSong);
 
         // now find the index of the song within the library
-        const songIndex = Object.keys(typedArg.library).findIndex(
-          (song) => song === typedArg.lastPlayedSong,
+        const songIndex = Object.keys(arg.library).findIndex(
+          (song) => song === arg.lastPlayedSong,
         );
         setInitialScrollIndex(songIndex);
       }

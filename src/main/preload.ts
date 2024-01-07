@@ -9,6 +9,7 @@ export type Channels =
   | 'initialize'
   | 'get-album-art'
   | 'copy-to-clipboard'
+  | 'modify-tag-of-file'
   | 'copy-art-to-clipboard'
   | 'show-in-finder'
   | 'song-imported';
@@ -20,6 +21,11 @@ export interface SendMessageArgs extends ArgsBase {
   'add-to-library': undefined;
   'get-album-art': string;
   'set-last-played-song': string;
+  'modify-tag-of-file': {
+    song: string;
+    key: string;
+    value: string;
+  };
   'copy-art-to-clipboard': {
     song: string;
   };

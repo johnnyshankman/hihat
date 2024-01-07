@@ -47,7 +47,7 @@ let mainWindow: BrowserWindow | null = null;
  *      so we lazy the art for one song at a time when the user clicks on a song
  *      via this event.
  */
-ipcMain.on('get-album-art', async (event, arg) => {
+ipcMain.on('get-album-art', async (event, arg: string) => {
   const songFilePath = arg;
   const metadata = await mm.parseFile(songFilePath);
   event.reply('get-album-art', metadata.common.picture?.[0] || '');
@@ -61,16 +61,15 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
   const userConfig = parseData(
     path.join(app.getPath('userData'), 'userConfig.json'),
   ) as StoreStructure;
+
   userConfig.lastPlayedSong = songFilePath;
+
   fs.writeFileSync(
     path.join(app.getPath('userData'), 'userConfig.json'),
     JSON.stringify(userConfig),
   );
 
-  console.log('hi');
   event.reply('set-last-played-song');
-
-  console.log(userConfig);
 });
 
 const findAllFilesRecursively = (dir: string) => {
@@ -215,7 +214,7 @@ const addToLibrary = async (event: IpcMainEvent) => {
     ...userConfig,
     library: orderedFilesToTags,
     scrollToIndex: currentSongIndex,
-  } as StoreStructure & { scrollToIndex: number };
+  };
   event.reply('add-to-library', initialStore);
 
   const dataPath = app.getPath('userData');
@@ -322,8 +321,7 @@ const selectLibrary = async (event: IpcMainEvent) => {
     playlists: [],
     lastPlayedSong: '',
     libraryPath: result.filePaths[0],
-  } as StoreStructure;
-
+  };
   event.reply('select-library', initialStore);
 
   // write the json file to the user data directory as userConfig.json
