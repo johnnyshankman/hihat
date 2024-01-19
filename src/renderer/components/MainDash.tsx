@@ -538,11 +538,12 @@ export default function MainDash() {
           </>
         )}
 
-        <Tooltip title="Import Library">
+        {/** TODO: need to add a warning dialog explaining what this does in context */}
+        <Tooltip title="Select Library Folder">
           <button
             onClick={importSongs}
             type="button"
-            aria-label="import library"
+            aria-label="select library folder"
             className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
           rounded-md text-[18px] ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
@@ -561,28 +562,30 @@ export default function MainDash() {
           </button>
         </Tooltip>
 
-        <Tooltip title="Add Songs To Library">
-          <button
-            onClick={importNewSongs}
-            type="button"
-            aria-label="import new songs"
-            className="nodrag absolute top-[60px] md:top-4 right-[4.5rem] items-center justify-center
+        {storeLibrary && (
+          <Tooltip title="Add Songs To Library Folder">
+            <button
+              onClick={importNewSongs}
+              type="button"
+              aria-label="import to songs"
+              className="nodrag absolute top-[60px] md:top-4 right-[4.5rem] items-center justify-center
           rounded-md text-[18px] ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
           disabled:opacity-50 border border-neutral-800 bg-black
           hover:bg-white hover:text-black
           px-4 py-[7px] text-sm"
-          >
-            <AddIcon
-              fontSize="inherit"
-              sx={{
-                position: 'relative',
-                bottom: '1px',
-              }}
-            />
-          </button>
-        </Tooltip>
+            >
+              <AddIcon
+                fontSize="inherit"
+                sx={{
+                  position: 'relative',
+                  bottom: '1px',
+                }}
+              />
+            </button>
+          </Tooltip>
+        )}
 
         <Box className="absolute h-[45px] top-4 md:top-4 md:right-[8rem] right-4 w-auto text-white">
           <Search
