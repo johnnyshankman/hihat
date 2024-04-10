@@ -154,6 +154,9 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [ ] Ability to edit metadata of MP3s using a modal
 - [x] Redo player UX on small screens, it's function over fashion atm
 - [x] Ability to insert new songs or albums without updating the whole library
+- [ ] Sort by date added
+- [ ] Edit song metadata within hihat
+- [ ] "Refresh" library button when songs are manually removed/added to library directory folder
 
 ![Screenshot 2023-11-04 at 10 50 26 PM](https://github.com/johnnyshankman/hihat/assets/6632701/c0c2e249-08bd-46d0-9487-3e89be56ff4f)
 
