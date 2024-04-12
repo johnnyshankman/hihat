@@ -125,6 +125,7 @@ If you ever need to update your library, hit the other icon in the top right lab
 
 <img width="298" alt="Screenshot 2023-12-17 at 10 56 43 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/ffade75b-0185-4392-82a9-a41c65fb8c66">
 
+**To Do: Refresh from current library folder, in case you've manually added files to the folder using Finder and therefore *hihat* is unaware they exist.**
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
