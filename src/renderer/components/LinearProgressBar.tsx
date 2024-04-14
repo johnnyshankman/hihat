@@ -66,7 +66,12 @@ export default function LinearProgressBar({
                 song.common.title === title && song.common.artist === artist,
             );
 
-            setOverrideScrollToIndex(index);
+            setOverrideScrollToIndex(undefined);
+
+            // in 0.01 seconds
+            setTimeout(() => {
+              setOverrideScrollToIndex(index);
+            }, 100);
           }}
         >
           {title}
@@ -124,6 +129,7 @@ export default function LinearProgressBar({
           onClick={() => {
             // find the index of this song in the library
             // @TODO: this really needs to be extracted into a helper function
+
             const library = usePlayerStore.getState().filteredLibrary;
             const libraryArray = Object.values(library);
             const index = libraryArray.findIndex(
@@ -131,7 +137,12 @@ export default function LinearProgressBar({
                 song.common.title === title && song.common.artist === artist,
             );
 
-            setOverrideScrollToIndex(index);
+            setOverrideScrollToIndex(undefined);
+
+            // in 0.01 seconds
+            setTimeout(() => {
+              setOverrideScrollToIndex(index);
+            }, 100);
           }}
         >
           {artist}
