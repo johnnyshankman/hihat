@@ -11,6 +11,7 @@ interface PlayerStore {
   volume: number;
   currentSongTime: number;
   filteredLibrary: { [key: string]: SongSkeletonStructure };
+  overrideScrollToIndex: number | undefined;
 
   deleteEverything: () => void;
   setVolume: (volume: number) => void;
@@ -24,6 +25,7 @@ interface PlayerStore {
   setFilteredLibrary: (filteredLibrary: {
     [key: string]: SongSkeletonStructure;
   }) => void;
+  setOverrideScrollToIndex: (index: number | undefined) => void;
 }
 
 const usePlayerStore = create<PlayerStore>((set) => ({
@@ -36,6 +38,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   volume: 100,
   currentSongTime: 0,
   filteredLibrary: {},
+  overrideScrollToIndex: undefined,
 
   deleteEverything: () => set({}, true),
   setVolume: (volume) => set({ volume }),
@@ -47,6 +50,9 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   setCurrentSongMetadata: (currentSongMetadata) => set({ currentSongMetadata }),
   setFilteredLibrary: (filteredLibrary) => set({ filteredLibrary }),
   setCurrentSongTime: (currentSongTime) => set({ currentSongTime }),
+  setOverrideScrollToIndex: (overrideScrollToIndex) => {
+    return set({ overrideScrollToIndex });
+  },
 }));
 
 export default usePlayerStore;

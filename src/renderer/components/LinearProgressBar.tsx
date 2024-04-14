@@ -2,6 +2,7 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
+import usePlayerStore from '../store/player';
 
 export default function LinearProgressBar({
   value,
@@ -17,6 +18,9 @@ export default function LinearProgressBar({
   max: number;
 }) {
   const [position, setPosition] = React.useState(32);
+  const setOverrideScrollToIndex = usePlayerStore(
+    (store) => store.setOverrideScrollToIndex,
+  );
 
   function convertToMMSS(timeInSeconds: number) {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -49,8 +53,21 @@ export default function LinearProgressBar({
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
+            cursor: 'pointer',
           }}
           aria-label="current-title"
+          onClick={() => {
+            // find the index of this song in the library
+            // @TODO: this really needs to be extracted into a helper function
+            const library = usePlayerStore.getState().filteredLibrary;
+            const libraryArray = Object.values(library);
+            const index = libraryArray.findIndex(
+              (song) =>
+                song.common.title === title && song.common.artist === artist,
+            );
+
+            setOverrideScrollToIndex(index);
+          }}
         >
           {title}
         </LessOpaqueTinyText>
@@ -101,8 +118,21 @@ export default function LinearProgressBar({
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
+            cursor: 'pointer',
           }}
           aria-label="current-artist"
+          onClick={() => {
+            // find the index of this song in the library
+            // @TODO: this really needs to be extracted into a helper function
+            const library = usePlayerStore.getState().filteredLibrary;
+            const libraryArray = Object.values(library);
+            const index = libraryArray.findIndex(
+              (song) =>
+                song.common.title === title && song.common.artist === artist,
+            );
+
+            setOverrideScrollToIndex(index);
+          }}
         >
           {artist}
         </LessOpaqueTinyText>
