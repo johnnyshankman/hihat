@@ -55,6 +55,15 @@ export default function LibraryList({
   const storeLibrary = useMainStore((store) => store.library);
   const currentSong = usePlayerStore((store) => store.currentSong);
   const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
+  const overrideScrollToIndex = usePlayerStore(
+    (store) => store.overrideScrollToIndex,
+  );
+
+  const scrollToIndex =
+    overrideScrollToIndex !== undefined
+      ? overrideScrollToIndex
+      : initialScrollIndex;
+
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
   );
@@ -325,9 +334,7 @@ export default function LibraryList({
           rowCount={Object.keys(filteredLibrary || {}).length}
           rowHeight={ROW_HEIGHT}
           scrollToAlignment="center"
-          scrollToIndex={
-            initialScrollIndex > 0 ? initialScrollIndex : undefined
-          }
+          scrollToIndex={scrollToIndex}
         />
       </div>
     </div>
