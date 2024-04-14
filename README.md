@@ -159,7 +159,7 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [ ] "Refresh" library button when songs are manually removed/added to library directory folder
 - [x] Click on song info to scroll back to it
 
-![Screenshot 2023-11-04 at 10 50 26 PM](https://github.com/johnnyshankman/hihat/assets/6632701/c0c2e249-08bd-46d0-9487-3e89be56ff4f)
+<img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
 
