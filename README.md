@@ -152,7 +152,6 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [ ] OBS extension for streaming songs
 - [ ] Ability to "hide" songs you don't actually want to see
 - [x] Ability to "open in finder" so you can see the song file
-- [ ] Ability to edit metadata of MP3s using a modal
 - [x] Redo player UX on small screens, it's function over fashion atm
 - [x] Ability to insert new songs or albums without updating the whole library
 - [ ] Sort by date added
