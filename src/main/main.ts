@@ -394,6 +394,26 @@ ipcMain.on('copy-art-to-clipboard', async (event, arg): Promise<any> => {
   }
 });
 
+ipcMain.on('download-artwork', async (event, arg): Promise<any> => {
+  if (!mainWindow) {
+    return;
+  }
+
+  const filePath = arg.song;
+  const metadata = await mm.parseFile(filePath);
+  if (metadata.common.picture?.[0].data) {
+    const buffer = metadata.common.picture?.[0].data;
+    const dest = dialog.showSaveDialogSync(mainWindow, {
+      defaultPath: `${metadata.common.artist} - ${metadata.common.album}.jpg`,
+      filters: [{ name: 'JPEG Image', extensions: ['jpg'] }],
+    });
+
+    if (dest) {
+      fs.writeFileSync(dest, buffer);
+    }
+  }
+});
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();

@@ -19,6 +19,13 @@ export default function AlbumArtMenu(props: AlbumArtMenuProps) {
     onClose();
   };
 
+  const downloadAlbumArt = () => {
+    window.electron.ipcRenderer.sendMessage('download-artwork', {
+      song,
+    });
+    onClose();
+  };
+
   return (
     <Menu
       id="basic-menu"
@@ -42,6 +49,14 @@ export default function AlbumArtMenu(props: AlbumArtMenuProps) {
         onClick={copyAlbumArt}
       >
         Copy Image
+      </MenuItem>
+      <MenuItem
+        sx={{
+          fontSize: '11px',
+        }}
+        onClick={downloadAlbumArt}
+      >
+        Download Artwork
       </MenuItem>
     </Menu>
   );
