@@ -1,6 +1,5 @@
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import opener from 'opener';
 import { SongSkeletonStructure } from '../../common/common';
 
 type SongMenuProps = {
