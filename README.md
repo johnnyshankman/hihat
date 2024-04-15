@@ -165,6 +165,7 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [ ] Edit song metadata within hihat
 - [ ] "Refresh" library button when songs are manually removed/added to library directory folder
 - [ ] Playcount tracking and sort by playcount
+- [ ] If internet access is present, generate shareable spotify/apple music links for friends
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
 
