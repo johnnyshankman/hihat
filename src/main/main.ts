@@ -18,6 +18,7 @@ import log from 'electron-log';
 import fs from 'fs';
 import * as mm from 'music-metadata';
 import { File } from 'node-taglib-sharp';
+import opener from 'opener';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import { StoreStructure, SongSkeletonStructure } from '../common/common';
@@ -382,6 +383,10 @@ ipcMain.on('show-in-finder', async (event, arg): Promise<any> => {
 
 ipcMain.on('copy-to-clipboard', async (event, arg): Promise<any> => {
   clipboard.writeText(arg.text);
+});
+
+ipcMain.on('open-in-browser', async (event, arg): Promise<any> => {
+  opener(arg.text);
 });
 
 ipcMain.on('copy-art-to-clipboard', async (event, arg): Promise<any> => {
