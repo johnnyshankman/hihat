@@ -12,6 +12,7 @@ export type Channels =
   | 'modify-tag-of-file'
   | 'copy-art-to-clipboard'
   | 'download-artwork'
+  | 'open-in-browser'
   | 'show-in-finder'
   | 'song-imported';
 
@@ -34,6 +35,9 @@ export interface SendMessageArgs extends ArgsBase {
     song: string;
   };
   'copy-to-clipboard': {
+    text: string;
+  };
+  'open-in-browser': {
     text: string;
   };
   'show-in-finder': {

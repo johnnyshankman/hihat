@@ -158,6 +158,8 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [x] Redo player UX on small screens, it's function over fashion atm
 - [x] Ability to insert new songs or albums without updating the whole library
 - [x] Click on song info to scroll back to it
+- [x] Generative shareable Spotify search links
+- [x] Generative shareable Apple Music search links
 - [ ] Playlists (TBD if I'll ever do this, a ton of work is required)
 - [ ] OBS extension for showing Now Playing
 - [ ] Ability to "hide" songs you don't want to see, without deleting them
@@ -165,7 +167,7 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [ ] Edit song metadata within hihat
 - [ ] "Refresh" library button when songs are manually removed/added to library directory folder
 - [ ] Playcount tracking and sort by playcount
-- [ ] If internet access is present, generate shareable [spotify](https://developer.spotify.com/documentation/web-api/reference/search)/apple music links for friends
+
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
 

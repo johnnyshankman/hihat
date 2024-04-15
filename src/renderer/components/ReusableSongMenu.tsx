@@ -1,5 +1,6 @@
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import opener from 'opener';
 import { SongSkeletonStructure } from '../../common/common';
 
 type SongMenuProps = {
@@ -31,6 +32,26 @@ export default function ReusableSongMenu(props: SongMenuProps) {
   const downloadAlbumArt = () => {
     window.electron.ipcRenderer.sendMessage('download-artwork', {
       song,
+    });
+    onClose();
+  };
+
+  const copySpotifyLink = () => {
+    const urlEncodedTitle = encodeURIComponent(songInfo?.common?.title || '');
+    const urlEncodedArtist = encodeURIComponent(songInfo?.common?.artist || '');
+
+    window.electron.ipcRenderer.sendMessage('open-in-browser', {
+      text: `https://open.spotify.com/search/${urlEncodedTitle}%20artist:${urlEncodedArtist}`,
+    });
+    onClose();
+  };
+
+  const copyAppleMusicLink = () => {
+    const urlEncodedTitle = encodeURIComponent(songInfo?.common?.title || '');
+    const urlEncodedArtist = encodeURIComponent(songInfo?.common?.artist || '');
+
+    window.electron.ipcRenderer.sendMessage('open-in-browser', {
+      text: `https://music.apple.com/search?term=${urlEncodedTitle}%20${urlEncodedArtist}`,
     });
     onClose();
   };
@@ -74,6 +95,22 @@ export default function ReusableSongMenu(props: SongMenuProps) {
         onClick={downloadAlbumArt}
       >
         Download Album Art
+      </MenuItem>
+      <MenuItem
+        sx={{
+          fontSize: '11px',
+        }}
+        onClick={copySpotifyLink}
+      >
+        Search on Spotify
+      </MenuItem>
+      <MenuItem
+        sx={{
+          fontSize: '11px',
+        }}
+        onClick={copyAppleMusicLink}
+      >
+        Search on Apple Music
       </MenuItem>
     </Menu>
   );
