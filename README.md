@@ -139,7 +139,6 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [x] Cache imported songs from previous session
 - [x] Minimalist search/filter solution
 - [x] Recursive file finding for itunes-like libraries with nested folders
-- [ ] Playlists (TBD if I'll ever do this, a ton of work is required)
 - [x] Update/import skips pre-existing files
 - [x] On reboot, scroll to last played song, queue it up as well
 - [x] Shuffle songs
@@ -149,15 +148,17 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [x] Fix the player UX on thin windows (400px)
 - [x] OSX song info in the menu bar tray thing
 - [x] Copy album art for sharing
-- [ ] OBS extension for streaming songs
-- [ ] Ability to "hide" songs you don't actually want to see
 - [x] Ability to "open in finder" so you can see the song file
 - [x] Redo player UX on small screens, it's function over fashion atm
 - [x] Ability to insert new songs or albums without updating the whole library
+- [x] Click on song info to scroll back to it
+- [ ] Playlists (TBD if I'll ever do this, a ton of work is required)
+- [ ] Download album art for sharing
+- [ ] OBS extension for showing Now Playing
+- [ ] Ability to "hide" songs you don't want to see, without deleting them
 - [ ] Sort by date added
 - [ ] Edit song metadata within hihat
 - [ ] "Refresh" library button when songs are manually removed/added to library directory folder
-- [x] Click on song info to scroll back to it
 - [ ] Playcount tracking and sort by playcount
 
 <img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
