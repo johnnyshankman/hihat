@@ -63,7 +63,7 @@
 [![hihat desktop preview][product-screenshot]](https://whitelights.co)
 
 <img src="/readme-images/hihat-preview-small.png" alt="small preview" width="220">
- 
+
  <img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
 
 
@@ -153,12 +153,12 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [x] Fix the player UX on thin windows (400px)
 - [x] OSX song info in the menu bar tray thing
 - [x] Copy album art for sharing
+- [x] Download album art for sharing
 - [x] Ability to "open in finder" so you can see the song file
 - [x] Redo player UX on small screens, it's function over fashion atm
 - [x] Ability to insert new songs or albums without updating the whole library
 - [x] Click on song info to scroll back to it
 - [ ] Playlists (TBD if I'll ever do this, a ton of work is required)
-- [ ] Download album art for sharing
 - [ ] OBS extension for showing Now Playing
 - [ ] Ability to "hide" songs you don't want to see, without deleting them
 - [ ] Sort by date added
