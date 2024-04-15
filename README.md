@@ -57,6 +57,8 @@
 [![hihat desktop preview][product-screenshot]](https://whitelights.co)
 
  <img src="/readme-images/hihat-preview-small.png" alt="small preview" width="220">
+ 
+ <img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
 
 *hihat* is a free and simple way to play your music offline, similar to iTunes or Windows Media Player from the early 2000s.
 
@@ -160,8 +162,6 @@ If you ever need to update your library, hit the other icon in the top right lab
 - [ ] Edit song metadata within hihat
 - [ ] "Refresh" library button when songs are manually removed/added to library directory folder
 - [ ] Playcount tracking and sort by playcount
-
-<img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
 
