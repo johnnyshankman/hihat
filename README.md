@@ -54,7 +54,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-*hihat* is a free and simple way to play your music offline, similar to iTunes or Windows Media Player from the early 2000s. I built this by myself due to a lack of solutions in this space besides ugly solutions like VLC which also don't intuitively support all music file types.
+*hihat* is a free and simple way to play your music offline, similar to iTunes or Windows Media Player from the early 2000s. I built this due to a lack of solutions in the space besides ugly apps like VLC which also don't intuitively support all file types.
 
 *hihat* has no socials, no lag, no ads, no bullshit.
 
