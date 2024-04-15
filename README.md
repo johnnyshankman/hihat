@@ -84,8 +84,8 @@
 * bigger album art than spotify etc
 * fast search
 * fast import
-* iTunes-like sort [artist -> album -> track #] by default
-* sorting by song, artist, or album
+* iTunes-like sort by default [artist -> album -> track #]
+* sort by song, artist, or album
 * shuffle
 * song repeat
 * limitless library size
