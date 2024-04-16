@@ -90,8 +90,7 @@
 * song repeat
 * limitless library size
 * nested folder/library support (ie. legacy iTunes structure)
-* Spotify and Apple Music links for sharing songs with chronically-online friends
-
+* generates Spotify and Apple Music links for sharing songs
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
