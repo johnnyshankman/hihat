@@ -64,8 +64,9 @@
 
 <img src="/readme-images/hihat-preview-small.png" alt="small preview" width="220">
 
- <img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
+<img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
 
+<img width="328" alt="Screenshot 2024-04-16 at 12 18 52 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/e174c03e-0ccb-4379-91eb-5c16dd201f36">
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
