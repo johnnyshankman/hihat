@@ -114,8 +114,8 @@ Almost every format under the sun should be supported, and they can all be mixed
 * See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
 
 Don't know where to get MP3/FLAC of your favorite albums and tracks? I suggest:
-* [tidal-dl](https://github.com/yaronzz/Tidal-Media-Downloader)
-* [spotify-downloader](https://github.com/spotDL/spotify-downloader)
+* [tidal-media-downloader](https://github.com/yaronzz/Tidal-Media-Downloader) (Works with Tidal)
+* [spotify-downloader](https://github.com/spotDL/spotify-downloader) (Works with Spotify and Youtube Music)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
