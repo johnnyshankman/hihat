@@ -108,9 +108,9 @@ This project was built with the following technologies:
 
 ### Supported Audio and Metadata Formats
 
-Almost every format under the sun should be supported, and they can all be mixed together into the same library seamlessly.
+Almost every format under the sun is supported, and they can all be mixed together into the same library seamlessly (mp3, m4a, aac, ogg, flac, wav, etc.).
 
-* See [The Chromium Project](https://www.chromium.org/audio-video/) for information on supported audio formats.
+* See [The Chromium Project](https://www.chromium.org/audio-video/) for detailed info on supported audio formats.
 * See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
 
 Don't know where to get MP3/FLAC of your favorite albums and tracks? I suggest:
