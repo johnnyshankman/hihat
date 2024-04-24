@@ -106,7 +106,7 @@ This project was built with the following technologies:
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-### Supported Audio Formats and Metadata Formats
+### Supported Audio and Metadata Formats
 
 Almost every format under the sun should be supported, and they can all be mixed together into the same library seamlessly.
 
