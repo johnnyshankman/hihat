@@ -130,7 +130,7 @@ If you ever need to update your library, hit the other icon in the top right lab
 
 <img width="298" alt="Screenshot 2023-12-17 at 10 56 43 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/ffade75b-0185-4392-82a9-a41c65fb8c66">
 
-**To Do: Refresh from current library folder, in case you've manually added files to the folder using Finder and therefore *hihat* is unaware they exist.**
+To Refresh your library after making manual changes in Finder (as those are not picked up by hihat automatically), simply reimport your music folder (the same one you were using before). This will remove songs no longer there, and add any new songs you manually imported. Should be a super safe operation!
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
