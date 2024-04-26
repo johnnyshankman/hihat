@@ -167,6 +167,7 @@ To refresh your library after making manual changes to the directory in Finder (
 - [ ] Edit song metadata within hihat
 - [ ] "Refresh" library button when songs are manually removed/added to library directory folder
 - [ ] Playcount tracking and sort by playcount
+- [ ] Show some fun stats about your library somewhere, like gb and # of songs
 
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
