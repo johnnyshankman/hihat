@@ -31,12 +31,12 @@ class AppUpdater {
   }
 }
 
-function parseData(fp: string) {
+function parseData(fp: string): StoreStructure {
   const defaultData = {};
   try {
-    return JSON.parse(fs.readFileSync(fp, 'utf8'));
+    return JSON.parse(fs.readFileSync(fp, 'utf8')) as StoreStructure;
   } catch (error) {
-    return defaultData;
+    return defaultData as StoreStructure;
   }
 }
 
@@ -129,7 +129,9 @@ const addToLibrary = async (event: IpcMainEvent) => {
   const userConfig = parseData(
     path.join(app.getPath('userData'), 'userConfig.json'),
   ) as StoreStructure;
-  const filesToTags = userConfig.library;
+  const filesToTags = {
+    ...userConfig.library,
+  };
 
   let destRootFolder = userConfig.libraryPath;
   if (!destRootFolder) {
@@ -157,10 +159,28 @@ const addToLibrary = async (event: IpcMainEvent) => {
       result.filePaths[i],
     )}`;
 
-    // copy the file over to the existing library folder
-    fs.copyFileSync(result.filePaths[i], destination);
-
     if (metadata && metadata.format.duration && metadata.common.title) {
+      // @IMPORTANT: if we already have this song in the library skip it
+      if (
+        userConfig.library[destination] &&
+        userConfig.library[destination].common.artist ===
+          metadata.common.artist &&
+        userConfig.library[destination].common.album ===
+          metadata.common.album &&
+        userConfig.library[destination].common.title === metadata.common.title
+      ) {
+        event.reply('song-imported', {
+          songsImported: i,
+          totalSongs: result.filePaths.length,
+        });
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+
+      // copy the music file over to the existing library folder
+      fs.copyFileSync(result.filePaths[i], destination);
+
+      // form the data we will save to the userConfig.json file
       filesToTags[destination] = {
         common: {
           ...metadata.common,
@@ -179,6 +199,7 @@ const addToLibrary = async (event: IpcMainEvent) => {
       } as SongSkeletonStructure;
     }
 
+    // report back to the front end so it can update its ux
     event.reply('song-imported', {
       songsImported: i,
       totalSongs: result.filePaths.length,
@@ -262,6 +283,10 @@ const selectLibrary = async (event: IpcMainEvent) => {
   // create an empty mapping of files to tags we want to cache and re-import on boot
   const filesToTags: { [key: string]: SongSkeletonStructure } = {};
 
+  const userConfig = parseData(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+  ) as StoreStructure;
+
   for (let i = 0; i < files.length; i += 1) {
     let metadata;
 
@@ -294,6 +319,14 @@ const selectLibrary = async (event: IpcMainEvent) => {
           dateAdded: Date.now(),
         },
       } as SongSkeletonStructure;
+    }
+
+    // @IMPORTANT: if the song already exists in the user's library port over its additionalInfo
+    if (userConfig?.library[`${result.filePaths[0]}/${files[i]}`]) {
+      filesToTags[`${result.filePaths[0]}/${files[i]}`].additionalInfo = {
+        ...userConfig.library[`${result.filePaths[0]}/${files[i]}`]
+          .additionalInfo,
+      };
     }
 
     event.reply('song-imported', {
@@ -366,7 +399,7 @@ ipcMain.on('modify-tag-of-file', async (event, arg): Promise<any> => {
   // now modify the userConfig.json file to reflect the changes
   const userConfig = parseData(
     path.join(app.getPath('userData'), 'userConfig.json'),
-  ) as StoreStructure;
+  );
   // @ts-ignore - `common` is not supposed to be indexed into use array syntax
   userConfig.library[filePath].common[arg.key] = arg.value;
   fs.writeFileSync(
@@ -562,14 +595,30 @@ const createWindow = async () => {
      * 1. add lastPlayed to all songs and save it back to the userConfig.json file
      * 2. TBD
      */
-    Object.keys(contents.library).forEach((key) => {
-      if (!contents.library[key].additionalInfo.dateAdded) {
-        contents.library[key].additionalInfo.dateAdded = Date.now();
-      }
-    });
+    if (contents.library) {
+      Object.keys(contents.library).forEach((key) => {
+        const song = {
+          ...contents.library[key],
+        };
+        if (song.additionalInfo === undefined) {
+          song.additionalInfo = {
+            playCount: 0,
+            lastPlayed: 0,
+            dateAdded: Date.now(),
+          };
+        }
+
+        if (song.additionalInfo.dateAdded === undefined) {
+          song.additionalInfo.dateAdded = Date.now();
+        }
+
+        contents.library[key] = song;
+      });
+    }
+
     fs.writeFileSync(filePath, JSON.stringify(contents));
 
-    mainWindow.webContents.send('initialize', contents as StoreStructure);
+    mainWindow.webContents.send('initialize', contents);
   });
 
   /**
