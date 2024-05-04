@@ -166,6 +166,8 @@ To refresh your library after making manual changes to the directory in Finder (
 - [ ] Ability to "hide" songs you don't want to see, without deleting their file
 - [ ] Edit song file metadata
 - [ ] Show some fun stats about your library somewhere, like gb and # of songs
+- [ ] Hide and show columns in the viewer
+- [ ] iTunes like "browser" for going seeing scrollabe list of artists/albums
 
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
