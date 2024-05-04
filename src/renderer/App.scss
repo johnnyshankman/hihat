@@ -52,6 +52,10 @@ button:focus {
   }
 }
 
+.ReactVirtualized__List {
+  overflow-y: scroll !important;
+}
+
 
 @layer base {
   :root {

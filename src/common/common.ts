@@ -1,5 +1,11 @@
 import { IPicture } from 'music-metadata';
 
+export type AdditionalSongInfo = {
+  playCount: number; // integer
+  lastPlayed: number; // ms date timestamp
+  dateAdded: number; // ms date timestamp
+};
+
 export type SongSkeletonStructure = {
   common: {
     artist?: string;
@@ -15,6 +21,7 @@ export type SongSkeletonStructure = {
   format: {
     duration?: number;
   };
+  additionalInfo: AdditionalSongInfo;
 };
 
 export type Playlist = {

@@ -41,9 +41,7 @@ export default function MainDash() {
    */
   const storeLibrary = useMainStore((store) => store.library);
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
-  const setLastPlayedSongInStoreAndOnServer = useMainStore(
-    (store) => store.setLastPlayedSong,
-  );
+  const setLastPlayedSong = useMainStore((store) => store.setLastPlayedSong);
   const paused = usePlayerStore((store) => store.paused);
   const setPaused = usePlayerStore((store) => store.setPaused);
   const shuffle = usePlayerStore((store) => store.shuffle);
@@ -168,9 +166,20 @@ export default function MainDash() {
 
     setCurrentSong(song);
     setCurrentSongMetadata(meta);
-
     requestAndSetAlbumArtForSong(song);
-    setLastPlayedSongInStoreAndOnServer(song);
+
+    // @dev: send message that syncs the BE with the FE
+    // that way on next boot we can restore the last played song state
+    setLastPlayedSong(song);
+    window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
+    window.electron.ipcRenderer.once('set-last-played-song', (arg) => {
+      // reset the library, the filtered library, the current song, and pause.
+      setLibraryInStore(arg.library);
+      setFilteredLibrary(arg.library);
+    });
+
+    // update the additionalInfo for song, so that lastPlayed is Date.now()
+    // and so that the playCount is incremented by 1
 
     // play the song regardless of when the main process responds
     setPaused(false);
@@ -319,7 +328,7 @@ export default function MainDash() {
   };
 
   /**
-   * @dev allow user to select a directory and import all songs within it
+   * @dev allow user to select some files and import them into the library
    */
   const importNewSongs = async () => {
     setShowImportingProgress(true);
