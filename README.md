@@ -87,6 +87,7 @@
 * limitless library size
 * nested folder/library support (ie. legacy iTunes structure)
 * Spotify and Apple Music share links for every song
+* playcount tracking
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
