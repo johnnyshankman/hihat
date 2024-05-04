@@ -265,7 +265,7 @@ export default function MainDash() {
   /**
    * @dev allow user to select a directory and import all songs within it
    */
-  const importSongs = async () => {
+  const importNewLibrary = async () => {
     setShowImportingProgress(true);
 
     // updates the UX with the progress of the import
@@ -288,7 +288,7 @@ export default function MainDash() {
     // once the import is complete, update the store/data
     window.electron.ipcRenderer.once('select-library', (arg) => {
       // exit early if the user cancels the import or the args are malformed
-      if (!arg || arg.library) {
+      if (!arg || !arg.library) {
         setShowImportingProgress(false);
         return;
       }
@@ -296,6 +296,7 @@ export default function MainDash() {
       // reset the library, the filtered library, the current song, and pause.
       setLibraryInStore(arg.library);
       setFilteredLibrary(arg.library);
+
       setShowImportingProgress(false);
       // set current song to the first song in the library
       const firstSong = Object.keys(arg.library)[0];
@@ -351,7 +352,9 @@ export default function MainDash() {
       // reset the library, the filtered library, the current song, and pause.
       setLibraryInStore(arg.library);
       setFilteredLibrary(arg.library);
+
       setShowImportingProgress(false);
+
       // scroll one of the new songs into view
       setInitialScrollIndex(arg.scrollToIndex);
 
@@ -361,7 +364,7 @@ export default function MainDash() {
       }, 1000);
     });
 
-    // request that the user selects a directory and that main process processes
+    // request that the user selects a directory from the main process
     window.electron.ipcRenderer.sendMessage('add-to-library');
   };
 
@@ -381,9 +384,10 @@ export default function MainDash() {
   }, [height, width]);
 
   /**
-   * @dev useEffect as a single mount callback
-   * to initialize the song mapping and set the row container height
-   * to the correct initial value.
+   * @dev useEffect as a single mount to attach the callback for
+   * initialize. then init the song mapping and set the row container height
+   * to the correct initial values when it responds. also setup the last
+   * played song and the album art for it.
    */
   useEffect(() => {
     window.electron.ipcRenderer.once('initialize', (arg) => {
@@ -541,7 +545,7 @@ export default function MainDash() {
         {/** TODO: need to add a warning dialog explaining what this does in context */}
         <Tooltip title="Select Library Folder">
           <button
-            onClick={importSongs}
+            onClick={importNewLibrary}
             type="button"
             aria-label="select library folder"
             className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
