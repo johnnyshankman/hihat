@@ -2,7 +2,8 @@ import { useState } from 'react';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { List } from 'react-virtualized';
-import { PlayArrow } from '@mui/icons-material';
+import { PlayArrow, Today } from '@mui/icons-material';
+import { Tooltip } from '@mui/material';
 import { SongSkeletonStructure, StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
 import { convertToMMSS } from '../utils/utils';
@@ -11,7 +12,7 @@ import ReusableSongMenu from './ReusableSongMenu';
 
 const ROW_HEIGHT = 25.5;
 
-type FilterTypes = 'title' | 'artist' | 'album' | 'playCount';
+type FilterTypes = 'title' | 'artist' | 'album' | 'playCount' | 'dateAdded';
 
 type FilterDirections = 'asc' | 'desc';
 
@@ -210,6 +211,30 @@ export default function LibraryList({
     setFilterType('album');
   };
 
+  const filterByDateAdded = () => {
+    if (!storeLibrary) return;
+    if (!filteredLibrary) return;
+
+    // flip the filter direction
+    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
+
+    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
+      const aDateAdded = filteredLibrary[a].additionalInfo?.dateAdded || 0;
+      const bDateAdded = filteredLibrary[b].additionalInfo?.dateAdded || 0;
+      if (aDateAdded < bDateAdded) return filterDirection === 'asc' ? -1 : 1;
+      if (aDateAdded > bDateAdded) return filterDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    const filteredLib: StoreStructure['library'] = {};
+    filtered.forEach((song) => {
+      filteredLib[song] = storeLibrary[song];
+    });
+
+    setFilteredLibrary(filteredLib);
+    setFilterType('dateAdded');
+  };
+
   /**
    * @dev render the row for the virtualized table, reps a single song
    */
@@ -255,6 +280,15 @@ export default function LibraryList({
         </div>
         <div className="select-none w-16 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
           {convertToMMSS(filteredLibrary?.[song].format.duration || 0)}
+        </div>
+        <div className="select-none w-16 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+          {new Date(
+            filteredLibrary?.[song].additionalInfo.dateAdded,
+          ).toLocaleDateString('en-us', {
+            year: '2-digit',
+            month: 'numeric',
+            day: 'numeric',
+          })}
         </div>
         <div className="select-none whitespace-nowrap	overflow-hidden w-12 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
           {filteredLibrary?.[song].additionalInfo.playCount || '-'}
@@ -342,21 +376,35 @@ export default function LibraryList({
              * @dev slightly diff size to accomodate the lack of scroll bar
              * next to it, unlike a normal row.
              */}
-            <button
-              type="button"
-              aria-label="duration"
-              className="select-none flex leading-[1em] items-center py-1.5 w-16 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-            >
-              <AccessTimeIcon fontSize="inherit" />
-            </button>
-            <button
-              type="button"
-              aria-label="duration"
-              onClick={filterByPlayCount}
-              className="select-none flex leading-[1em] items-center py-1.5 w-12 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-            >
-              <PlayArrow fontSize="inherit" />
-            </button>
+            <Tooltip title="Duration">
+              <button
+                type="button"
+                aria-label="duration"
+                className="select-none flex leading-[1em] items-center py-1.5 w-16 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+              >
+                <AccessTimeIcon fontSize="inherit" />
+              </button>
+            </Tooltip>
+            <Tooltip title="Plays">
+              <button
+                type="button"
+                aria-label="duration"
+                onClick={filterByDateAdded}
+                className="select-none flex leading-[1em] items-center py-1.5 w-16 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+              >
+                <Today fontSize="inherit" />
+              </button>
+            </Tooltip>
+            <Tooltip title="Date Added">
+              <button
+                type="button"
+                aria-label="duration"
+                onClick={filterByPlayCount}
+                className="select-none flex leading-[1em] items-center py-1.5 w-12 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+              >
+                <PlayArrow fontSize="inherit" />
+              </button>
+            </Tooltip>
           </div>
         </div>
 

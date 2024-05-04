@@ -556,6 +556,19 @@ const createWindow = async () => {
     const dataPath = app.getPath('userData');
     const filePath = path.join(dataPath, 'userConfig.json');
     const contents = parseData(filePath);
+
+    /**
+     * @important shim any missing data from updates between versions of app
+     * 1. add lastPlayed to all songs and save it back to the userConfig.json file
+     * 2. TBD
+     */
+    Object.keys(contents.library).forEach((key) => {
+      if (!contents.library[key].additionalInfo.dateAdded) {
+        contents.library[key].additionalInfo.dateAdded = Date.now();
+      }
+    });
+    fs.writeFileSync(filePath, JSON.stringify(contents));
+
     mainWindow.webContents.send('initialize', contents as StoreStructure);
   });
 
