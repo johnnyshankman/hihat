@@ -385,7 +385,7 @@ export default function LibraryList({
                 <AccessTimeIcon fontSize="inherit" />
               </button>
             </Tooltip>
-            <Tooltip title="Plays">
+            <Tooltip title="Date Added">
               <button
                 type="button"
                 aria-label="duration"
@@ -395,7 +395,7 @@ export default function LibraryList({
                 <Today fontSize="inherit" />
               </button>
             </Tooltip>
-            <Tooltip title="Date Added">
+            <Tooltip title="Plays">
               <button
                 type="button"
                 aria-label="duration"
