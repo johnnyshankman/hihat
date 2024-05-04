@@ -56,6 +56,8 @@ ipcMain.on('get-album-art', async (event, arg: string) => {
 
 /**
  * @dev sets lastPlayedSong in the userConfig.json file to provided arg.path
+ * and then also updates that songs lastPlaye timestamp and increased that
+ * songs playCount by 1.
  */
 ipcMain.on('set-last-played-song', async (event, arg: string) => {
   const songFilePath = arg;
@@ -65,18 +67,11 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
 
   userConfig.lastPlayedSong = songFilePath;
 
-  // find the song within the user config and update its lastPlayed and playCount
   Object.keys(userConfig.library).forEach((key) => {
     if (key === songFilePath) {
       userConfig.library[key].additionalInfo.lastPlayed = Date.now();
-      // bump the play count as well
       userConfig.library[key].additionalInfo.playCount += 1;
     }
-  });
-
-  // console.log the playcount of every song in the library
-  Object.keys(userConfig.library).forEach((key) => {
-    console.log('playcount', userConfig.library[key].additionalInfo.playCount);
   });
 
   fs.writeFileSync(
