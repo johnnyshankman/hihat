@@ -65,12 +65,26 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
 
   userConfig.lastPlayedSong = songFilePath;
 
+  // find the song within the user config and update its lastPlayed and playCount
+  Object.keys(userConfig.library).forEach((key) => {
+    if (key === songFilePath) {
+      userConfig.library[key].additionalInfo.lastPlayed = Date.now();
+      // bump the play count as well
+      userConfig.library[key].additionalInfo.playCount += 1;
+    }
+  });
+
+  // console.log the playcount of every song in the library
+  Object.keys(userConfig.library).forEach((key) => {
+    console.log('playcount', userConfig.library[key].additionalInfo.playCount);
+  });
+
   fs.writeFileSync(
     path.join(app.getPath('userData'), 'userConfig.json'),
     JSON.stringify(userConfig),
   );
 
-  event.reply('set-last-played-song');
+  event.reply('set-last-played-song', userConfig);
 });
 
 const findAllFilesRecursively = (dir: string) => {
@@ -161,6 +175,11 @@ const addToLibrary = async (event: IpcMainEvent) => {
         format: {
           ...metadata.format,
           duration: metadata.format.duration,
+        },
+        additionalInfo: {
+          playCount: 0,
+          lastPlayed: 0,
+          dateAdded: Date.now(),
         },
       } as SongSkeletonStructure;
     }
@@ -274,6 +293,11 @@ const selectLibrary = async (event: IpcMainEvent) => {
           ...metadata.format,
           duration: metadata.format.duration,
         },
+        additionalInfo: {
+          playCount: 0,
+          lastPlayed: 0,
+          dateAdded: Date.now(),
+        },
       } as SongSkeletonStructure;
     }
 
@@ -377,18 +401,31 @@ ipcMain.on('select-library', async (event): Promise<any> => {
   await selectLibrary(event);
 });
 
+/**
+ * @dev for showing a file in Finder on OSX
+ */
 ipcMain.on('show-in-finder', async (event, arg): Promise<any> => {
   shell.showItemInFolder(arg.path);
 });
 
+/**
+ * @dev for copying text to the user's OS clipboard
+ */
 ipcMain.on('copy-to-clipboard', async (event, arg): Promise<any> => {
   clipboard.writeText(arg.text);
 });
 
+/**
+ * @dev for opening a link in the user's default browser
+ */
 ipcMain.on('open-in-browser', async (event, arg): Promise<any> => {
   opener(arg.text);
 });
 
+/**
+ * @dev for coyping the artwork data of a song into the user's clipboard,
+ * that way they can paste it into another app, like iMessage.
+ */
 ipcMain.on('copy-art-to-clipboard', async (event, arg): Promise<any> => {
   const filePath = arg.song;
   const metadata = await mm.parseFile(filePath);
@@ -399,6 +436,10 @@ ipcMain.on('copy-art-to-clipboard', async (event, arg): Promise<any> => {
   }
 });
 
+/**
+ * @dev for downloading the artwork data of a song to the user's computer,
+ * that way they can share it with others or use it as a wallpaper.
+ */
 ipcMain.on('download-artwork', async (event, arg): Promise<any> => {
   if (!mainWindow) {
     return;
@@ -466,6 +507,9 @@ const createWindow = async () => {
     }
   });
 
+  /**
+   * @importnat Set the global asset path to /assets
+   */
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
     : path.join(__dirname, '../../assets');
@@ -476,12 +520,14 @@ const createWindow = async () => {
 
   /**
    * @dev create the main window of the app. This is the window that
-   *      the user will interact with. It is a BrowserWindow instance.
-   *      We also set the icon for the app here.
-   *      We also set the preload script here. This is a script that
-   *      runs in the renderer process before any other scripts run.
-   *      We use this to set up the ipcRenderer and other things that
-   *      we need to use in the renderer + main processes.
+   * the user will interact with. It is a BrowserWindow instance.
+   *
+   * @important We also set the icon for the app here.
+   * @important We also set the preload script here. This is a script that
+   * runs in the renderer process before any other scripts run.
+   * We use this to set up the ipcRenderer and other things that
+   * we need to use in the renderer + main processes.
+   *
    * @see https://www.electronjs.org/docs/api/browser-window
    */
   mainWindow = new BrowserWindow({
@@ -518,6 +564,9 @@ const createWindow = async () => {
     mainWindow.webContents.send('initialize', contents as StoreStructure);
   });
 
+  /**
+   * @dev enables showing the app minimized to start if the user wants
+   */
   mainWindow.on('ready-to-show', () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');

@@ -28,8 +28,6 @@ const useMainStore = create<StoreStructure & AdditionalActions>((set) => ({
     });
   },
   setLastPlayedSong: (song: string) => {
-    // @dev: send message that syncs the BE with the FE, affects next reboot
-    window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
     return set({
       lastPlayedSong: song,
     });
