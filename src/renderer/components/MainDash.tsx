@@ -172,14 +172,15 @@ export default function MainDash() {
     // that way on next boot we can restore the last played song state
     setLastPlayedSong(song);
     window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
-    window.electron.ipcRenderer.once('set-last-played-song', (arg) => {
-      // reset the library, the filtered library, the current song, and pause.
-      setLibraryInStore(arg.library);
-      setFilteredLibrary(arg.library);
-    });
+    window.electron.ipcRenderer.once('set-last-played-song', (args) => {
+      const newLibrary = { ...storeLibrary };
+      newLibrary[args.song] = args.songData;
+      setLibraryInStore(newLibrary);
 
-    // update the additionalInfo for song, so that lastPlayed is Date.now()
-    // and so that the playCount is incremented by 1
+      const newFilteredLibrary = { ...filteredLibrary };
+      newFilteredLibrary[args.song] = args.songData;
+      setFilteredLibrary(newFilteredLibrary);
+    });
 
     // play the song regardless of when the main process responds
     setPaused(false);

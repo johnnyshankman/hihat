@@ -79,7 +79,10 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
     JSON.stringify(userConfig),
   );
 
-  event.reply('set-last-played-song', userConfig);
+  event.reply('set-last-played-song', {
+    song: songFilePath,
+    songData: userConfig.library[songFilePath],
+  });
 });
 
 const findAllFilesRecursively = (dir: string) => {

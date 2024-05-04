@@ -54,7 +54,10 @@ export interface ResponseArgs extends ArgsBase {
     songsImported: number;
     totalSongs: number;
   };
-  'set-last-played-song': StoreStructure;
+  'set-last-played-song': {
+    song: string;
+    songData: StoreStructure['library'][string];
+  };
 }
 
 const electronHandler = {
