@@ -160,13 +160,11 @@ To refresh your library after making manual changes to the directory in Finder (
 - [x] Click on song info to scroll back to it
 - [x] Generative shareable Spotify search links
 - [x] Generative shareable Apple Music search links
+- [x] Sort by date added
+- [x] Playcount tracking and sort by playcount
 - [ ] Playlists (TBD if I'll ever do this, a ton of work is required)
-- [ ] OBS extension for showing Now Playing
-- [ ] Ability to "hide" songs you don't want to see, without deleting them
-- [ ] Sort by date added
-- [ ] Edit song metadata within hihat
-- [ ] "Refresh" library button when songs are manually removed/added to library directory folder
-- [ ] Playcount tracking and sort by playcount
+- [ ] Ability to "hide" songs you don't want to see, without deleting their file
+- [ ] Edit song file metadata
 - [ ] Show some fun stats about your library somewhere, like gb and # of songs
 
 
