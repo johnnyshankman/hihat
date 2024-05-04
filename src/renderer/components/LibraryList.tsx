@@ -2,6 +2,7 @@ import { useState } from 'react';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { List } from 'react-virtualized';
+import { PlayArrow } from '@mui/icons-material';
 import { SongSkeletonStructure, StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
 import { convertToMMSS } from '../utils/utils';
@@ -10,7 +11,7 @@ import ReusableSongMenu from './ReusableSongMenu';
 
 const ROW_HEIGHT = 25.5;
 
-type FilterTypes = 'title' | 'artist' | 'album';
+type FilterTypes = 'title' | 'artist' | 'album' | 'playCount';
 
 type FilterDirections = 'asc' | 'desc';
 
@@ -148,6 +149,30 @@ export default function LibraryList({
     setFilterType('artist');
   };
 
+  const filterByPlayCount = () => {
+    if (!storeLibrary) return;
+    if (!filteredLibrary) return;
+
+    // flip the filter direction
+    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
+
+    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
+      const aPlayCount = filteredLibrary[a].additionalInfo?.playCount || 0;
+      const bPlayCount = filteredLibrary[b].additionalInfo?.playCount || 0;
+      if (aPlayCount < bPlayCount) return filterDirection === 'asc' ? -1 : 1;
+      if (aPlayCount > bPlayCount) return filterDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    const filteredLib: StoreStructure['library'] = {};
+    filtered.forEach((song) => {
+      filteredLib[song] = storeLibrary[song];
+    });
+
+    setFilteredLibrary(filteredLib);
+    setFilterType('playCount');
+  };
+
   const filterByAlbum = () => {
     if (!storeLibrary) return;
     if (!filteredLibrary) return;
@@ -228,8 +253,11 @@ export default function LibraryList({
         <div className="select-none whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
           {filteredLibrary?.[song].common.album}
         </div>
-        <div className="select-none w-14 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <div className="select-none w-16 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
           {convertToMMSS(filteredLibrary?.[song].format.duration || 0)}
+        </div>
+        <div className="select-none whitespace-nowrap	overflow-hidden w-12 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+          {filteredLibrary?.[song].additionalInfo.playCount || '-'}
         </div>
       </div>
     );
@@ -254,7 +282,7 @@ export default function LibraryList({
       )}
       <div className="w-full text-[11px]  mb-[1px]">
         <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
-          <div className="flex transition-colors divide-neutral-800 divide-x">
+          <div className="flex transition-colors divide-neutral-800 divide-x mr-4">
             <button
               onClick={filterByTitle}
               type="button"
@@ -317,9 +345,17 @@ export default function LibraryList({
             <button
               type="button"
               aria-label="duration"
-              className="select-none flex leading-[1em] items-center py-1.5 w-14 text-center px-4 mr-2 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+              className="select-none flex leading-[1em] items-center py-1.5 w-16 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
             >
               <AccessTimeIcon fontSize="inherit" />
+            </button>
+            <button
+              type="button"
+              aria-label="duration"
+              onClick={filterByPlayCount}
+              className="select-none flex leading-[1em] items-center py-1.5 w-12 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+            >
+              <PlayArrow fontSize="inherit" />
             </button>
           </div>
         </div>
