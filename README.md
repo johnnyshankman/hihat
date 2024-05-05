@@ -62,7 +62,9 @@
 
 [![hihat desktop preview][product-screenshot]](https://whitelights.co)
 
-<img width="328" alt="Screenshot 2024-04-16 at 12 18 52 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/e174c03e-0ccb-4379-91eb-5c16dd201f36"> <img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
+<img width="328" alt="Screenshot 2024-04-16 at 12 18 52 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/e174c03e-0ccb-4379-91eb-5c16dd201f36"> 
+
+<img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -135,7 +137,7 @@ _Then select your library's directory and wait for the import process to finish.
 
 _Hit the "Add Songs" icon in the top right (or in the `hihat` menu)._
 
-<img width="320" alt="Screenshot 2024-05-05 at 1 14 50 AM" src="https://github.com/johnnyshankman/hihat/assets/6632701/ef9388a0-b055-47f0-8c98-3c98215c58d3">
+<img width="326" alt="Screenshot 2024-05-05 at 1 18 04 AM" src="https://github.com/johnnyshankman/hihat/assets/6632701/399013e3-0b60-45c9-93ff-93535f8c7ce3">
 
 ### Refreshing Your Library
 
