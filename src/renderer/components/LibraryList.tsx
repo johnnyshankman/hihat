@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { List } from 'react-virtualized';
@@ -60,11 +60,22 @@ export default function LibraryList({
   const overrideScrollToIndex = usePlayerStore(
     (store) => store.overrideScrollToIndex,
   );
+  const setOverrideScrollToIndex = usePlayerStore(
+    (store) => store.setOverrideScrollToIndex,
+  );
+
+  useEffect(() => {
+    if (overrideScrollToIndex !== undefined) {
+      setTimeout(() => {
+        setOverrideScrollToIndex(undefined);
+      }, 10);
+    }
+  }, [overrideScrollToIndex, setOverrideScrollToIndex]);
 
   const scrollToIndex =
-    overrideScrollToIndex !== undefined
-      ? overrideScrollToIndex
-      : initialScrollIndex;
+    overrideScrollToIndex === undefined
+      ? initialScrollIndex
+      : overrideScrollToIndex;
 
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,

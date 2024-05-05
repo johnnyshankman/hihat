@@ -32,7 +32,7 @@ type AlbumArtMenuState =
 
 export default function MainDash() {
   /**
-   * @dev external hookds
+   * @dev external hooks
    */
   const { width, height, ref } = useResizeDetector();
 
@@ -83,7 +83,9 @@ export default function MainDash() {
   const [totalSongs, setTotalSongs] = useState(0);
   const [estimatedTimeRemainingString, setEstimatedTimeRemainingString] =
     useState('');
-  const [initialScrollIndex, setInitialScrollIndex] = useState(0);
+  const [initialScrollIndex, setInitialScrollIndex] = useState<
+    number | undefined
+  >(undefined);
   const [showAlbumArtMenu, setShowAlbumArtMenu] =
     useState<AlbumArtMenuState>(undefined);
 
@@ -425,6 +427,14 @@ export default function MainDash() {
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (initialScrollIndex !== undefined) {
+      setTimeout(() => {
+        setInitialScrollIndex(undefined);
+      }, 10);
+    }
+  }, [initialScrollIndex]);
 
   navigator.mediaSession.setActionHandler('previoustrack', () => {
     playPreviousSong();
