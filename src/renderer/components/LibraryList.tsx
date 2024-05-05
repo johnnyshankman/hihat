@@ -409,6 +409,17 @@ export default function LibraryList({
                 className="select-none flex leading-[1em] items-center py-1.5 w-16 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
               >
                 <Today fontSize="inherit" />
+                {filterType === 'dateAdded' && (
+                  <span
+                    className={`${
+                      filterDirection === 'asc'
+                        ? 'rotate-180'
+                        : 'relative bottom-[2px]'
+                    } inline-block ml-2`}
+                  >
+                    <FilterListIcon fontSize="inherit" />
+                  </span>
+                )}
               </button>
             </Tooltip>
             <Tooltip title="Plays">
@@ -419,6 +430,17 @@ export default function LibraryList({
                 className="select-none flex leading-[1em] items-center py-1.5 w-12 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
               >
                 <PlayArrow fontSize="inherit" />
+                {filterType === 'playCount' && (
+                  <span
+                    className={`${
+                      filterDirection === 'asc'
+                        ? 'rotate-180'
+                        : 'relative bottom-[2px]'
+                    } inline-block ml-2`}
+                  >
+                    <FilterListIcon fontSize="inherit" />
+                  </span>
+                )}
               </button>
             </Tooltip>
           </div>
