@@ -290,9 +290,13 @@ export default function MainDash() {
 
       // convert the estimated time remaining in ms to a human readable format
       const minutes = Math.floor(estimatedTimeRemaining / 60000);
+      const seconds = Math.floor(estimatedTimeRemaining / 1000);
       const timeRemainingString =
+        // eslint-disable-next-line no-nested-ternary
         minutes < 1
-          ? `${Math.floor(estimatedTimeRemaining / 1000)}s left`
+          ? seconds === 0
+            ? 'Processing...'
+            : `${seconds}s left`
           : `${minutes}mins left`;
       setEstimatedTimeRemainingString(timeRemainingString);
     });
