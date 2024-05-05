@@ -144,7 +144,7 @@ const addToLibrary = async (event: IpcMainEvent) => {
   }
 
   for (let i = 0; i < result.filePaths.length; i += 1) {
-    let metadata;
+    let metadata: mm.IAudioMetadata;
 
     try {
       // eslint-disable-next-line no-await-in-loop
@@ -163,23 +163,6 @@ const addToLibrary = async (event: IpcMainEvent) => {
     )}`;
 
     if (metadata && metadata.format.duration && metadata.common.title) {
-      // @IMPORTANT: if we already have this song in the library skip it
-      if (
-        userConfig.library[destination] &&
-        userConfig.library[destination].common.artist ===
-          metadata.common.artist &&
-        userConfig.library[destination].common.album ===
-          metadata.common.album &&
-        userConfig.library[destination].common.title === metadata.common.title
-      ) {
-        event.reply('song-imported', {
-          songsImported: i,
-          totalSongs: result.filePaths.length,
-        });
-        // eslint-disable-next-line no-continue
-        continue;
-      }
-
       // copy the music file over to the existing library folder
       fs.copyFileSync(result.filePaths[i], destination);
 
@@ -200,6 +183,34 @@ const addToLibrary = async (event: IpcMainEvent) => {
           dateAdded: Date.now(),
         },
       } as SongSkeletonStructure;
+
+      /**
+       * @important if we already have a song file in the library with identical album, title,
+       *            and artist, to the one trying to be added.
+       * 1. remove the old file
+       * 2. replace it with this new one
+       * 3. keep the old additionalInfo so that playCount and lastPlayed are preserved.
+       *
+       * @note This allows users to "upgrade" a file in their library by re-importing it.
+       */
+      const allLibraryKeys = Object.keys(userConfig.library);
+      if (userConfig.library && allLibraryKeys.length > 0) {
+        allLibraryKeys.forEach((key) => {
+          if (
+            userConfig.library[key].common.artist === metadata.common.artist &&
+            userConfig.library[key].common.album === metadata.common.album &&
+            userConfig.library[key].common.title === metadata.common.title
+          ) {
+            delete filesToTags[key];
+            filesToTags[destination] = {
+              ...metadata,
+              additionalInfo: {
+                ...userConfig.library[key].additionalInfo,
+              },
+            };
+          }
+        });
+      }
     }
 
     // report back to the front end so it can update its ux
@@ -266,7 +277,7 @@ const selectLibrary = async (event: IpcMainEvent) => {
     return;
   }
 
-  let result;
+  let result: OpenDialogReturnValue;
   try {
     result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory'],
@@ -291,7 +302,7 @@ const selectLibrary = async (event: IpcMainEvent) => {
   ) as StoreStructure;
 
   for (let i = 0; i < files.length; i += 1) {
-    let metadata;
+    let metadata: mm.IAudioMetadata;
 
     try {
       // eslint-disable-next-line no-await-in-loop
