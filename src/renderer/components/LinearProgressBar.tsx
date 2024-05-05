@@ -54,6 +54,10 @@ export default function LinearProgressBar({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             cursor: 'pointer',
+            transition: 'opacity 0.2s',
+            '&:hover': {
+              opacity: 0.75,
+            },
           }}
           aria-label="current-title"
           onClick={() => {
@@ -124,6 +128,10 @@ export default function LinearProgressBar({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             cursor: 'pointer',
+            transition: 'opacity 0.2s',
+            '&:hover': {
+              opacity: 0.75,
+            },
           }}
           aria-label="current-artist"
           onClick={() => {
