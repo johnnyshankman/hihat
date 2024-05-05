@@ -14,6 +14,8 @@ export type Channels =
   | 'download-artwork'
   | 'open-in-browser'
   | 'show-in-finder'
+  | 'menu-select-library'
+  | 'menu-add-songs'
   | 'song-imported';
 
 export type ArgsBase = Record<Channels, unknown>;

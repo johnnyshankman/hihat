@@ -9,6 +9,7 @@ import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
 import LibraryAddOutlined from '@mui/icons-material/LibraryAddOutlined';
 import SearchIcon from '@mui/icons-material/Search';
+import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
 import { StoreStructure, SongSkeletonStructure } from '../../common/common';
 import AlbumArtMenu from './AlbumArtMenu';
 import useMainStore from '../store/main';
@@ -426,6 +427,14 @@ export default function MainDash() {
         setInitialScrollIndex(songIndex);
       }
     });
+
+    window.electron.ipcRenderer.on('menu-select-library', () => {
+      importNewLibrary();
+    });
+
+    window.electron.ipcRenderer.on('menu-add-songs', () => {
+      importNewSongs();
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -563,36 +572,13 @@ export default function MainDash() {
         )}
 
         {/** TODO: need to add a warning dialog explaining what this does in context */}
-        <Tooltip title="Select Library Folder">
-          <button
-            onClick={importNewLibrary}
-            type="button"
-            aria-label="select library folder"
-            className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
-          rounded-md text-[18px] ring-offset-background transition-colors
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-          focus-visible:ring-offset-2 disabled:pointer-events-none
-          disabled:opacity-50 border border-neutral-800 bg-black
-          hover:bg-white hover:text-black
-          px-4 py-[7px] text-sm"
-          >
-            <LibraryAddOutlined
-              fontSize="inherit"
-              sx={{
-                position: 'relative',
-                bottom: '1px',
-              }}
-            />
-          </button>
-        </Tooltip>
-
-        {storeLibrary && (
-          <Tooltip title="Add Songs To Library Folder">
+        {!storeLibrary && (
+          <Tooltip title="Import Library">
             <button
-              onClick={importNewSongs}
+              onClick={importNewLibrary}
               type="button"
-              aria-label="import to songs"
-              className="nodrag absolute top-[60px] md:top-4 right-[4.5rem] items-center justify-center
+              aria-label="select library folder"
+              className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
           rounded-md text-[18px] ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
@@ -600,7 +586,7 @@ export default function MainDash() {
           hover:bg-white hover:text-black
           px-4 py-[7px] text-sm"
             >
-              <AddIcon
+              <LibraryMusic
                 fontSize="inherit"
                 sx={{
                   position: 'relative',
@@ -611,7 +597,32 @@ export default function MainDash() {
           </Tooltip>
         )}
 
-        <Box className="absolute h-[45px] top-4 md:top-4 md:right-[8rem] right-4 w-auto text-white">
+        {storeLibrary && (
+          <Tooltip title="Add Songs To Library">
+            <button
+              onClick={importNewSongs}
+              type="button"
+              aria-label="import to songs"
+              className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
+          rounded-md text-[18px] ring-offset-background transition-colors
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+          focus-visible:ring-offset-2 disabled:pointer-events-none
+          disabled:opacity-50 border border-neutral-800 bg-black
+          hover:bg-white hover:text-black
+          px-4 py-[7px] text-sm"
+            >
+              <LibraryAdd
+                fontSize="inherit"
+                sx={{
+                  position: 'relative',
+                  bottom: '1px',
+                }}
+              />
+            </button>
+          </Tooltip>
+        )}
+
+        <Box className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white">
           <Search
             sx={{
               borderRadius: '0.375rem',

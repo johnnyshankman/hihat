@@ -62,6 +62,20 @@ export default class MenuBuilder {
         },
         { type: 'separator' },
         {
+          label: 'import library',
+          click: () => {
+            this.mainWindow.webContents.send('menu-select-library');
+          },
+        },
+        {
+          label: 'add songs to library',
+          click: () => {
+            this.mainWindow.webContents.send('menu-add-songs');
+          },
+        },
+        { type: 'separator' },
+
+        {
           label: 'hide hihat',
           accelerator: 'Command+H',
           selector: 'hide:',

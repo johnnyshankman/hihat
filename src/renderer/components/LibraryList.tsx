@@ -28,7 +28,7 @@ type LibraryListProps = {
   /**
    * @dev the height of the row container
    */
-  initialScrollIndex: number;
+  initialScrollIndex: number | undefined;
   /**
    * @dev a hook for when the song is double clicked
    */
