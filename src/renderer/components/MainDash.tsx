@@ -277,12 +277,12 @@ export default function MainDash() {
    * @dev allow user to select a directory and import all songs within it
    */
   const importNewLibrary = async () => {
-    setShowImportingProgress(true);
-
     // updates the UX with the progress of the import
     window.electron.ipcRenderer.on('song-imported', (args) => {
+      setShowImportingProgress(true);
       setSongsImported(args.songsImported);
       setTotalSongs(args.totalSongs);
+
       // completion time is roughly 5ms per song
       const estimatedTimeRemaining = Math.floor(
         (args.totalSongs - args.songsImported) * 5,
@@ -290,15 +290,16 @@ export default function MainDash() {
 
       // convert the estimated time remaining in ms to a human readable format
       const minutes = Math.floor(estimatedTimeRemaining / 60000);
-      // if it is less than one minute say `less than a minute`
-      const seconds =
-        minutes < 1 ? 'Time Left: < 1min' : `Time Left: ${minutes}mins...`;
-      setEstimatedTimeRemainingString(seconds);
+      const timeRemainingString =
+        minutes < 1
+          ? `${Math.floor(estimatedTimeRemaining / 1000)}s left`
+          : `${minutes}mins left`;
+      setEstimatedTimeRemainingString(timeRemainingString);
     });
 
     // once the import is complete, update the store/data
     window.electron.ipcRenderer.once('select-library', (arg) => {
-      // exit early if the user cancels the import or the args are malformed
+      // exit early if the user cancels or the args are malformed
       if (!arg || !arg.library) {
         setShowImportingProgress(false);
         return;
@@ -333,15 +334,14 @@ export default function MainDash() {
    * @dev allow user to select some files and import them into the library
    */
   const importNewSongs = async () => {
-    setShowImportingProgress(true);
-
     // updates the UX with the progress of the import
     window.electron.ipcRenderer.on('song-imported', (args) => {
-      setSongsImported((args as any).songsImported);
-      setTotalSongs((args as any).totalSongs);
+      setShowImportingProgress(true);
+      setSongsImported(args.songsImported);
+      setTotalSongs(args.totalSongs);
       // completion time is roughly 5ms per song
       const estimatedTimeRemaining = Math.floor(
-        ((args as any).totalSongs - (args as any).songsImported) * 5,
+        (args.totalSongs - args.songsImported) * 5,
       );
 
       // convert the estimated time remaining in ms to a human readable format
@@ -492,12 +492,12 @@ export default function MainDash() {
             />
           </Box>
           <div className="flex w-full justify-center mt-1 px-2 ">
-            <TinyText>{`${songsImported} / ${totalSongs}`}</TinyText>
+            <h4>{`${songsImported} / ${totalSongs}`}</h4>
           </div>
-          <div className="flex w-full justify-center px-2">
-            <TinyText>{`[${
+          <div className="flex w-full justify-center pt-2 pb-1 px-2">
+            <TinyText>{`(${
               estimatedTimeRemainingString || 'Calculating...'
-            }]`}</TinyText>
+            })`}</TinyText>
           </div>
         </div>
       </Dialog>
@@ -643,6 +643,7 @@ export default function MainDash() {
         rowContainerHeight={rowContainerHeight}
         initialScrollIndex={initialScrollIndex}
         playSong={playSong}
+        onImportLibrary={importNewLibrary}
       />
 
       <StaticPlayer

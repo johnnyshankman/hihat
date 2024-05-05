@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { List } from 'react-virtualized';
-import { PlayArrow, Today } from '@mui/icons-material';
+import { LibraryMusic, PlayArrow, Today } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 import { SongSkeletonStructure, StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
@@ -33,6 +33,10 @@ type LibraryListProps = {
    * @dev a hook for when the song is double clicked
    */
   playSong: (song: string, info: StoreStructure['library'][string]) => void;
+  /**
+   * @dev a hook for when the user wants to import their library
+   */
+  onImportLibrary: () => void;
 };
 
 type SongMenuState =
@@ -50,6 +54,7 @@ export default function LibraryList({
   rowContainerHeight,
   initialScrollIndex,
   playSong,
+  onImportLibrary,
 }: LibraryListProps) {
   /**
    * @dev store hooks
@@ -422,15 +427,55 @@ export default function LibraryList({
         {/**
          * @dev since the list could be 1000s of songs long we must virtualize it
          */}
-        <List
-          width={width || 0}
-          height={rowContainerHeight}
-          rowRenderer={renderSongRow}
-          rowCount={Object.keys(filteredLibrary || {}).length}
-          rowHeight={ROW_HEIGHT}
-          scrollToAlignment="center"
-          scrollToIndex={scrollToIndex}
-        />
+        {Object.keys(filteredLibrary || {}).length ? (
+          <List
+            width={width || 0}
+            height={rowContainerHeight}
+            rowRenderer={renderSongRow}
+            rowCount={Object.keys(filteredLibrary || {}).length}
+            rowHeight={ROW_HEIGHT}
+            scrollToAlignment="center"
+            scrollToIndex={scrollToIndex}
+          />
+        ) : (
+          <div
+            className="w-full flex items-center justify-center"
+            style={{
+              height: rowContainerHeight,
+            }}
+          >
+            <div className="flex flex-col gap-4 items-center">
+              <h1 className="text-neutral-500">
+                Please import your library...
+              </h1>
+              <Tooltip title="Import Library">
+                <button
+                  onClick={() => {
+                    onImportLibrary();
+                  }}
+                  type="button"
+                  aria-label="select library folder"
+                  className="nodrag items-center justify-center
+          rounded-md text-[18px] ring-offset-background transition-colors
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+          focus-visible:ring-offset-2 disabled:pointer-events-none
+          disabled:opacity-50 border border-neutral-800 bg-black
+          hover:bg-white hover:text-black
+          w-16
+          px-4 py-[7px] text-2xl"
+                >
+                  <LibraryMusic
+                    fontSize="inherit"
+                    sx={{
+                      position: 'relative',
+                      bottom: '1px',
+                    }}
+                  />
+                </button>
+              </Tooltip>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
