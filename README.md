@@ -49,7 +49,7 @@
         <li><a href="#refreshing-your-library">Refreshing Your Library</a></li>
       </ul>
     </li>
-    <li><a href="#roadmap">Feature Roadmap</a></li>
+    <li><a href="#feature-roadmap">Feature Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -155,7 +155,7 @@ _If you make manual changes to your library's directory in Finder, you will want
 
 
 <!-- ROADMAP -->
-## Roadmap of Features
+## Feature Roadmap
 
 - [x] Autoplay Next Song
 - [x] Virtualized Lists for opitmal rendering
