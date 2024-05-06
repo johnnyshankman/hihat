@@ -61,11 +61,11 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-*hihat* is a free way to elegantly play your music offline, similar to iTunes or Windows Media Player in the early 2000s.
+*hihat* is the free, open-source, and elegant way play your music offline -- similar to iTunes or Windows Media Player in the early 2000s.
 
-*hihat* has no socials, no lag, no ads, no bulls***.
+*hihat* has no socials, no lag, and no ads.
 
-*hihat* is just music without the distractions.
+*hihat* lets you enjoy music without the distractions.
 
 [![hihat desktop preview][product-screenshot]](https://whitelights.co)
 
