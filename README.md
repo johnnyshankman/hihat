@@ -41,8 +41,15 @@
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
+    <li>
+      <a href="#usage">Usage</a>
+      <ul>
+        <li><a href="#setting-your-library">Setting Your Library</a></li>
+        <li><a href="#adding-more-songs">Adding More Songs</a></li>
+        <li><a href="#refreshing-your-library">Refreshing Your Library</a></li>
+      </ul>
+    </li>
+    <li><a href="#roadmap">Feature Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -131,7 +138,7 @@ _Then select your library's directory and wait for the import process to finish.
 
 <img width="331" alt="Screenshot 2023-12-17 at 10 56 38 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/a4d9d343-66e0-43af-9a23-36a7d0998f9c">
 
-### Adding Songs
+### Adding More Songs
 
 _Hit the "Add Songs" icon in the top right (or in the `hihat` menu)._
 
