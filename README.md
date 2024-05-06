@@ -62,7 +62,7 @@
 
 [![hihat desktop preview][product-screenshot]](https://whitelights.co)
 
-<img width="328" alt="Screenshot 2024-04-16 at 12 18 52 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/e174c03e-0ccb-4379-91eb-5c16dd201f36"> 
+<img width="555" alt="Screenshot 2024-05-05 at 10 14 04 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/5487ffb6-0676-460e-8613-1c44880223df">
 
 <img width="335" alt="Screenshot 2024-04-14 at 1 47 23 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/b7a4a047-57fc-4c6f-b55e-a86ee352ec9a">
 
