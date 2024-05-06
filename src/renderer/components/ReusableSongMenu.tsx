@@ -85,7 +85,7 @@ export default function ReusableSongMenu(props: SongMenuProps) {
         }}
         onClick={copyInfoToClipboard}
       >
-        Copy Song Info
+        Copy Info to Clipboard
       </MenuItem>
       <MenuItem
         sx={{
