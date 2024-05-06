@@ -116,12 +116,25 @@ This project was built with the following technologies:
 
 ### Supported Audio and Metadata Formats
 
-Almost every format under the sun is supported, and they can all be mixed together into the same library seamlessly (mp3, m4a, aac, ogg, flac, wav, etc.).
+Almost every format under the sun is supported, and they can all be mixed together into the same library seamlessly.
 
-* See [The Chromium Project](https://www.chromium.org/audio-video/) for detailed info on supported audio formats.
-* See [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
+Just to name a few:
+* MP3
+* MP4
+* Ogg
+* WebM
+* WAV
+* FLAC
+* Opus
+* PCM
+* Vorbis
+* AAC
 
-Don't know where to get MP3/FLAC of your favorite albums and tracks? I suggest:
+If you'd like to see more detailed information, check out:
+* [The Chromium Project](https://www.chromium.org/audio-video/) for info on supported audio formats.
+* [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
+
+Don't know where to download files of your favorite albums and tracks? I suggest:
 * [tidal-media-downloader](https://github.com/yaronzz/Tidal-Media-Downloader) (Works with Tidal)
 * [spotify-downloader](https://github.com/spotDL/spotify-downloader) (Works with Spotify and Youtube Music)
 
