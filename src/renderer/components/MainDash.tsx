@@ -646,7 +646,14 @@ export default function MainDash() {
         width={width || 0}
         rowContainerHeight={rowContainerHeight}
         initialScrollIndex={initialScrollIndex}
-        playSong={playSong}
+        playSong={async (song, meta) => {
+          // if the user clicks on the currently playing song, start it over
+          if (currentSong === song) {
+            await startCurrentSongOver();
+          } else {
+            await playSong(song, meta);
+          }
+        }}
         onImportLibrary={importNewLibrary}
       />
 
