@@ -71,23 +71,23 @@
 *hihat* has the following core features:
 * 100% offline
 * always dark mode
-* responsively designed
-* mix 'n match music file types
-* compact song list
-* OSX menu bar integration
+* responsive design
+* audiophile fidelity (supports all file types)
+* mix 'n match file types (mp3, m4a, flac, etc)
+* limitless library size
+* compact UX
+* song shuffle
+* song repeat
 * Media Keys support
 * Bluetooth headphone play/pause/skip support
-* bigger album art than spotify etc
-* fast search
+* OSX menu bar integration
+* downloadable album art
+* quick search
 * fast import
-* iTunes-like sort by default [artist -> album -> track #]
-* sort by song, artist, or album
-* shuffle
-* song repeat
-* limitless library size
+* sort by song, artist, album, date added or playcount
+* iTunes-like sorting for artist [artist -> album -> track num]
 * nested folder/library support (ie. legacy iTunes structure)
 * Spotify and Apple Music share links for every song
-* playcount tracking
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
