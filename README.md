@@ -98,22 +98,6 @@ a music player without the distractions.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### Built With
-
-This project was built with the following technologies:
-
-* [![Electron][Electron.js]][Electron-url]
-* [![React][React.js]][React-url]
-* [![Electron React Boilerplate][ElectronReactBoilerplate.js]][ElectronReactBoilerplate-url]
-* [![Typescript][Typescript.js]][Typescript-url]
-* [![Google Material UI][MaterialUI.js]][MaterialUI-url]
-* [![zustand][zustand.js]][zustand-url]
-* [![Tailwind][Tailwind.js]][Tailwind-url]
-* [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 ### Supported Audio and Metadata Formats
 
 Almost every format under the sun is supported, and they can all be mixed together into the same library seamlessly.
@@ -165,7 +149,20 @@ _If you make manual changes to your library's directory in Finder, you will want
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+### Built With
 
+This project was built with the following technologies:
+
+* [![Electron][Electron.js]][Electron-url]
+* [![React][React.js]][React-url]
+* [![Electron React Boilerplate][ElectronReactBoilerplate.js]][ElectronReactBoilerplate-url]
+* [![Typescript][Typescript.js]][Typescript-url]
+* [![Google Material UI][MaterialUI.js]][MaterialUI-url]
+* [![zustand][zustand.js]][zustand-url]
+* [![Tailwind][Tailwind.js]][Tailwind-url]
+* [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ROADMAP -->
 ## Feature Roadmap
