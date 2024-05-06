@@ -170,9 +170,8 @@ export default function MainDash() {
     requestAndSetAlbumArtForSong(song);
 
     // @dev: send message that syncs the BE with the FE
-    // that way on next boot we can restore the last played song state
+    // that way on next boot we can restore the last played song
     setLastPlayedSong(song);
-    window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
     window.electron.ipcRenderer.once('set-last-played-song', (args) => {
       const newLibrary = { ...storeLibrary };
       newLibrary[args.song] = args.songData;
@@ -182,6 +181,7 @@ export default function MainDash() {
       newFilteredLibrary[args.song] = args.songData;
       setFilteredLibrary(newFilteredLibrary);
     });
+    window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
 
     // play the song regardless of when the main process responds
     setPaused(false);
