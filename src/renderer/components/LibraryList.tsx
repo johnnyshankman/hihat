@@ -69,6 +69,12 @@ export default function LibraryList({
     (store) => store.setOverrideScrollToIndex,
   );
 
+  /**
+   * @dev anytime overrideScrollToIndex changes, set a timeout to
+   * reset it to undefined after 10ms. this is to prevent the
+   * library list from scrolling to the wrong index when the
+   * library is updated.
+   */
   useEffect(() => {
     if (overrideScrollToIndex !== undefined) {
       setTimeout(() => {

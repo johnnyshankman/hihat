@@ -187,7 +187,11 @@ export default function MainDash() {
     setPaused(false);
   };
 
-  // @dev: hack, play blank song then play the song again to start it over
+  /**
+   * @dev plays a blank song THEN plays the real song
+   * exactly 10ms later in order to start it over
+   * from the start
+   */
   const startCurrentSongOver = async () => {
     return new Promise((resolve, reject) => {
       if (currentSong && currentSongMetadata) {
@@ -195,7 +199,7 @@ export default function MainDash() {
         window.setTimeout(() => {
           playSong(currentSong, currentSongMetadata);
           resolve(null);
-        }, 100);
+        }, 10);
       } else {
         reject();
       }
@@ -277,18 +281,19 @@ export default function MainDash() {
    * @dev allow user to select a directory and import all songs within it
    */
   const importNewLibrary = async () => {
-    // updates the UX with the progress of the import
+    // fires when one song is imported
+    // used for the importing UX with progress
     window.electron.ipcRenderer.on('song-imported', (args) => {
       setShowImportingProgress(true);
       setSongsImported(args.songsImported);
       setTotalSongs(args.totalSongs);
 
-      // completion time is roughly 5ms per song
+      // @note: completion time is roughly 5ms/song
       const estimatedTimeRemaining = Math.floor(
         (args.totalSongs - args.songsImported) * 5,
       );
 
-      // convert the estimated time remaining in ms to a human readable format
+      // convert the estimated time from ms to a human readable format
       const minutes = Math.floor(estimatedTimeRemaining / 60000);
       const seconds = Math.floor(estimatedTimeRemaining / 1000);
       const timeRemainingString =
@@ -301,33 +306,36 @@ export default function MainDash() {
       setEstimatedTimeRemainingString(timeRemainingString);
     });
 
-    // once the import is complete, update the store/data
+    // fires once the import is complete
     window.electron.ipcRenderer.once('select-library', (arg) => {
-      // exit early if the user cancels or the args are malformed
+      // exit early if the user canceled or the args are malformed
       if (!arg || !arg.library) {
         setShowImportingProgress(false);
         return;
       }
 
-      // reset the library, the filtered library, the current song, and pause.
+      // reset the library, the filtered library
       setLibraryInStore(arg.library);
       setFilteredLibrary(arg.library);
 
-      setShowImportingProgress(false);
       // set current song to the first song in the library
       const firstSong = Object.keys(arg.library)[0];
       const firstSongMeta = arg.library[firstSong];
-
       setCurrentSong(firstSong);
       setCurrentSongMetadata(firstSongMeta);
       requestAndSetAlbumArtForSong(firstSong);
+
       setPaused(true);
       setInitialScrollIndex(2);
+      setShowImportingProgress(false);
 
+      // reset the internal ux of the progress bar for next time its used
+      // do it way after the importing progress dialog is closed
+      // so that the ux update does not get batched together
       window.setTimeout(() => {
         setSongsImported(0);
         setTotalSongs(0);
-      }, 1000);
+      }, 100);
     });
 
     // request that the user selects a directory and that main process processes
@@ -368,15 +376,19 @@ export default function MainDash() {
       setLibraryInStore(arg.library);
       setFilteredLibrary(arg.library);
 
-      setShowImportingProgress(false);
-
       // scroll one of the new songs into view
       setInitialScrollIndex(arg.scrollToIndex);
 
+      // hide the dialog
+      setShowImportingProgress(false);
+
+      // reset the internal ux of the progress bar for next time its used
+      // do it way after the importing progress dialog is closed
+      // so that the ux update does not get batched together
       window.setTimeout(() => {
         setSongsImported(0);
         setTotalSongs(0);
-      }, 1000);
+      }, 100);
     });
 
     // request that the user selects a directory from the main process
@@ -439,6 +451,12 @@ export default function MainDash() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * @dev anytime initial scroll index changes, set a timeout to
+   * reset it to undefined after 10ms. this is to prevent the
+   * library list from scrolling to the wrong index when the
+   * library is updated.
+   */
   useEffect(() => {
     if (initialScrollIndex !== undefined) {
       setTimeout(() => {

@@ -72,12 +72,8 @@ export default function LinearProgressBar({
                   song.common.title === title && song.common.artist === artist,
               );
 
-              setOverrideScrollToIndex(undefined);
-
-              // in 0.01 seconds
-              setTimeout(() => {
-                setOverrideScrollToIndex(index);
-              }, 100);
+              // flip between undefined and the index very quickly
+              setOverrideScrollToIndex(index);
             }}
           >
             {title}
@@ -150,12 +146,7 @@ export default function LinearProgressBar({
                   song.common.title === title && song.common.artist === artist,
               );
 
-              setOverrideScrollToIndex(undefined);
-
-              // in 0.01 seconds
-              setTimeout(() => {
-                setOverrideScrollToIndex(index);
-              }, 100);
+              setOverrideScrollToIndex(index);
             }}
           >
             {artist}
