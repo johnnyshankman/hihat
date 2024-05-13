@@ -1,6 +1,7 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
+import { Tooltip } from '@mui/material';
 import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
 import usePlayerStore from '../store/player';
 
@@ -47,39 +48,41 @@ export default function LinearProgressBar({
           justifyContent: 'center',
         }}
       >
-        <LessOpaqueTinyText
-          sx={{
-            margin: 0,
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            cursor: 'pointer',
-            transition: 'opacity 0.2s',
-            '&:hover': {
-              opacity: 0.75,
-            },
-          }}
-          aria-label="current-title"
-          onClick={() => {
-            // find the index of this song in the library
-            // @TODO: this really needs to be extracted into a helper function
-            const library = usePlayerStore.getState().filteredLibrary;
-            const libraryArray = Object.values(library);
-            const index = libraryArray.findIndex(
-              (song) =>
-                song.common.title === title && song.common.artist === artist,
-            );
+        <Tooltip title="Scroll to song">
+          <LessOpaqueTinyText
+            sx={{
+              margin: 0,
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s',
+              '&:hover': {
+                opacity: 0.75,
+              },
+            }}
+            aria-label="current-title"
+            onClick={() => {
+              // find the index of this song in the library
+              // @TODO: this really needs to be extracted into a helper function
+              const library = usePlayerStore.getState().filteredLibrary;
+              const libraryArray = Object.values(library);
+              const index = libraryArray.findIndex(
+                (song) =>
+                  song.common.title === title && song.common.artist === artist,
+              );
 
-            setOverrideScrollToIndex(undefined);
+              setOverrideScrollToIndex(undefined);
 
-            // in 0.01 seconds
-            setTimeout(() => {
-              setOverrideScrollToIndex(index);
-            }, 100);
-          }}
-        >
-          {title}
-        </LessOpaqueTinyText>
+              // in 0.01 seconds
+              setTimeout(() => {
+                setOverrideScrollToIndex(index);
+              }, 100);
+            }}
+          >
+            {title}
+          </LessOpaqueTinyText>
+        </Tooltip>
       </Box>
       <Box
         sx={{
@@ -121,40 +124,44 @@ export default function LinearProgressBar({
         <LessOpaqueTinyText aria-label="current-time">
           {convertToMMSS(position)}
         </LessOpaqueTinyText>
-        <LessOpaqueTinyText
-          sx={{
-            margin: 0,
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            cursor: 'pointer',
-            transition: 'opacity 0.2s',
-            '&:hover': {
-              opacity: 0.75,
-            },
-          }}
-          aria-label="current-artist"
-          onClick={() => {
-            // find the index of this song in the library
-            // @TODO: this really needs to be extracted into a helper function
 
-            const library = usePlayerStore.getState().filteredLibrary;
-            const libraryArray = Object.values(library);
-            const index = libraryArray.findIndex(
-              (song) =>
-                song.common.title === title && song.common.artist === artist,
-            );
+        <Tooltip title={`Scroll to ${artist}`}>
+          <LessOpaqueTinyText
+            sx={{
+              margin: 0,
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s',
+              '&:hover': {
+                opacity: 0.75,
+              },
+            }}
+            aria-label="current-artist"
+            onClick={() => {
+              // find the index of this song in the library
+              // @TODO: this really needs to be extracted into a helper function
 
-            setOverrideScrollToIndex(undefined);
+              const library = usePlayerStore.getState().filteredLibrary;
+              const libraryArray = Object.values(library);
+              const index = libraryArray.findIndex(
+                (song) =>
+                  song.common.title === title && song.common.artist === artist,
+              );
 
-            // in 0.01 seconds
-            setTimeout(() => {
-              setOverrideScrollToIndex(index);
-            }, 100);
-          }}
-        >
-          {artist}
-        </LessOpaqueTinyText>
+              setOverrideScrollToIndex(undefined);
+
+              // in 0.01 seconds
+              setTimeout(() => {
+                setOverrideScrollToIndex(index);
+              }, 100);
+            }}
+          >
+            {artist}
+          </LessOpaqueTinyText>
+        </Tooltip>
+
         <LessOpaqueTinyText aria-label="current-max-time">
           -{convertToMMSS(max - position)}
         </LessOpaqueTinyText>
