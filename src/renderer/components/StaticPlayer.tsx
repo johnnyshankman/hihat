@@ -164,8 +164,6 @@ export default function StaticPlayer({
       <LinearProgressBar
         value={currentSongTime}
         max={currentSongMetadata?.format?.duration || 0}
-        title={currentSongMetadata?.common?.title || 'No song selected'}
-        artist={currentSongMetadata?.common?.artist || '--'}
         onManualChange={(e: number) => {
           setCurrentSongTime(e);
           if (audioTagRef?.current) {

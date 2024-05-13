@@ -8,17 +8,17 @@ import usePlayerStore from '../store/player';
 export default function LinearProgressBar({
   value,
   onManualChange,
-  title,
-  artist,
   max,
 }: {
   value: number;
   onManualChange: (value: number) => void;
-  title: string;
-  artist: string;
   max: number;
 }) {
   const [position, setPosition] = React.useState(32);
+  const filteredLibrary = usePlayerStore((state) => state.filteredLibrary);
+  const currentSongMetadata = usePlayerStore(
+    (state) => state.currentSongMetadata,
+  );
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
   );
@@ -65,18 +65,19 @@ export default function LinearProgressBar({
             onClick={() => {
               // find the index of this song in the library
               // @TODO: this really needs to be extracted into a helper function
-              const library = usePlayerStore.getState().filteredLibrary;
-              const libraryArray = Object.values(library);
+              const libraryArray = Object.values(filteredLibrary);
               const index = libraryArray.findIndex(
                 (song) =>
-                  song.common.title === title && song.common.artist === artist,
+                  song.common.title === currentSongMetadata.common?.title &&
+                  song.common.artist === currentSongMetadata.common?.artist &&
+                  song.common.album === currentSongMetadata.common?.album,
               );
 
               // flip between undefined and the index very quickly
               setOverrideScrollToIndex(index);
             }}
           >
-            {title}
+            {currentSongMetadata.common?.title || 'No song selected'}
           </LessOpaqueTinyText>
         </Tooltip>
       </Box>
@@ -121,7 +122,9 @@ export default function LinearProgressBar({
           {convertToMMSS(position)}
         </LessOpaqueTinyText>
 
-        <Tooltip title={`Scroll to ${artist}`}>
+        <Tooltip
+          title={`Scroll to ${currentSongMetadata.common?.artist || 'artist'}`}
+        >
           <LessOpaqueTinyText
             sx={{
               margin: 0,
@@ -136,20 +139,18 @@ export default function LinearProgressBar({
             }}
             aria-label="current-artist"
             onClick={() => {
-              // find the index of this song in the library
-              // @TODO: this really needs to be extracted into a helper function
-
-              const library = usePlayerStore.getState().filteredLibrary;
-              const libraryArray = Object.values(library);
+              const libraryArray = Object.values(filteredLibrary);
               const index = libraryArray.findIndex(
                 (song) =>
-                  song.common.title === title && song.common.artist === artist,
+                  song.common.title === currentSongMetadata.common?.title &&
+                  song.common.artist === currentSongMetadata.common?.artist &&
+                  song.common.album === currentSongMetadata.common?.album,
               );
 
               setOverrideScrollToIndex(index);
             }}
           >
-            {artist}
+            {currentSongMetadata.common?.artist || '--'}
           </LessOpaqueTinyText>
         </Tooltip>
 

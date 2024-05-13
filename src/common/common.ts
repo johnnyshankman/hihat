@@ -29,6 +29,10 @@ export type Playlist = {
   songs: string[];
 };
 
+export type Library = {
+  [key: string]: SongSkeletonStructure;
+};
+
 export type StoreStructure = {
   library: {
     [key: string]: SongSkeletonStructure;
