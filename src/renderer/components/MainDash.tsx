@@ -593,7 +593,7 @@ export default function MainDash() {
 
         {/** TODO: need to add a warning dialog explaining what this does in context */}
         {!storeLibrary && (
-          <Tooltip title="Import Library">
+          <Tooltip title="Import Library From Folder">
             <button
               onClick={importNewLibrary}
               type="button"

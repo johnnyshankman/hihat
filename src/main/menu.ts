@@ -62,15 +62,15 @@ export default class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'import library',
-          click: () => {
-            this.mainWindow.webContents.send('menu-select-library');
-          },
-        },
-        {
           label: 'add songs to library',
           click: () => {
             this.mainWindow.webContents.send('menu-add-songs');
+          },
+        },
+        {
+          label: 'change library location',
+          click: () => {
+            this.mainWindow.webContents.send('menu-select-library');
           },
         },
         { type: 'separator' },
