@@ -185,12 +185,14 @@ This project was built with the following technologies:
 - [x] Generative shareable Apple Music search links
 - [x] Sort by date added
 - [x] Playcount tracking and sort by playcount
-- [ ] Playlists (TBD if I'll ever do this, a ton of work is required)
 - [ ] Ability to "hide" songs you don't want to see, without deleting their file
-- [ ] Edit song file metadata
+- [ ] Edit song metadta
 - [ ] Show some fun stats about your library somewhere, like gb and # of songs
 - [ ] Hide and show columns in the viewer
-- [ ] iTunes like "browser" for going seeing scrollabe list of artists/albums
+- [ ] iTunes-1.0-like "browser" for going seeing scrollable list of artists/albums
+- [ ] True gapless playback ie preloading queued-file before it plays
+- [ ] Playlists (TBD if I'll ever do this, lots of work required)
+- [ ] Queue songs (TBD if I'll ever do this, lots of work required)
 
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
