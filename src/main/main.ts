@@ -351,7 +351,7 @@ const selectLibrary = async (event: IpcMainEvent) => {
     }
 
     // @IMPORTANT: if the song already exists in the user's library port over its additionalInfo
-    if (userConfig?.library[`${result.filePaths[0]}/${files[i]}`]) {
+    if (userConfig?.library?.[`${result.filePaths[0]}/${files[i]}`]) {
       filesToTags[`${result.filePaths[0]}/${files[i]}`].additionalInfo = {
         ...userConfig.library[`${result.filePaths[0]}/${files[i]}`]
           .additionalInfo,
