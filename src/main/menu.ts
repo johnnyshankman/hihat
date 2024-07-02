@@ -73,6 +73,12 @@ export default class MenuBuilder {
             this.mainWindow.webContents.send('menu-select-library');
           },
         },
+        {
+          label: 'reset to blank library',
+          click: () => {
+            this.mainWindow.webContents.send('menu-reset-library');
+          },
+        },
         { type: 'separator' },
 
         {

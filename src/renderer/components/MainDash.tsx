@@ -452,6 +452,10 @@ export default function MainDash() {
     window.electron.ipcRenderer.on('menu-add-songs', () => {
       importNewSongs();
     });
+
+    window.electron.ipcRenderer.on('menu-reset-library', () => {
+      window.electron.ipcRenderer.sendMessage('menu-reset-library');
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**

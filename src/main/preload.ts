@@ -16,6 +16,7 @@ export type Channels =
   | 'show-in-finder'
   | 'menu-select-library'
   | 'menu-add-songs'
+  | 'menu-reset-library'
   | 'song-imported';
 
 export type ArgsBase = Record<Channels, unknown>;

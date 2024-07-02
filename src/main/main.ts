@@ -479,6 +479,20 @@ ipcMain.on('show-in-finder', async (event, arg): Promise<any> => {
 });
 
 /**
+ * @dev for reseting all the user's data in the app
+ */
+ipcMain.on('menu-reset-library', async (event, arg): Promise<any> => {
+  // set the userConfig.json file to an empty object
+  fs.writeFileSync(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+    JSON.stringify({}),
+  );
+  // reload the app
+  app.relaunch();
+  app.exit();
+});
+
+/**
  * @dev for copying text to the user's OS clipboard
  */
 ipcMain.on('copy-to-clipboard', async (event, arg): Promise<any> => {
