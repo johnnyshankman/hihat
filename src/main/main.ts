@@ -85,7 +85,20 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
   });
 });
 
-const ALLOWED_EXTENSIONS = ['mp3', 'flac', 'm4a', 'wav', 'alac', 'aiff', 'ogg', 'oga', 'mogg', 'aac', 'm4p', 'wma'];
+const ALLOWED_EXTENSIONS = [
+  'mp3',
+  'flac',
+  'm4a',
+  'wav',
+  'alac',
+  'aiff',
+  'ogg',
+  'oga',
+  'mogg',
+  'aac',
+  'm4p',
+  'wma',
+];
 
 const findAllMusicFilesRecursively = (dir: string) => {
   const result = [];
