@@ -358,12 +358,17 @@ export default function MainDash() {
         (args.totalSongs - args.songsImported) * 5,
       );
 
-      // convert the estimated time remaining in ms to a human readable format
+      // convert the estimated time from ms to a human readable format
       const minutes = Math.floor(estimatedTimeRemaining / 60000);
-      // if it is less than one minute say `less than a minute`
-      const seconds =
-        minutes < 1 ? 'Time Left: < 1min' : `Time Left: ${minutes}mins...`;
-      setEstimatedTimeRemainingString(seconds);
+      const seconds = Math.floor(estimatedTimeRemaining / 1000);
+      const timeRemainingString =
+        // eslint-disable-next-line no-nested-ternary
+        minutes < 1
+          ? seconds === 0
+            ? 'Processing...'
+            : `${seconds}s left`
+          : `${minutes}mins left`;
+      setEstimatedTimeRemainingString(timeRemainingString);
     });
 
     // once the import is complete, update the store/data
@@ -524,9 +529,9 @@ export default function MainDash() {
             <h4>{`${songsImported} / ${totalSongs}`}</h4>
           </div>
           <div className="flex w-full justify-center pt-2 pb-1 px-2">
-            <TinyText>{`(${
+            <TinyText>{`${
               estimatedTimeRemainingString || 'Calculating...'
-            })`}</TinyText>
+            }`}</TinyText>
           </div>
         </div>
       </Dialog>

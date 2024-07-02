@@ -74,7 +74,7 @@ export default class MenuBuilder {
           },
         },
         {
-          label: 'reset to blank library',
+          label: 'reset hihat data',
           click: () => {
             this.mainWindow.webContents.send('menu-reset-library');
           },
