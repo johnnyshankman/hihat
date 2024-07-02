@@ -498,7 +498,7 @@ export default function LibraryList({
           >
             <div className="flex flex-col gap-4 items-center">
               <h1 className="text-neutral-500">
-                Please import your library...
+                Please select your library folder...
               </h1>
               <Tooltip title="Import Library">
                 <button
