@@ -3,7 +3,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { List } from 'react-virtualized';
 import { LibraryMusic, PlayArrow, Today } from '@mui/icons-material';
-import { Tooltip } from '@mui/material';
+import { CircularProgress, Tooltip } from '@mui/material';
 import { SongSkeletonStructure, StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
 import { convertToMMSS } from '../utils/utils';
@@ -59,6 +59,7 @@ export default function LibraryList({
   /**
    * @dev store hooks
    */
+  const initialized = useMainStore((store) => store.initialized);
   const storeLibrary = useMainStore((store) => store.library);
   const currentSong = usePlayerStore((store) => store.currentSong);
   const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
@@ -319,6 +320,8 @@ export default function LibraryList({
     );
   };
 
+  const hasSongs = Object.keys(filteredLibrary || {}).length;
+
   return (
     <div className="w-full overflow-auto">
       {/**
@@ -452,10 +455,30 @@ export default function LibraryList({
           </div>
         </div>
 
+        {!initialized && (
+          <div
+            className="w-full flex items-center justify-center"
+            style={{
+              height: rowContainerHeight,
+            }}
+          >
+            <div className="flex flex-col gap-4 items-center">
+              <h1 className="text-neutral-500 text-base">Loading</h1>
+              <CircularProgress
+                size={20}
+                className="ml-2"
+                sx={{
+                  color: 'white',
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/**
          * @dev since the list could be 1000s of songs long we must virtualize it
          */}
-        {Object.keys(filteredLibrary || {}).length ? (
+        {hasSongs && initialized && (
           <List
             width={width || 0}
             height={rowContainerHeight}
@@ -465,7 +488,8 @@ export default function LibraryList({
             scrollToAlignment="center"
             scrollToIndex={scrollToIndex}
           />
-        ) : (
+        )}
+        {!hasSongs && initialized && (
           <div
             className="w-full flex items-center justify-center"
             style={{

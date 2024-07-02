@@ -21,6 +21,7 @@ import {
   StyledInputBase,
   TinyText,
 } from './SimpleStyledMaterialUIComponents';
+import { CircularProgress } from '@mui/material';
 
 type AlbumArtMenuState =
   | {
@@ -47,6 +48,7 @@ export default function MainDash() {
   const repeating = usePlayerStore((store) => store.repeating);
   const currentSong = usePlayerStore((store) => store.currentSong);
   const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
+  const setInitialized = useMainStore((store) => store.setInitialized);
   const currentSongDataURL = usePlayerStore(
     (store) => store.currentSongDataURL,
   );
@@ -418,6 +420,7 @@ export default function MainDash() {
    */
   useEffect(() => {
     window.electron.ipcRenderer.once('initialize', (arg) => {
+      setInitialized(true);
       setLibraryInStore(arg.library);
       setFilteredLibrary(arg.library);
 

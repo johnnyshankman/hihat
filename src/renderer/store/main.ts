@@ -6,6 +6,7 @@ interface AdditionalActions {
   setLibrary: (library: { [key: string]: SongSkeletonStructure }) => void;
   setLastPlayedSong: (song: string) => void;
   setLibraryPath: (path: string) => void;
+  setInitialized: (initialized: boolean) => void;
 }
 
 const useMainStore = create<StoreStructure & AdditionalActions>((set) => ({
@@ -16,6 +17,7 @@ const useMainStore = create<StoreStructure & AdditionalActions>((set) => ({
   playlists: [],
   lastPlayedSong: '',
   libraryPath: '',
+  initialized: false,
 
   /**
    * AdditionalActions
@@ -35,6 +37,11 @@ const useMainStore = create<StoreStructure & AdditionalActions>((set) => ({
   setLibraryPath: (path: string) => {
     return set({
       libraryPath: path,
+    });
+  },
+  setInitialized: (initialized: boolean) => {
+    return set({
+      initialized,
     });
   },
 }));

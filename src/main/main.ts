@@ -85,7 +85,9 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
   });
 });
 
-const findAllFilesRecursively = (dir: string) => {
+const ALLOWED_EXTENSIONS = ['mp3', 'flac', 'm4a', 'wav', 'alac', 'aiff', 'ogg', 'oga', 'mogg', 'aac', 'm4p', 'wma'];
+
+const findAllMusicFilesRecursively = (dir: string) => {
   const result = [];
 
   const files = [dir];
@@ -102,7 +104,10 @@ const findAllFilesRecursively = (dir: string) => {
         files.push(path.join(filepath, f)),
       );
     } else if (stat.isFile()) {
-      result.push(path.relative(dir, filepath));
+      const ext = path.extname(filepath).substring(1);
+      if (ALLOWED_EXTENSIONS.includes(ext)) {
+        result.push(path.relative(dir, filepath));
+      }
     }
   } while (files.length !== 0);
 
@@ -117,7 +122,8 @@ const addToLibrary = async (event: IpcMainEvent) => {
   let result: OpenDialogReturnValue;
   try {
     result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openFile', 'multiSelections'],
+      properties: ['openFile', 'openDirectory', 'multiSelections'],
+      filters: [{ name: 'Music', extensions: ALLOWED_EXTENSIONS }],
     });
   } catch (e) {
     console.log(e);
@@ -141,6 +147,14 @@ const addToLibrary = async (event: IpcMainEvent) => {
     // @dev: fallback to picking out the first song and using its parent folder
     const dest = Object.keys(filesToTags)[0];
     destRootFolder = dest.substring(0, dest.lastIndexOf('/'));
+  }
+
+  // if there is only one filePath and it is a directory, then we want to
+  // import all files in that directory and pretend like that was the selection
+  const stat = fs.lstatSync(result.filePaths[0]);
+  if (stat.isDirectory()) {
+    const files = findAllMusicFilesRecursively(result.filePaths[0]);
+    result.filePaths = files.map((f) => `${result.filePaths[0]}/${f}`);
   }
 
   for (let i = 0; i < result.filePaths.length; i += 1) {
@@ -255,7 +269,7 @@ const addToLibrary = async (event: IpcMainEvent) => {
     });
 
   // find the index of the first result.filePath in the orderedFilesToTags
-  // and set that as the currentSongIndex
+  // and set that as the currentSongIndex so we can scroll to it
   const currentSongIndex = Object.keys(orderedFilesToTags).findIndex(
     (key) => key === `${destRootFolder}/${path.basename(result.filePaths[0])}`,
   );
@@ -281,6 +295,7 @@ const selectLibrary = async (event: IpcMainEvent) => {
   try {
     result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory'],
+      filters: [{ name: 'Music', extensions: ALLOWED_EXTENSIONS }],
     });
   } catch (e) {
     console.log(e);
@@ -292,7 +307,7 @@ const selectLibrary = async (event: IpcMainEvent) => {
     return;
   }
 
-  const files = findAllFilesRecursively(result.filePaths[0]);
+  const files = findAllMusicFilesRecursively(result.filePaths[0]);
 
   // create an empty mapping of files to tags we want to cache and re-import on boot
   const filesToTags: { [key: string]: SongSkeletonStructure } = {};

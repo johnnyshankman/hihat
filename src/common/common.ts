@@ -40,4 +40,5 @@ export type StoreStructure = {
   playlists: Playlist[];
   lastPlayedSong: string; // a key into "library"
   libraryPath: string;
+  initialized: boolean;
 };
