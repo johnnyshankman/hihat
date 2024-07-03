@@ -68,7 +68,7 @@ export default class MenuBuilder {
           },
         },
         {
-          label: 'change library location',
+          label: 'select different library',
           click: () => {
             this.mainWindow.webContents.send('menu-select-library');
           },
