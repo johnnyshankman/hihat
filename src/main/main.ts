@@ -135,7 +135,7 @@ const addToLibrary = async (event: IpcMainEvent) => {
   let result: OpenDialogReturnValue;
   try {
     result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openFile', 'openDirectory', 'multiSelections'],
+      properties: ['openFile', 'multiSelections'],
       filters: [{ name: 'Music', extensions: ALLOWED_EXTENSIONS }],
     });
   } catch (e) {
@@ -151,50 +151,27 @@ const addToLibrary = async (event: IpcMainEvent) => {
   const userConfig = parseData(
     path.join(app.getPath('userData'), 'userConfig.json'),
   ) as StoreStructure;
-  const filesToTags = {
-    ...userConfig.library,
-  };
 
-  let destRootFolder = userConfig.libraryPath;
-  if (!destRootFolder) {
-    // @dev: fallback to picking out the first song and using its parent folder
-    const dest = Object.keys(filesToTags)[0];
-    destRootFolder = dest.substring(0, dest.lastIndexOf('/'));
-  }
+  const files = result.filePaths;
+  const filesToTags: { [key: string]: SongSkeletonStructure } = {};
 
-  // if there is only one filePath and it is a directory, then we want to
-  // import all files in that directory and pretend like that was the selection
-  const stat = fs.lstatSync(result.filePaths[0]);
-  if (stat.isDirectory()) {
-    const files = findAllMusicFilesRecursively(result.filePaths[0]);
-    result.filePaths = files.map((f) => `${result.filePaths[0]}/${f}`);
-  }
-
-  for (let i = 0; i < result.filePaths.length; i += 1) {
+  for (let i = 0; i < files.length; i += 1) {
     let metadata: mm.IAudioMetadata;
 
     try {
       // eslint-disable-next-line no-await-in-loop
-      metadata = await mm.parseFile(`${result.filePaths[i]}`);
+      metadata = await mm.parseFile(files[i]);
     } catch (e) {
       event.reply('song-imported', {
         songsImported: i,
-        totalSongs: result.filePaths.length,
+        totalSongs: files.length,
       });
       // eslint-disable-next-line no-continue
       continue;
     }
 
-    const destination = `${destRootFolder}/${path.basename(
-      result.filePaths[i],
-    )}`;
-
     if (metadata && metadata.format.duration && metadata.common.title) {
-      // copy the music file over to the existing library folder
-      fs.copyFileSync(result.filePaths[i], destination);
-
-      // form the data we will save to the userConfig.json file
-      filesToTags[destination] = {
+      filesToTags[files[i]] = {
         common: {
           ...metadata.common,
           picture: [],
@@ -210,40 +187,18 @@ const addToLibrary = async (event: IpcMainEvent) => {
           dateAdded: Date.now(),
         },
       } as SongSkeletonStructure;
-
-      /**
-       * @important if we already have a song file in the library with identical album, title,
-       *            and artist, to the one trying to be added.
-       * 1. remove the old file
-       * 2. replace it with this new one
-       * 3. keep the old additionalInfo so that playCount and lastPlayed are preserved.
-       *
-       * @note This allows users to "upgrade" a file in their library by re-importing it.
-       */
-      const allLibraryKeys = Object.keys(userConfig.library);
-      if (userConfig.library && allLibraryKeys.length > 0) {
-        allLibraryKeys.forEach((key) => {
-          if (
-            userConfig.library[key].common.artist === metadata.common.artist &&
-            userConfig.library[key].common.album === metadata.common.album &&
-            userConfig.library[key].common.title === metadata.common.title
-          ) {
-            delete filesToTags[key];
-            filesToTags[destination] = {
-              ...metadata,
-              additionalInfo: {
-                ...userConfig.library[key].additionalInfo,
-              },
-            };
-          }
-        });
-      }
     }
 
-    // report back to the front end so it can update its ux
+    // @IMPORTANT: if the song already exists in the user's library port over its additionalInfo
+    if (userConfig?.library?.[files[i]]) {
+      filesToTags[files[i]].additionalInfo = {
+        ...userConfig.library[files[i]].additionalInfo,
+      };
+    }
+
     event.reply('song-imported', {
       songsImported: i,
-      totalSongs: result.filePaths.length,
+      totalSongs: files.length,
     });
   }
 
@@ -281,22 +236,23 @@ const addToLibrary = async (event: IpcMainEvent) => {
       orderedFilesToTags[key] = filesToTags[key];
     });
 
-  // find the index of the first result.filePath in the orderedFilesToTags
-  // and set that as the currentSongIndex so we can scroll to it
-  const currentSongIndex = Object.keys(orderedFilesToTags).findIndex(
-    (key) => key === `${destRootFolder}/${path.basename(result.filePaths[0])}`,
-  );
-
-  const initialStore = {
-    ...userConfig,
-    library: orderedFilesToTags,
-    scrollToIndex: currentSongIndex,
+  const updatedLibrary = {
+    ...userConfig.library,
+    ...orderedFilesToTags,
   };
-  event.reply('add-to-library', initialStore);
 
+  const updatedStore = {
+    ...userConfig,
+    library: updatedLibrary,
+  };
+
+  event.reply('add-to-library', updatedStore);
+
+  // write the json file to the user data directory as userConfig.json
+  // for caching purposes. we re-use this during future boots of the app.
   const dataPath = app.getPath('userData');
   const filePath = path.join(dataPath, 'userConfig.json');
-  fs.writeFileSync(filePath, JSON.stringify(initialStore));
+  fs.writeFileSync(filePath, JSON.stringify(updatedStore));
 };
 
 const selectLibrary = async (event: IpcMainEvent) => {
