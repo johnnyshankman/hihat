@@ -42,3 +42,18 @@ export type StoreStructure = {
   libraryPath: string;
   initialized: boolean;
 };
+
+export const ALLOWED_EXTENSIONS = [
+  'mp3',
+  'flac',
+  'm4a',
+  'wav',
+  'alac',
+  'aiff',
+  'ogg',
+  'oga',
+  'mogg',
+  'aac',
+  'm4p',
+  'wma',
+];

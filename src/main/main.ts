@@ -21,7 +21,11 @@ import { File } from 'node-taglib-sharp';
 import opener from 'opener';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { StoreStructure, SongSkeletonStructure } from '../common/common';
+import {
+  StoreStructure,
+  SongSkeletonStructure,
+  ALLOWED_EXTENSIONS,
+} from '../common/common';
 
 class AppUpdater {
   constructor() {
@@ -39,6 +43,33 @@ function parseData(fp: string): StoreStructure {
     return defaultData as StoreStructure;
   }
 }
+
+const findAllMusicFilesRecursively = (dir: string) => {
+  const result = [];
+
+  const files = [dir];
+  do {
+    const filepath = files.pop();
+
+    if (!filepath) {
+      break;
+    }
+
+    const stat = fs.lstatSync(filepath);
+    if (stat.isDirectory()) {
+      fs.readdirSync(filepath).forEach((f) =>
+        files.push(path.join(filepath, f)),
+      );
+    } else if (stat.isFile()) {
+      const ext = path.extname(filepath).substring(1);
+      if (ALLOWED_EXTENSIONS.includes(ext)) {
+        result.push(path.relative(dir, filepath));
+      }
+    }
+  } while (files.length !== 0);
+
+  return result;
+};
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -85,48 +116,6 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
   });
 });
 
-const ALLOWED_EXTENSIONS = [
-  'mp3',
-  'flac',
-  'm4a',
-  'wav',
-  'alac',
-  'aiff',
-  'ogg',
-  'oga',
-  'mogg',
-  'aac',
-  'm4p',
-  'wma',
-];
-
-const findAllMusicFilesRecursively = (dir: string) => {
-  const result = [];
-
-  const files = [dir];
-  do {
-    const filepath = files.pop();
-
-    if (!filepath) {
-      break;
-    }
-
-    const stat = fs.lstatSync(filepath);
-    if (stat.isDirectory()) {
-      fs.readdirSync(filepath).forEach((f) =>
-        files.push(path.join(filepath, f)),
-      );
-    } else if (stat.isFile()) {
-      const ext = path.extname(filepath).substring(1);
-      if (ALLOWED_EXTENSIONS.includes(ext)) {
-        result.push(path.relative(dir, filepath));
-      }
-    }
-  } while (files.length !== 0);
-
-  return result;
-};
-
 const addToLibrary = async (event: IpcMainEvent) => {
   if (!mainWindow) {
     return;
@@ -135,7 +124,7 @@ const addToLibrary = async (event: IpcMainEvent) => {
   let result: OpenDialogReturnValue;
   try {
     result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openFile', 'multiSelections'],
+      properties: ['openFile', 'multiSelections', 'openDirectory'],
       filters: [{ name: 'Music', extensions: ALLOWED_EXTENSIONS }],
     });
   } catch (e) {
@@ -157,6 +146,17 @@ const addToLibrary = async (event: IpcMainEvent) => {
 
   for (let i = 0; i < files.length; i += 1) {
     let metadata: mm.IAudioMetadata;
+
+    // check if the file is a directory and if so, find all music files in it
+    if (fs.lstatSync(files[i]).isDirectory()) {
+      const musicFiles = findAllMusicFilesRecursively(files[i]);
+      musicFiles.forEach((file) => {
+        files.push(`${files[i]}/${file}`);
+      });
+      // continue and skip over the directory
+      // eslint-disable-next-line no-continue
+      continue;
+    }
 
     try {
       // eslint-disable-next-line no-await-in-loop
