@@ -153,7 +153,7 @@ const addToLibrary = async (event: IpcMainEvent) => {
       musicFiles.forEach((file) => {
         files.push(`${files[i]}/${file}`);
       });
-      // continue and skip over the directory
+      // skip over the directory reference itself
       // eslint-disable-next-line no-continue
       continue;
     }
@@ -189,7 +189,10 @@ const addToLibrary = async (event: IpcMainEvent) => {
       } as SongSkeletonStructure;
     }
 
-    // @IMPORTANT: if the song already exists in the user's library port over its additionalInfo
+    /**
+     * @IMPORTANT if the song already exists in the user's library
+     * we must port over its `additionalInfo` to keep playcounts in tact
+     */
     if (userConfig?.library?.[files[i]]) {
       filesToTags[files[i]].additionalInfo = {
         ...userConfig.library[files[i]].additionalInfo,
@@ -244,12 +247,28 @@ const addToLibrary = async (event: IpcMainEvent) => {
   const updatedStore = {
     ...userConfig,
     library: updatedLibrary,
+  } as StoreStructure & {
+    scrollToIndex: number;
   };
+
+  /**
+   * @note this makes the UI scroll to the 1st song we successfully shimmed
+   * into the library, aka not a directory.
+   */
+  const firstSong = Object.keys(orderedFilesToTags).find(
+    (song) => !fs.lstatSync(song).isDirectory(),
+  );
+  const scrollToIndex = Object.keys(updatedLibrary).indexOf(firstSong || '');
+  if (scrollToIndex > -1) {
+    updatedStore.scrollToIndex = scrollToIndex;
+  }
 
   event.reply('add-to-library', updatedStore);
 
-  // write the json file to the user data directory as userConfig.json
-  // for caching purposes. we re-use this during future boots of the app.
+  /**
+   * @note write the json file to the user data directory as userConfig.json
+   * for caching purposes. We will re-use this during future boots of the app.
+   */
   const dataPath = app.getPath('userData');
   const filePath = path.join(dataPath, 'userConfig.json');
   fs.writeFileSync(filePath, JSON.stringify(updatedStore));
@@ -319,7 +338,10 @@ const selectLibrary = async (event: IpcMainEvent) => {
       } as SongSkeletonStructure;
     }
 
-    // @IMPORTANT: if the song already exists in the user's library port over its additionalInfo
+    /**
+     * @IMPORTANT if the song already exists in the user's library
+     * we must port over its additionalInfo to keep playcounts in tact
+     */
     if (userConfig?.library?.[`${result.filePaths[0]}/${files[i]}`]) {
       filesToTags[`${result.filePaths[0]}/${files[i]}`].additionalInfo = {
         ...userConfig.library[`${result.filePaths[0]}/${files[i]}`]
@@ -375,8 +397,10 @@ const selectLibrary = async (event: IpcMainEvent) => {
   };
   event.reply('select-library', initialStore);
 
-  // write the json file to the user data directory as userConfig.json
-  // for caching purposes. we re-use this during future boots of the app.
+  /**
+   * @note write the json file to the user data directory as userConfig.json
+   * for caching purposes. We will re-use this during future boots of the app.
+   */
   const dataPath = app.getPath('userData');
   const filePath = path.join(dataPath, 'userConfig.json');
   fs.writeFileSync(filePath, JSON.stringify(initialStore));
@@ -390,7 +414,7 @@ const selectLibrary = async (event: IpcMainEvent) => {
 ipcMain.on('modify-tag-of-file', async (event, arg): Promise<any> => {
   const filePath = arg.song as string;
   const file = File.createFromPath(filePath);
-  // @ts-ignore - `tag` is not supposed to be indexed into use array syntax
+  // @ts-ignore - `tag` is not supposed to be indexed into using array syntax
   file.tag[arg.tag] = arg.value;
   file.save();
 
@@ -398,14 +422,14 @@ ipcMain.on('modify-tag-of-file', async (event, arg): Promise<any> => {
   const userConfig = parseData(
     path.join(app.getPath('userData'), 'userConfig.json'),
   );
-  // @ts-ignore - `common` is not supposed to be indexed into use array syntax
+
+  // @ts-expect-error - `common` is not supposed to be indexed into using array syntax
   userConfig.library[filePath].common[arg.key] = arg.value;
   fs.writeFileSync(
     path.join(app.getPath('userData'), 'userConfig.json'),
     JSON.stringify(userConfig),
   );
 
-  // reply with the updated song info
   event.reply('modify-tag-of-file', userConfig.library[filePath]);
 });
 
@@ -537,7 +561,7 @@ const createWindow = async () => {
    */
   protocol.registerFileProtocol('my-magic-protocol', (request, callback) => {
     const url = request.url.replace('my-magic-protocol://getMediaFile/', '');
-    // @dev: for things like japanese characters we have to decode things like %E7
+    // @dev: for things like japanese characters we have to decode (e.g. %E7)
     const decodedUrl = decodeURIComponent(url);
     try {
       return callback(decodedUrl);
