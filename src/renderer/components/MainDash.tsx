@@ -8,7 +8,6 @@ import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
 import SearchIcon from '@mui/icons-material/Search';
 import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
-import { CircularProgress } from '@mui/material';
 import { StoreStructure, SongSkeletonStructure } from '../../common/common';
 import AlbumArtMenu from './AlbumArtMenu';
 import useMainStore from '../store/main';

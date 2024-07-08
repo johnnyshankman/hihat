@@ -454,14 +454,14 @@ ipcMain.on('select-library', async (event): Promise<any> => {
 /**
  * @dev for showing a file in Finder on OSX
  */
-ipcMain.on('show-in-finder', async (event, arg): Promise<any> => {
+ipcMain.on('show-in-finder', async (_event, arg): Promise<any> => {
   shell.showItemInFolder(arg.path);
 });
 
 /**
  * @dev for reseting all the user's data in the app
  */
-ipcMain.on('menu-reset-library', async (event, arg): Promise<any> => {
+ipcMain.on('menu-reset-library', async (_event, _arg): Promise<any> => {
   // set the userConfig.json file to an empty object
   fs.writeFileSync(
     path.join(app.getPath('userData'), 'userConfig.json'),
@@ -475,14 +475,14 @@ ipcMain.on('menu-reset-library', async (event, arg): Promise<any> => {
 /**
  * @dev for copying text to the user's OS clipboard
  */
-ipcMain.on('copy-to-clipboard', async (event, arg): Promise<any> => {
+ipcMain.on('copy-to-clipboard', async (_event, arg): Promise<any> => {
   clipboard.writeText(arg.text);
 });
 
 /**
  * @dev for opening a link in the user's default browser
  */
-ipcMain.on('open-in-browser', async (event, arg): Promise<any> => {
+ipcMain.on('open-in-browser', async (_event, arg): Promise<any> => {
   opener(arg.text);
 });
 
@@ -490,7 +490,7 @@ ipcMain.on('open-in-browser', async (event, arg): Promise<any> => {
  * @dev for coyping the artwork data of a song into the user's clipboard,
  * that way they can paste it into another app, like iMessage.
  */
-ipcMain.on('copy-art-to-clipboard', async (event, arg): Promise<any> => {
+ipcMain.on('copy-art-to-clipboard', async (_event, arg): Promise<any> => {
   const filePath = arg.song;
   const metadata = await mm.parseFile(filePath);
   if (metadata.common.picture?.[0].data) {
@@ -504,7 +504,7 @@ ipcMain.on('copy-art-to-clipboard', async (event, arg): Promise<any> => {
  * @dev for downloading the artwork data of a song to the user's computer,
  * that way they can share it with others or use it as a wallpaper.
  */
-ipcMain.on('download-artwork', async (event, arg): Promise<any> => {
+ipcMain.on('download-artwork', async (_event, arg): Promise<any> => {
   if (!mainWindow) {
     return;
   }
