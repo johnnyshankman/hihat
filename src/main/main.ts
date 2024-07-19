@@ -142,7 +142,10 @@ const addToLibrary = async (event: IpcMainEvent) => {
   ) as StoreStructure;
 
   const files = result.filePaths;
-  const filesToTags: { [key: string]: SongSkeletonStructure } = {};
+  // seed the mapping of files to tags with the user's current library
+  const filesToTags = userConfig.library;
+
+  let lastFileNameAdded = '';
 
   for (let i = 0; i < files.length; i += 1) {
     let metadata: mm.IAudioMetadata;
@@ -157,6 +160,15 @@ const addToLibrary = async (event: IpcMainEvent) => {
       // eslint-disable-next-line no-continue
       continue;
     }
+
+    // give me the file name itself
+    const fileName = path.basename(files[i]);
+    const newFilePath = `${userConfig.libraryPath}/${fileName}`;
+    // copy over file into the user's existing library folder, flatten all directories
+    fs.cpSync(files[i], newFilePath);
+
+    // replace files[i] with the new path so we save the path of the file in the user's library not the path of the file from the user's file system
+    files[i] = newFilePath;
 
     try {
       // eslint-disable-next-line no-await-in-loop
@@ -203,6 +215,8 @@ const addToLibrary = async (event: IpcMainEvent) => {
       songsImported: i,
       totalSongs: files.length,
     });
+
+    lastFileNameAdded = fileName;
   }
 
   // sort filesToTags by artist, album, then track number
@@ -239,26 +253,18 @@ const addToLibrary = async (event: IpcMainEvent) => {
       orderedFilesToTags[key] = filesToTags[key];
     });
 
-  const updatedLibrary = {
-    ...userConfig.library,
-    ...orderedFilesToTags,
-  };
-
   const updatedStore = {
     ...userConfig,
-    library: updatedLibrary,
+    library: orderedFilesToTags,
   } as StoreStructure & {
     scrollToIndex: number;
   };
 
-  /**
-   * @note this makes the UI scroll to the 1st song we successfully shimmed
-   * into the library, aka not a directory.
-   */
-  const firstSong = Object.keys(orderedFilesToTags).find(
-    (song) => !fs.lstatSync(song).isDirectory(),
+  // scroll to the last song added
+  const scrollToIndex = Object.keys(updatedStore.library).findIndex((key) =>
+    key.includes(lastFileNameAdded),
   );
-  const scrollToIndex = Object.keys(updatedLibrary).indexOf(firstSong || '');
+
   if (scrollToIndex > -1) {
     updatedStore.scrollToIndex = scrollToIndex;
   }
