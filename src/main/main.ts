@@ -161,13 +161,11 @@ const addToLibrary = async (event: IpcMainEvent) => {
       continue;
     }
 
-    // give me the file name itself
     const fileName = path.basename(files[i]);
+    // copy file into the user's existing library folder, flatten all directories
     const newFilePath = `${userConfig.libraryPath}/${fileName}`;
-    // copy over file into the user's existing library folder, flatten all directories
     fs.cpSync(files[i], newFilePath);
-
-    // replace files[i] with the new path so we save the path of the file in the user's library not the path of the file from the user's file system
+    // replace reference to the file with the new path
     files[i] = newFilePath;
 
     try {
