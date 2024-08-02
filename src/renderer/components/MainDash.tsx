@@ -100,12 +100,14 @@ export default function MainDash() {
    * @param event an IPicture
    */
   const requestAndSetAlbumArtForSong = (song: string) => {
-    // request the album art for the file from the main process
     window.electron.ipcRenderer.sendMessage('get-album-art', song);
-
-    // set the current song data url when the main process responds
     window.electron.ipcRenderer.once('get-album-art', async (event) => {
-      const url = await bufferToDataUrl(event.data, event.format);
+      let url = '';
+      // @important: handle no image metadata for file
+      if (event.data) {
+        url = await bufferToDataUrl(event.data, event.format);
+      }
+
       setCurrentSongDataURL(url);
       if (navigator.mediaSession.metadata?.artwork) {
         navigator.mediaSession.metadata.artwork = [
