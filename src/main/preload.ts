@@ -17,7 +17,10 @@ export type Channels =
   | 'menu-select-library'
   | 'menu-add-songs'
   | 'menu-reset-library'
-  | 'song-imported';
+  | 'menu-dedupe-library'
+  | 'song-imported'
+  // TODO: use this way more for replies
+  | 'update-library';
 
 export type ArgsBase = Record<Channels, unknown>;
 
@@ -61,6 +64,7 @@ export interface ResponseArgs extends ArgsBase {
     song: string;
     songData: StoreStructure['library'][string];
   };
+  'update-library': StoreStructure;
 }
 
 const electronHandler = {

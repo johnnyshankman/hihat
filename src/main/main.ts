@@ -85,6 +85,133 @@ ipcMain.on('get-album-art', async (event, arg: string) => {
   event.reply('get-album-art', metadata.common.picture?.[0] || '');
 });
 
+async function sortFilesByQuality(files: string[]) {
+  // Step 1: Fetch metadata for all files because sort cannot do async operations
+  const metadataArray = await Promise.all(
+    files.map(async (file) => {
+      const metadata = await mm.parseFile(file);
+      return { file, metadata };
+    }),
+  );
+
+  // Step 2: Sort the array based on the metadata we've fetched
+  const sorted = metadataArray.sort((a, b) => {
+    const metadataA = a.metadata;
+    const metadataB = b.metadata;
+
+    // If one of the metadata is null, push it to the end (assuming valid metadata is better)
+    if (!metadataA) return 1;
+    if (!metadataB) return -1;
+
+    // If one is lossless and the other isn't, the lossless one is better
+    if (metadataA.format.lossless && !metadataB.format.lossless) return -1;
+    if (!metadataA.format.lossless && metadataB.format.lossless) return 1;
+
+    // If one has a higher bitrate, it's better
+    if (metadataA.format.bitrate && metadataB.format.bitrate) {
+      if (metadataA.format.bitrate !== metadataB.format.bitrate) {
+        return metadataB.format.bitrate - metadataA.format.bitrate;
+      }
+    }
+
+    // If one has a higher sample rate, it's better
+    if (metadataA.format.sampleRate && metadataB.format.sampleRate) {
+      if (metadataA.format.sampleRate !== metadataB.format.sampleRate) {
+        return metadataB.format.sampleRate - metadataA.format.sampleRate;
+      }
+    }
+
+    // If one has a higher bit depth (bits per sample), it's better
+    if (metadataA.format.bitsPerSample && metadataB.format.bitsPerSample) {
+      if (metadataA.format.bitsPerSample !== metadataB.format.bitsPerSample) {
+        return metadataB.format.bitsPerSample - metadataA.format.bitsPerSample;
+      }
+    }
+
+    // If none of the above distinctions help, consider them equal
+    return 0;
+  });
+
+  // Step 3: Extract the sorted files
+  return sorted.map((item) => item.file);
+}
+
+ipcMain.on('menu-dedupe-library', async (event) => {
+  const userConfig = parseData(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+  ) as StoreStructure;
+  const { library } = userConfig;
+
+  // in miliseconds
+  // const dedupeTime = 5.65237006;
+
+  const duplicatesMap: Record<string, string[]> = {};
+
+  const libraryKeys = Object.keys(library);
+  for (let i = 0; i < libraryKeys.length; i += 1) {
+    const libraryKey = libraryKeys[i];
+    const songData = library[libraryKey];
+
+    // create an idempotent key for the song
+    const { title, artist, album } = songData.common;
+    const key = `${title?.toLowerCase().trim()}-${artist
+      ?.toLowerCase()
+      .trim()}-${album?.toLowerCase().trim()}`;
+
+    console.log('Processing Key', key);
+
+    // if the duplicates map already has this key, skip it.
+    // that means we've already found the duplicates and queued the bad ones for deletion
+    if (duplicatesMap[key]) {
+      console.log('Skipping Key Already Processed', key);
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    // find all dupes of this song
+    // which means the title, artist, and album are identical
+    const dupesOfThisSong = Object.keys(library).filter(
+      (nestedLibraryKey) =>
+        library[nestedLibraryKey].common.title?.toLowerCase().trim() ===
+          title?.toLowerCase().trim() &&
+        library[nestedLibraryKey].common.artist?.toLowerCase().trim() ===
+          artist?.toLowerCase().trim() &&
+        library[nestedLibraryKey].common.album?.toLowerCase().trim() ===
+          album?.toLowerCase().trim(),
+    );
+
+    // eslint-disable-next-line no-await-in-loop
+    const sorted = await sortFilesByQuality(dupesOfThisSong);
+
+    // remove the best version from the list and delete the rest from the library
+    sorted.shift();
+    if (sorted.length) {
+      console.log('Files to Delete', sorted);
+      duplicatesMap[key] = sorted;
+    }
+  }
+
+  // delete all the files in the duplicates map
+  Object.keys(duplicatesMap).forEach((key) => {
+    const filesToDelete = duplicatesMap[key];
+    for (let i = 0; i < filesToDelete.length; i += 1) {
+      delete library[filesToDelete[i]];
+    }
+  });
+
+  // update the long term and short term stores with the new library
+  const updatedStore = {
+    ...userConfig,
+    library,
+  };
+
+  fs.writeFileSync(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+    JSON.stringify(updatedStore),
+  );
+  event.reply('update-library', updatedStore);
+});
+
 /**
  * @dev sets lastPlayedSong in the userConfig.json file to provided arg.path
  * and then also updates that songs lastPlaye timestamp and increased that
@@ -324,6 +451,12 @@ const selectLibrary = async (event: IpcMainEvent) => {
     }
 
     if (metadata && metadata.format.duration && metadata.common.title) {
+      // if the song already exists in the user's library, skip it
+      if (filesToTags[`${result.filePaths[0]}/${files[i]}`]) {
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+
       filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
         common: {
           ...metadata.common,

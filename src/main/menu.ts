@@ -79,6 +79,12 @@ export default class MenuBuilder {
             this.mainWindow.webContents.send('menu-reset-library');
           },
         },
+        {
+          label: 'deduplicate songs',
+          click: () => {
+            this.mainWindow.webContents.send('menu-dedupe-library');
+          },
+        },
         { type: 'separator' },
 
         {

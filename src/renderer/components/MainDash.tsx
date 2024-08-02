@@ -88,6 +88,7 @@ export default function MainDash() {
   >(undefined);
   const [showAlbumArtMenu, setShowAlbumArtMenu] =
     useState<AlbumArtMenuState>(undefined);
+  const [showDedupingProgress, setShowDedupingProgress] = useState(false);
 
   /**
    * @def start functions
@@ -451,6 +452,10 @@ export default function MainDash() {
       }
     });
 
+    /**
+     * initialize the callbacks for all menu items
+     */
+
     window.electron.ipcRenderer.on('menu-select-library', () => {
       importNewLibrary();
     });
@@ -461,6 +466,17 @@ export default function MainDash() {
 
     window.electron.ipcRenderer.on('menu-reset-library', () => {
       window.electron.ipcRenderer.sendMessage('menu-reset-library');
+    });
+
+    window.electron.ipcRenderer.on('menu-dedupe-library', () => {
+      setShowDedupingProgress(true);
+      window.electron.ipcRenderer.sendMessage('menu-dedupe-library');
+    });
+
+    window.electron.ipcRenderer.on('update-library', (arg) => {
+      setShowDedupingProgress(false);
+      setLibraryInStore(arg.library);
+      setFilteredLibrary(arg.library);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -533,6 +549,21 @@ export default function MainDash() {
             <TinyText>{`${
               estimatedTimeRemainingString || 'Calculating...'
             }`}</TinyText>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        className="flex flex-col items-center justify-center content-center p-10"
+        open={showDedupingProgress}
+      >
+        <div className="flex flex-col items-center px-20 pb-6">
+          <DialogTitle>Deduplicating Songs</DialogTitle>
+          <Box sx={{ width: '100%', marginBottom: '12px' }}>
+            <LinearProgress variant="indeterminate" color="inherit" />
+          </Box>
+          <div className="flex w-full justify-center pt-2 pb-1 px-2">
+            <TinyText>This operation will take three to five minutes</TinyText>
           </div>
         </div>
       </Dialog>
