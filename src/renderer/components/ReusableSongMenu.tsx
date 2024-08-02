@@ -87,7 +87,7 @@ export default function ReusableSongMenu(props: SongMenuProps) {
               <TinyText>
                 This will hide the song in your hihat library AND delete its
                 file from your computer. This operation cannot be undone. Are
-                you sure you'd like to proceed?
+                you sure you&apos;d like to proceed?
               </TinyText>
             </div>
           </DialogContent>
@@ -128,7 +128,7 @@ export default function ReusableSongMenu(props: SongMenuProps) {
               <TinyText>
                 This will hide the song in your hihat library and can be undone
                 anytime by re-adding the song to your library. Are you sure
-                you'd like to proceed?
+                you&apos;d like to proceed?
               </TinyText>
             </div>
           </DialogContent>
