@@ -136,6 +136,45 @@ async function sortFilesByQuality(files: string[]) {
   return sorted.map((item) => item.file);
 }
 
+ipcMain.on('hide-song', async (event, arg) => {
+  const userConfig = parseData(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+  ) as StoreStructure;
+
+  // remove the song from the library but not from the filesystem
+  delete userConfig.library[arg.song];
+  const updatedStore = {
+    ...userConfig,
+  };
+
+  fs.writeFileSync(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+    JSON.stringify(updatedStore),
+  );
+  // @todo: rename to update-store not update-library
+  event.reply('update-library', updatedStore);
+});
+
+ipcMain.on('delete-song', async (event, arg) => {
+  const userConfig = parseData(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+  ) as StoreStructure;
+
+  // delete the song from the library and from the filesystem
+  delete userConfig.library[arg.song];
+  fs.unlinkSync(arg.song);
+  const updatedStore = {
+    ...userConfig,
+  };
+
+  fs.writeFileSync(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+    JSON.stringify(updatedStore),
+  );
+
+  event.reply('update-library', updatedStore);
+});
+
 ipcMain.on('menu-dedupe-library', async (event) => {
   const userConfig = parseData(
     path.join(app.getPath('userData'), 'userConfig.json'),
@@ -291,7 +330,16 @@ const addToLibrary = async (event: IpcMainEvent) => {
     const fileName = path.basename(files[i]);
     // copy file into the user's existing library folder, flatten all directories
     const newFilePath = `${userConfig.libraryPath}/${fileName}`;
-    fs.cpSync(files[i], newFilePath);
+    // if src and dest are the same, skip the copy because it's a no op
+    if (files[i] !== newFilePath) {
+      try {
+        fs.cpSync(files[i], newFilePath);
+      } catch (e) {
+        console.error(e);
+        console.error('continuing after failed copy');
+      }
+    }
+
     // replace reference to the file with the new path
     files[i] = newFilePath;
 

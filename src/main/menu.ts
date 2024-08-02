@@ -74,15 +74,15 @@ export default class MenuBuilder {
           },
         },
         {
-          label: 'reset hihat data',
-          click: () => {
-            this.mainWindow.webContents.send('menu-reset-library');
-          },
-        },
-        {
           label: 'deduplicate songs',
           click: () => {
             this.mainWindow.webContents.send('menu-dedupe-library');
+          },
+        },
+        {
+          label: 'reset all hihat data',
+          click: () => {
+            this.mainWindow.webContents.send('menu-reset-library');
           },
         },
         { type: 'separator' },

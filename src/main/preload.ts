@@ -19,6 +19,8 @@ export type Channels =
   | 'menu-reset-library'
   | 'menu-dedupe-library'
   | 'song-imported'
+  | 'hide-song'
+  | 'delete-song'
   // TODO: use this way more for replies
   | 'update-library';
 
@@ -38,6 +40,12 @@ export interface SendMessageArgs extends ArgsBase {
     song: string;
   };
   'download-artwork': {
+    song: string;
+  };
+  'hide-song': {
+    song: string;
+  };
+  'delete-song': {
     song: string;
   };
   'copy-to-clipboard': {
