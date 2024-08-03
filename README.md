@@ -185,7 +185,7 @@ This project was built with the following technologies:
 - [x] Generative shareable Apple Music search links
 - [x] Sort by date added
 - [x] Playcount tracking and sort by playcount
-- [ ] Ability to "hide" songs you don't want to see, without deleting their file
+- [x] Ability to "hide" songs you don't want to see, with or without deleting their file
 - [ ] Edit song metadta
 - [ ] Show some fun stats about your library somewhere, like gb and # of songs
 - [ ] Hide and show columns in the viewer
