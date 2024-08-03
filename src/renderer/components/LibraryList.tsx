@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { List } from 'react-virtualized';
-import { LibraryMusic, PlayArrow, Today } from '@mui/icons-material';
+import { DragIndicator, LibraryMusic, Today } from '@mui/icons-material';
 import { CircularProgress, Tooltip } from '@mui/material';
+import Draggable from 'react-draggable';
 import { SongSkeletonStructure, StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
 import { convertToMMSS } from '../utils/utils';
@@ -12,7 +13,21 @@ import ReusableSongMenu from './ReusableSongMenu';
 
 const ROW_HEIGHT = 25.5;
 
-type FilterTypes = 'title' | 'artist' | 'album' | 'playCount' | 'dateAdded';
+type FilterTypes =
+  | 'title'
+  | 'artist'
+  | 'album'
+  | 'playCount'
+  | 'dateAdded'
+  | 'duration';
+const FILTER_TYPES: FilterTypes[] = [
+  'title',
+  'artist',
+  'album',
+  'duration',
+  'playCount',
+  'dateAdded',
+];
 
 type FilterDirections = 'asc' | 'desc';
 
@@ -69,6 +84,56 @@ export default function LibraryList({
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
   );
+  const [staleWidth, setStaleWidth] = useState(width);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const [columnUXInfo, setColumnUXInfo] = useState([
+    {
+      id: 'title',
+      label: 'Song',
+      width: width * 0.35,
+    },
+    {
+      id: 'artist',
+      label: 'Artist',
+      width: width * 0.2,
+    },
+    {
+      id: 'album',
+      label: 'Album',
+      width: width * 0.2,
+    },
+    {
+      id: 'duration',
+      label: 'Time',
+      width: width * 0.1,
+    },
+    {
+      id: 'dateAdded',
+      label: 'Added',
+      width: width * 0.075,
+      icon: <Today fontSize="inherit" />,
+    },
+    {
+      id: 'playCount',
+      label: 'Plays',
+      width: width * 0.075,
+      icon: <AccessTimeIcon fontSize="inherit" />,
+    },
+  ]);
+
+  useEffect(() => {
+    // recalculate the width of each column proportionally using staleWidth as the base
+    if (staleWidth !== width) {
+      setColumnUXInfo(
+        columnUXInfo.map((column) => ({
+          ...column,
+          width: (column.width / staleWidth) * width,
+        })),
+      );
+      setStaleWidth(width);
+    }
+  }, [width]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * @dev anytime overrideScrollToIndex changes, set a timeout to
@@ -101,161 +166,115 @@ export default function LibraryList({
     useState<FilterDirections>('desc');
   const [songMenu, setSongMenu] = useState<SongMenuState>(undefined);
 
-  const filterByTitle = () => {
+  // create a monolothic filter function that takes in the filter type as the first param
+  const filterLibrary = (filter: FilterTypes): void => {
+    if (isDragging) return;
     if (!storeLibrary) return;
     if (!filteredLibrary) return;
 
     // flip the filter direction
     setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
 
-    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      const aTitle = filteredLibrary[a].common.title?.toLowerCase() || '';
-      const bTitle = filteredLibrary[b].common.title?.toLowerCase() || '';
-      const val = aTitle.localeCompare(bTitle);
-      if (filterDirection === 'desc') {
-        return val * -1;
-      }
-      return val;
-    });
+    let filtered;
+    switch (filter) {
+      case 'title':
+        filtered = Object.keys(filteredLibrary).sort((a, b) => {
+          const aTitle = filteredLibrary[a].common.title?.toLowerCase() || '';
+          const bTitle = filteredLibrary[b].common.title?.toLowerCase() || '';
+          const val = aTitle.localeCompare(bTitle);
+          if (filterDirection === 'desc') {
+            return val * -1;
+          }
+          return val;
+        });
+        break;
+      case 'artist':
+        filtered = Object.keys(filteredLibrary).sort((a, b) => {
+          const artistA = filteredLibrary[a].common?.artist
+            ?.toLowerCase()
+            .replace(/^the /, '');
+          const artistB = filteredLibrary[b].common?.artist
+            ?.toLowerCase()
+            .replace(/^the /, '');
+          const albumA = filteredLibrary[a].common?.album?.toLowerCase();
+          const albumB = filteredLibrary[b].common?.album?.toLowerCase();
+          const trackA = filteredLibrary[a].common?.track?.no;
+          const trackB = filteredLibrary[b].common?.track?.no;
+          // handle null cases
+          if (!artistA) return filterDirection === 'asc' ? -1 : 1;
+          if (!artistB) return filterDirection === 'asc' ? 1 : -1;
 
+          if (!albumA) return -1;
+          if (!albumB) return 1;
+          if (!trackA) return -1;
+          if (!trackB) return 1;
+
+          if (artistA < artistB) return filterDirection === 'asc' ? -1 : 1;
+          if (artistA > artistB) return filterDirection === 'asc' ? 1 : -1;
+
+          if (albumA < albumB) return -1;
+          if (albumA > albumB) return 1;
+          if (trackA < trackB) return -1;
+          if (trackA > trackB) return 1;
+          return 0;
+        });
+        break;
+      case 'album':
+        filtered = Object.keys(filteredLibrary).sort((a, b) => {
+          // sort by album, then track number
+          const albumA = filteredLibrary[a].common?.album?.toLowerCase();
+          const albumB = filteredLibrary[b].common?.album?.toLowerCase();
+          const trackA = filteredLibrary[a].common?.track?.no;
+          const trackB = filteredLibrary[b].common?.track?.no;
+          // handle null cases
+          if (!albumA) return filterDirection === 'asc' ? -1 : 1;
+          if (!albumB) return filterDirection === 'asc' ? 1 : -1;
+          if (!trackA) return -1;
+          if (!trackB) return 1;
+
+          if (albumA < albumB) return filterDirection === 'asc' ? -1 : 1;
+          if (albumA > albumB) return filterDirection === 'asc' ? 1 : -1;
+
+          if (trackA < trackB) return -1;
+          if (trackA > trackB) return 1;
+
+          return 0;
+        });
+        break;
+      case 'playCount':
+        filtered = Object.keys(filteredLibrary).sort((a, b) => {
+          const aPlayCount = filteredLibrary[a].additionalInfo?.playCount || 0;
+          const bPlayCount = filteredLibrary[b].additionalInfo?.playCount || 0;
+          if (aPlayCount < bPlayCount)
+            return filterDirection === 'asc' ? -1 : 1;
+          if (aPlayCount > bPlayCount)
+            return filterDirection === 'asc' ? 1 : -1;
+          return 0;
+        });
+        break;
+      case 'dateAdded':
+        filtered = Object.keys(filteredLibrary).sort((a, b) => {
+          const aDateAdded = filteredLibrary[a].additionalInfo?.dateAdded || 0;
+          const bDateAdded = filteredLibrary[b].additionalInfo?.dateAdded || 0;
+          if (aDateAdded < bDateAdded)
+            return filterDirection === 'asc' ? -1 : 1;
+          if (aDateAdded > bDateAdded)
+            return filterDirection === 'asc' ? 1 : -1;
+          return 0;
+        });
+        break;
+      default:
+        filtered = Object.keys(filteredLibrary);
+    }
+
+    // why am i doing this? cant i just set directly?
     const filteredLib: StoreStructure['library'] = {};
     filtered.forEach((song) => {
       filteredLib[song] = storeLibrary[song];
     });
 
     setFilteredLibrary(filteredLib);
-    setFilterType('title');
-  };
-
-  const filterByArtist = () => {
-    if (!storeLibrary) return;
-    if (!filteredLibrary) return;
-
-    // flip the filter direction
-    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
-
-    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      const artistA = filteredLibrary[a].common?.artist
-        ?.toLowerCase()
-        .replace(/^the /, '');
-      const artistB = filteredLibrary[b].common?.artist
-        ?.toLowerCase()
-        .replace(/^the /, '');
-      const albumA = filteredLibrary[a].common?.album?.toLowerCase();
-      const albumB = filteredLibrary[b].common?.album?.toLowerCase();
-      const trackA = filteredLibrary[a].common?.track?.no;
-      const trackB = filteredLibrary[b].common?.track?.no;
-      // handle null cases
-      if (!artistA) return filterDirection === 'asc' ? -1 : 1;
-      if (!artistB) return filterDirection === 'asc' ? 1 : -1;
-
-      if (!albumA) return -1;
-      if (!albumB) return 1;
-      if (!trackA) return -1;
-      if (!trackB) return 1;
-
-      if (artistA < artistB) return filterDirection === 'asc' ? -1 : 1;
-      if (artistA > artistB) return filterDirection === 'asc' ? 1 : -1;
-
-      if (albumA < albumB) return -1;
-      if (albumA > albumB) return 1;
-      if (trackA < trackB) return -1;
-      if (trackA > trackB) return 1;
-      return 0;
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
-
-    setFilteredLibrary(filteredLib);
-    setFilterType('artist');
-  };
-
-  const filterByPlayCount = () => {
-    if (!storeLibrary) return;
-    if (!filteredLibrary) return;
-
-    // flip the filter direction
-    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
-
-    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      const aPlayCount = filteredLibrary[a].additionalInfo?.playCount || 0;
-      const bPlayCount = filteredLibrary[b].additionalInfo?.playCount || 0;
-      if (aPlayCount < bPlayCount) return filterDirection === 'asc' ? -1 : 1;
-      if (aPlayCount > bPlayCount) return filterDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
-
-    setFilteredLibrary(filteredLib);
-    setFilterType('playCount');
-  };
-
-  const filterByAlbum = () => {
-    if (!storeLibrary) return;
-    if (!filteredLibrary) return;
-
-    // flip the filter direction
-    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
-
-    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      // sort by album, then track number
-      const albumA = filteredLibrary[a].common?.album?.toLowerCase();
-      const albumB = filteredLibrary[b].common?.album?.toLowerCase();
-      const trackA = filteredLibrary[a].common?.track?.no;
-      const trackB = filteredLibrary[b].common?.track?.no;
-      // handle null cases
-      if (!albumA) return filterDirection === 'asc' ? -1 : 1;
-      if (!albumB) return filterDirection === 'asc' ? 1 : -1;
-      if (!trackA) return -1;
-      if (!trackB) return 1;
-
-      if (albumA < albumB) return filterDirection === 'asc' ? -1 : 1;
-      if (albumA > albumB) return filterDirection === 'asc' ? 1 : -1;
-
-      if (trackA < trackB) return -1;
-      if (trackA > trackB) return 1;
-
-      return 0;
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
-
-    setFilteredLibrary(filteredLib);
-    setFilterType('album');
-  };
-
-  const filterByDateAdded = () => {
-    if (!storeLibrary) return;
-    if (!filteredLibrary) return;
-
-    // flip the filter direction
-    setFilterDirection(filterDirection === 'asc' ? 'desc' : 'asc');
-
-    const filtered = Object.keys(filteredLibrary).sort((a, b) => {
-      const aDateAdded = filteredLibrary[a].additionalInfo?.dateAdded || 0;
-      const bDateAdded = filteredLibrary[b].additionalInfo?.dateAdded || 0;
-      if (aDateAdded < bDateAdded) return filterDirection === 'asc' ? -1 : 1;
-      if (aDateAdded > bDateAdded) return filterDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
-
-    setFilteredLibrary(filteredLib);
-    setFilterType('dateAdded');
+    setFilterType(filter);
   };
 
   /**
@@ -292,19 +311,44 @@ export default function LibraryList({
         data-state={song === currentSong ? 'selected' : undefined}
         className="flex w-full items-center border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
       >
-        <div className="select-none whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <div
+          className={`select-none whitespace-nowrap	overflow-hidden py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0`}
+          style={{
+            width: `${columnUXInfo[0].width}px`,
+          }}
+        >
           {filteredLibrary?.[song].common.title}
         </div>
-        <div className="select-none whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <div
+          className="select-none whitespace-nowrap	overflow-hidden py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+          style={{
+            width: `${columnUXInfo[1].width}px`,
+          }}
+        >
           {filteredLibrary?.[song].common.artist}
         </div>
-        <div className="select-none whitespace-nowrap	overflow-hidden flex-1 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <div
+          className="select-none whitespace-nowrap	overflow-hidden py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+          style={{
+            width: `${columnUXInfo[2].width}px`,
+          }}
+        >
           {filteredLibrary?.[song].common.album}
         </div>
-        <div className="select-none w-16 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <div
+          className="select-none py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+          style={{
+            width: `${columnUXInfo[3].width}px`,
+          }}
+        >
           {convertToMMSS(filteredLibrary?.[song].format.duration || 0)}
         </div>
-        <div className="select-none w-16 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <div
+          className="select-none py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+          style={{
+            width: `${columnUXInfo[4].width}px`,
+          }}
+        >
           {new Date(
             filteredLibrary?.[song].additionalInfo.dateAdded,
           ).toLocaleDateString('en-us', {
@@ -313,7 +357,12 @@ export default function LibraryList({
             day: 'numeric',
           })}
         </div>
-        <div className="select-none whitespace-nowrap	overflow-hidden w-12 py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <div
+          className="select-none whitespace-nowrap	overflow-hidden py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0"
+          style={{
+            width: `${columnUXInfo[5].width}px`,
+          }}
+        >
           {filteredLibrary?.[song].additionalInfo.playCount || '-'}
         </div>
       </div>
@@ -321,6 +370,19 @@ export default function LibraryList({
   };
 
   const hasSongs = Object.keys(filteredLibrary || {}).length;
+
+  const updateColumnWidth = (index: number, deltaX: number) => {
+    // edit the width of columnUXInfo[index] based on the drag delta
+    const newColumnUXInfo = [...columnUXInfo];
+    newColumnUXInfo[index].width += deltaX;
+
+    // check if the width is less than 100
+    if (newColumnUXInfo[index].width < 80) {
+      newColumnUXInfo[index].width = 80;
+    }
+
+    setColumnUXInfo(newColumnUXInfo);
+  };
 
   return (
     <div className="w-full overflow-auto">
@@ -342,116 +404,55 @@ export default function LibraryList({
       <div className="w-full text-[11px]  mb-[1px]">
         <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
           <div className="flex transition-colors divide-neutral-800 divide-x mr-4">
-            <button
-              onClick={filterByTitle}
-              type="button"
-              className="select-none flex leading-[1em] items-center py-1.5 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-            >
-              Song
-              {/* if this is the selected filter add an up or down arrow represending the filter direction */}
-              {filterType === 'title' && (
-                <span
-                  className={`${
-                    filterDirection === 'asc'
-                      ? 'rotate-180'
-                      : 'relative bottom-[2px]'
-                  } inline-block ml-2`}
-                >
-                  <FilterListIcon fontSize="inherit" />
-                </span>
-              )}
-            </button>
-            <button
-              onClick={filterByArtist}
-              type="button"
-              className="select-none flex leading-[1em] items-center py-1.5 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-            >
-              Artist
-              {filterType === 'artist' && (
-                <span
-                  className={`${
-                    filterDirection === 'asc'
-                      ? 'rotate-180'
-                      : 'relative bottom-[2px]'
-                  } inline-block ml-2`}
-                >
-                  <FilterListIcon fontSize="inherit" />
-                </span>
-              )}
-            </button>
-            <button
-              onClick={filterByAlbum}
-              type="button"
-              className="select-none flex leading-[1em] items-center py-1.5 flex-1 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-            >
-              Album
-              {filterType === 'album' && (
-                <span
-                  className={`${
-                    filterDirection === 'asc'
-                      ? 'rotate-180'
-                      : 'relative bottom-[2px]'
-                  } inline-block ml-2`}
-                >
-                  <FilterListIcon fontSize="inherit" />
-                </span>
-              )}
-            </button>
-            {/**
-             * @dev slightly diff size to accomodate the lack of scroll bar
-             * next to it, unlike a normal row.
-             */}
-            <Tooltip title="Duration">
+            {FILTER_TYPES.map((filter, index) => (
               <button
+                key={filter}
+                onClick={() => filterLibrary(filter)}
                 type="button"
-                aria-label="duration"
-                className="select-none flex leading-[1em] items-center py-1.5 w-16 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
+                className={`select-none flex flow-row leading-[1em] items-center justify-between py-1.5 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0`}
+                style={{
+                  width: `${columnUXInfo[index].width}px`,
+                }}
               >
-                <AccessTimeIcon fontSize="inherit" />
+                <span
+                  className={`select-none flex items-center text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0`}
+                >
+                  {columnUXInfo[index].icon || columnUXInfo[index].label}
+                  {filterType === filter && (
+                    <span
+                      className={`${
+                        filterDirection === 'asc'
+                          ? 'rotate-180'
+                          : 'relative bottom-[2px]'
+                      } inline-block ml-2`}
+                    >
+                      <FilterListIcon fontSize="inherit" />
+                    </span>
+                  )}
+                </span>
+                <Draggable
+                  axis="x"
+                  bounds="parent"
+                  defaultClassName="DragHandle"
+                  defaultClassNameDragging="DragHandleActive"
+                  onDrag={(event, { deltaX }) => {
+                    updateColumnWidth(index, deltaX);
+                  }}
+                  onStart={() => {
+                    setIsDragging(true);
+                  }}
+                  onStop={() => {
+                    window.setTimeout(() => {
+                      setIsDragging(false);
+                    }, 100);
+                  }}
+                  // @ts-expect-error - purposely breaking the lib so transform results in bunk transform
+                  position={{ x: 0 }}
+                >
+                  <DragIndicator fontSize="inherit" />
+                </Draggable>
               </button>
-            </Tooltip>
-            <Tooltip title="Date Added">
-              <button
-                type="button"
-                aria-label="duration"
-                onClick={filterByDateAdded}
-                className="select-none flex leading-[1em] items-center py-1.5 w-16 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-              >
-                <Today fontSize="inherit" />
-                {filterType === 'dateAdded' && (
-                  <span
-                    className={`${
-                      filterDirection === 'asc'
-                        ? 'rotate-180'
-                        : 'relative bottom-[2px]'
-                    } inline-block ml-2`}
-                  >
-                    <FilterListIcon fontSize="inherit" />
-                  </span>
-                )}
-              </button>
-            </Tooltip>
-            <Tooltip title="Plays">
-              <button
-                type="button"
-                aria-label="duration"
-                onClick={filterByPlayCount}
-                className="select-none flex leading-[1em] items-center py-1.5 w-12 text-center px-4 align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0"
-              >
-                <PlayArrow fontSize="inherit" />
-                {filterType === 'playCount' && (
-                  <span
-                    className={`${
-                      filterDirection === 'asc'
-                        ? 'rotate-180'
-                        : 'relative bottom-[2px]'
-                    } inline-block ml-2`}
-                  >
-                    <FilterListIcon fontSize="inherit" />
-                  </span>
-                )}
-              </button>
-            </Tooltip>
+            ))}
           </div>
         </div>
 

@@ -723,20 +723,22 @@ export default function MainDash() {
         </Box>
       </div>
 
-      <LibraryList
-        width={width || 0}
-        rowContainerHeight={rowContainerHeight}
-        initialScrollIndex={initialScrollIndex}
-        playSong={async (song, meta) => {
-          // if the user clicks on the currently playing song, start it over
-          if (currentSong === song) {
-            await startCurrentSongOver();
-          } else {
-            await playSong(song, meta);
-          }
-        }}
-        onImportLibrary={importNewLibrary}
-      />
+      {width && (
+        <LibraryList
+          width={width}
+          rowContainerHeight={rowContainerHeight}
+          initialScrollIndex={initialScrollIndex}
+          playSong={async (song, meta) => {
+            // if the user clicks on the currently playing song, start it over
+            if (currentSong === song) {
+              await startCurrentSongOver();
+            } else {
+              await playSong(song, meta);
+            }
+          }}
+          onImportLibrary={importNewLibrary}
+        />
+      )}
 
       <StaticPlayer
         audioTagRef={audioTagRef}
