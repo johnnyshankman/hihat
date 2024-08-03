@@ -35,15 +35,70 @@ class AppUpdater {
   }
 }
 
-function parseData(fp: string): StoreStructure {
-  const defaultData = {};
+let mainWindow: BrowserWindow | null = null;
+
+/**
+ * Utility functions
+ */
+
+/**
+ * @dev installs the React DevTools and Redux DevTools as extensions
+ */
+const installExtensions = async () => {
+  const installer = require('electron-devtools-installer');
+  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
+  const extensions = ['REACT_DEVELOPER_TOOLS'];
+
+  return installer
+    .default(
+      extensions.map((name) => installer[name]),
+      forceDownload,
+    )
+    .catch(console.log);
+};
+
+/**
+ * Get JSON data from a file at some filepath
+ *
+ * @param fp filepath
+ * @returns the parsed data from the file at the filepath
+ */
+function parseData(fp: string): any {
   try {
-    return JSON.parse(fs.readFileSync(fp, 'utf8')) as StoreStructure;
+    return JSON.parse(fs.readFileSync(fp, 'utf8')) as any;
   } catch (error) {
-    return defaultData as StoreStructure;
+    return {};
   }
 }
 
+/**
+ * Get the user's configuration data from the userConfig.json file
+ *
+ * @returns the user's configuration data as a StoreStructure
+ */
+function getUserConfig(): StoreStructure {
+  return parseData(path.join(app.getPath('userData'), 'userConfig.json'));
+}
+
+/**
+ * Get the user's userConfig.json filepath and write the data to it
+ * in a synchronous and stringified manner. Ensures that we always
+ * write a bonafide StoreStructure object to the file.
+ *
+ * @param data | a StoreStructure object
+ * @returns void
+ */
+function writeFileSyncToUserConfig(data: StoreStructure) {
+  fs.writeFileSync(
+    path.join(app.getPath('userData'), 'userConfig.json'),
+    JSON.stringify(data),
+  );
+}
+
+/**
+ * @dev recursively find all music files in a directory
+ * @param dir the directory to search for music files in
+ */
 const findAllMusicFilesRecursively = (dir: string) => {
   const result = [];
 
@@ -71,22 +126,21 @@ const findAllMusicFilesRecursively = (dir: string) => {
   return result;
 };
 
-let mainWindow: BrowserWindow | null = null;
-
 /**
- * @dev for requesting album art data. taking every music metadata album art
- *      in library and sending it over is much too large for the IPC
- *      so we lazy the art for one song at a time when the user clicks on a song
- *      via this event.
+ * Sorts a group of files considered to be duplicates, but of varying quality.
+ * The sorting is based on the following criteria:
+ * 1. Lossless files are better than lossy files
+ * 2. Higher bitrate is better
+ * 3. Higher sample rate is better
+ * 4. Higher bit depth is better
+ * 5. Files with album art are better
+ * 6. If none of the above distinctions help, consider them equal
+ *
+ * @param files | an array of file paths
+ * @returns an array of file paths sorted by quality
  */
-ipcMain.on('get-album-art', async (event, arg: string) => {
-  const songFilePath = arg;
-  const metadata = await mm.parseFile(songFilePath);
-  event.reply('get-album-art', metadata.common.picture?.[0] || '');
-});
-
 async function sortFilesByQuality(files: string[]) {
-  // Step 1: Fetch metadata for all files because sort cannot do async operations
+  // setup: fetch metadata for all files because we cant do async in sort()
   const metadataArray = await Promise.all(
     files.map(async (file) => {
       const metadata = await mm.parseFile(file);
@@ -94,7 +148,6 @@ async function sortFilesByQuality(files: string[]) {
     }),
   );
 
-  // Step 2: Sort the array based on the metadata we've fetched
   const sorted = metadataArray.sort((a, b) => {
     const metadataA = a.metadata;
     const metadataB = b.metadata;
@@ -128,6 +181,10 @@ async function sortFilesByQuality(files: string[]) {
       }
     }
 
+    // If one has album art and the other doesn't, the one with album art is better
+    if (metadataA.common.picture && !metadataB.common.picture) return -1;
+    if (!metadataA.common.picture && metadataB.common.picture) return 1;
+
     // If none of the above distinctions help, consider them equal
     return 0;
   });
@@ -136,49 +193,8 @@ async function sortFilesByQuality(files: string[]) {
   return sorted.map((item) => item.file);
 }
 
-ipcMain.on('hide-song', async (event, arg) => {
-  const userConfig = parseData(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-  ) as StoreStructure;
-
-  // remove the song from the library but not from the filesystem
-  delete userConfig.library[arg.song];
-  const updatedStore = {
-    ...userConfig,
-  };
-
-  fs.writeFileSync(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-    JSON.stringify(updatedStore),
-  );
-  // @todo: rename to update-store not update-library
-  event.reply('update-library', updatedStore);
-});
-
-ipcMain.on('delete-song', async (event, arg) => {
-  const userConfig = parseData(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-  ) as StoreStructure;
-
-  // delete the song from the library and from the filesystem
-  delete userConfig.library[arg.song];
-  fs.unlinkSync(arg.song);
-  const updatedStore = {
-    ...userConfig,
-  };
-
-  fs.writeFileSync(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-    JSON.stringify(updatedStore),
-  );
-
-  event.reply('update-library', updatedStore);
-});
-
-ipcMain.on('menu-dedupe-library', async (event) => {
-  const userConfig = parseData(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-  ) as StoreStructure;
+const hideOrDeleteDupes = async (event: IpcMainEvent, del: boolean) => {
+  const userConfig = getUserConfig();
   const { library } = userConfig;
 
   // in miliseconds
@@ -235,6 +251,10 @@ ipcMain.on('menu-dedupe-library', async (event) => {
     const filesToDelete = duplicatesMap[key];
     for (let i = 0; i < filesToDelete.length; i += 1) {
       delete library[filesToDelete[i]];
+
+      if (del) {
+        fs.unlinkSync(filesToDelete[i]);
+      }
     }
   });
 
@@ -244,11 +264,73 @@ ipcMain.on('menu-dedupe-library', async (event) => {
     library,
   };
 
-  fs.writeFileSync(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-    JSON.stringify(updatedStore),
-  );
-  event.reply('update-library', updatedStore);
+  return updatedStore;
+};
+
+/**
+ * IPC Main Handlers
+ */
+
+/**
+ * @dev for requesting album art data. taking every music metadata album art
+ *      in library and sending it over is much too large for the IPC
+ *      so we lazy the art for one song at a time when the user clicks on a song
+ *      via this event.
+ */
+ipcMain.on('get-album-art', async (event, arg: string) => {
+  const songFilePath = arg;
+  const metadata = await mm.parseFile(songFilePath);
+  event.reply('get-album-art', metadata.common.picture?.[0] || '');
+});
+
+/**
+ * @dev removes the requested song from the library but not from the filesystem
+ */
+ipcMain.on('hide-song', async (event, arg) => {
+  const userConfig = getUserConfig();
+
+  delete userConfig.library[arg.song];
+  const updatedStore = {
+    ...userConfig,
+  };
+  writeFileSyncToUserConfig(updatedStore);
+
+  // @todo: rename to update-store not update-store
+  event.reply('update-store', updatedStore);
+});
+
+/**
+ * @dev removes the requested song from the library and from the filesystem
+ */
+ipcMain.on('delete-song', async (event, arg) => {
+  const userConfig = getUserConfig();
+
+  delete userConfig.library[arg.song];
+  fs.unlinkSync(arg.song);
+  const updatedStore = {
+    ...userConfig,
+  };
+  writeFileSyncToUserConfig(updatedStore);
+
+  event.reply('update-store', updatedStore);
+});
+
+/**
+ * @dev for hiding duplicate songs in the user's library
+ */
+ipcMain.on('menu-hide-dupes', async (event) => {
+  const updatedStore = await hideOrDeleteDupes(event, false);
+  writeFileSyncToUserConfig(updatedStore);
+  event.reply('update-store', updatedStore);
+});
+
+/**
+ * @dev for deleting duplicate songs in the user's library
+ */
+ipcMain.on('menu-delete-dupes', async (event) => {
+  const updatedStore = await hideOrDeleteDupes(event, true);
+  writeFileSyncToUserConfig(updatedStore);
+  event.reply('update-store', updatedStore);
 });
 
 /**
@@ -258,9 +340,7 @@ ipcMain.on('menu-dedupe-library', async (event) => {
  */
 ipcMain.on('set-last-played-song', async (event, arg: string) => {
   const songFilePath = arg;
-  const userConfig = parseData(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-  ) as StoreStructure;
+  const userConfig = getUserConfig();
 
   userConfig.lastPlayedSong = songFilePath;
 
@@ -271,10 +351,7 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
     }
   });
 
-  fs.writeFileSync(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-    JSON.stringify(userConfig),
-  );
+  writeFileSyncToUserConfig(userConfig);
 
   event.reply('set-last-played-song', {
     song: songFilePath,
@@ -282,7 +359,32 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
   });
 });
 
-const addToLibrary = async (event: IpcMainEvent) => {
+/**
+ * @dev for requesting the modification of a tag of a media file
+ *      and then modifying it in the app as well as cache'ing it
+ *      in the user's app data directory.
+ */
+ipcMain.on('modify-tag-of-file', async (event, arg): Promise<any> => {
+  const filePath = arg.song as string;
+  const file = File.createFromPath(filePath);
+  // @ts-ignore - `tag` is not supposed to be indexed into using array syntax
+  file.tag[arg.tag] = arg.value;
+  file.save();
+
+  const userConfig = getUserConfig();
+  // @ts-expect-error - `common` is not supposed to be indexed into using array syntax
+  userConfig.library[filePath].common[arg.key] = arg.value;
+  writeFileSyncToUserConfig(userConfig);
+
+  event.reply('modify-tag-of-file', userConfig.library[filePath]);
+});
+
+/**
+ * @dev for requesting the directory of music the user wants to import
+ *      and then importing it into the app as well as cache'ing it
+ *     in the user's app data directory.
+ */
+ipcMain.on('add-to-library', async (event): Promise<any> => {
   if (!mainWindow) {
     return;
   }
@@ -303,9 +405,7 @@ const addToLibrary = async (event: IpcMainEvent) => {
     return;
   }
 
-  const userConfig = parseData(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-  ) as StoreStructure;
+  const userConfig = getUserConfig();
 
   const files = result.filePaths;
   // seed the mapping of files to tags with the user's current library
@@ -430,7 +530,7 @@ const addToLibrary = async (event: IpcMainEvent) => {
     ...userConfig,
     library: orderedFilesToTags,
   } as StoreStructure & {
-    scrollToIndex: number;
+    scrollToIndex?: number;
   };
 
   // scroll to the last song added
@@ -442,18 +542,20 @@ const addToLibrary = async (event: IpcMainEvent) => {
     updatedStore.scrollToIndex = scrollToIndex;
   }
 
-  event.reply('add-to-library', updatedStore);
-
   /**
    * @note write the json file to the user data directory as userConfig.json
-   * for caching purposes. We will re-use this during future boots of the app.
+   * for caching purposes. We re-use this during future boots of the app.
    */
-  const dataPath = app.getPath('userData');
-  const filePath = path.join(dataPath, 'userConfig.json');
-  fs.writeFileSync(filePath, JSON.stringify(updatedStore));
-};
+  writeFileSyncToUserConfig(updatedStore);
+  event.reply('add-to-library', updatedStore);
+});
 
-const selectLibrary = async (event: IpcMainEvent) => {
+/**
+ * @dev for requesting the directory of music the user wants to import
+ *      and then importing it into the app as well as cache'ing it
+ *     in the user's app data directory.
+ */
+ipcMain.on('select-library', async (event): Promise<any> => {
   if (!mainWindow) {
     return;
   }
@@ -479,9 +581,7 @@ const selectLibrary = async (event: IpcMainEvent) => {
   // create an empty mapping of files to tags we want to cache and re-import on boot
   const filesToTags: { [key: string]: SongSkeletonStructure } = {};
 
-  const userConfig = parseData(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-  ) as StoreStructure;
+  const userConfig = getUserConfig();
 
   for (let i = 0; i < files.length; i += 1) {
     let metadata: mm.IAudioMetadata;
@@ -579,61 +679,15 @@ const selectLibrary = async (event: IpcMainEvent) => {
     playlists: [],
     lastPlayedSong: '',
     libraryPath: result.filePaths[0],
+    initialized: true,
   };
-  event.reply('select-library', initialStore);
 
   /**
    * @note write the json file to the user data directory as userConfig.json
    * for caching purposes. We will re-use this during future boots of the app.
    */
-  const dataPath = app.getPath('userData');
-  const filePath = path.join(dataPath, 'userConfig.json');
-  fs.writeFileSync(filePath, JSON.stringify(initialStore));
-};
-
-/**
- * @dev for requesting the modification of a tag of a media file
- *      and then modifying it in the app as well as cache'ing it
- *      in the user's app data directory.
- */
-ipcMain.on('modify-tag-of-file', async (event, arg): Promise<any> => {
-  const filePath = arg.song as string;
-  const file = File.createFromPath(filePath);
-  // @ts-ignore - `tag` is not supposed to be indexed into using array syntax
-  file.tag[arg.tag] = arg.value;
-  file.save();
-
-  // now modify the userConfig.json file to reflect the changes
-  const userConfig = parseData(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-  );
-
-  // @ts-expect-error - `common` is not supposed to be indexed into using array syntax
-  userConfig.library[filePath].common[arg.key] = arg.value;
-  fs.writeFileSync(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-    JSON.stringify(userConfig),
-  );
-
-  event.reply('modify-tag-of-file', userConfig.library[filePath]);
-});
-
-/**
- * @dev for requesting the directory of music the user wants to import
- *      and then importing it into the app as well as cache'ing it
- *     in the user's app data directory.
- */
-ipcMain.on('add-to-library', async (event): Promise<any> => {
-  await addToLibrary(event);
-});
-
-/**
- * @dev for requesting the directory of music the user wants to import
- *      and then importing it into the app as well as cache'ing it
- *     in the user's app data directory.
- */
-ipcMain.on('select-library', async (event): Promise<any> => {
-  await selectLibrary(event);
+  writeFileSyncToUserConfig(initialStore);
+  event.reply('select-library', initialStore);
 });
 
 /**
@@ -648,10 +702,13 @@ ipcMain.on('show-in-finder', async (_event, arg): Promise<any> => {
  */
 ipcMain.on('menu-reset-library', async (_event, _arg): Promise<any> => {
   // set the userConfig.json file to an empty object
-  fs.writeFileSync(
-    path.join(app.getPath('userData'), 'userConfig.json'),
-    JSON.stringify({}),
-  );
+  writeFileSyncToUserConfig({
+    library: {},
+    playlists: [],
+    lastPlayedSong: '',
+    libraryPath: '',
+    initialized: true,
+  });
   // reload the app
   app.relaunch();
   app.exit();
@@ -721,19 +778,6 @@ if (isDebug) {
   require('electron-debug')();
 }
 
-const installExtensions = async () => {
-  const installer = require('electron-devtools-installer');
-  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  const extensions = ['REACT_DEVELOPER_TOOLS'];
-
-  return installer
-    .default(
-      extensions.map((name) => installer[name]),
-      forceDownload,
-    )
-    .catch(console.log);
-};
-
 const createWindow = async () => {
   if (isDebug) {
     await installExtensions();
@@ -752,7 +796,9 @@ const createWindow = async () => {
       return callback(decodedUrl);
     } catch (error) {
       console.error(error);
-      return callback(404);
+      return callback({
+        statusCode: 404,
+      });
     }
   });
 
@@ -802,24 +848,17 @@ const createWindow = async () => {
       throw new Error('"mainWindow" is not defined');
     }
 
-    /**
-     * @dev read the userConfig.json file from the user data directory
-     *     and send the contents to the renderer process to initialize
-     *    the app.
-     */
-    const dataPath = app.getPath('userData');
-    const filePath = path.join(dataPath, 'userConfig.json');
-    const contents = parseData(filePath);
+    const userConfig = getUserConfig();
 
     /**
      * @important shim any missing data from updates between versions of app
      * 1. add lastPlayed to all songs and save it back to the userConfig.json file
      * 2. TBD
      */
-    if (contents.library) {
-      Object.keys(contents.library).forEach((key) => {
+    if (userConfig.library) {
+      Object.keys(userConfig.library).forEach((key) => {
         const song = {
-          ...contents.library[key],
+          ...userConfig.library[key],
         };
         if (song.additionalInfo === undefined) {
           song.additionalInfo = {
@@ -833,13 +872,12 @@ const createWindow = async () => {
           song.additionalInfo.dateAdded = Date.now();
         }
 
-        contents.library[key] = song;
+        userConfig.library[key] = song;
       });
     }
 
-    fs.writeFileSync(filePath, JSON.stringify(contents));
-
-    mainWindow.webContents.send('initialize', contents);
+    writeFileSyncToUserConfig(userConfig);
+    mainWindow.webContents.send('initialize', userConfig);
   });
 
   /**

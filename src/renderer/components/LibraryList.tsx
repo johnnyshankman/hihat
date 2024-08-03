@@ -455,6 +455,9 @@ export default function LibraryList({
           </div>
         </div>
 
+        {/**
+         * @dev Loading UX for when the library is being loaded from main process over IPC
+         */}
         {!initialized && (
           <div
             className="w-full flex items-center justify-center"
@@ -489,6 +492,10 @@ export default function LibraryList({
             scrollToIndex={scrollToIndex}
           />
         )}
+
+        {/**
+         * @dev FTUE for when the user has no songs in their library
+         */}
         {!hasSongs && initialized && (
           <div
             className="w-full flex items-center justify-center"

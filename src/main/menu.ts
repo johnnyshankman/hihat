@@ -74,9 +74,15 @@ export default class MenuBuilder {
           },
         },
         {
-          label: 'deduplicate songs',
+          label: 'hide duplicate songs',
           click: () => {
-            this.mainWindow.webContents.send('menu-dedupe-library');
+            this.mainWindow.webContents.send('menu-hide-dupes');
+          },
+        },
+        {
+          label: 'delete duplicate songs',
+          click: () => {
+            this.mainWindow.webContents.send('menu-delete-dupes');
           },
         },
         {

@@ -91,7 +91,7 @@ export default function MainDash() {
   const [showDedupingProgress, setShowDedupingProgress] = useState(false);
 
   /**
-   * @def start functions
+   * @def functions
    */
 
   /**
@@ -149,7 +149,6 @@ export default function MainDash() {
    *      last played song into the userConfig for persistence.
    */
   const playSong = async (song: string, meta: SongSkeletonStructure) => {
-    // update the navigator
     if (
       navigator.mediaSession.metadata?.title &&
       meta.common.title &&
@@ -350,11 +349,15 @@ export default function MainDash() {
    * @dev allow user to select some files and import them into the library
    */
   const importNewSongs = async () => {
-    // updates the UX with the progress of the import
+    /**
+     * @dev fires when one song is imported, that way we can update
+     * our progress bar in the UI and the EstimatedTimeRemainingString
+     */
     window.electron.ipcRenderer.on('song-imported', (args) => {
       setShowImportingProgress(true);
       setSongsImported(args.songsImported);
       setTotalSongs(args.totalSongs);
+
       // completion time is roughly 5ms per song
       const estimatedTimeRemaining = Math.floor(
         (args.totalSongs - args.songsImported) * 5,
@@ -373,7 +376,10 @@ export default function MainDash() {
       setEstimatedTimeRemainingString(timeRemainingString);
     });
 
-    // once the import is complete, update the store/data
+    /**
+     * @dev fires when adding songs to the library is complete.
+     * Is given the new store/library and the index of the song to scroll to
+     */
     window.electron.ipcRenderer.once('add-to-library', (arg) => {
       // exit early if the user cancels the import or the args are malformed
       if (!arg || !arg.library) {
@@ -381,7 +387,7 @@ export default function MainDash() {
         return;
       }
 
-      // reset the library, the filtered library, the current song, and pause.
+      // update the library, the filtered library, the current song, and pause.
       setLibraryInStore(arg.library);
       setFilteredLibrary(arg.library);
 
@@ -400,7 +406,10 @@ export default function MainDash() {
       }, 100);
     });
 
-    // request that the user selects a directory from the main process
+    /**
+     * ask the user what songs to add to the library.
+     * will respond with add-to-library and song-imported events
+     */
     window.electron.ipcRenderer.sendMessage('add-to-library');
   };
 
@@ -420,10 +429,11 @@ export default function MainDash() {
   }, [height, width]);
 
   /**
-   * @dev useEffect as a single mount to attach the callback for
-   * initialize. then init the song mapping and set the row container height
-   * to the correct initial values when it responds. also setup the last
-   * played song and the album art for it.
+   * @dev useEffect to initialize the app and set up the internal store
+   * for the library etc. also sets the current song and album art.
+   * also sets the row container height for the library list.
+   * also sets the initial scroll index to the last played song.
+   * also sets up the menu callbacks for the main process.
    */
   useEffect(() => {
     window.electron.ipcRenderer.once('initialize', (arg) => {
@@ -452,9 +462,12 @@ export default function MainDash() {
       }
     });
 
-    /**
-     * initialize the callbacks for all menu items
-     */
+    window.electron.ipcRenderer.on('update-store', (arg) => {
+      setInitialized(true);
+      setShowDedupingProgress(false);
+      setLibraryInStore(arg.library);
+      setFilteredLibrary(arg.library);
+    });
 
     window.electron.ipcRenderer.on('menu-select-library', () => {
       importNewLibrary();
@@ -468,15 +481,16 @@ export default function MainDash() {
       window.electron.ipcRenderer.sendMessage('menu-reset-library');
     });
 
-    window.electron.ipcRenderer.on('menu-dedupe-library', () => {
+    window.electron.ipcRenderer.on('menu-hide-dupes', () => {
       setShowDedupingProgress(true);
-      window.electron.ipcRenderer.sendMessage('menu-dedupe-library');
+      // @note: responds with update-store
+      window.electron.ipcRenderer.sendMessage('menu-hide-dupes');
     });
 
-    window.electron.ipcRenderer.on('update-library', (arg) => {
-      setShowDedupingProgress(false);
-      setLibraryInStore(arg.library);
-      setFilteredLibrary(arg.library);
+    window.electron.ipcRenderer.on('menu-delete-dupes', () => {
+      setShowDedupingProgress(true);
+      // @note: responds with update-store
+      window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -527,7 +541,7 @@ export default function MainDash() {
       />
 
       {/**
-       * @dev this is the import progress dialog/modal
+       * @dev IMPORT PROGRESS DIALOG
        */}
       <Dialog
         className="flex flex-col items-center justify-center content-center p-10"
@@ -553,6 +567,9 @@ export default function MainDash() {
         </div>
       </Dialog>
 
+      {/**
+       * @dev DEDUPING PROGRESS DIALOG
+       */}
       <Dialog
         className="flex flex-col items-center justify-center content-center p-10"
         open={showDedupingProgress}
@@ -569,12 +586,14 @@ export default function MainDash() {
       </Dialog>
 
       {/**
-       * @dev this is the top third of the screen with the artwork and import buttons
-       *      and search bar etc
+       * @dev top third of the screen with
+       *  -- the artwork
+       *  -- import button
+       *  -- search bar etc
        */}
       <div className="flex art drag justify-center p-4 pb-8 space-x-4 md:flex-row">
         {/**
-         * @dev either show the animated placeholder, or the album art
+         * @dev ALBUM ART (OR PLACEHOLDER)
          */}
         {!currentSongDataURL ? (
           <div
