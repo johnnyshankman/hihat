@@ -8,6 +8,7 @@ import { useResizeDetector } from 'react-resize-detector';
 import LinearProgress from '@mui/material/LinearProgress';
 import SearchIcon from '@mui/icons-material/Search';
 import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
+import { DialogContent } from '@mui/material';
 import { StoreStructure, SongSkeletonStructure } from '../../common/common';
 import AlbumArtMenu from './AlbumArtMenu';
 import useMainStore from '../store/main';
@@ -89,6 +90,10 @@ export default function MainDash() {
   const [showAlbumArtMenu, setShowAlbumArtMenu] =
     useState<AlbumArtMenuState>(undefined);
   const [showDedupingProgress, setShowDedupingProgress] = useState(false);
+  const [
+    showConfirmDedupeAndDeleteDialog,
+    setShowConfirmDedupeAndDeleteDialog,
+  ] = useState(false);
 
   /**
    * @def functions
@@ -488,9 +493,7 @@ export default function MainDash() {
     });
 
     window.electron.ipcRenderer.on('menu-delete-dupes', () => {
-      setShowDedupingProgress(true);
-      // @note: responds with update-store
-      window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
+      setShowConfirmDedupeAndDeleteDialog(true);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -581,6 +584,55 @@ export default function MainDash() {
           </Box>
           <div className="flex w-full justify-center pt-2 pb-1 px-2">
             <TinyText>This operation will take three to five minutes</TinyText>
+          </div>
+        </div>
+      </Dialog>
+
+      {/**
+       * @dev CONFIRM DEDUPING DIALOG
+       */}
+      <Dialog
+        className="flex flex-col items-center justify-center content-center p-10"
+        open={showConfirmDedupeAndDeleteDialog}
+      >
+        <div className="flex flex-col items-center pb-4 max-w-[400px]">
+          <DialogTitle>Deduplicate Library</DialogTitle>
+          <DialogContent>
+            <div className="flex w-full justify-center px-2">
+              <TinyText>
+                This will find any dupilcate song files with identical title,
+                artist, and album and keep only the highest quality version of
+                each song. That way your library will contain only the best
+                quality files.
+              </TinyText>
+            </div>
+          </DialogContent>
+          <div className="flex flex-row">
+            <div className="flex w-full justify-center pt-2 pb-1 px-2">
+              <button
+                type="button"
+                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                onClick={() => {
+                  setShowConfirmDedupeAndDeleteDialog(false);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+            <div className="flex w-full justify-center pt-2 pb-1 px-2">
+              <button
+                type="button"
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                onClick={() => {
+                  setShowConfirmDedupeAndDeleteDialog(false);
+                  setShowDedupingProgress(true);
+                  // @note: responds with update-store
+                  window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
+                }}
+              >
+                Deduplicate
+              </button>
+            </div>
           </div>
         </div>
       </Dialog>

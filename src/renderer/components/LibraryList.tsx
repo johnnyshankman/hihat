@@ -96,7 +96,7 @@ export default function LibraryList({
     {
       id: 'title',
       label: 'Song',
-      width: width * 0.5 - 100,
+      width: width * 0.5 - 60 - 40,
     },
     {
       id: 'artist',
