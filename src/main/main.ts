@@ -395,19 +395,28 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
  *      and then modifying it in the app as well as cache'ing it
  *      in the user's app data directory.
  */
-ipcMain.on('modify-tag-of-file', async (event, arg): Promise<any> => {
+ipcMain.on('modify-tags-of-file', async (event, arg): Promise<any> => {
   const filePath = arg.song as string;
   const file = File.createFromPath(filePath);
-  // @ts-ignore - `tag` is not supposed to be indexed into using array syntax
-  file.tag[arg.tag] = arg.value;
+  Object.keys(arg.tags).forEach((key) => {
+    // @ts-ignore - `tag` is not supposed to be indexed into using array syntax
+    file.tag[key] = arg.tags[key];
+  });
+  // ensure file has read write permissions before saving
+  file.setPermissions(File.Permission.Read | File.Permission.Write);
   file.save();
 
   const userConfig = getUserConfig();
-  // @ts-expect-error - `common` is not supposed to be indexed into using array syntax
-  userConfig.library[filePath].common[arg.key] = arg.value;
+  Object.keys(arg.tags).forEach((key) => {
+    // @ts-expect-error - `common` is not supposed to be indexed into using array syntax
+    userConfig.library[filePath].common[key] = arg.tags[key];
+  });
   writeFileSyncToUserConfig(userConfig);
 
-  event.reply('modify-tag-of-file', userConfig.library[filePath]);
+  event.reply('update-store-song', {
+    song: arg.song,
+    songData: userConfig.library[filePath],
+  });
 });
 
 /**

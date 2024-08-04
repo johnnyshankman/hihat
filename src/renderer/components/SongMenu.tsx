@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { useState } from 'react';
 import { SongSkeletonStructure } from '../../common/common';
 import { TinyText } from './SimpleStyledMaterialUIComponents';
+import EditSongDataDialog from './EditSongDataDialog';
 
 type SongMenuProps = {
   anchorEl: HTMLElement | null;
@@ -19,6 +20,7 @@ export default function SongMenu(props: SongMenuProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showHideDialog, setShowHideDialog] = useState(false);
   const [showDeleteAlbumDialog, setShowDeleteAlbumDialog] = useState(false);
+  const [showEditSongDataDialog, setShowEditSongDataDialog] = useState(false);
 
   const showPathInFinder = () => {
     window.electron.ipcRenderer.sendMessage('show-in-finder', {
@@ -208,6 +210,15 @@ export default function SongMenu(props: SongMenuProps) {
         </div>
       </Dialog>
 
+      <EditSongDataDialog
+        open={showEditSongDataDialog}
+        song={song}
+        songInfo={songInfo}
+        onClose={() => {
+          setShowEditSongDataDialog(false);
+        }}
+      />
+
       <Menu
         id="basic-menu"
         anchorEl={anchorEl}
@@ -230,6 +241,14 @@ export default function SongMenu(props: SongMenuProps) {
           onClick={showPathInFinder}
         >
           Show In Finder
+        </MenuItem>
+        <MenuItem
+          sx={{
+            fontSize: '11px',
+          }}
+          onClick={() => setShowEditSongDataDialog(true)}
+        >
+          Edit Metadata
         </MenuItem>
         <MenuItem
           sx={{

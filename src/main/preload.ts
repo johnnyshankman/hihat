@@ -8,7 +8,7 @@ export type Channels =
   | 'set-last-played-song'
   | 'initialize'
   | 'get-album-art'
-  | 'modify-tag-of-file'
+  | 'modify-tags-of-file'
   | 'copy-art-to-clipboard'
   | 'download-artwork'
   | 'open-in-browser'
@@ -23,7 +23,8 @@ export type Channels =
   | 'delete-song'
   | 'delete-album'
   // TODO: use this way more for replies
-  | 'update-store';
+  | 'update-store'
+  | 'update-store-song';
 
 export type ArgsBase = Record<Channels, unknown>;
 
@@ -32,10 +33,13 @@ export interface SendMessageArgs extends ArgsBase {
   'add-to-library': undefined;
   'get-album-art': string;
   'set-last-played-song': string;
-  'modify-tag-of-file': {
+  'modify-tags-of-file': {
     song: string;
-    key: string;
-    value: string;
+    tags: {
+      title: string;
+      artist: string;
+      album: string;
+    };
   };
   'copy-art-to-clipboard': {
     song: string;
@@ -70,6 +74,10 @@ export interface ResponseArgs extends ArgsBase {
     totalSongs: number;
   };
   'set-last-played-song': {
+    song: string;
+    songData: StoreStructure['library'][string];
+  };
+  'update-store-song': {
     song: string;
     songData: StoreStructure['library'][string];
   };
