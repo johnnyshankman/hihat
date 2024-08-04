@@ -194,7 +194,7 @@ export default function LibraryList({
         newColumnUXInfo[index + 2].width -= deltaX;
       }
 
-      // if the column TWO after this one is now less than 90 make it 90 and see if we can adjust the column THREE after this one
+      // if the column TWO after this one is now less than 90 make it 90 and reject
       if (newColumnUXInfo[index + 2].width < 90) {
         newColumnUXInfo[index + 2].width = 90;
         // and reject the change
