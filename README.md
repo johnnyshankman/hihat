@@ -186,11 +186,11 @@ This project was built with the following technologies:
 - [x] Sort by date added
 - [x] Playcount tracking and sort by playcount
 - [x] Ability to "hide" songs you don't want to see, with or without deleting their file
-- [ ] Edit song metadta
+- [x] Ability to deduplicate identical songs in library easily
+- [ ] Edit song metadata
 - [ ] Show some fun stats about your library somewhere, like gb and # of songs
-- [ ] Hide and show columns in the viewer
+- [ ] Hide and show columns in the song list
 - [ ] iTunes-1.0-like "browser" for going seeing scrollable list of artists/albums
-- [ ] True gapless playback ie preloading queued-file before it plays
 - [ ] Playlists (TBD if I'll ever do this, lots of work required)
 - [ ] Queue songs (TBD if I'll ever do this, lots of work required)
 
