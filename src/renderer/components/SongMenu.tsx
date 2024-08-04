@@ -18,6 +18,7 @@ export default function SongMenu(props: SongMenuProps) {
   const { anchorEl, onClose, song, songInfo, mouseX, mouseY } = props;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showHideDialog, setShowHideDialog] = useState(false);
+  const [showDeleteAlbumDialog, setShowDeleteAlbumDialog] = useState(false);
 
   const showPathInFinder = () => {
     window.electron.ipcRenderer.sendMessage('show-in-finder', {
@@ -67,6 +68,13 @@ export default function SongMenu(props: SongMenuProps) {
     onClose();
   };
 
+  const deleteAlbum = () => {
+    window.electron.ipcRenderer.sendMessage('delete-album', {
+      song,
+    });
+    onClose();
+  };
+
   return (
     <>
       <Dialog
@@ -106,6 +114,51 @@ export default function SongMenu(props: SongMenuProps) {
                 type="button"
                 className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
                 onClick={deleteSong}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        className="flex flex-col items-center justify-center content-center p-10"
+        open={showDeleteAlbumDialog}
+      >
+        <div className="flex flex-col items-center pb-4 max-w-[400px]">
+          <DialogTitle>Delete Album</DialogTitle>
+          <DialogContent>
+            <div className="flex w-full justify-center px-2">
+              <TinyText>
+                This will delete {songInfo.common.album} from your hihat library{' '}
+                <strong>
+                  and permanently delete its files from your computer.
+                  <br />
+                  <br />
+                  This operation cannot be undone.
+                </strong>
+              </TinyText>
+            </div>
+          </DialogContent>
+          <div className="flex flex-row">
+            <div className="flex w-full justify-center pt-2 pb-1 px-2">
+              <button
+                type="button"
+                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  onClose();
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+            <div className="flex w-full justify-center pt-2 pb-1 px-2">
+              <button
+                type="button"
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                onClick={deleteAlbum}
               >
                 Delete
               </button>
@@ -217,7 +270,16 @@ export default function SongMenu(props: SongMenuProps) {
           style={{ color: 'red' }}
           onClick={() => setShowDeleteDialog(true)}
         >
-          Delete Permanently
+          Delete Song
+        </MenuItem>
+        <MenuItem
+          sx={{
+            fontSize: '11px',
+          }}
+          style={{ color: 'red' }}
+          onClick={() => setShowDeleteAlbumDialog(true)}
+        >
+          Delete Album
         </MenuItem>
       </Menu>
     </>

@@ -21,6 +21,7 @@ export type Channels =
   | 'song-imported'
   | 'hide-song'
   | 'delete-song'
+  | 'delete-album'
   // TODO: use this way more for replies
   | 'update-store';
 
@@ -46,6 +47,9 @@ export interface SendMessageArgs extends ArgsBase {
     song: string;
   };
   'delete-song': {
+    song: string;
+  };
+  'delete-album': {
     song: string;
   };
   'open-in-browser': {

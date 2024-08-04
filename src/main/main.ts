@@ -316,6 +316,37 @@ ipcMain.on('delete-song', async (event, arg) => {
 });
 
 /**
+ * @dev removes the requested album of songs from the library and the filesystem
+ *     by filtering the library for all songs with the same artist and album
+ */
+ipcMain.on('delete-album', async (event, arg) => {
+  const userConfig = getUserConfig();
+  const { song } = arg;
+
+  const { artist } = userConfig.library[song].common;
+  const { album } = userConfig.library[song].common;
+
+  const songsToDelete = Object.keys(userConfig.library).filter(
+    (key) =>
+      userConfig.library[key].common.artist === artist &&
+      userConfig.library[key].common.album === album,
+  );
+
+  songsToDelete.forEach((songToDelete) => {
+    delete userConfig.library[songToDelete];
+    fs.unlinkSync(songToDelete);
+  });
+
+  const updatedStore = {
+    ...userConfig,
+  };
+
+  writeFileSyncToUserConfig(updatedStore);
+
+  event.reply('update-store', updatedStore);
+});
+
+/**
  * @dev for hiding duplicate songs in the user's library
  */
 ipcMain.on('menu-hide-dupes', async (event) => {
