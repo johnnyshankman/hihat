@@ -26,13 +26,6 @@ export default function ReusableSongMenu(props: SongMenuProps) {
     onClose();
   };
 
-  const copyInfoToClipboard = () => {
-    window.electron.ipcRenderer.sendMessage('copy-to-clipboard', {
-      text: `${songInfo.common.title} - ${songInfo.common.artist} - ${songInfo.common.album}`,
-    });
-    onClose();
-  };
-
   const downloadAlbumArt = () => {
     window.electron.ipcRenderer.sendMessage('download-artwork', {
       song,
@@ -85,9 +78,13 @@ export default function ReusableSongMenu(props: SongMenuProps) {
           <DialogContent>
             <div className="flex w-full justify-center px-2">
               <TinyText>
-                This will hide the song in your hihat library AND delete its
-                file from your computer. This operation cannot be undone. Are
-                you sure you&apos;d like to proceed?
+                This will delete {songInfo.common.title} from your hihat library{' '}
+                <strong>
+                  and permanently delete its file from your computer.
+                  <br />
+                  <br />
+                  This operation cannot be undone.
+                </strong>
               </TinyText>
             </div>
           </DialogContent>
@@ -126,9 +123,9 @@ export default function ReusableSongMenu(props: SongMenuProps) {
           <DialogContent>
             <div className="flex w-full justify-center px-2">
               <TinyText>
-                This will hide the song in your hihat library and can be undone
-                anytime by re-adding the song to your library. Are you sure
-                you&apos;d like to proceed?
+                This will hide {songInfo.common.title} from your hihat library
+                but this action can be undone anytime by re-adding the file
+                using the &quot;Add To Library&quot; button.
               </TinyText>
             </div>
           </DialogContent>
@@ -181,38 +178,13 @@ export default function ReusableSongMenu(props: SongMenuProps) {
         >
           Show In Finder
         </MenuItem>
-
-        <MenuItem
-          sx={{
-            fontSize: '11px',
-          }}
-          onClick={() => setShowHideDialog(true)}
-        >
-          Hide Song
-        </MenuItem>
-        <MenuItem
-          sx={{
-            fontSize: '11px',
-          }}
-          onClick={() => setShowDeleteDialog(true)}
-        >
-          Hide & Delete Song
-        </MenuItem>
         <MenuItem
           sx={{
             fontSize: '11px',
           }}
           onClick={downloadAlbumArt}
         >
-          Download Album Art
-        </MenuItem>
-        <MenuItem
-          sx={{
-            fontSize: '11px',
-          }}
-          onClick={copyInfoToClipboard}
-        >
-          Copy to Clipboard
+          Download Artwork
         </MenuItem>
         <MenuItem
           sx={{
@@ -220,7 +192,7 @@ export default function ReusableSongMenu(props: SongMenuProps) {
           }}
           onClick={copySpotifyLink}
         >
-          Search on Spotify
+          Find on Spotify
         </MenuItem>
         <MenuItem
           sx={{
@@ -228,7 +200,24 @@ export default function ReusableSongMenu(props: SongMenuProps) {
           }}
           onClick={copyAppleMusicLink}
         >
-          Search on Apple Music
+          Find on Apple Music
+        </MenuItem>
+        <MenuItem
+          sx={{
+            fontSize: '11px',
+          }}
+          onClick={() => setShowHideDialog(true)}
+        >
+          Hide
+        </MenuItem>
+        <MenuItem
+          sx={{
+            fontSize: '11px',
+          }}
+          style={{ color: 'red' }}
+          onClick={() => setShowDeleteDialog(true)}
+        >
+          Delete Permanently
         </MenuItem>
       </Menu>
     </>

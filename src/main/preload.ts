@@ -8,7 +8,6 @@ export type Channels =
   | 'set-last-played-song'
   | 'initialize'
   | 'get-album-art'
-  | 'copy-to-clipboard'
   | 'modify-tag-of-file'
   | 'copy-art-to-clipboard'
   | 'download-artwork'
@@ -48,9 +47,6 @@ export interface SendMessageArgs extends ArgsBase {
   };
   'delete-song': {
     song: string;
-  };
-  'copy-to-clipboard': {
-    text: string;
   };
   'open-in-browser': {
     text: string;

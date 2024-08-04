@@ -715,13 +715,6 @@ ipcMain.on('menu-reset-library', async (_event, _arg): Promise<any> => {
 });
 
 /**
- * @dev for copying text to the user's OS clipboard
- */
-ipcMain.on('copy-to-clipboard', async (_event, arg): Promise<any> => {
-  clipboard.writeText(arg.text);
-});
-
-/**
  * @dev for opening a link in the user's default browser
  */
 ipcMain.on('open-in-browser', async (_event, arg): Promise<any> => {
