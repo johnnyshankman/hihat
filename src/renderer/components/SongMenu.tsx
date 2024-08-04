@@ -14,7 +14,7 @@ type SongMenuProps = {
   mouseY: number;
 };
 
-export default function ReusableSongMenu(props: SongMenuProps) {
+export default function SongMenu(props: SongMenuProps) {
   const { anchorEl, onClose, song, songInfo, mouseX, mouseY } = props;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showHideDialog, setShowHideDialog] = useState(false);

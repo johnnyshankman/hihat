@@ -14,7 +14,7 @@ import { SongSkeletonStructure, StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
 import { convertToMMSS } from '../utils/utils';
 import usePlayerStore from '../store/player';
-import ReusableSongMenu from './ReusableSongMenu';
+import SongMenu from './SongMenu';
 
 const ROW_HEIGHT = 25.5;
 
@@ -424,7 +424,7 @@ export default function LibraryList({
        * @dev this is the menu that pops up when the user right clicks on a song
        */}
       {songMenu && (
-        <ReusableSongMenu
+        <SongMenu
           anchorEl={songMenu?.anchorEl}
           onClose={() => {
             setSongMenu(undefined);
