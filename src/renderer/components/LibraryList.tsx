@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { List } from 'react-virtualized';
-import { DragIndicator, LibraryMusic, Today } from '@mui/icons-material';
+import {
+  DragIndicator,
+  LibraryMusic,
+  PlayArrowRounded,
+  Today,
+} from '@mui/icons-material';
 import { CircularProgress, Tooltip } from '@mui/material';
 import Draggable from 'react-draggable';
 import { SongSkeletonStructure, StoreStructure } from '../../common/common';
@@ -91,7 +96,7 @@ export default function LibraryList({
     {
       id: 'title',
       label: 'Song',
-      width: width * 0.35,
+      width: width * 0.5 - 100,
     },
     {
       id: 'artist',
@@ -107,18 +112,19 @@ export default function LibraryList({
       id: 'duration',
       label: 'Time',
       width: width * 0.1,
+      icon: <AccessTimeIcon fontSize="inherit" />,
     },
     {
       id: 'dateAdded',
       label: 'Added',
-      width: width * 0.075,
+      width: 60,
       icon: <Today fontSize="inherit" />,
     },
     {
       id: 'playCount',
       label: 'Plays',
-      width: width * 0.075,
-      icon: <AccessTimeIcon fontSize="inherit" />,
+      width: 40,
+      icon: <PlayArrowRounded fontSize="inherit" />,
     },
   ]);
 
@@ -128,7 +134,7 @@ export default function LibraryList({
       setColumnUXInfo(
         columnUXInfo.map((column) => ({
           ...column,
-          width: (column.width / staleWidth) * width,
+          width: Math.max((column.width / staleWidth) * width, 60),
         })),
       );
       setStaleWidth(width);
@@ -157,6 +163,47 @@ export default function LibraryList({
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
   );
+
+  const updateColumnWidth = (index: number, deltaX: number) => {
+    // edit the width of columnUXInfo[index] based on the drag delta
+    const newColumnUXInfo = [...columnUXInfo];
+    newColumnUXInfo[index].width += deltaX;
+
+    // check if the width is less than 90
+    if (newColumnUXInfo[index].width < 90) {
+      newColumnUXInfo[index].width = 90;
+    }
+
+    // do a failsafe to make sure the total width of the columns is equal to the width of the container
+    const totalWidth = newColumnUXInfo.reduce(
+      (acc, column) => acc + column.width,
+      0,
+    );
+
+    // if we've made the columns too big, adjust the width of the column after this one to make it work
+    if (totalWidth !== width) {
+      const diff = totalWidth - width;
+      newColumnUXInfo[index + 1].width -= diff;
+    }
+
+    // if the column after this one is now less than 90 make it 90 and see if we can adjust the column TWO after this one
+    if (newColumnUXInfo[index + 1].width < 90) {
+      newColumnUXInfo[index + 1].width = 90;
+
+      if (newColumnUXInfo[index + 2]) {
+        newColumnUXInfo[index + 2].width -= deltaX;
+      }
+
+      // if the column TWO after this one is now less than 90 make it 90 and see if we can adjust the column THREE after this one
+      if (newColumnUXInfo[index + 2].width < 90) {
+        newColumnUXInfo[index + 2].width = 90;
+        // and reject the change
+        newColumnUXInfo[index].width -= deltaX;
+      }
+    }
+
+    setColumnUXInfo(newColumnUXInfo);
+  };
 
   /**
    * @dev state
@@ -371,19 +418,6 @@ export default function LibraryList({
 
   const hasSongs = Object.keys(filteredLibrary || {}).length;
 
-  const updateColumnWidth = (index: number, deltaX: number) => {
-    // edit the width of columnUXInfo[index] based on the drag delta
-    const newColumnUXInfo = [...columnUXInfo];
-    newColumnUXInfo[index].width += deltaX;
-
-    // check if the width is less than 100
-    if (newColumnUXInfo[index].width < 80) {
-      newColumnUXInfo[index].width = 80;
-    }
-
-    setColumnUXInfo(newColumnUXInfo);
-  };
-
   return (
     <div className="w-full overflow-auto">
       {/**
@@ -421,36 +455,41 @@ export default function LibraryList({
                   {filterType === filter && (
                     <span
                       className={`${
-                        filterDirection === 'asc'
-                          ? 'rotate-180'
-                          : 'relative bottom-[2px]'
+                        filterDirection === 'asc' ? 'rotate-180' : 'relative'
                       } inline-block ml-2`}
                     >
                       <FilterListIcon fontSize="inherit" />
                     </span>
                   )}
                 </span>
-                <Draggable
-                  axis="x"
-                  bounds="parent"
-                  defaultClassName="DragHandle"
-                  defaultClassNameDragging="DragHandleActive"
-                  onDrag={(event, { deltaX }) => {
-                    updateColumnWidth(index, deltaX);
-                  }}
-                  onStart={() => {
-                    setIsDragging(true);
-                  }}
-                  onStop={() => {
-                    window.setTimeout(() => {
-                      setIsDragging(false);
-                    }, 100);
-                  }}
-                  // @ts-expect-error - purposely breaking the lib so transform results in bunk transform
-                  position={{ x: 0 }}
-                >
-                  <DragIndicator fontSize="inherit" />
-                </Draggable>
+                {
+                  // dont show when the last column
+                  filter !== 'playCount' &&
+                    filter !== 'dateAdded' &&
+                    filter !== 'duration' && (
+                      <Draggable
+                        axis="x"
+                        bounds="parent"
+                        defaultClassName="DragHandle"
+                        defaultClassNameDragging="DragHandleActive"
+                        onDrag={(event, { deltaX }) => {
+                          updateColumnWidth(index, deltaX);
+                        }}
+                        onStart={() => {
+                          setIsDragging(true);
+                        }}
+                        onStop={() => {
+                          window.setTimeout(() => {
+                            setIsDragging(false);
+                          }, 100);
+                        }}
+                        // @ts-expect-error - purposely breaking the lib so transform results in bunk transform
+                        position={{ x: 0 }}
+                      >
+                        <DragIndicator fontSize="inherit" />
+                      </Draggable>
+                    )
+                }
               </button>
             ))}
           </div>
