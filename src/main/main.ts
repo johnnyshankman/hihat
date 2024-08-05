@@ -23,7 +23,7 @@ import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import {
   StoreStructure,
-  SongSkeletonStructure,
+  LightweightAudioMetadata,
   ALLOWED_EXTENSIONS,
 } from '../common/common';
 
@@ -272,10 +272,11 @@ const hideOrDeleteDupes = async (event: IpcMainEvent, del: boolean) => {
  */
 
 /**
- * @dev for requesting album art data. taking every music metadata album art
- *      in library and sending it over is much too large for the IPC
- *      so we lazy the art for one song at a time when the user clicks on a song
- *      via this event.
+ * @dev for requesting album art data.
+ * @important storing album art in the user's config file and sending it over
+ * is much too large for the IPC so we lazy load the art for one song at
+ * a time when the user clicks on a song via this event.
+ * @note I would take a similar approach to lyrics, and any other large data
  */
 ipcMain.on('get-album-art', async (event, arg: string) => {
   const songFilePath = arg;
@@ -488,13 +489,25 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
 
     if (metadata && metadata.format.duration && metadata.common.title) {
       filesToTags[files[i]] = {
-        ...metadata,
+        common: {
+          artist: metadata.common.artist,
+          album: metadata.common.album,
+          title: metadata.common.title,
+          track: metadata.common.track,
+          disk: metadata.common.disk,
+          // purposely do not store the picture data in the user's config
+          // because it's too large and we can lazy load it when needed
+          picture: [],
+        },
+        format: {
+          duration: metadata.format.duration,
+        },
         additionalInfo: {
           playCount: 0,
           lastPlayed: 0,
           dateAdded: Date.now(),
         },
-      } as SongSkeletonStructure;
+      } as LightweightAudioMetadata;
     }
 
     /**
@@ -516,7 +529,7 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
   }
 
   // sort filesToTags by artist, album, then track number
-  const orderedFilesToTags: { [key: string]: SongSkeletonStructure } = {};
+  const orderedFilesToTags: { [key: string]: LightweightAudioMetadata } = {};
   Object.keys(filesToTags)
     .sort((a, b) => {
       const artistA = filesToTags[a].common?.artist
@@ -543,7 +556,6 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
       if (artistA > artistB) return 1;
       if (albumA < albumB) return -1;
       if (albumA > albumB) return 1;
-
       if (diskA && diskB) {
         if (diskA < diskB) return -1;
         if (diskA > diskB) return 1;
@@ -609,7 +621,7 @@ ipcMain.on('select-library', async (event): Promise<any> => {
   const files = findAllMusicFilesRecursively(result.filePaths[0]);
 
   // create an empty mapping of files to tags we want to cache and re-import on boot
-  const filesToTags: { [key: string]: SongSkeletonStructure } = {};
+  const filesToTags: { [key: string]: LightweightAudioMetadata } = {};
 
   const userConfig = getUserConfig();
 
@@ -636,23 +648,44 @@ ipcMain.on('select-library', async (event): Promise<any> => {
       }
 
       filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
-        ...metadata,
+        common: {
+          artist: metadata.common.artist,
+          album: metadata.common.album,
+          title: metadata.common.title,
+          track: metadata.common.track,
+          disk: metadata.common.disk,
+          // purposely do not store the picture data in the user's config
+          // because it's too large and we can lazy load it when needed
+          picture: [],
+        },
+        format: {
+          duration: metadata.format.duration,
+        },
         additionalInfo: {
           playCount: 0,
           lastPlayed: 0,
           dateAdded: Date.now(),
         },
-      } as SongSkeletonStructure;
+      } as LightweightAudioMetadata;
     }
 
     /**
      * @IMPORTANT if the song already exists in the user's library
-     * we must port over its additionalInfo to keep playcounts in tact
+     * we must port over its additionalInfo to keep playcounts in tact.
+     * we find the song with identical name, artist, and album.
+     * @NOTE if there are dupes and only one has the legacy data, we will
+     * not consistently port over the correct additional data.
      */
-    if (userConfig?.library?.[`${result.filePaths[0]}/${files[i]}`]) {
+    const preexistingSong = Object.keys(userConfig.library).find(
+      (key) =>
+        userConfig.library[key].common.title === metadata.common.title &&
+        userConfig.library[key].common.artist === metadata.common.artist &&
+        userConfig.library[key].common.album === metadata.common.album,
+    );
+
+    if (preexistingSong) {
       filesToTags[`${result.filePaths[0]}/${files[i]}`].additionalInfo = {
-        ...userConfig.library[`${result.filePaths[0]}/${files[i]}`]
-          .additionalInfo,
+        ...userConfig.library[preexistingSong].additionalInfo,
       };
     }
 
@@ -663,7 +696,7 @@ ipcMain.on('select-library', async (event): Promise<any> => {
   }
 
   // sort filesToTags by artist, album, then track number
-  const orderedFilesToTags: { [key: string]: SongSkeletonStructure } = {};
+  const orderedFilesToTags: { [key: string]: LightweightAudioMetadata } = {};
   Object.keys(filesToTags)
     .sort((a, b) => {
       const artistA = filesToTags[a].common?.artist
@@ -676,8 +709,6 @@ ipcMain.on('select-library', async (event): Promise<any> => {
       const albumB = filesToTags[b].common?.album?.toLowerCase();
       const trackA = filesToTags[a].common?.track?.no;
       const trackB = filesToTags[b].common?.track?.no;
-
-      // order by disk # if it exists
       const diskA = filesToTags[a].common?.disk?.no;
       const diskB = filesToTags[b].common?.disk?.no;
 
@@ -692,12 +723,10 @@ ipcMain.on('select-library', async (event): Promise<any> => {
       if (artistA > artistB) return 1;
       if (albumA < albumB) return -1;
       if (albumA > albumB) return 1;
-
       if (diskA && diskB) {
         if (diskA < diskB) return -1;
         if (diskA > diskB) return 1;
       }
-
       if (trackA < trackB) return -1;
       if (trackA > trackB) return 1;
       return 0;

@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { SongSkeletonStructure, StoreStructure } from '../../common/common';
+import { LightweightAudioMetadata, StoreStructure } from '../../common/common';
 
 interface AdditionalActions {
   deleteEverything: () => void;
-  setLibrary: (library: { [key: string]: SongSkeletonStructure }) => void;
+  setLibrary: (library: { [key: string]: LightweightAudioMetadata }) => void;
   setLastPlayedSong: (song: string) => void;
   setLibraryPath: (path: string) => void;
   setInitialized: (initialized: boolean) => void;
@@ -23,7 +23,7 @@ const useMainStore = create<StoreStructure & AdditionalActions>((set) => ({
    * AdditionalActions
    */
   deleteEverything: () => set({}, true),
-  setLibrary: (library: { [key: string]: SongSkeletonStructure }) => {
+  setLibrary: (library: { [key: string]: LightweightAudioMetadata }) => {
     // @dev: library source of truth is the BE so this only updates the FE store
     return set({
       library,

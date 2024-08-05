@@ -10,7 +10,7 @@ import {
 } from '@mui/icons-material';
 import { CircularProgress, Tooltip } from '@mui/material';
 import Draggable from 'react-draggable';
-import { SongSkeletonStructure, StoreStructure } from '../../common/common';
+import { LightweightAudioMetadata, StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
 import { convertToMMSS } from '../utils/utils';
 import usePlayerStore from '../store/player';
@@ -63,7 +63,7 @@ type SongMenuState =
   | {
       song: string;
       anchorEl: HTMLElement | null;
-      songInfo: SongSkeletonStructure;
+      songInfo: LightweightAudioMetadata;
       mouseX: number;
       mouseY: number;
     }

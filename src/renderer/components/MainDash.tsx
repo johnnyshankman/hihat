@@ -9,7 +9,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import SearchIcon from '@mui/icons-material/Search';
 import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
 import { DialogContent } from '@mui/material';
-import { StoreStructure, SongSkeletonStructure } from '../../common/common';
+import { StoreStructure, LightweightAudioMetadata } from '../../common/common';
 import AlbumArtMenu from './AlbumArtMenu';
 import useMainStore from '../store/main';
 import { bufferToDataUrl } from '../utils/utils';
@@ -153,7 +153,7 @@ export default function MainDash() {
    *      the main process handler for the album art also saves the
    *      last played song into the userConfig for persistence.
    */
-  const playSong = async (song: string, meta: SongSkeletonStructure) => {
+  const playSong = async (song: string, meta: LightweightAudioMetadata) => {
     if (
       navigator.mediaSession.metadata?.title &&
       meta.common.title &&
