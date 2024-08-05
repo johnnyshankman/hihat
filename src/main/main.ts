@@ -488,15 +488,7 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
 
     if (metadata && metadata.format.duration && metadata.common.title) {
       filesToTags[files[i]] = {
-        common: {
-          ...metadata.common,
-          picture: [],
-          lyrics: [],
-        },
-        format: {
-          ...metadata.format,
-          duration: metadata.format.duration,
-        },
+        ...metadata,
         additionalInfo: {
           playCount: 0,
           lastPlayed: 0,
@@ -537,6 +529,8 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
       const albumB = filesToTags[b].common?.album?.toLowerCase();
       const trackA = filesToTags[a].common?.track?.no;
       const trackB = filesToTags[b].common?.track?.no;
+      const diskA = filesToTags[a].common?.disk?.no;
+      const diskB = filesToTags[b].common?.disk?.no;
 
       if (!artistA) return -1;
       if (!artistB) return 1;
@@ -549,6 +543,11 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
       if (artistA > artistB) return 1;
       if (albumA < albumB) return -1;
       if (albumA > albumB) return 1;
+
+      if (diskA && diskB) {
+        if (diskA < diskB) return -1;
+        if (diskA > diskB) return 1;
+      }
       if (trackA < trackB) return -1;
       if (trackA > trackB) return 1;
       return 0;
@@ -637,15 +636,7 @@ ipcMain.on('select-library', async (event): Promise<any> => {
       }
 
       filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
-        common: {
-          ...metadata.common,
-          picture: [],
-          lyrics: [],
-        },
-        format: {
-          ...metadata.format,
-          duration: metadata.format.duration,
-        },
+        ...metadata,
         additionalInfo: {
           playCount: 0,
           lastPlayed: 0,
@@ -686,6 +677,10 @@ ipcMain.on('select-library', async (event): Promise<any> => {
       const trackA = filesToTags[a].common?.track?.no;
       const trackB = filesToTags[b].common?.track?.no;
 
+      // order by disk # if it exists
+      const diskA = filesToTags[a].common?.disk?.no;
+      const diskB = filesToTags[b].common?.disk?.no;
+
       if (!artistA) return -1;
       if (!artistB) return 1;
       if (!albumA) return -1;
@@ -697,6 +692,12 @@ ipcMain.on('select-library', async (event): Promise<any> => {
       if (artistA > artistB) return 1;
       if (albumA < albumB) return -1;
       if (albumA > albumB) return 1;
+
+      if (diskA && diskB) {
+        if (diskA < diskB) return -1;
+        if (diskA > diskB) return 1;
+      }
+
       if (trackA < trackB) return -1;
       if (trackA > trackB) return 1;
       return 0;

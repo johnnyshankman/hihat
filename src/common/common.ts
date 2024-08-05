@@ -1,4 +1,4 @@
-import { IPicture } from 'music-metadata';
+import { IAudioMetadata } from 'music-metadata';
 
 export type AdditionalSongInfo = {
   playCount: number; // integer
@@ -6,23 +6,12 @@ export type AdditionalSongInfo = {
   dateAdded: number; // ms date timestamp
 };
 
-export type SongSkeletonStructure = {
-  common: {
-    artist?: string;
-    album?: string;
-    title?: string;
-    track?: {
-      no: number | null;
-      of: number | null;
-    };
-    picture?: IPicture[];
-    lyrics?: string[];
-  };
-  format: {
-    duration?: number;
-  };
+/**
+ * Rename to LibrarySongInfo
+ */
+export interface SongSkeletonStructure extends IAudioMetadata {
   additionalInfo: AdditionalSongInfo;
-};
+}
 
 export type Playlist = {
   name: string;
