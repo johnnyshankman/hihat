@@ -495,9 +495,10 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
           title: metadata.common.title,
           track: metadata.common.track,
           disk: metadata.common.disk,
-          // purposely do not store the picture data in the user's config
-          // because it's too large and we can lazy load it when needed
-          picture: [],
+          /**
+           * purposely do not store the picture data in the user's config
+           * because it's too large and we can lazy load it when needed
+           */
         },
         format: {
           duration: metadata.format.duration,
@@ -654,9 +655,10 @@ ipcMain.on('select-library', async (event): Promise<any> => {
           title: metadata.common.title,
           track: metadata.common.track,
           disk: metadata.common.disk,
-          // purposely do not store the picture data in the user's config
-          // because it's too large and we can lazy load it when needed
-          picture: [],
+          /**
+           * purposely do not store the picture data in the user's config
+           * because it's too large and we can lazy load it when needed
+           */
         },
         format: {
           duration: metadata.format.duration,

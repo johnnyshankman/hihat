@@ -19,6 +19,12 @@ export type LightweightAudioMetadata = {
     title?: ICommonTagsResult['title'];
     track?: ICommonTagsResult['track'];
     disk: ICommonTagsResult['disk'];
+    /**
+     * @important we never store the picture in the user config because it
+     * overloads the IPC and causes crashes. we always request it song by song
+     * lazily using the `get-album-art` channel.
+     */
+    picture: null;
   };
   format: {
     duration?: IFormat['duration'];
