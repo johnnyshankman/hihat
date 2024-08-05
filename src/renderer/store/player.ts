@@ -1,16 +1,16 @@
 import { create } from 'zustand';
-import { SongSkeletonStructure } from '../../common/common';
+import { LightweightAudioMetadata } from '../../common/common';
 
 interface PlayerStore {
   paused: boolean;
   currentSong: string;
   currentSongDataURL: string;
-  currentSongMetadata: SongSkeletonStructure;
+  currentSongMetadata: LightweightAudioMetadata;
   shuffle: boolean;
   repeating: boolean;
   volume: number;
   currentSongTime: number;
-  filteredLibrary: { [key: string]: SongSkeletonStructure };
+  filteredLibrary: { [key: string]: LightweightAudioMetadata };
   overrideScrollToIndex: number | undefined;
 
   deleteEverything: () => void;
@@ -20,10 +20,10 @@ interface PlayerStore {
   setRepeating: (repeating: boolean) => void;
   setCurrentSong: (song: string) => void;
   setCurrentSongDataURL: (dataURL: string) => void;
-  setCurrentSongMetadata: (metadata: SongSkeletonStructure) => void;
+  setCurrentSongMetadata: (metadata: LightweightAudioMetadata) => void;
   setCurrentSongTime: (time: number) => void;
   setFilteredLibrary: (filteredLibrary: {
-    [key: string]: SongSkeletonStructure;
+    [key: string]: LightweightAudioMetadata;
   }) => void;
   setOverrideScrollToIndex: (index: number | undefined) => void;
 }
@@ -32,7 +32,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   paused: true,
   currentSong: '',
   currentSongDataURL: '',
-  currentSongMetadata: {} as SongSkeletonStructure,
+  currentSongMetadata: {} as LightweightAudioMetadata,
   shuffle: false,
   repeating: false,
   volume: 100,

@@ -1,4 +1,4 @@
-import { IPicture } from 'music-metadata';
+import { ICommonTagsResult, IFormat } from 'music-metadata';
 
 export type AdditionalSongInfo = {
   playCount: number; // integer
@@ -6,20 +6,28 @@ export type AdditionalSongInfo = {
   dateAdded: number; // ms date timestamp
 };
 
-export type SongSkeletonStructure = {
+/**
+ * Refactor this type as it's just IAudioMetaData from music-metadata
+ * with AdditionalSongInfo.
+ * We could just store all metadata, it's not that much data.
+ */
+
+export type LightweightAudioMetadata = {
   common: {
-    artist?: string;
-    album?: string;
-    title?: string;
-    track?: {
-      no: number | null;
-      of: number | null;
-    };
-    picture?: IPicture[];
-    lyrics?: string[];
+    artist?: ICommonTagsResult['artist'];
+    album?: ICommonTagsResult['album'];
+    title?: ICommonTagsResult['title'];
+    track?: ICommonTagsResult['track'];
+    disk: ICommonTagsResult['disk'];
+    /**
+     * @important we never store the picture in the user config because it
+     * overloads the IPC and causes crashes. we always request it song by song
+     * lazily using the `get-album-art` channel.
+     */
+    picture: null;
   };
   format: {
-    duration?: number;
+    duration?: IFormat['duration'];
   };
   additionalInfo: AdditionalSongInfo;
 };
@@ -30,12 +38,12 @@ export type Playlist = {
 };
 
 export type Library = {
-  [key: string]: SongSkeletonStructure;
+  [key: string]: LightweightAudioMetadata;
 };
 
 export type StoreStructure = {
   library: {
-    [key: string]: SongSkeletonStructure;
+    [key: string]: LightweightAudioMetadata;
   };
   playlists: Playlist[];
   lastPlayedSong: string; // a key into "library"

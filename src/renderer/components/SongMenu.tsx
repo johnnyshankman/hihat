@@ -2,14 +2,14 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { useState } from 'react';
-import { SongSkeletonStructure } from '../../common/common';
+import { LightweightAudioMetadata } from '../../common/common';
 import { TinyText } from './SimpleStyledMaterialUIComponents';
 
 type SongMenuProps = {
   anchorEl: HTMLElement | null;
   onClose: () => void;
   song: string;
-  songInfo: SongSkeletonStructure;
+  songInfo: LightweightAudioMetadata;
   mouseX: number;
   mouseY: number;
 };
