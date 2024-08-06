@@ -741,7 +741,7 @@ export default function MainDash() {
         )}
 
         {storeLibrary && (
-          <Tooltip title="Add Songs To Library">
+          <Tooltip title="Import New Songs">
             <button
               onClick={importNewSongs}
               type="button"
