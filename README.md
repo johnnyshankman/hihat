@@ -68,26 +68,23 @@ a music player without the distractions.
 
 ### Core Features
 
-*hihat* has the following core features:
+*hihat* core features:
 * 100% offline
 * always dark mode
-* responsive design
 * audiophile fidelity (supports all file types)
 * mix 'n match file types (mp3, m4a, flac, etc)
 * limitless library size
-* compact UX
+* responsive design
 * song shuffle
 * song repeat
-* Media Keys support
-* Bluetooth headphone play/pause/skip support
+* media key support
 * OSX menu bar integration
 * downloadable album art
 * quick search
-* fast import
-* sort by song, artist, album, date added or playcount
-* iTunes-like sorting for artist [artist -> album -> track num]
-* nested folder/library support (ie. legacy iTunes structure)
-* Spotify and Apple Music share links for every song
+* quick import
+* intelligent sorting by song, artist, album
+* nested folder support for libraries and new imports
+* Spotify and Apple Music 1-click search
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
