@@ -68,13 +68,13 @@ export default class MenuBuilder {
           },
         },
         {
-          label: 'rescan library',
+          label: 'rescan library folder',
           click: () => {
             this.mainWindow.webContents.send('menu-rescan-library');
           },
         },
         {
-          label: 'select different library',
+          label: 'select library folder',
           click: () => {
             this.mainWindow.webContents.send('menu-select-library');
           },
@@ -91,14 +91,12 @@ export default class MenuBuilder {
             this.mainWindow.webContents.send('menu-delete-dupes');
           },
         },
-        process.env.NODE_ENV === 'development'
-          ? {
-              label: 'reset all hihat data',
-              click: () => {
-                this.mainWindow.webContents.send('menu-reset-library');
-              },
-            }
-          : {},
+        {
+          label: 'reset all hihat data',
+          click: () => {
+            this.mainWindow.webContents.send('menu-reset-library');
+          },
+        },
         { type: 'separator' },
 
         {
