@@ -139,7 +139,7 @@ _Click  `hihat -> rescan library folder` from the menu. This operation will keep
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### Built With
+## Built With
 
 This project was built with the following technologies:
 
