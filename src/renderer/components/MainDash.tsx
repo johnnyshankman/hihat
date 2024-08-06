@@ -288,7 +288,7 @@ export default function MainDash() {
   /**
    * @dev allow user to select a directory and import all songs within it
    */
-  const importNewLibrary = async () => {
+  const importNewLibrary = async (rescan = false) => {
     // fires when one song is imported
     // used for the importing UX with progress
     window.electron.ipcRenderer.on('song-imported', (args) => {
@@ -347,7 +347,9 @@ export default function MainDash() {
     });
 
     // request that the user selects a directory and that main process processes
-    window.electron.ipcRenderer.sendMessage('select-library');
+    window.electron.ipcRenderer.sendMessage('select-library', {
+      rescan,
+    });
   };
 
   /**
@@ -375,7 +377,7 @@ export default function MainDash() {
         // eslint-disable-next-line no-nested-ternary
         minutes < 1
           ? seconds === 0
-            ? 'Processing...'
+            ? 'Processing Metadata...'
             : `${seconds}s left`
           : `${minutes}mins left`;
       setEstimatedTimeRemainingString(timeRemainingString);
@@ -478,6 +480,10 @@ export default function MainDash() {
       importNewLibrary();
     });
 
+    window.electron.ipcRenderer.on('menu-rescan-library', () => {
+      importNewLibrary(true);
+    });
+
     window.electron.ipcRenderer.on('menu-add-songs', () => {
       importNewSongs();
     });
@@ -554,7 +560,9 @@ export default function MainDash() {
           <DialogTitle>Importing Songs</DialogTitle>
           <Box sx={{ width: '100%', marginBottom: '12px' }}>
             <LinearProgress
-              variant="determinate"
+              variant={
+                songsImported === totalSongs ? 'indeterminate' : 'determinate'
+              }
               color="inherit"
               value={(songsImported / totalSongs) * 100}
             />

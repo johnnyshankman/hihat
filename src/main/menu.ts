@@ -62,9 +62,15 @@ export default class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'add songs to library',
+          label: 'import new songs',
           click: () => {
             this.mainWindow.webContents.send('menu-add-songs');
+          },
+        },
+        {
+          label: 'rescan library',
+          click: () => {
+            this.mainWindow.webContents.send('menu-rescan-library');
           },
         },
         {
@@ -85,12 +91,14 @@ export default class MenuBuilder {
             this.mainWindow.webContents.send('menu-delete-dupes');
           },
         },
-        {
-          label: 'reset all hihat data',
-          click: () => {
-            this.mainWindow.webContents.send('menu-reset-library');
-          },
-        },
+        process.env.NODE_ENV === 'development'
+          ? {
+              label: 'reset all hihat data',
+              click: () => {
+                this.mainWindow.webContents.send('menu-reset-library');
+              },
+            }
+          : {},
         { type: 'separator' },
 
         {

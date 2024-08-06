@@ -26,6 +26,7 @@ import {
   LightweightAudioMetadata,
   ALLOWED_EXTENSIONS,
 } from '../common/common';
+import { SendMessageArgs } from './preload';
 
 class AppUpdater {
   constructor() {
@@ -598,160 +599,171 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
  *      and then importing it into the app as well as cache'ing it
  *     in the user's app data directory.
  */
-ipcMain.on('select-library', async (event): Promise<any> => {
-  if (!mainWindow) {
-    return;
-  }
-
-  let result: OpenDialogReturnValue;
-  try {
-    result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openDirectory'],
-      filters: [{ name: 'Music', extensions: ALLOWED_EXTENSIONS }],
-    });
-  } catch (e) {
-    console.log(e);
-    return;
-  }
-
-  if (result.canceled) {
-    event.reply('select-library');
-    return;
-  }
-
-  const files = findAllMusicFilesRecursively(result.filePaths[0]);
-
-  // create an empty mapping of files to tags we want to cache and re-import on boot
-  const filesToTags: { [key: string]: LightweightAudioMetadata } = {};
-
-  const userConfig = getUserConfig();
-
-  for (let i = 0; i < files.length; i += 1) {
-    let metadata: mm.IAudioMetadata;
-
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      metadata = await mm.parseFile(`${result.filePaths[0]}/${files[i]}`);
-    } catch (e) {
-      event.reply('song-imported', {
-        songsImported: i,
-        totalSongs: files.length,
-      });
-      // eslint-disable-next-line no-continue
-      continue;
+ipcMain.on(
+  'select-library',
+  async (event, args: SendMessageArgs['select-library']): Promise<any> => {
+    if (!mainWindow) {
+      return;
     }
 
-    if (metadata && metadata.format.duration && metadata.common.title) {
-      // if the song already exists in the user's library, skip it
-      if (filesToTags[`${result.filePaths[0]}/${files[i]}`]) {
+    let result: OpenDialogReturnValue;
+
+    // when rescan is true, we skip the dialog and just rescan the existing library
+    // from the user's config file
+    if (args.rescan) {
+      const userConfig = getUserConfig();
+      result = { filePaths: [userConfig.libraryPath] } as OpenDialogReturnValue;
+    } else {
+      try {
+        result = await dialog.showOpenDialog(mainWindow, {
+          properties: ['openDirectory'],
+          filters: [{ name: 'Music', extensions: ALLOWED_EXTENSIONS }],
+        });
+      } catch (e) {
+        console.log(e);
+        return;
+      }
+    }
+
+    if (result.canceled) {
+      event.reply('select-library');
+      return;
+    }
+
+    const files = findAllMusicFilesRecursively(result.filePaths[0]);
+
+    // create an empty mapping that will become the library
+    const filesToTags: { [key: string]: LightweightAudioMetadata } = {};
+
+    const userConfig = getUserConfig();
+
+    for (let i = 0; i < files.length; i += 1) {
+      let metadata: mm.IAudioMetadata;
+
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        metadata = await mm.parseFile(`${result.filePaths[0]}/${files[i]}`);
+      } catch (e) {
+        event.reply('song-imported', {
+          songsImported: i,
+          totalSongs: files.length,
+        });
         // eslint-disable-next-line no-continue
         continue;
       }
 
-      filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
-        common: {
-          artist: metadata.common.artist,
-          album: metadata.common.album,
-          title: metadata.common.title,
-          track: metadata.common.track,
-          disk: metadata.common.disk,
-          /**
-           * purposely do not store the picture data in the user's config
-           * because it's too large and we can lazy load it when needed
-           */
-        },
-        format: {
-          duration: metadata.format.duration,
-        },
-        additionalInfo: {
-          playCount: 0,
-          lastPlayed: 0,
-          dateAdded: Date.now(),
-        },
-      } as LightweightAudioMetadata;
+      if (metadata && metadata.format.duration && metadata.common.title) {
+        // if the song already exists in the user's library, skip it
+        if (filesToTags[`${result.filePaths[0]}/${files[i]}`]) {
+          // eslint-disable-next-line no-continue
+          continue;
+        }
+
+        filesToTags[`${result.filePaths[0]}/${files[i]}`] = {
+          common: {
+            artist: metadata.common.artist,
+            album: metadata.common.album,
+            title: metadata.common.title,
+            track: metadata.common.track,
+            disk: metadata.common.disk,
+            /**
+             * purposely do not store the picture data in the user's config
+             * because it's too large and we can lazy load it when needed
+             */
+          },
+          format: {
+            duration: metadata.format.duration,
+          },
+          additionalInfo: {
+            playCount: 0,
+            lastPlayed: 0,
+            dateAdded: Date.now(),
+          },
+        } as LightweightAudioMetadata;
+      }
+
+      /**
+       * @IMPORTANT if the song already exists in the user's library
+       * we must port over its additionalInfo to keep playcounts in tact.
+       * we find the song with identical name, artist, and album.
+       * @NOTE if there are dupes and only one has the legacy data, we will
+       * not consistently port over the correct additional data.
+       */
+      const preexistingSong = Object.keys(userConfig.library).find(
+        (key) =>
+          userConfig.library[key].common.title === metadata.common.title &&
+          userConfig.library[key].common.artist === metadata.common.artist &&
+          userConfig.library[key].common.album === metadata.common.album,
+      );
+
+      if (preexistingSong) {
+        filesToTags[`${result.filePaths[0]}/${files[i]}`].additionalInfo = {
+          ...userConfig.library[preexistingSong].additionalInfo,
+        };
+      }
+
+      event.reply('song-imported', {
+        songsImported: i,
+        totalSongs: files.length,
+      });
     }
+
+    // sort filesToTags by artist, album, then track number
+    const orderedFilesToTags: { [key: string]: LightweightAudioMetadata } = {};
+    Object.keys(filesToTags)
+      .sort((a, b) => {
+        const artistA = filesToTags[a].common?.artist
+          ?.toLowerCase()
+          .replace(/^the /, '');
+        const artistB = filesToTags[b].common?.artist
+          ?.toLowerCase()
+          .replace(/^the /, '');
+        const albumA = filesToTags[a].common?.album?.toLowerCase();
+        const albumB = filesToTags[b].common?.album?.toLowerCase();
+        const trackA = filesToTags[a].common?.track?.no;
+        const trackB = filesToTags[b].common?.track?.no;
+        const diskA = filesToTags[a].common?.disk?.no;
+        const diskB = filesToTags[b].common?.disk?.no;
+
+        if (!artistA) return -1;
+        if (!artistB) return 1;
+        if (!albumA) return -1;
+        if (!albumB) return 1;
+        if (!trackA) return -1;
+        if (!trackB) return 1;
+
+        if (artistA < artistB) return -1;
+        if (artistA > artistB) return 1;
+        if (albumA < albumB) return -1;
+        if (albumA > albumB) return 1;
+        if (diskA && diskB) {
+          if (diskA < diskB) return -1;
+          if (diskA > diskB) return 1;
+        }
+        if (trackA < trackB) return -1;
+        if (trackA > trackB) return 1;
+        return 0;
+      })
+      .forEach((key) => {
+        orderedFilesToTags[key] = filesToTags[key];
+      });
+
+    const initialStore = {
+      library: orderedFilesToTags,
+      playlists: [],
+      lastPlayedSong: '',
+      libraryPath: result.filePaths[0],
+      initialized: true,
+    };
 
     /**
-     * @IMPORTANT if the song already exists in the user's library
-     * we must port over its additionalInfo to keep playcounts in tact.
-     * we find the song with identical name, artist, and album.
-     * @NOTE if there are dupes and only one has the legacy data, we will
-     * not consistently port over the correct additional data.
+     * @note write the json file to the user data directory as userConfig.json
+     * for caching purposes. We will re-use this during future boots of the app.
      */
-    const preexistingSong = Object.keys(userConfig.library).find(
-      (key) =>
-        userConfig.library[key].common.title === metadata.common.title &&
-        userConfig.library[key].common.artist === metadata.common.artist &&
-        userConfig.library[key].common.album === metadata.common.album,
-    );
-
-    if (preexistingSong) {
-      filesToTags[`${result.filePaths[0]}/${files[i]}`].additionalInfo = {
-        ...userConfig.library[preexistingSong].additionalInfo,
-      };
-    }
-
-    event.reply('song-imported', {
-      songsImported: i,
-      totalSongs: files.length,
-    });
-  }
-
-  // sort filesToTags by artist, album, then track number
-  const orderedFilesToTags: { [key: string]: LightweightAudioMetadata } = {};
-  Object.keys(filesToTags)
-    .sort((a, b) => {
-      const artistA = filesToTags[a].common?.artist
-        ?.toLowerCase()
-        .replace(/^the /, '');
-      const artistB = filesToTags[b].common?.artist
-        ?.toLowerCase()
-        .replace(/^the /, '');
-      const albumA = filesToTags[a].common?.album?.toLowerCase();
-      const albumB = filesToTags[b].common?.album?.toLowerCase();
-      const trackA = filesToTags[a].common?.track?.no;
-      const trackB = filesToTags[b].common?.track?.no;
-      const diskA = filesToTags[a].common?.disk?.no;
-      const diskB = filesToTags[b].common?.disk?.no;
-
-      if (!artistA) return -1;
-      if (!artistB) return 1;
-      if (!albumA) return -1;
-      if (!albumB) return 1;
-      if (!trackA) return -1;
-      if (!trackB) return 1;
-
-      if (artistA < artistB) return -1;
-      if (artistA > artistB) return 1;
-      if (albumA < albumB) return -1;
-      if (albumA > albumB) return 1;
-      if (diskA && diskB) {
-        if (diskA < diskB) return -1;
-        if (diskA > diskB) return 1;
-      }
-      if (trackA < trackB) return -1;
-      if (trackA > trackB) return 1;
-      return 0;
-    })
-    .forEach((key) => {
-      orderedFilesToTags[key] = filesToTags[key];
-    });
-
-  const initialStore = {
-    library: orderedFilesToTags,
-    playlists: [],
-    lastPlayedSong: '',
-    libraryPath: result.filePaths[0],
-    initialized: true,
-  };
-
-  /**
-   * @note write the json file to the user data directory as userConfig.json
-   * for caching purposes. We will re-use this during future boots of the app.
-   */
-  writeFileSyncToUserConfig(initialStore);
-  event.reply('select-library', initialStore);
-});
+    writeFileSyncToUserConfig(initialStore);
+    event.reply('select-library', initialStore);
+  },
+);
 
 /**
  * @dev for showing a file in Finder on OSX

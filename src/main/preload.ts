@@ -14,6 +14,7 @@ export type Channels =
   | 'open-in-browser'
   | 'show-in-finder'
   | 'menu-select-library'
+  | 'menu-rescan-library'
   | 'menu-add-songs'
   | 'menu-reset-library'
   | 'menu-hide-dupes'
@@ -28,7 +29,9 @@ export type Channels =
 export type ArgsBase = Record<Channels, unknown>;
 
 export interface SendMessageArgs extends ArgsBase {
-  'select-library': undefined;
+  'select-library': {
+    rescan: boolean;
+  };
   'add-to-library': undefined;
   'get-album-art': string;
   'set-last-played-song': string;
