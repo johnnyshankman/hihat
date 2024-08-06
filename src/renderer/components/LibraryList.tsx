@@ -15,6 +15,7 @@ import useMainStore from '../store/main';
 import { convertToMMSS } from '../utils/utils';
 import usePlayerStore from '../store/player';
 import SongMenu from './SongMenu';
+import AlphabetSlider from './AlphabetSlider';
 
 const ROW_HEIGHT = 25.5;
 
@@ -435,7 +436,7 @@ export default function LibraryList({
           songInfo={songMenu?.songInfo}
         />
       )}
-      <div className="w-full text-[11px]  mb-[1px]">
+      <div className="w-full text-[11px]  mb-[1px] relative">
         <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
           <div className="flex transition-colors divide-neutral-800 divide-x mr-4">
             {FILTER_TYPES.map((filter, index) => (
@@ -517,6 +518,8 @@ export default function LibraryList({
             </div>
           </div>
         )}
+
+        <AlphabetSlider />
 
         {/**
          * @dev since the list could be 1000s of songs long we must virtualize it

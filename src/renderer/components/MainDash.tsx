@@ -49,6 +49,10 @@ export default function MainDash() {
   const currentSong = usePlayerStore((store) => store.currentSong);
   const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const setInitialized = useMainStore((store) => store.setInitialized);
+  const initialScrollIndex = useMainStore((store) => store.initialScrollIndex);
+  const setInitialScrollIndex = useMainStore(
+    (store) => store.setInitialScrollIndex,
+  );
   const currentSongDataURL = usePlayerStore(
     (store) => store.currentSongDataURL,
   );
@@ -84,9 +88,6 @@ export default function MainDash() {
   const [totalSongs, setTotalSongs] = useState(0);
   const [estimatedTimeRemainingString, setEstimatedTimeRemainingString] =
     useState('');
-  const [initialScrollIndex, setInitialScrollIndex] = useState<
-    number | undefined
-  >(undefined);
   const [showAlbumArtMenu, setShowAlbumArtMenu] =
     useState<AlbumArtMenuState>(undefined);
   const [showDedupingProgress, setShowDedupingProgress] = useState(false);
@@ -515,7 +516,7 @@ export default function MainDash() {
         setInitialScrollIndex(undefined);
       }, 10);
     }
-  }, [initialScrollIndex]);
+  }, [initialScrollIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   navigator.mediaSession.setActionHandler('previoustrack', () => {
     playPreviousSong();

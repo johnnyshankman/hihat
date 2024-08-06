@@ -7,6 +7,7 @@ interface AdditionalActions {
   setLastPlayedSong: (song: string) => void;
   setLibraryPath: (path: string) => void;
   setInitialized: (initialized: boolean) => void;
+  setInitialScrollIndex: (index: number | undefined) => void;
 }
 
 const useMainStore = create<StoreStructure & AdditionalActions>((set) => ({
@@ -18,6 +19,7 @@ const useMainStore = create<StoreStructure & AdditionalActions>((set) => ({
   lastPlayedSong: '',
   libraryPath: '',
   initialized: false,
+  initialScrollIndex: undefined,
 
   /**
    * AdditionalActions
@@ -42,6 +44,11 @@ const useMainStore = create<StoreStructure & AdditionalActions>((set) => ({
   setInitialized: (initialized: boolean) => {
     return set({
       initialized,
+    });
+  },
+  setInitialScrollIndex: (index: number | undefined) => {
+    return set({
+      initialScrollIndex: index,
     });
   },
 }));

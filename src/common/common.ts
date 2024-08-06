@@ -49,6 +49,7 @@ export type StoreStructure = {
   lastPlayedSong: string; // a key into "library"
   libraryPath: string;
   initialized: boolean;
+  initialScrollIndex?: number;
 };
 
 export const ALLOWED_EXTENSIONS = [
