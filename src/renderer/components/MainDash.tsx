@@ -714,11 +714,10 @@ export default function MainDash() {
           </>
         )}
 
-        {/** TODO: need to add a warning dialog explaining what this does in context */}
-        {!storeLibrary && (
+        {!storeLibrary ? (
           <Tooltip title="Import Library From Folder">
             <button
-              onClick={importNewLibrary}
+              onClick={() => importNewLibrary()}
               type="button"
               aria-label="select library folder"
               className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
@@ -738,9 +737,7 @@ export default function MainDash() {
               />
             </button>
           </Tooltip>
-        )}
-
-        {storeLibrary && (
+        ) : (
           <Tooltip title="Import New Songs">
             <button
               onClick={importNewSongs}
