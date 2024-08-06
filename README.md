@@ -31,7 +31,6 @@
     <li>
       <a href="#about-the-project">About The Project</a>
       <ul>
-        <li><a href="#built-with">Built With</a></li>
         <li><a href="#core-features">Core Features</a></li>
         <li><a href="#supported-audio-and-metadata-formats">Supported Audio and Metadata Formats</a></li>
       </ul>
@@ -39,9 +38,9 @@
     <li>
       <a href="#usage">Usage</a>
       <ul>
-        <li><a href="#setting-your-library">Setting Your Library</a></li>
-        <li><a href="#adding-more-songs">Adding More Songs</a></li>
-        <li><a href="#refreshing-your-library">Refreshing Your Library</a></li>
+        <li><a href="#initializing-your-library">Setting Your Library</a></li>
+        <li><a href="#adding-new-songs">Adding More Songs</a></li>
+        <li><a href="#rescanning-your-library">Refreshing Your Library</a></li>
       </ul>
     </li>
     <li><a href="#feature-roadmap">Feature Roadmap</a></li>
