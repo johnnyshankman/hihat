@@ -122,25 +122,25 @@ Don't know where to download files of your favorite albums and tracks? I suggest
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-### Setting Your Library
+### Initializing Your Library
 
-_Hit the "Import Library" icon in the top right (or in the `hihat` menu)._
+_Upon initial boot of the app you'll see a button that allows you to select your library folder. Click it._
 
-_Then select your library's directory and wait for the import process to finish. This process takes about 1min per 10,000 songs imported._
+_After selecting a directory from you computer, hit confirm and wait for the import process to finish. This process takes about 1m / 10,000 songs._
 
-<img width="331" alt="Screenshot 2023-12-17 at 10 56 38 PM" src="https://github.com/johnnyshankman/hihat/assets/6632701/a4d9d343-66e0-43af-9a23-36a7d0998f9c">
+### Adding New Songs
 
-### Adding More Songs
+_Click the "import new songs" icon in the top right of hihat (or  `hihat -> import new songs` from the menu). You can select individual songs, or folders of songs to import. hihat will copy them for their existing directory into your hihat library's folder for safekeeping._
 
-_Hit the "Add Songs" icon in the top right (or in the `hihat` menu)._
+<img width="686" alt="Screenshot_2024-08-05_at_7_32_23 PM" src="https://github.com/user-attachments/assets/ce8cfe19-a918-49aa-9d55-ebc27ae8d53d">
 
-<img width="326" alt="Screenshot 2024-05-05 at 1 18 04 AM" src="https://github.com/johnnyshankman/hihat/assets/6632701/399013e3-0b60-45c9-93ff-93535f8c7ce3">
+### Rescanning Your Library
 
-### Refreshing Your Library
+_If you make manual changes to the files within your library's folder (using Finder for example) you will want to rescan your library._ 
 
-_If you make manual changes to your library's directory in Finder, you will want to reimport your library. Simply hit `import library` under the `hihat` menu and reselec your existing library directory._
+_Click  `hihat -> rescan library folder` from the menu. This operation will keep the Playcount and Date Added of every existing song in tact while importing any new songs found in your library's folder._
 
-<img width="289" alt="Screenshot 2024-05-05 at 1 17 42 AM" src="https://github.com/johnnyshankman/hihat/assets/6632701/bcf30959-01f1-4847-96bd-85c4bfbd9734">
+<img width="673" alt="Screenshot 2024-08-05 at 8 51 45 PM" src="https://github.com/user-attachments/assets/bfb904a1-dee6-4199-9bfb-ca9515ef9d88">
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
