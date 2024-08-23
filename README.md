@@ -84,6 +84,7 @@ a music player without the distractions.
 * intelligent sorting by song, artist, album
 * nested folder support for libraries and new imports
 * Spotify and Apple Music 1-click search
+* [Rockbox](https://www.rockbox.org/)/Music-Device syncronization
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
