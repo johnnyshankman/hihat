@@ -15,6 +15,8 @@ export type Channels =
   | 'show-in-finder'
   | 'menu-select-library'
   | 'menu-rescan-library'
+  | 'menu-backup-library'
+  | 'backup-library-success'
   | 'menu-add-songs'
   | 'menu-reset-library'
   | 'menu-hide-dupes'
@@ -77,6 +79,7 @@ export interface ResponseArgs extends ArgsBase {
     songData: StoreStructure['library'][string];
   };
   'update-store': StoreStructure;
+  'backup-library-success': undefined;
 }
 
 const electronHandler = {

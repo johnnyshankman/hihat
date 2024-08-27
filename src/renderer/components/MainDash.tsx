@@ -501,6 +501,14 @@ export default function MainDash() {
     window.electron.ipcRenderer.on('menu-delete-dupes', () => {
       setShowConfirmDedupeAndDeleteDialog(true);
     });
+
+    window.electron.ipcRenderer.on('menu-backup-library', () => {
+      window.electron.ipcRenderer.sendMessage('menu-backup-library');
+
+      window.electron.ipcRenderer.once('backup-library-success', () => {
+        console.log('library backed up');
+      });
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
