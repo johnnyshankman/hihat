@@ -174,41 +174,42 @@ export default function LibraryList({
   );
 
   const updateColumnWidth = (index: number, deltaX: number) => {
-    // edit the width of columnUXInfo[index] based on the drag delta
     const newColumnUXInfo = [...columnUXInfo];
     newColumnUXInfo[index].width += deltaX;
 
-    // check if the width is less than 90
     if (newColumnUXInfo[index].width < 90) {
       newColumnUXInfo[index].width = 90;
     }
 
-    // do a failsafe to make sure the total width of the columns is equal to the width of the container
     const totalWidth = newColumnUXInfo.reduce(
       (acc, column) => acc + column.width,
       0,
     );
 
-    // if we've made the columns too big, adjust the width of the column after this one to make it work
     if (totalWidth !== width) {
       const diff = totalWidth - width;
-      newColumnUXInfo[index + 1].width -= diff;
+
+      if (index === 2) {
+        // Album column
+        newColumnUXInfo[1].width -= diff; // Adjust Artist column
+      } else if (index < 3) {
+        // Title or Artist column
+        newColumnUXInfo[index + 1].width -= diff;
+      }
     }
 
-    // if the column after this one is now less than 90 make it 90 and see if we can adjust the column TWO after this one
-    if (newColumnUXInfo[index + 1].width < 90) {
-      newColumnUXInfo[index + 1].width = 90;
+    if (index === 1 && newColumnUXInfo[1].width < 90) {
+      newColumnUXInfo[1].width = 90;
+      newColumnUXInfo[0].width -= 90 - newColumnUXInfo[1].width + deltaX;
+    }
 
-      if (newColumnUXInfo[index + 2]) {
-        newColumnUXInfo[index + 2].width -= deltaX;
-      }
+    if (index === 2 && newColumnUXInfo[2].width < 90) {
+      newColumnUXInfo[2].width = 90;
+      newColumnUXInfo[1].width -= 90 - newColumnUXInfo[2].width + deltaX;
+    }
 
-      // if the column TWO after this one is now less than 90 make it 90 and reject
-      if (newColumnUXInfo[index + 2].width < 90) {
-        newColumnUXInfo[index + 2].width = 90;
-        // and reject the change
-        newColumnUXInfo[index].width -= deltaX;
-      }
+    if (newColumnUXInfo[0].width < 90) {
+      newColumnUXInfo[0].width = 90;
     }
 
     setColumnUXInfo(newColumnUXInfo);
