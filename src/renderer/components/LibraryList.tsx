@@ -96,7 +96,7 @@ export default function LibraryList({
     {
       id: 'title',
       label: 'Song',
-      width: width * 0.5 - 60 - 40,
+      width: width * 0.6 - 70 - 40 - 70,
     },
     {
       id: 'artist',
@@ -111,13 +111,13 @@ export default function LibraryList({
     {
       id: 'duration',
       label: 'Time',
-      width: width * 0.1,
+      width: 70,
       icon: <AccessTimeIcon fontSize="inherit" />,
     },
     {
       id: 'dateAdded',
       label: 'Added',
-      width: 60,
+      width: 70,
       icon: <Today fontSize="inherit" />,
     },
     {
@@ -132,10 +132,19 @@ export default function LibraryList({
     // recalculate the width of each column proportionally using staleWidth as the base
     if (staleWidth !== width) {
       setColumnUXInfo(
-        columnUXInfo.map((column) => ({
-          ...column,
-          width: Math.max((column.width / staleWidth) * width, 60),
-        })),
+        columnUXInfo.map((column) => {
+          if (
+            column.id === 'dateAdded' ||
+            column.id === 'playCount' ||
+            column.id === 'duration'
+          ) {
+            return column; // Keep these columns at their initial width
+          }
+          return {
+            ...column,
+            width: Math.max((column.width / staleWidth) * width, 60),
+          };
+        }),
       );
       setStaleWidth(width);
     }
