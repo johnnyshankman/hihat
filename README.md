@@ -117,11 +117,13 @@ Don't know where to download files of your favorite albums and tracks? I suggest
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-### Initializing Your Library
+### Getting Started
 
 _Upon initial boot of the app you'll see a button that allows you to select your library folder. Click it._
 
-_After selecting a directory from you computer, hit confirm and wait for the import process to finish. This process takes about 1m / 10,000 songs._
+_After selecting a directory from you computer containing your music library, hit confirm and wait for the import process to finish. This process takes about 1m/10,000 songs._
+
+_Now when new songs are added to library from any other place on your computer, they'll be copied into your library folder for safekeeping!_
 
 ### Adding New Songs
 
