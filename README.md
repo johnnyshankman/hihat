@@ -184,18 +184,21 @@ This project was built with the following technologies:
 - [x] Download album art for sharing
 - [x] Ability to "open in finder" so you can see the song file
 - [x] Redo player UX on small screens, it's function over fashion atm
-- [x] Ability to insert new songs or albums without updating the whole library
+- [x] Insert new songs or albums without reimporting the whole library
 - [x] Click on song info to scroll back to it
-- [x] Generative shareable Spotify search links
-- [x] Generative shareable Apple Music search links
+- [x] Shareable Spotify search links
+- [x] Shareable Apple Music search links
 - [x] Sort by date added
 - [x] Playcount tracking and sort by playcount
-- [x] Ability to "hide" songs you don't want to see, with or without deleting their file
+- [x] Ability to "hide" songs you don't want to see, with or without deleting their file in filesystem
 - [x] Ability to deduplicate identical songs in library easily
+- [ ] Ability to delete entire albums of songs from library and filestystem
+- [x] Adjustable column widths for songname, artist, and album
+- [ ] Sort by albumartist not the plain old artist, pretty much only used by rap albums with features (2Pac - All Eyez On Me)
 - [ ] Edit song metadata
-- [ ] Show some fun stats about your library somewhere, like gb and # of songs
-- [ ] Hide and show columns in the song list
-- [ ] iTunes-1.0-like "browser" for going seeing scrollable list of artists/albums
+- [ ] Show stats about your library somewhere, like GB and # of songs
+- [ ] Hide and show columns in the explorer
+- [ ] iTunes-1.0-like "browser" for seeing scrollable list of artists or albums
 - [ ] Playlists (TBD if I'll ever do this, lots of work required)
 - [ ] Queue songs (TBD if I'll ever do this, lots of work required)
 
