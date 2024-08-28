@@ -84,7 +84,7 @@ a music player without the distractions.
 * intelligent sorting by song, artist, album
 * nested folder support for libraries and new imports
 * Spotify and Apple Music one-click search
-* Easily sync your library to a backup HD, phone, or retro device running [Rockbox](https://www.rockbox.org/)
+* sync your library to a backup drive, phone, or retro device running [Rockbox](https://www.rockbox.org/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -192,8 +192,9 @@ This project was built with the following technologies:
 - [x] Playcount tracking and sort by playcount
 - [x] Ability to "hide" songs you don't want to see, with or without deleting their file in filesystem
 - [x] Ability to deduplicate identical songs in library easily
-- [ ] Ability to delete entire albums of songs from library and filestystem
+- [x] Ability to delete entire albums of songs from library and filestystem
 - [x] Adjustable column widths for songname, artist, and album
+- [ ] Adjustable explorer height which makes album art smaller/bigger
 - [ ] Sort by albumartist not the plain old artist, pretty much only used by rap albums with features (2Pac - All Eyez On Me)
 - [ ] Edit song metadata
 - [ ] Show stats about your library somewhere, like GB and # of songs
