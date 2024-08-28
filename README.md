@@ -61,7 +61,7 @@
 
 a music player without the distractions.
 
-[![hihat desktop preview][product-screenshot]](https://whitelights.co)
+[![hihat desktop preview][product-screenshot]](https://whitelights.rip)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
