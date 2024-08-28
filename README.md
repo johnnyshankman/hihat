@@ -119,23 +119,31 @@ Don't know where to download files of your favorite albums and tracks? I suggest
 
 ### Getting Started
 
-_Upon initial boot of the app you'll see a button that allows you to select your library folder. Click it._
+Upon initial boot of the app you'll see a button that allows you to select your library folder.
 
-_After selecting a directory from you computer containing your music library, hit confirm and wait for the import process to finish. This process takes about 1m/10,000 songs._
+Click it and then select a directory from you computer containing your music library. 
 
-_Now when new songs are added to library from any other place on your computer, they'll be copied into your library folder for safekeeping!_
+After hitting confirm simply wait for the import process to finish, it takes about 1 minute for every 10,000 songs.
+
+Once that is complete you're ready to go! When new songs are added hihat from any other place on your computer, they'll be copied into this library directory.
 
 ### Adding New Songs
 
-_Click the "import new songs" icon in the top right of hihat (or  `hihat -> import new songs` from the menu). You can select individual songs, or folders of songs to import. hihat will copy them for their existing directory into your hihat library's folder for safekeeping._
+Click the "import new songs" icon in the top right of hihat (or  `hihat -> import new songs` from the menu). 
+
+Then select individual songs or folders of songs to import. 
+
+hihat will copy them from their existing directory into your hihat library's folder for longterm safekeeping.
 
 <img width="686" alt="Screenshot_2024-08-05_at_7_32_23 PM" src="https://github.com/user-attachments/assets/ce8cfe19-a918-49aa-9d55-ebc27ae8d53d">
 
 ### Rescanning Your Library
 
-_If you make manual changes to the files within your library's folder (using Finder for example) you will want to rescan your library._ 
+If you've used Finder to add songs to your library's folder instead of using hihat's "import new songs" feature you'll need to rescan your library so that hihat is aware of the new songs.
 
-_Click  `hihat -> rescan library folder` from the menu. This operation will keep the Playcount and Date Added of every existing song in tact while importing any new songs found in your library's folder._
+Click  `hihat -> rescan library folder` from the menu. 
+
+This operation will keep the Playcount and Date Added of every existing song in tact while importing any new songs found in your library folder.
 
 <img width="673" alt="Screenshot 2024-08-05 at 8 51 45 PM" src="https://github.com/user-attachments/assets/bfb904a1-dee6-4199-9bfb-ca9515ef9d88">
 
