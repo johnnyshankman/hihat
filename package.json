@@ -78,6 +78,7 @@
     "react-dom": "^18.2.0",
     "react-draggable": "^4.4.6",
     "react-router-dom": "^6.16.0",
+    "rsync": "^0.6.1",
     "source-map-support": "^0.5.21",
     "zustand": "^4.4.7"
   },
@@ -102,6 +103,7 @@
     "@types/react-dom": "^18.2.7",
     "@types/react-test-renderer": "^18.0.1",
     "@types/react-virtualized": "^9.21.26",
+    "@types/rsync": "^0.4.36",
     "@types/terser-webpack-plugin": "^5.0.4",
     "@types/webpack-bundle-analyzer": "^4.6.0",
     "@typescript-eslint/eslint-plugin": "^6.7.0",

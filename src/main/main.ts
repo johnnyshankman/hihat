@@ -19,6 +19,7 @@ import fs from 'fs';
 import * as mm from 'music-metadata';
 import { File } from 'node-taglib-sharp';
 import opener from 'opener';
+import Rsync from 'rsync';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import {
@@ -807,6 +808,54 @@ ipcMain.on('copy-art-to-clipboard', async (_event, arg): Promise<any> => {
     clipboard.writeImage(
       nativeImage.createFromBuffer(metadata.common.picture?.[0].data),
     );
+  }
+});
+
+/**
+ * @dev for backing up the user's library to a certain directory/path
+ * by using rsync.
+ */
+ipcMain.on('menu-backup-library', async (event, _arg): Promise<any> => {
+  const userConfig = getUserConfig();
+  const { libraryPath } = userConfig;
+
+  // null check the mainWindow
+  if (!mainWindow) {
+    return;
+  }
+
+  let result: OpenDialogReturnValue;
+  try {
+    result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+    });
+  } catch (e) {
+    console.log(e);
+    return;
+  }
+
+  if (result.canceled) {
+    return;
+  }
+
+  const backupPath = result.filePaths[0];
+
+  if (backupPath) {
+    const rsync = new Rsync();
+
+    rsync
+      .set('ignore-existing')
+      .flags(['v', 'P', 'r', 'h'])
+      .source(libraryPath)
+      .destination(backupPath);
+
+    // Execute the command
+    rsync.execute((error, code, cmd) => {
+      // we are done, respond to the renderer process
+      console.log('rsync error:', error);
+      console.log('rsync command:', cmd);
+      event.reply('backup-library-success');
+    });
   }
 });
 

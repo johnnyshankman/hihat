@@ -92,6 +92,12 @@ export default class MenuBuilder {
           },
         },
         {
+          label: 'backup / sync library',
+          click: () => {
+            this.mainWindow.webContents.send('menu-backup-library');
+          },
+        },
+        {
           label: 'reset all hihat data',
           click: () => {
             this.mainWindow.webContents.send('menu-reset-library');
