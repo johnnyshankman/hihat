@@ -92,7 +92,7 @@ export default class MenuBuilder {
           },
         },
         {
-          label: 'backup library',
+          label: 'backup / sync library',
           click: () => {
             this.mainWindow.webContents.send('menu-backup-library');
           },

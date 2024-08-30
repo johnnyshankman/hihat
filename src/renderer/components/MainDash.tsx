@@ -94,7 +94,10 @@ export default function MainDash() {
     showConfirmDedupeAndDeleteDialog,
     setShowConfirmDedupeAndDeleteDialog,
   ] = useState(false);
-
+  const [showBackupConfirmationDialog, setShowBackupConfirmationDialog] =
+    useState(false);
+  const [showBackingUpLibraryDialog, setShowBackingUpLibraryDialog] =
+    useState(false);
   /**
    * @def functions
    */
@@ -494,20 +497,25 @@ export default function MainDash() {
 
     window.electron.ipcRenderer.on('menu-hide-dupes', () => {
       setShowDedupingProgress(true);
-      // @note: responds with update-store
+      // responds with 'update-store' on completion
       window.electron.ipcRenderer.sendMessage('menu-hide-dupes');
     });
 
     window.electron.ipcRenderer.on('menu-delete-dupes', () => {
+      // open the confirmation dialog, which handles the other ipc calls
       setShowConfirmDedupeAndDeleteDialog(true);
+      // eventually this will respond with 'update-store' on completion
     });
 
     window.electron.ipcRenderer.on('menu-backup-library', () => {
-      window.electron.ipcRenderer.sendMessage('menu-backup-library');
+      // open the confirmation dialog, which handles the other ipc calls
+      setShowBackupConfirmationDialog(true);
+    });
 
-      window.electron.ipcRenderer.once('backup-library-success', () => {
-        console.log('library backed up');
-      });
+    window.electron.ipcRenderer.once('backup-library-success', () => {
+      // close the dialogs
+      setShowBackingUpLibraryDialog(false);
+      setShowBackupConfirmationDialog(false);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -601,6 +609,91 @@ export default function MainDash() {
           <div className="flex w-full justify-center pt-2 pb-1 px-2">
             <TinyText>This operation will take three to five minutes</TinyText>
           </div>
+        </div>
+      </Dialog>
+
+      {/**
+       * @dev BACKUP CONFIRMATION DIALOG
+       */}
+      <Dialog
+        className="flex flex-col items-center justify-center content-center p-10"
+        open={showBackupConfirmationDialog}
+      >
+        <div className="flex flex-col items-center pb-4 max-w-[400px]">
+          <DialogTitle>Backup Library</DialogTitle>
+          <DialogContent>
+            <div className="flex w-full justify-center px-2">
+              <TinyText as="div">
+                This feature creates a copy of your music library in a folder
+                you choose, like on an external hard drive. It's smart enough
+                to:
+                <ol className="list-decimal pl-6 space-y-2 mt-2">
+                  <li>
+                    Only copy new or changed files, saving time and space.
+                  </li>
+                  <li>
+                    Keep your backup folder in sync with your main library.
+                  </li>
+                  <li>Let you easily update your backup whenever you want.</li>
+                </ol>
+                <p className="mt-4">
+                  This way, you can protect your music collection without
+                  worrying about duplicate files or complicated backups.
+                </p>
+              </TinyText>
+            </div>
+          </DialogContent>
+          <div className="flex flex-row">
+            <div className="flex w-full justify-center pt-2 pb-1 px-2">
+              <button
+                type="button"
+                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                onClick={() => {
+                  setShowBackupConfirmationDialog(false);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+            <div className="flex w-full justify-center pt-2 pb-1 px-2">
+              <button
+                type="button"
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                onClick={() => {
+                  setShowBackupConfirmationDialog(false);
+                  setShowBackingUpLibraryDialog(true);
+                  window.electron.ipcRenderer.sendMessage(
+                    'menu-backup-library',
+                  );
+                }}
+              >
+                Backup
+              </button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
+
+      {/**
+       * @dev BACKING UP LIBRARY DIALOG
+       */}
+      <Dialog
+        className="flex flex-col items-center justify-center content-center p-10"
+        open={showBackingUpLibraryDialog}
+      >
+        <div className="flex flex-col items-center pb-4 max-w-[240px]">
+          <DialogTitle>Backing Up</DialogTitle>
+          <DialogContent>
+            <div className="flex w-full justify-center px-2 flex-col gap-6">
+              <TinyText className="text-center">
+                Syncing your library with the chosen folder. This may take a
+                while so go grab some tea!
+              </TinyText>
+              <Box sx={{ width: '100%', marginBottom: '12px' }}>
+                <LinearProgress variant="indeterminate" color="inherit" />
+              </Box>
+            </div>
+          </DialogContent>
         </div>
       </Dialog>
 
