@@ -625,8 +625,8 @@ export default function MainDash() {
             <div className="flex w-full justify-center px-2">
               <TinyText as="div">
                 This feature creates a copy of your music library in a folder
-                you choose, like on an external hard drive. It's smart enough
-                to:
+                you choose, like on an external hard drive. It&apos;s smart
+                enough to:
                 <ol className="list-decimal pl-6 space-y-2 mt-2">
                   <li>
                     Only copy new or changed files, saving time and space.
