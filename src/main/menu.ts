@@ -97,12 +97,12 @@ export default class MenuBuilder {
             this.mainWindow.webContents.send('menu-backup-library');
           },
         },
-        {
-          label: 'reset all hihat data',
-          click: () => {
-            this.mainWindow.webContents.send('menu-reset-library');
-          },
-        },
+        // {
+        //   label: 'reset all hihat data',
+        //   click: () => {
+        //     this.mainWindow.webContents.send('menu-reset-library');
+        //   },
+        // },
         { type: 'separator' },
 
         {
