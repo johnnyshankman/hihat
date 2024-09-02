@@ -429,7 +429,7 @@ export default function LibraryList({
   const hasSongs = Object.keys(filteredLibrary || {}).length;
 
   return (
-    <div className="w-full overflow-auto">
+    <div className="w-full">
       {/**
        * @dev this is the menu that pops up when the user right clicks on a song
        */}

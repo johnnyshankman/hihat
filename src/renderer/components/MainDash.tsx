@@ -9,6 +9,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import SearchIcon from '@mui/icons-material/Search';
 import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
 import { DialogContent } from '@mui/material';
+import Draggable from 'react-draggable';
 import { StoreStructure, LightweightAudioMetadata } from '../../common/common';
 import AlbumArtMenu from './AlbumArtMenu';
 import useMainStore from '../store/main';
@@ -434,7 +435,10 @@ export default function MainDash() {
     const playerHeight = document.querySelector('.player')?.clientHeight || 0;
 
     if (height) {
-      setRowContainerHeight(height - playerHeight - artContainerHeight - 1);
+
+      setRowContainerHeight(
+        height - playerHeight - artContainerHeight - 1 - 30,
+      );
     }
   }, [height, width]);
 
@@ -453,10 +457,9 @@ export default function MainDash() {
 
       const artContainerHeight =
         document.querySelector('.art')?.clientHeight || 0;
-      const playerHeight = document.querySelector('.player')?.clientHeight || 0;
 
       if (height) {
-        setRowContainerHeight(height - playerHeight - artContainerHeight);
+        setRowContainerHeight(height - 120 - artContainerHeight);
       }
 
       if (arg.lastPlayedSong) {
@@ -752,7 +755,7 @@ export default function MainDash() {
        *  -- import button
        *  -- search bar etc
        */}
-      <div className="flex art drag justify-center p-4 pb-8 space-x-4 md:flex-row">
+      <div className="flex art drag justify-center p-4 pb-8 space-x-4 md:flex-row ">
         {/**
          * @dev ALBUM ART (OR PLACEHOLDER)
          */}
