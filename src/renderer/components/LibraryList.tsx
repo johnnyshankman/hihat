@@ -366,7 +366,7 @@ export default function LibraryList({
           });
         }}
         data-state={song === currentSong ? 'selected' : undefined}
-        className="flex w-full items-center border-b border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
+        className="flex w-full items-center border-b last:border-b-0 border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
       >
         <div
           className={`select-none whitespace-nowrap	overflow-hidden py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0`}
@@ -445,7 +445,7 @@ export default function LibraryList({
           songInfo={songMenu?.songInfo}
         />
       )}
-      <div className="w-full text-[11px]  mb-[1px]">
+      <div className="w-full text-[11px]">
         <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
           <div className="flex transition-colors divide-neutral-800 divide-x mr-4">
             {FILTER_TYPES.map((filter, index) => (

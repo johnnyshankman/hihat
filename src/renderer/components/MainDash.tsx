@@ -435,10 +435,7 @@ export default function MainDash() {
     const playerHeight = document.querySelector('.player')?.clientHeight || 0;
 
     if (height) {
-
-      setRowContainerHeight(
-        height - playerHeight - artContainerHeight - 1 - 30,
-      );
+      setRowContainerHeight(height - playerHeight - artContainerHeight - 26);
     }
   }, [height, width]);
 
