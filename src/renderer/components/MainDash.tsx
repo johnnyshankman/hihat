@@ -455,6 +455,7 @@ export default function MainDash() {
         document.querySelector('.art')?.clientHeight || 0;
 
       if (height) {
+        // since the player has no actual height, we use 120 to implicitly set the height
         setRowContainerHeight(height - 120 - artContainerHeight);
       }
 
