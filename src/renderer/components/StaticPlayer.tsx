@@ -46,7 +46,7 @@ export default function StaticPlayer({
   return (
     <div
       className="player flex flex-col sm:flex-row items-center
-       justify-between drag gap-1 sm:gap-10 fixed inset-x-0 border-t
+       justify-between drag gap-1 sm:gap-10 inset-x-0 border-t
        border-neutral-800 bottom-0 bg-[#0d0d0d] shadow-md px-4 pb-4 pt-0 sm:pb-2 sm:pt-2
        "
     >

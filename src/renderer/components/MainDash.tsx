@@ -434,7 +434,7 @@ export default function MainDash() {
     const playerHeight = document.querySelector('.player')?.clientHeight || 0;
 
     if (height) {
-      setRowContainerHeight(height - playerHeight - artContainerHeight - 1);
+      setRowContainerHeight(height - playerHeight - artContainerHeight - 26);
     }
   }, [height, width]);
 
@@ -453,10 +453,10 @@ export default function MainDash() {
 
       const artContainerHeight =
         document.querySelector('.art')?.clientHeight || 0;
-      const playerHeight = document.querySelector('.player')?.clientHeight || 0;
 
       if (height) {
-        setRowContainerHeight(height - playerHeight - artContainerHeight);
+        // since the player has no actual height, we use 120 to implicitly set the height
+        setRowContainerHeight(height - 120 - artContainerHeight);
       }
 
       if (arg.lastPlayedSong) {
@@ -752,7 +752,7 @@ export default function MainDash() {
        *  -- import button
        *  -- search bar etc
        */}
-      <div className="flex art drag justify-center p-4 pb-8 space-x-4 md:flex-row">
+      <div className="flex art drag justify-center p-4 pb-8 space-x-4 md:flex-row ">
         {/**
          * @dev ALBUM ART (OR PLACEHOLDER)
          */}
