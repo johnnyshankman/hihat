@@ -840,6 +840,17 @@ ipcMain.on('menu-backup-library', async (event, _arg): Promise<any> => {
 
   const backupPath = result.filePaths[0];
 
+  if (
+    backupPath === libraryPath ||
+    backupPath.startsWith(libraryPath + path.sep)
+  ) {
+    event.reply(
+      'backup-library-error',
+      'Cannot backup to the same folder or its subfolder',
+    );
+    return;
+  }
+
   if (backupPath) {
     const rsync = new Rsync();
 

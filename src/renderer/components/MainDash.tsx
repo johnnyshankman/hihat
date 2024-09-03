@@ -9,7 +9,6 @@ import LinearProgress from '@mui/material/LinearProgress';
 import SearchIcon from '@mui/icons-material/Search';
 import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
 import { DialogContent } from '@mui/material';
-import Draggable from 'react-draggable';
 import { StoreStructure, LightweightAudioMetadata } from '../../common/common';
 import AlbumArtMenu from './AlbumArtMenu';
 import useMainStore from '../store/main';
