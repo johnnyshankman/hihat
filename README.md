@@ -71,7 +71,7 @@ a music player without the distractions.
 * 100% offline
 * always dark mode
 * audiophile fidelity (supports all file types)
-* mix 'n match file types (mp3, m4a, flac, etc)
+* mix 'n match file types in one library
 * limitless library size
 * responsive design
 * song shuffle
