@@ -194,14 +194,12 @@ This project was built with the following technologies:
 - [x] Ability to deduplicate identical songs in library easily
 - [x] Ability to delete entire albums of songs from library and filestystem
 - [x] Adjustable column widths for songname, artist, and album
-- [ ] Adjustable explorer height which makes album art smaller/bigger
 - [ ] Sort by albumartist not the plain old artist, pretty much only used by rap albums with features (2Pac - All Eyez On Me)
 - [ ] Edit song metadata
 - [ ] Show stats about your library somewhere, like GB and # of songs
 - [ ] Hide and show columns in the explorer
 - [ ] iTunes-1.0-like "browser" for seeing scrollable list of artists or albums
-- [ ] Playlists (TBD if I'll ever do this, lots of work required)
-- [ ] Queue songs (TBD if I'll ever do this, lots of work required)
+- [ ] Queue next-up song
 
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
