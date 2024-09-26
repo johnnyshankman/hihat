@@ -95,14 +95,13 @@ Almost every format under the sun is supported, and they can all be mixed togeth
 Just to name a few:
 * MP3
 * MP4
-* Ogg
-* WebM
+* AAC
+* Ogg Vorbis
 * WAV
 * FLAC
+* ALAC
 * Opus
 * PCM
-* Vorbis
-* AAC
 
 If you'd like to see more detailed information, check out:
 * [The Chromium Project](https://www.chromium.org/audio-video/) for info on supported audio formats.
