@@ -129,6 +129,7 @@ Don't know where to download files of your favorite albums and tracks? I suggest
 
 * Double click on a song to play it
 * Use the playback controls at the bottom of the app to pause, skip, adjust volume, engage shuffle, or engage song repeat.
+* Click on the song name or artist name in the player at the bottom to scroll back to the currently playing song!
 
 <img width="749" alt="Screenshot 2024-09-15 at 8 39 53 PM" src="https://github.com/user-attachments/assets/1d21bf27-d808-49fb-b5ba-7108454c0dcc">
 
