@@ -355,10 +355,8 @@ export default function LibraryList({
     return (
       <div
         key={key}
-        style={style}
-        onDoubleClick={async () => {
-          await playSong(song, filteredLibrary[song]);
-        }}
+        className="flex w-full items-center border-b last:border-b-0 border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
+        data-state={song === currentSong ? 'selected' : undefined}
         onContextMenu={(e) => {
           e.preventDefault();
           setSongMenu({
@@ -369,8 +367,10 @@ export default function LibraryList({
             mouseY: e.clientY - 4,
           });
         }}
-        data-state={song === currentSong ? 'selected' : undefined}
-        className="flex w-full items-center border-b last:border-b-0 border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1 divide-neutral-50"
+        onDoubleClick={async () => {
+          await playSong(song, filteredLibrary[song]);
+        }}
+        style={style}
       >
         <div
           className={`select-none whitespace-nowrap	overflow-hidden py-1 px-4 align-middle [&amp;:has([role=checkbox])]:pr-0`}
@@ -440,11 +440,11 @@ export default function LibraryList({
       {songMenu && (
         <SongMenu
           anchorEl={songMenu?.anchorEl}
+          mouseX={songMenu.mouseX}
+          mouseY={songMenu.mouseY}
           onClose={() => {
             setSongMenu(undefined);
           }}
-          mouseX={songMenu.mouseX}
-          mouseY={songMenu.mouseY}
           song={songMenu?.song}
           songInfo={songMenu?.songInfo}
         />
@@ -455,12 +455,12 @@ export default function LibraryList({
             {FILTER_TYPES.map((filter, index) => (
               <button
                 key={filter}
-                onClick={() => filterLibrary(filter)}
-                type="button"
                 className={`select-none flex flow-row leading-[1em] items-center justify-between py-1.5 px-4 text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0`}
+                onClick={() => filterLibrary(filter)}
                 style={{
                   width: `${columnUXInfo[index].width}px`,
                 }}
+                type="button"
               >
                 <span
                   className={`select-none flex items-center text-left align-middle font-medium hover:bg-neutral-800/50 text-neutral-500 [&amp;:has([role=checkbox])]:pr-0`}
@@ -522,8 +522,8 @@ export default function LibraryList({
             <div className="flex flex-col gap-4 items-center">
               <h1 className="text-neutral-500 text-base">Loading</h1>
               <CircularProgress
-                size={20}
                 className="ml-2"
+                size={20}
                 sx={{
                   color: 'white',
                 }}
@@ -537,13 +537,13 @@ export default function LibraryList({
          */}
         {initialized && width && hasSongs && (
           <List
-            width={width}
             height={rowContainerHeight}
-            rowRenderer={renderSongRow}
             rowCount={Object.keys(filteredLibrary || {}).length}
             rowHeight={ROW_HEIGHT}
+            rowRenderer={renderSongRow}
             scrollToAlignment="center"
             scrollToIndex={scrollToIndex}
+            width={width}
           />
         )}
 
@@ -563,10 +563,6 @@ export default function LibraryList({
               </h1>
               <Tooltip title="Import Library">
                 <button
-                  onClick={() => {
-                    onImportLibrary();
-                  }}
-                  type="button"
                   aria-label="select library folder"
                   className="nodrag items-center justify-center
           rounded-md text-[18px] ring-offset-background transition-colors
@@ -576,6 +572,10 @@ export default function LibraryList({
           hover:bg-white hover:text-black
           w-16
           px-4 py-[7px] text-2xl"
+                  onClick={() => {
+                    onImportLibrary();
+                  }}
+                  type="button"
                 >
                   <LibraryMusic
                     fontSize="inherit"

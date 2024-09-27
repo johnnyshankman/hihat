@@ -544,7 +544,7 @@ export default function Main() {
   });
 
   return (
-    <div className="h-full flex flex-col dark" ref={ref}>
+    <div ref={ref} className="h-full flex flex-col dark">
       {/**
        * @dev this is the audio tag that plays the song.
        * it is hidden and only used to play the song, as well as
@@ -552,20 +552,20 @@ export default function Main() {
        * never let the user click on this directly.
        * */}
       <audio
-        className="hidden"
-        src={`my-magic-protocol://getMediaFile/${currentSong}`}
-        autoPlay={!paused}
-        onEnded={playNextSong}
-        onTimeUpdate={(e) => {
-          setCurrentSongTime(e.currentTarget.currentTime);
-        }}
         ref={audioTagRef}
+        autoPlay={!paused}
+        className="hidden"
+        onEnded={playNextSong}
         onPause={() => {
           setPaused(true);
         }}
         onPlay={() => {
           setPaused(false);
         }}
+        onTimeUpdate={(e) => {
+          setCurrentSongTime(e.currentTarget.currentTime);
+        }}
+        src={`my-magic-protocol://getMediaFile/${currentSong}`}
       />
 
       {/**
@@ -579,11 +579,11 @@ export default function Main() {
           <DialogTitle>Importing Songs</DialogTitle>
           <Box sx={{ width: '100%', marginBottom: '12px' }}>
             <LinearProgress
+              color="inherit"
+              value={(songsImported / totalSongs) * 100}
               variant={
                 songsImported === totalSongs ? 'indeterminate' : 'determinate'
               }
-              color="inherit"
-              value={(songsImported / totalSongs) * 100}
             />
           </Box>
           <div className="flex w-full justify-center mt-1 px-2 ">
@@ -607,7 +607,7 @@ export default function Main() {
         <div className="flex flex-col items-center px-20 pb-6">
           <DialogTitle>Deduplicating Songs</DialogTitle>
           <Box sx={{ width: '100%', marginBottom: '12px' }}>
-            <LinearProgress variant="indeterminate" color="inherit" />
+            <LinearProgress color="inherit" variant="indeterminate" />
           </Box>
           <div className="flex w-full justify-center pt-2 pb-1 px-2">
             <TinyText>This operation will take three to five minutes</TinyText>
@@ -649,18 +649,17 @@ export default function Main() {
           <div className="flex flex-row">
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
                 onClick={() => {
                   setShowBackupConfirmationDialog(false);
                 }}
+                type="button"
               >
                 Cancel
               </button>
             </div>
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
                 onClick={() => {
                   setShowBackupConfirmationDialog(false);
@@ -669,6 +668,7 @@ export default function Main() {
                     'menu-backup-library',
                   );
                 }}
+                type="button"
               >
                 Backup
               </button>
@@ -693,7 +693,7 @@ export default function Main() {
                 while so go grab some tea!
               </TinyText>
               <Box sx={{ width: '100%', marginBottom: '12px' }}>
-                <LinearProgress variant="indeterminate" color="inherit" />
+                <LinearProgress color="inherit" variant="indeterminate" />
               </Box>
             </div>
           </DialogContent>
@@ -722,18 +722,17 @@ export default function Main() {
           <div className="flex flex-row">
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
                 onClick={() => {
                   setShowConfirmDedupeAndDeleteDialog(false);
                 }}
+                type="button"
               >
                 Cancel
               </button>
             </div>
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
                 onClick={() => {
                   setShowConfirmDedupeAndDeleteDialog(false);
@@ -741,6 +740,7 @@ export default function Main() {
                   // @note: responds with update-store
                   window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
                 }}
+                type="button"
               >
                 Deduplicate
               </button>
@@ -800,18 +800,18 @@ export default function Main() {
              * @dev ACTUAL ALBUM ART
              */}
             <img
-              src={currentSongDataURL}
               alt="Album Art"
               className="album-art h-full w-full rounded-lg"
-              style={{
-                maxWidth: `${albumArtMaxWidth}px`,
-              }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setShowAlbumArtMenu({
                   mouseX: e.clientX - 2,
                   mouseY: e.clientY - 4,
                 });
+              }}
+              src={currentSongDataURL}
+              style={{
+                maxWidth: `${albumArtMaxWidth}px`,
               }}
             />
             {showAlbumArtMenu && currentSong && (
@@ -830,7 +830,6 @@ export default function Main() {
              */}
             <Draggable
               axis="y"
-              position={{ x: 0, y: 0 }}
               onDrag={(e, data) => {
                 const newMaxWidth = albumArtMaxWidth + data.deltaY;
                 const clampedMaxWidth = Math.max(
@@ -839,6 +838,7 @@ export default function Main() {
                 );
                 setAlbumArtMaxWidth(clampedMaxWidth);
               }}
+              position={{ x: 0, y: 0 }}
             >
               <div className="w-full absolute bottom-0 h-[20px] bg-transparent cursor-ns-resize hover:cursor-ns-resize bg-red-400" />
             </Draggable>
@@ -851,8 +851,6 @@ export default function Main() {
         {!storeLibrary ? (
           <Tooltip title="Import Library From Folder">
             <button
-              onClick={() => importNewLibrary()}
-              type="button"
               aria-label="select library folder"
               className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
           rounded-md text-[18px] ring-offset-background transition-colors
@@ -861,6 +859,8 @@ export default function Main() {
           disabled:opacity-50 border border-neutral-800 bg-black
           hover:bg-white hover:text-black
           px-4 py-[7px] text-sm"
+              onClick={() => importNewLibrary()}
+              type="button"
             >
               <LibraryMusic
                 fontSize="inherit"
@@ -874,8 +874,6 @@ export default function Main() {
         ) : (
           <Tooltip title="Import New Songs">
             <button
-              onClick={importNewSongs}
-              type="button"
               aria-label="import to songs"
               className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
           rounded-md text-[18px] ring-offset-background transition-colors
@@ -884,6 +882,8 @@ export default function Main() {
           disabled:opacity-50 border border-neutral-800 bg-black
           hover:bg-white hover:text-black
           px-4 py-[7px] text-sm"
+              onClick={importNewSongs}
+              type="button"
             >
               <LibraryAdd
                 fontSize="inherit"
@@ -906,9 +906,9 @@ export default function Main() {
             }}
           >
             <StyledInputBase
-              placeholder="Search"
               inputProps={{ 'aria-label': 'search' }}
               onChange={handleSearch}
+              placeholder="Search"
             />
             <SearchIconWrapper className="text-[16px]">
               <SearchIcon fontSize="inherit" />
@@ -922,9 +922,8 @@ export default function Main() {
        */}
       {width && (
         <LibraryList
-          width={width}
-          rowContainerHeight={rowContainerHeight}
           initialScrollIndex={initialScrollIndex}
+          onImportLibrary={importNewLibrary}
           playSong={async (song, meta) => {
             // if the user clicks on the currently playing song, start it over
             if (currentSong === song) {
@@ -933,7 +932,8 @@ export default function Main() {
               await playSong(song, meta);
             }
           }}
-          onImportLibrary={importNewLibrary}
+          rowContainerHeight={rowContainerHeight}
+          width={width}
         />
       )}
 
@@ -942,8 +942,8 @@ export default function Main() {
        */}
       <StaticPlayer
         audioTagRef={audioTagRef}
-        playPreviousSong={playPreviousSong}
         playNextSong={playNextSong}
+        playPreviousSong={playPreviousSong}
       />
     </div>
   );

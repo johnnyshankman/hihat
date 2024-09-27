@@ -17,7 +17,6 @@ export default function App() {
     <Router>
       <Routes>
         <Route
-          path="/"
           element={
             <div className="shell">
               {/**
@@ -30,6 +29,7 @@ export default function App() {
               </ThemeProvider>
             </div>
           }
+          path="/"
         />
       </Routes>
     </Router>

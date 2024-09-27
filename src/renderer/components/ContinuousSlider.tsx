@@ -19,23 +19,23 @@ export default function ContinuousSlider({
   return (
     <Box sx={{ width: '75%', maxWidth: 180, minWidth: 80 }}>
       <Stack
-        spacing={1.5}
-        direction="row"
         alignItems="center"
+        direction="row"
         justifyContent="center"
         justifyItems="start"
+        spacing={1.5}
       >
         <VolumeDown fontSize="small" />
         <Slider
-          size="small"
-          color="secondary"
           aria-label="Volume"
-          value={value}
+          color="secondary"
           onChange={handleChange}
+          size="small"
           sx={{
             color: 'rgb(133,133,133)',
             '.MuiSlider-thumb': { height: 10, width: 10 },
           }}
+          value={value}
         />
         <VolumeUp fontSize="small" />
       </Stack>

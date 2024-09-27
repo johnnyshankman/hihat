@@ -28,33 +28,33 @@ export default function AlbumArtMenu(props: AlbumArtMenuProps) {
 
   return (
     <Menu
-      id="basic-menu"
       anchorEl={anchorEl}
-      open
-      MenuListProps={{
-        'aria-labelledby': 'basic-button',
-      }}
-      onClose={onClose}
       anchorOrigin={{
         vertical: 'center',
         horizontal: 'center',
       }}
-      anchorReference="anchorPosition"
       anchorPosition={{ top: mouseY, left: mouseX }}
+      anchorReference="anchorPosition"
+      id="basic-menu"
+      MenuListProps={{
+        'aria-labelledby': 'basic-button',
+      }}
+      onClose={onClose}
+      open
     >
       <MenuItem
+        onClick={copyAlbumArt}
         sx={{
           fontSize: '11px',
         }}
-        onClick={copyAlbumArt}
       >
         Copy Image
       </MenuItem>
       <MenuItem
+        onClick={downloadAlbumArt}
         sx={{
           fontSize: '11px',
         }}
-        onClick={downloadAlbumArt}
       >
         Download Artwork
       </MenuItem>

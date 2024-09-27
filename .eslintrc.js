@@ -16,6 +16,8 @@ module.exports = {
       'error',
       { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
     ],
+    // Add these new rules
+    'react/jsx-sort-props': ['error'],
   },
   parserOptions: {
     ecmaVersion: 2022,

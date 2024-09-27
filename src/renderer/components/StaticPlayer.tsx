@@ -65,13 +65,13 @@ export default function StaticPlayer({
          */}
         <div className="flex sm:hidden flex-row first-letter:align-start justify-start items-center">
           <IconButton
-            sx={{
-              fontSize: '1rem',
-              color: 'rgb(133,133,133)',
-            }}
             onClick={() => {
               const newValue = !repeating;
               setRepeating(newValue);
+            }}
+            sx={{
+              fontSize: '1rem',
+              color: 'rgb(133,133,133)',
             }}
           >
             {repeating ? (
@@ -81,13 +81,13 @@ export default function StaticPlayer({
             )}
           </IconButton>
           <IconButton
-            sx={{
-              fontSize: '1rem',
-              color: 'rgb(133,133,133)',
-            }}
             onClick={() => {
               const newValue = !shuffle;
               setShuffle(newValue);
+            }}
+            sx={{
+              fontSize: '1rem',
+              color: 'rgb(133,133,133)',
             }}
           >
             {shuffle ? (
@@ -102,17 +102,17 @@ export default function StaticPlayer({
          * @dev this is the play button on all sizes
          */}
         <Stack
-          spacing={0}
-          direction="row"
           alignItems="center"
+          direction="row"
           justifyContent="center"
           justifyItems="center"
+          spacing={0}
         >
           <IconButton
             aria-label="previous song"
-            onClick={playPreviousSong}
-            disabled={!currentSongMetadata}
             color="inherit"
+            disabled={!currentSongMetadata}
+            onClick={playPreviousSong}
           >
             <FastRewindRounded fontSize="medium" />
           </IconButton>
@@ -136,9 +136,9 @@ export default function StaticPlayer({
           </IconButton>
           <IconButton
             aria-label="next song"
-            onClick={playNextSong}
-            disabled={!currentSongMetadata}
             color="inherit"
+            disabled={!currentSongMetadata}
+            onClick={playNextSong}
           >
             <FastForwardRounded fontSize="medium" />
           </IconButton>
@@ -149,11 +149,11 @@ export default function StaticPlayer({
          */}
         <div className="flex sm:hidden justify-end flex-1 mt-1 mb-1">
           <ContinuousSlider
-            value={volume}
             onChange={(event, value) => {
               audioTagRef.current!.volume = (value as number) / 100;
               setVolume(value as number);
             }}
+            value={volume}
           />
         </div>
       </Box>
@@ -162,7 +162,6 @@ export default function StaticPlayer({
        * @dev this is song progress bar on mobile and desktop
        */}
       <LinearProgressBar
-        value={currentSongTime}
         max={currentSongMetadata?.format?.duration || 0}
         onManualChange={(e: number) => {
           setCurrentSongTime(e);
@@ -170,6 +169,7 @@ export default function StaticPlayer({
             audioTagRef.current.currentTime = e;
           }
         }}
+        value={currentSongTime}
       />
 
       {/**
@@ -178,13 +178,13 @@ export default function StaticPlayer({
       <div className="sm:flex hidden gap-2 relative justify-end flex-1 mt-2 mb-1 w-full">
         <div className="flex flex-row relative bottom-0.5">
           <IconButton
-            sx={{
-              fontSize: '1rem',
-              color: 'rgb(133,133,133)',
-            }}
             onClick={() => {
               const newValue = !repeating;
               setRepeating(newValue);
+            }}
+            sx={{
+              fontSize: '1rem',
+              color: 'rgb(133,133,133)',
             }}
           >
             {repeating ? (
@@ -194,13 +194,13 @@ export default function StaticPlayer({
             )}
           </IconButton>
           <IconButton
-            sx={{
-              fontSize: '1rem',
-              color: 'rgb(133,133,133)',
-            }}
             onClick={() => {
               const newValue = !shuffle;
               setShuffle(newValue);
+            }}
+            sx={{
+              fontSize: '1rem',
+              color: 'rgb(133,133,133)',
             }}
           >
             {shuffle ? (
@@ -211,11 +211,11 @@ export default function StaticPlayer({
           </IconButton>
         </div>
         <ContinuousSlider
-          value={volume}
           onChange={(event, value) => {
             audioTagRef.current!.volume = (value as number) / 100;
             setVolume(value as number);
           }}
+          value={volume}
         />
       </div>
     </div>

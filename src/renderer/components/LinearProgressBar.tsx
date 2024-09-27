@@ -48,19 +48,8 @@ export default function LinearProgressBar({
           justifyContent: 'center',
         }}
       >
-        <Tooltip title="Scroll to song" placement="top" arrow>
+        <Tooltip arrow placement="top" title="Scroll to song">
           <LessOpaqueTinyText
-            sx={{
-              margin: 0,
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              transition: 'opacity 0.2s',
-              '&:hover': {
-                opacity: 0.75,
-              },
-            }}
             aria-label="current-title"
             onClick={() => {
               // find the index of this song in the library
@@ -76,6 +65,17 @@ export default function LinearProgressBar({
               // flip between undefined and the index very quickly
               setOverrideScrollToIndex(index);
             }}
+            sx={{
+              margin: 0,
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s',
+              '&:hover': {
+                opacity: 0.75,
+              },
+            }}
           >
             {currentSongMetadata.common?.title || 'No song selected'}
           </LessOpaqueTinyText>
@@ -89,17 +89,16 @@ export default function LinearProgressBar({
         }}
       >
         <Slider
-          color="primary"
           aria-label="time-indicator"
-          size="small"
-          value={position}
-          min={0}
-          step={1}
+          color="primary"
           max={max}
+          min={0}
           onChange={(_, val) => {
             setPosition(val as number);
             onManualChange(val as number);
           }}
+          size="small"
+          step={1}
           sx={{
             color: 'rgba(133, 133, 133)',
             padding: '6px 0',
@@ -108,6 +107,7 @@ export default function LinearProgressBar({
               width: 8,
             },
           }}
+          value={position}
         />
       </Box>
       <Box
@@ -122,19 +122,8 @@ export default function LinearProgressBar({
           {convertToMMSS(position)}
         </LessOpaqueTinyText>
 
-        <Tooltip title="Scroll to artist" placement="top" arrow>
+        <Tooltip arrow placement="top" title="Scroll to artist">
           <LessOpaqueTinyText
-            sx={{
-              margin: 0,
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              transition: 'opacity 0.2s',
-              '&:hover': {
-                opacity: 0.75,
-              },
-            }}
             aria-label="current-artist"
             onClick={() => {
               const libraryArray = Object.values(filteredLibrary);
@@ -146,6 +135,17 @@ export default function LinearProgressBar({
               );
 
               setOverrideScrollToIndex(index);
+            }}
+            sx={{
+              margin: 0,
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s',
+              '&:hover': {
+                opacity: 0.75,
+              },
             }}
           >
             {currentSongMetadata.common?.artist || '--'}

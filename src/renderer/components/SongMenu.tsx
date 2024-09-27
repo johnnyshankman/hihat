@@ -99,21 +99,21 @@ export default function SongMenu(props: SongMenuProps) {
           <div className="flex flex-row">
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
                 onClick={() => {
                   setShowDeleteDialog(false);
                   onClose();
                 }}
+                type="button"
               >
                 Cancel
               </button>
             </div>
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
                 onClick={deleteSong}
+                type="button"
               >
                 Delete
               </button>
@@ -144,21 +144,21 @@ export default function SongMenu(props: SongMenuProps) {
           <div className="flex flex-row">
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
                 onClick={() => {
                   setShowDeleteDialog(false);
                   onClose();
                 }}
+                type="button"
               >
                 Cancel
               </button>
             </div>
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
                 onClick={deleteAlbum}
+                type="button"
               >
                 Delete
               </button>
@@ -185,21 +185,21 @@ export default function SongMenu(props: SongMenuProps) {
           <div className="flex flex-row">
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
                 onClick={() => {
                   setShowHideDialog(false);
                   onClose();
                 }}
+                type="button"
               >
                 Cancel
               </button>
             </div>
             <div className="flex w-full justify-center pt-2 pb-1 px-2">
               <button
-                type="button"
                 className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
                 onClick={hideSong}
+                type="button"
               >
                 Hide
               </button>
@@ -209,75 +209,75 @@ export default function SongMenu(props: SongMenuProps) {
       </Dialog>
 
       <Menu
-        id="basic-menu"
         anchorEl={anchorEl}
-        open
-        MenuListProps={{
-          'aria-labelledby': 'basic-button',
-        }}
-        onClose={onClose}
         anchorOrigin={{
           vertical: 'bottom',
           horizontal: 'right',
         }}
-        anchorReference="anchorPosition"
         anchorPosition={{ top: mouseY, left: mouseX }}
+        anchorReference="anchorPosition"
+        id="basic-menu"
+        MenuListProps={{
+          'aria-labelledby': 'basic-button',
+        }}
+        onClose={onClose}
+        open
       >
         <MenuItem
+          onClick={showPathInFinder}
           sx={{
             fontSize: '11px',
           }}
-          onClick={showPathInFinder}
         >
           Show In Finder
         </MenuItem>
         <MenuItem
+          onClick={downloadAlbumArt}
           sx={{
             fontSize: '11px',
           }}
-          onClick={downloadAlbumArt}
         >
           Download Artwork
         </MenuItem>
         <MenuItem
+          onClick={copySpotifyLink}
           sx={{
             fontSize: '11px',
           }}
-          onClick={copySpotifyLink}
         >
           Find on Spotify
         </MenuItem>
         <MenuItem
+          onClick={copyAppleMusicLink}
           sx={{
             fontSize: '11px',
           }}
-          onClick={copyAppleMusicLink}
         >
           Find on Apple Music
         </MenuItem>
         <MenuItem
+          onClick={() => setShowHideDialog(true)}
           sx={{
             fontSize: '11px',
           }}
-          onClick={() => setShowHideDialog(true)}
         >
           Hide
         </MenuItem>
         <MenuItem
+          onClick={() => setShowDeleteDialog(true)}
+          style={{ color: 'red' }}
           sx={{
             fontSize: '11px',
           }}
-          style={{ color: 'red' }}
-          onClick={() => setShowDeleteDialog(true)}
         >
           Delete Song
         </MenuItem>
         <MenuItem
+          onClick={() => setShowDeleteAlbumDialog(true)}
+          style={{ color: 'red' }}
           sx={{
             fontSize: '11px',
           }}
-          style={{ color: 'red' }}
-          onClick={() => setShowDeleteAlbumDialog(true)}
         >
           Delete Album
         </MenuItem>
