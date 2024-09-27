@@ -9,6 +9,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import SearchIcon from '@mui/icons-material/Search';
 import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
 import { DialogContent } from '@mui/material';
+import Draggable from 'react-draggable';
 import { StoreStructure, LightweightAudioMetadata } from '../../common/common';
 import AlbumArtMenu from './AlbumArtMenu';
 import useMainStore from '../store/main';
@@ -30,14 +31,14 @@ type AlbumArtMenuState =
     }
   | undefined;
 
-export default function MainDash() {
+export default function Main() {
   /**
    * @dev external hooks
    */
   const { width, height, ref } = useResizeDetector();
 
   /**
-   * @dev store hooks
+   * @dev global store hooks
    */
   const storeLibrary = useMainStore((store) => store.library);
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
@@ -71,12 +72,12 @@ export default function MainDash() {
   );
 
   /**
-   * @dev refs
+   * @dev JSX refs
    */
   const audioTagRef = useRef<HTMLAudioElement>(null);
 
   /**
-   * @dev state
+   * @dev component state
    */
   const [rowContainerHeight, setRowContainerHeight] = useState(0);
   const [showImportingProgress, setShowImportingProgress] = useState(false);
@@ -98,6 +99,9 @@ export default function MainDash() {
     useState(false);
   const [showBackingUpLibraryDialog, setShowBackingUpLibraryDialog] =
     useState(false);
+  const [albumArtMaxWidth, setAlbumArtMaxWidth] = useState(280);
+  const [dragPosition, setDragPosition] = useState(0);
+
   /**
    * @def functions
    */
@@ -758,10 +762,10 @@ export default function MainDash() {
          */}
         {!currentSongDataURL ? (
           <div
+            className="relative aspect-square w-1/3 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
             style={{
-              aspectRatio: '1/1',
+              maxWidth: `${albumArtMaxWidth}px`,
             }}
-            className="relative max-w-[280px] w-1/3 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
           >
             <div className="inset-0 h-full w-full flex items-center justify-center">
               <svg
@@ -784,14 +788,18 @@ export default function MainDash() {
             </div>
           </div>
         ) : (
-          <>
+          <div
+            className="relative aspect-square w-1/3 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg"
+            style={{
+              maxWidth: `${albumArtMaxWidth}px`,
+            }}
+          >
             <img
               src={currentSongDataURL}
               alt="Album Art"
-              className="album-art object-cover rounded-lg shadow-md max-w-[280px] w-1/3"
+              className="album-art h-full w-full"
               style={{
-                aspectRatio: '200/200',
-                objectFit: 'cover',
+                maxWidth: `${albumArtMaxWidth}px`,
               }}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -812,7 +820,21 @@ export default function MainDash() {
                 song={currentSong}
               />
             )}
-          </>
+            <Draggable
+              axis="y"
+              position={{ x: 0, y: 0 }}
+              onDrag={(e, data) => {
+                const newMaxWidth = albumArtMaxWidth + data.deltaY;
+                const clampedMaxWidth = Math.max(
+                  100,
+                  Math.min(newMaxWidth, 400),
+                );
+                setAlbumArtMaxWidth(clampedMaxWidth);
+              }}
+            >
+              <div className="w-full absolute bottom-0 h-[10px] bg-transparent cursor-ns-resize hover:cursor-ns-resize bg-red-400" />
+            </Draggable>
+          </div>
         )}
 
         {!storeLibrary ? (
