@@ -19,6 +19,7 @@ export type LightweightAudioMetadata = {
     title?: ICommonTagsResult['title'];
     track?: ICommonTagsResult['track'];
     disk: ICommonTagsResult['disk'];
+    albumartist?: ICommonTagsResult['albumartist'];
     /**
      * @important we never store the picture in the user config because it
      * overloads the IPC and causes crashes. we always request it song by song
