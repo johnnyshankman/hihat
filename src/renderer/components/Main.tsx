@@ -769,7 +769,7 @@ export default function Main() {
             {/**
              * @dev PLACEHOLDER ALBUM ART
              */}
-            <div className="inset-0 h-full w-full flex items-center justify-center">
+            <div className="inset-0 h-full w-full flex items-center justify-center rounded-lg">
               <svg
                 className=" text-neutral-300 w-1/5 h-1/5 animate-bounce"
                 fill="none"
@@ -802,7 +802,7 @@ export default function Main() {
             <img
               src={currentSongDataURL}
               alt="Album Art"
-              className="album-art h-full w-full"
+              className="album-art h-full w-full rounded-lg"
               style={{
                 maxWidth: `${albumArtMaxWidth}px`,
               }}
