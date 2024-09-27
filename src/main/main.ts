@@ -966,31 +966,20 @@ const createWindow = async () => {
         song.additionalInfo.dateAdded = Date.now();
       }
 
-      if (!song.common.albumartist) {
+      if (song.common.albumartist === undefined) {
         // eslint-disable-next-line no-await-in-loop
         const metadata = await mm.parseFile(key);
         if (metadata.common.albumartist) {
           song.common.albumartist = metadata.common.albumartist;
+        } else {
+          // keeps us from having to do this check again in the future
+          // blank string is still falsey in JS so this won't affect sorting
+          song.common.albumartist = '';
         }
       }
 
       userConfig.library[key] = song;
     }
-
-    /**
-     * @important fix any bad sorting in the library
-     */
-    const orderedFilesToTags: { [key: string]: LightweightAudioMetadata } = {};
-    Object.keys(userConfig.library)
-      .sort((a, b) =>
-        compareMetadata(userConfig.library[a], userConfig.library[b]),
-      )
-      .forEach((key) => {
-        orderedFilesToTags[key] = userConfig.library[key];
-      });
-
-    // Update the userConfig with the ordered library
-    userConfig.library = orderedFilesToTags;
 
     writeFileSyncToUserConfig(userConfig);
     mainWindow.webContents.send('initialize', userConfig);
