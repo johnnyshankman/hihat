@@ -535,9 +535,9 @@ export default function LibraryList({
         {/**
          * @dev since the list could be 1000s of songs long we must virtualize it
          */}
-        {hasSongs && initialized && (
+        {initialized && width && hasSongs && (
           <List
-            width={width || 0}
+            width={width}
             height={rowContainerHeight}
             rowRenderer={renderSongRow}
             rowCount={Object.keys(filteredLibrary || {}).length}
