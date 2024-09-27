@@ -840,7 +840,7 @@ export default function Main() {
                 setAlbumArtMaxWidth(clampedMaxWidth);
               }}
             >
-              <div className="w-full absolute bottom-0 h-[10px] bg-transparent cursor-ns-resize hover:cursor-ns-resize bg-red-400" />
+              <div className="w-full absolute bottom-0 h-[20px] bg-transparent cursor-ns-resize hover:cursor-ns-resize bg-red-400" />
             </Draggable>
           </div>
         )}
