@@ -48,7 +48,7 @@ export default function LinearProgressBar({
           justifyContent: 'center',
         }}
       >
-        <Tooltip title="Scroll to song">
+        <Tooltip title="Scroll to song" placement="top" arrow>
           <LessOpaqueTinyText
             sx={{
               margin: 0,
@@ -122,9 +122,7 @@ export default function LinearProgressBar({
           {convertToMMSS(position)}
         </LessOpaqueTinyText>
 
-        <Tooltip
-          title={`Scroll to ${currentSongMetadata.common?.artist || 'artist'}`}
-        >
+        <Tooltip title="Scroll to artist" placement="top" arrow>
           <LessOpaqueTinyText
             sx={{
               margin: 0,

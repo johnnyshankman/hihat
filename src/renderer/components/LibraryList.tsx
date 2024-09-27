@@ -247,27 +247,31 @@ export default function LibraryList({
         break;
       case 'artist':
         filtered = Object.keys(filteredLibrary).sort((a, b) => {
-          const artistA = filteredLibrary[a].common?.artist
-            ?.toLowerCase()
-            .replace(/^the /, '');
-          const artistB = filteredLibrary[b].common?.artist
-            ?.toLowerCase()
-            .replace(/^the /, '');
+          const artistA =
+            filteredLibrary[a].common?.albumartist ||
+            filteredLibrary[a].common?.artist;
+          const artistB =
+            filteredLibrary[b].common?.albumartist ||
+            filteredLibrary[b].common?.artist;
+          const normalizedArtistA = artistA?.toLowerCase().replace(/^the /, '');
+          const normalizedArtistB = artistB?.toLowerCase().replace(/^the /, '');
           const albumA = filteredLibrary[a].common?.album?.toLowerCase();
           const albumB = filteredLibrary[b].common?.album?.toLowerCase();
           const trackA = filteredLibrary[a].common?.track?.no;
           const trackB = filteredLibrary[b].common?.track?.no;
           // handle null cases
-          if (!artistA) return filterDirection === 'asc' ? -1 : 1;
-          if (!artistB) return filterDirection === 'asc' ? 1 : -1;
+          if (!normalizedArtistA) return filterDirection === 'asc' ? -1 : 1;
+          if (!normalizedArtistB) return filterDirection === 'asc' ? 1 : -1;
 
           if (!albumA) return -1;
           if (!albumB) return 1;
           if (!trackA) return -1;
           if (!trackB) return 1;
 
-          if (artistA < artistB) return filterDirection === 'asc' ? -1 : 1;
-          if (artistA > artistB) return filterDirection === 'asc' ? 1 : -1;
+          if (normalizedArtistA < normalizedArtistB)
+            return filterDirection === 'asc' ? -1 : 1;
+          if (normalizedArtistA > normalizedArtistB)
+            return filterDirection === 'asc' ? 1 : -1;
 
           if (albumA < albumB) return -1;
           if (albumA > albumB) return 1;
@@ -531,9 +535,9 @@ export default function LibraryList({
         {/**
          * @dev since the list could be 1000s of songs long we must virtualize it
          */}
-        {hasSongs && initialized && (
+        {initialized && width && hasSongs && (
           <List
-            width={width || 0}
+            width={width}
             height={rowContainerHeight}
             rowRenderer={renderSongRow}
             rowCount={Object.keys(filteredLibrary || {}).length}

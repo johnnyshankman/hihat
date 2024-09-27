@@ -195,6 +195,32 @@ async function sortFilesByQuality(files: string[]) {
   return sorted.map((item) => item.file);
 }
 
+const getArtist = (metadata: LightweightAudioMetadata) => {
+  return (metadata.common?.albumartist || metadata.common?.artist || '')
+    .toLowerCase()
+    .replace(/^the /, '');
+};
+
+const compareMetadata = (
+  a: LightweightAudioMetadata,
+  b: LightweightAudioMetadata,
+) => {
+  const artistA = getArtist(a);
+  const artistB = getArtist(b);
+  const albumA = a.common?.album?.toLowerCase() || '';
+  const albumB = b.common?.album?.toLowerCase() || '';
+  const diskA = a.common?.disk?.no || 0;
+  const diskB = b.common?.disk?.no || 0;
+  const trackA = a.common?.track?.no || 0;
+  const trackB = b.common?.track?.no || 0;
+
+  if (artistA !== artistB) return artistA.localeCompare(artistB);
+  if (albumA !== albumB) return albumA.localeCompare(albumB);
+  if (diskA !== diskB) return diskA - diskB;
+  if (trackA !== trackB) return trackA - trackB;
+  return 0;
+};
+
 const hideOrDeleteDupes = async (event: IpcMainEvent, del: boolean) => {
   const userConfig = getUserConfig();
   const { library } = userConfig;
@@ -326,12 +352,12 @@ ipcMain.on('delete-album', async (event, arg) => {
   const userConfig = getUserConfig();
   const { song } = arg;
 
-  const { artist } = userConfig.library[song].common;
-  const { album } = userConfig.library[song].common;
+  const { artist, album, albumartist } = userConfig.library[song].common;
 
   const songsToDelete = Object.keys(userConfig.library).filter(
     (key) =>
-      userConfig.library[key].common.artist === artist &&
+      (userConfig.library[key].common.artist === artist ||
+        userConfig.library[key].common.albumartist === albumartist) &&
       userConfig.library[key].common.album === album,
   );
 
@@ -497,6 +523,7 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
           title: metadata.common.title,
           track: metadata.common.track,
           disk: metadata.common.disk,
+          albumartist: metadata.common.albumartist,
           /**
            * purposely do not store the picture data in the user's config
            * because it's too large and we can lazy load it when needed
@@ -534,39 +561,7 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
   // sort filesToTags by artist, album, then track number
   const orderedFilesToTags: { [key: string]: LightweightAudioMetadata } = {};
   Object.keys(filesToTags)
-    .sort((a, b) => {
-      const artistA = filesToTags[a].common?.artist
-        ?.toLowerCase()
-        .replace(/^the /, '');
-      const artistB = filesToTags[b].common?.artist
-        ?.toLowerCase()
-        .replace(/^the /, '');
-      const albumA = filesToTags[a].common?.album?.toLowerCase();
-      const albumB = filesToTags[b].common?.album?.toLowerCase();
-      const trackA = filesToTags[a].common?.track?.no;
-      const trackB = filesToTags[b].common?.track?.no;
-      const diskA = filesToTags[a].common?.disk?.no;
-      const diskB = filesToTags[b].common?.disk?.no;
-
-      if (!artistA) return -1;
-      if (!artistB) return 1;
-      if (!albumA) return -1;
-      if (!albumB) return 1;
-      if (!trackA) return -1;
-      if (!trackB) return 1;
-
-      if (artistA < artistB) return -1;
-      if (artistA > artistB) return 1;
-      if (albumA < albumB) return -1;
-      if (albumA > albumB) return 1;
-      if (diskA && diskB) {
-        if (diskA < diskB) return -1;
-        if (diskA > diskB) return 1;
-      }
-      if (trackA < trackB) return -1;
-      if (trackA > trackB) return 1;
-      return 0;
-    })
+    .sort((a, b) => compareMetadata(filesToTags[a], filesToTags[b]))
     .forEach((key) => {
       orderedFilesToTags[key] = filesToTags[key];
     });
@@ -667,6 +662,7 @@ ipcMain.on(
             title: metadata.common.title,
             track: metadata.common.track,
             disk: metadata.common.disk,
+            albumartist: metadata.common.albumartist,
             /**
              * purposely do not store the picture data in the user's config
              * because it's too large and we can lazy load it when needed
@@ -709,42 +705,9 @@ ipcMain.on(
       });
     }
 
-    // sort filesToTags by artist, album, then track number
     const orderedFilesToTags: { [key: string]: LightweightAudioMetadata } = {};
     Object.keys(filesToTags)
-      .sort((a, b) => {
-        const artistA = filesToTags[a].common?.artist
-          ?.toLowerCase()
-          .replace(/^the /, '');
-        const artistB = filesToTags[b].common?.artist
-          ?.toLowerCase()
-          .replace(/^the /, '');
-        const albumA = filesToTags[a].common?.album?.toLowerCase();
-        const albumB = filesToTags[b].common?.album?.toLowerCase();
-        const trackA = filesToTags[a].common?.track?.no;
-        const trackB = filesToTags[b].common?.track?.no;
-        const diskA = filesToTags[a].common?.disk?.no;
-        const diskB = filesToTags[b].common?.disk?.no;
-
-        if (!artistA) return -1;
-        if (!artistB) return 1;
-        if (!albumA) return -1;
-        if (!albumB) return 1;
-        if (!trackA) return -1;
-        if (!trackB) return 1;
-
-        if (artistA < artistB) return -1;
-        if (artistA > artistB) return 1;
-        if (albumA < albumB) return -1;
-        if (albumA > albumB) return 1;
-        if (diskA && diskB) {
-          if (diskA < diskB) return -1;
-          if (diskA > diskB) return 1;
-        }
-        if (trackA < trackB) return -1;
-        if (trackA > trackB) return 1;
-        return 0;
-      })
+      .sort((a, b) => compareMetadata(filesToTags[a], filesToTags[b]))
       .forEach((key) => {
         orderedFilesToTags[key] = filesToTags[key];
       });
@@ -971,7 +934,7 @@ const createWindow = async () => {
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
-  mainWindow.webContents.on('did-finish-load', () => {
+  mainWindow.webContents.on('did-finish-load', async () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
     }
@@ -980,28 +943,42 @@ const createWindow = async () => {
 
     /**
      * @important shim any missing data from updates between versions of app
-     * 1. add lastPlayed to all songs and save it back to the userConfig.json file
-     * 2. TBD
+     * 1. give all songs an initial additionalInfo object if it is missing
+     * 2. if the additionalInfo has no dateAdded, make it the current timestamp
+     * 3. give all songs an albumartist if it is missing
      */
-    if (userConfig.library) {
-      Object.keys(userConfig.library).forEach((key) => {
-        const song = {
-          ...userConfig.library[key],
+    const keys = Object.keys(userConfig.library);
+    for (let i = 0; i < keys.length; i += 1) {
+      const key = keys[i];
+      const song = {
+        ...userConfig.library[key],
+      };
+
+      if (song.additionalInfo === undefined) {
+        song.additionalInfo = {
+          playCount: 0,
+          lastPlayed: 0,
+          dateAdded: Date.now(),
         };
-        if (song.additionalInfo === undefined) {
-          song.additionalInfo = {
-            playCount: 0,
-            lastPlayed: 0,
-            dateAdded: Date.now(),
-          };
-        }
+      }
 
-        if (song.additionalInfo.dateAdded === undefined) {
-          song.additionalInfo.dateAdded = Date.now();
-        }
+      if (song.additionalInfo.dateAdded === undefined) {
+        song.additionalInfo.dateAdded = Date.now();
+      }
 
-        userConfig.library[key] = song;
-      });
+      if (song.common.albumartist === undefined) {
+        // eslint-disable-next-line no-await-in-loop
+        const metadata = await mm.parseFile(key);
+        if (metadata.common.albumartist) {
+          song.common.albumartist = metadata.common.albumartist;
+        } else {
+          // keeps us from having to do this check again in the future
+          // blank string is still falsey in JS so this won't affect sorting
+          song.common.albumartist = '';
+        }
+      }
+
+      userConfig.library[key] = song;
     }
 
     writeFileSyncToUserConfig(userConfig);
