@@ -122,35 +122,33 @@ export default function LinearProgressBar({
           {convertToMMSS(position)}
         </LessOpaqueTinyText>
 
-        <Tooltip arrow placement="top" title="Scroll to artist">
-          <LessOpaqueTinyText
-            aria-label="current-artist"
-            onClick={() => {
-              const libraryArray = Object.values(filteredLibrary);
-              const index = libraryArray.findIndex(
-                (song) =>
-                  song.common.title === currentSongMetadata.common?.title &&
-                  song.common.artist === currentSongMetadata.common?.artist &&
-                  song.common.album === currentSongMetadata.common?.album,
-              );
+        <LessOpaqueTinyText
+          aria-label="current-artist"
+          onClick={() => {
+            const libraryArray = Object.values(filteredLibrary);
+            const index = libraryArray.findIndex(
+              (song) =>
+                song.common.title === currentSongMetadata.common?.title &&
+                song.common.artist === currentSongMetadata.common?.artist &&
+                song.common.album === currentSongMetadata.common?.album,
+            );
 
-              setOverrideScrollToIndex(index);
-            }}
-            sx={{
-              margin: 0,
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              transition: 'opacity 0.2s',
-              '&:hover': {
-                opacity: 0.75,
-              },
-            }}
-          >
-            {currentSongMetadata.common?.artist || '--'}
-          </LessOpaqueTinyText>
-        </Tooltip>
+            setOverrideScrollToIndex(index);
+          }}
+          sx={{
+            margin: 0,
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            cursor: 'pointer',
+            transition: 'opacity 0.2s',
+            '&:hover': {
+              opacity: 0.75,
+            },
+          }}
+        >
+          {currentSongMetadata.common?.artist || '--'}
+        </LessOpaqueTinyText>
 
         <LessOpaqueTinyText aria-label="current-max-time">
           -{convertToMMSS(max - position)}
