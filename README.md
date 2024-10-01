@@ -55,11 +55,9 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-*hihat* is the best way play your music library offline on OSX with audiophile quality, similar to iTunes or Windows Media Player circa 2002.
+*hihat* is the best way play your music library offline on OSX, similar to iTunes or Windows Media Player circa 2002.
 
-*hihat* has no socials, no lag, and no ads.
-
-*hihat* is music listening made simple.
+*hihat* has *no* socials, *no* lag, and *no* ads.
 
 [![hihat desktop preview][product-screenshot]](https://whitelights.rip)
 
