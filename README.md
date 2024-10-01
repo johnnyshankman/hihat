@@ -116,6 +116,15 @@ Don't know where to download files of your favorite albums and tracks? I suggest
 <!-- USAGE EXAMPLES -->
 ## Usage
 
+### Installing hihat
+
+1. Download the `.dmg` file of your choosing from our [Latest Release](https://github.com/johnnyshankman/hihat/releases/tag/latest)
+2. Double click it to open the contents, then drag the *hihat* application into your Apps folder
+
+You are now all set.
+
+**Warning:** The first time you open *hihat*, OSX will warn you that it's from an unidentified developer and ask you to confirm you actually want to open *hihat*. Confirm. *This warning is why the application is free, I do not pay for a BS Apple Developer License yearly just to remove this dialog*.
+
 ### First Time Setup
 
 1. Launch hihat.
