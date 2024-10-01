@@ -4,12 +4,13 @@ import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
 import FastForwardRounded from '@mui/icons-material/FastForwardRounded';
 import FastRewindRounded from '@mui/icons-material/FastRewindRounded';
 import PauseRounded from '@mui/icons-material/PauseRounded';
-import { IconButton } from '@mui/material';
+import { IconButton, Tooltip } from '@mui/material';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import ShuffleOnIcon from '@mui/icons-material/ShuffleOn';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import Stack from '@mui/material/Stack';
 import RepeatOnIcon from '@mui/icons-material/RepeatOn';
+import SpatialAudioIcon from '@mui/icons-material/SpatialAudio';
 import ContinuousSlider from './ContinuousSlider';
 import LinearProgressBar from './LinearProgressBar';
 import usePlayerStore from '../store/player';
@@ -43,6 +44,7 @@ export default function StaticPlayer({
   const setCurrentSongTime = usePlayerStore(
     (state) => state.setCurrentSongTime,
   );
+
   return (
     <div
       className="player flex flex-col sm:flex-row items-center
@@ -64,38 +66,57 @@ export default function StaticPlayer({
          * @dev this is the mobile version of the shuffle, repeat, play button, and volume slider
          */}
         <div className="flex sm:hidden flex-row first-letter:align-start justify-start items-center">
-          <IconButton
-            onClick={() => {
-              const newValue = !repeating;
-              setRepeating(newValue);
-            }}
-            sx={{
-              fontSize: '1rem',
-              color: 'rgb(133,133,133)',
-            }}
-          >
-            {repeating ? (
-              <RepeatOnIcon fontSize="inherit" />
-            ) : (
-              <RepeatIcon fontSize="inherit" />
-            )}
-          </IconButton>
-          <IconButton
-            onClick={() => {
-              const newValue = !shuffle;
-              setShuffle(newValue);
-            }}
-            sx={{
-              fontSize: '1rem',
-              color: 'rgb(133,133,133)',
-            }}
-          >
-            {shuffle ? (
-              <ShuffleOnIcon fontSize="inherit" />
-            ) : (
-              <ShuffleIcon fontSize="inherit" />
-            )}
-          </IconButton>
+          <Tooltip title="Song Repeat">
+            <IconButton
+              onClick={() => {
+                const newValue = !repeating;
+                setRepeating(newValue);
+              }}
+              sx={{
+                fontSize: '1rem',
+                color: 'rgb(133,133,133)',
+              }}
+            >
+              {repeating ? (
+                <RepeatOnIcon fontSize="inherit" />
+              ) : (
+                <RepeatIcon fontSize="inherit" />
+              )}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Shuffle">
+            <IconButton
+              onClick={() => {
+                const newValue = !shuffle;
+                setShuffle(newValue);
+              }}
+              sx={{
+                fontSize: '1rem',
+                color: 'rgb(133,133,133)',
+              }}
+            >
+              {shuffle ? (
+                <ShuffleOnIcon fontSize="inherit" />
+              ) : (
+                <ShuffleIcon fontSize="inherit" />
+              )}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Quiet Mode">
+            <IconButton
+              onClick={() => {
+                // set the volume to 0.02 so you can listen to a podcast or hear the person next to you
+                audioTagRef.current!.volume = 2 / 100;
+                setVolume(2);
+              }}
+              sx={{
+                fontSize: '1rem',
+                color: 'rgb(133,133,133)',
+              }}
+            >
+              <SpatialAudioIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
         </div>
 
         {/**
@@ -177,38 +198,57 @@ export default function StaticPlayer({
        */}
       <div className="sm:flex hidden gap-2 relative justify-end flex-1 mt-2 mb-1 w-full">
         <div className="flex flex-row relative bottom-0.5">
-          <IconButton
-            onClick={() => {
-              const newValue = !repeating;
-              setRepeating(newValue);
-            }}
-            sx={{
-              fontSize: '1rem',
-              color: 'rgb(133,133,133)',
-            }}
-          >
-            {repeating ? (
-              <RepeatOnIcon fontSize="inherit" />
-            ) : (
-              <RepeatIcon fontSize="inherit" />
-            )}
-          </IconButton>
-          <IconButton
-            onClick={() => {
-              const newValue = !shuffle;
-              setShuffle(newValue);
-            }}
-            sx={{
-              fontSize: '1rem',
-              color: 'rgb(133,133,133)',
-            }}
-          >
-            {shuffle ? (
-              <ShuffleOnIcon fontSize="inherit" />
-            ) : (
-              <ShuffleIcon fontSize="inherit" />
-            )}
-          </IconButton>
+          <Tooltip title="Repeat Song">
+            <IconButton
+              onClick={() => {
+                const newValue = !repeating;
+                setRepeating(newValue);
+              }}
+              sx={{
+                fontSize: '1rem',
+                color: 'rgb(133,133,133)',
+              }}
+            >
+              {repeating ? (
+                <RepeatOnIcon fontSize="inherit" />
+              ) : (
+                <RepeatIcon fontSize="inherit" />
+              )}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Shuffle">
+            <IconButton
+              onClick={() => {
+                const newValue = !shuffle;
+                setShuffle(newValue);
+              }}
+              sx={{
+                fontSize: '1rem',
+                color: 'rgb(133,133,133)',
+              }}
+            >
+              {shuffle ? (
+                <ShuffleOnIcon fontSize="inherit" />
+              ) : (
+                <ShuffleIcon fontSize="inherit" />
+              )}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Quiet Mode">
+            <IconButton
+              onClick={() => {
+                // set the volume to 0.025
+                audioTagRef.current!.volume = 2.5 / 100;
+                setVolume(2.5);
+              }}
+              sx={{
+                fontSize: '1rem',
+                color: 'rgb(133,133,133)',
+              }}
+            >
+              <SpatialAudioIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
         </div>
         <ContinuousSlider
           onChange={(event, value) => {

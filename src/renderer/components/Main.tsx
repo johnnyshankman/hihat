@@ -23,6 +23,7 @@ import {
   StyledInputBase,
   TinyText,
 } from './SimpleStyledMaterialUIComponents';
+import BackupConfirmationDialog from './Dialog/BackupConfirmationDialog';
 
 type AlbumArtMenuState =
   | {
@@ -439,6 +440,11 @@ export default function Main() {
     if (height) {
       setRowContainerHeight(height - playerHeight - artContainerHeight - 26);
     }
+
+    if (width && albumArtMaxWidth) {
+      // set
+
+    }
   }, [height, width, albumArtMaxWidth]);
 
   /**
@@ -615,67 +621,15 @@ export default function Main() {
         </div>
       </Dialog>
 
-      {/**
-       * @dev BACKUP CONFIRMATION DIALOG
-       */}
-      <Dialog
-        className="flex flex-col items-center justify-center content-center p-10"
+      <BackupConfirmationDialog
+        onBackup={() => {
+          setShowBackupConfirmationDialog(false);
+          setShowBackingUpLibraryDialog(true);
+          window.electron.ipcRenderer.sendMessage('menu-backup-library');
+        }}
+        onClose={() => setShowBackupConfirmationDialog(false)}
         open={showBackupConfirmationDialog}
-      >
-        <div className="flex flex-col items-center pb-4 max-w-[400px]">
-          <DialogTitle>Backup Library</DialogTitle>
-          <DialogContent>
-            <div className="flex w-full justify-center px-2">
-              <TinyText as="div">
-                This feature creates a copy of your music library in a folder
-                you choose, like on an external hard drive. It&apos;s smart
-                enough to:
-                <ol className="list-decimal pl-6 space-y-2 mt-2">
-                  <li>
-                    Only copy new or changed files, saving time and space.
-                  </li>
-                  <li>
-                    Keep your backup folder in sync with your main library.
-                  </li>
-                  <li>Let you easily update your backup whenever you want.</li>
-                </ol>
-                <p className="mt-4">
-                  This way, you can protect your music collection without
-                  worrying about duplicate files or complicated backups.
-                </p>
-              </TinyText>
-            </div>
-          </DialogContent>
-          <div className="flex flex-row">
-            <div className="flex w-full justify-center pt-2 pb-1 px-2">
-              <button
-                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-                onClick={() => {
-                  setShowBackupConfirmationDialog(false);
-                }}
-                type="button"
-              >
-                Cancel
-              </button>
-            </div>
-            <div className="flex w-full justify-center pt-2 pb-1 px-2">
-              <button
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                onClick={() => {
-                  setShowBackupConfirmationDialog(false);
-                  setShowBackingUpLibraryDialog(true);
-                  window.electron.ipcRenderer.sendMessage(
-                    'menu-backup-library',
-                  );
-                }}
-                type="button"
-              >
-                Backup
-              </button>
-            </div>
-          </div>
-        </div>
-      </Dialog>
+      />
 
       {/**
        * @dev BACKING UP LIBRARY DIALOG
@@ -761,7 +715,7 @@ export default function Main() {
          */}
         {!currentSongDataURL ? (
           <div
-            className="relative aspect-square w-1/3 sm:w-1/2 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
+            className="relative aspect-square w-[40%] bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
             style={{
               maxWidth: `${albumArtMaxWidth}px`,
             }}
@@ -791,7 +745,7 @@ export default function Main() {
           </div>
         ) : (
           <div
-            className="relative aspect-square w-1/3 sm:w-1/2 bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg"
+            className="relative aspect-square w-full bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg"
             style={{
               maxWidth: `${albumArtMaxWidth}px`,
             }}
@@ -831,10 +785,12 @@ export default function Main() {
             <Draggable
               axis="y"
               onDrag={(e, data) => {
+                if (!width) return;
+
                 const newMaxWidth = albumArtMaxWidth + data.deltaY;
                 const clampedMaxWidth = Math.max(
-                  100,
-                  Math.min(newMaxWidth, 400),
+                  120,
+                  Math.min(newMaxWidth, width * 0.4),
                 );
                 setAlbumArtMaxWidth(clampedMaxWidth);
               }}
