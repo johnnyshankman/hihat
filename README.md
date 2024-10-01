@@ -59,6 +59,8 @@
 
 *hihat* has *no* socials, *no* lag, and *no* ads.
 
+*hihat* is completely free-to-use and open-source.
+
 [![hihat desktop preview][product-screenshot]](https://whitelights.rip)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
