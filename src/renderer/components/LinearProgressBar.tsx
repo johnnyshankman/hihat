@@ -2,6 +2,7 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import { Tooltip } from '@mui/material';
+import Marquee from 'react-fast-marquee';
 import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
 import usePlayerStore from '../store/player';
 
@@ -15,6 +16,7 @@ export default function LinearProgressBar({
   max: number;
 }) {
   const [position, setPosition] = React.useState(32);
+  const [isScrolling, setIsScrolling] = React.useState(false);
   const filteredLibrary = usePlayerStore((state) => state.filteredLibrary);
   const currentSongMetadata = usePlayerStore(
     (state) => state.currentSongMetadata,
@@ -22,6 +24,8 @@ export default function LinearProgressBar({
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
   );
+  const titleRef = React.useRef<HTMLDivElement>(null);
+  const titleRef2 = React.useRef<HTMLDivElement>(null);
 
   function convertToMMSS(timeInSeconds: number) {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -35,6 +39,62 @@ export default function LinearProgressBar({
   React.useEffect(() => {
     setPosition(value);
   }, [value]);
+
+  React.useEffect(() => {
+    const checkOverflow1 = () => {
+      if (titleRef.current) {
+        const isOverflowing =
+          titleRef.current.scrollWidth >
+          (titleRef.current.parentElement?.parentElement?.parentElement
+            ?.scrollWidth || 10000000);
+        setIsScrolling(isOverflowing);
+      }
+    };
+
+    checkOverflow1();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkOverflow1);
+    if (titleRef.current) {
+      resizeObserver.observe(titleRef.current);
+    }
+
+    const currentTitleRef = titleRef.current;
+    // Clean up the observer when the component unmounts
+    return () => {
+      if (currentTitleRef) {
+        resizeObserver.unobserve(currentTitleRef);
+      }
+    };
+  }, [currentSongMetadata.common?.title]);
+
+  React.useEffect(() => {
+    const checkOverflow2 = () => {
+      if (titleRef2.current) {
+        const isOverflowing =
+          titleRef2.current.scrollWidth >
+          (titleRef2.current.parentElement?.parentElement?.parentElement
+            ?.scrollWidth || 10000000);
+        setIsScrolling(isOverflowing);
+      }
+    };
+
+    checkOverflow2();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkOverflow2);
+    if (titleRef2.current) {
+      resizeObserver.observe(titleRef2.current);
+    }
+
+    // Clean up the observer when the component unmounts
+    const currentTitleRef2 = titleRef2.current;
+    return () => {
+      if (currentTitleRef2) {
+        resizeObserver.unobserve(currentTitleRef2);
+      }
+    };
+  }, [currentSongMetadata.common?.title]);
 
   return (
     <Box
@@ -77,7 +137,18 @@ export default function LinearProgressBar({
               },
             }}
           >
-            {currentSongMetadata.common?.title || 'No song selected'}
+            {isScrolling ? (
+              <Marquee>
+                <div ref={titleRef2}>
+                  {currentSongMetadata.common?.title || 'No song selected'}
+                  &nbsp;&nbsp;•&nbsp;&nbsp;
+                </div>
+              </Marquee>
+            ) : (
+              <div ref={titleRef}>
+                {currentSongMetadata.common?.title || 'No song selected'}
+              </div>
+            )}
           </LessOpaqueTinyText>
         </Tooltip>
       </Box>
