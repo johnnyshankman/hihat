@@ -17,6 +17,8 @@ export default function LinearProgressBar({
 }) {
   const [position, setPosition] = React.useState(32);
   const [isScrolling, setIsScrolling] = React.useState(false);
+  const [isArtistScrolling, setIsArtistScrolling] = React.useState(false);
+
   const filteredLibrary = usePlayerStore((state) => state.filteredLibrary);
   const currentSongMetadata = usePlayerStore(
     (state) => state.currentSongMetadata,
@@ -26,6 +28,8 @@ export default function LinearProgressBar({
   );
   const titleRef = React.useRef<HTMLDivElement>(null);
   const titleRef2 = React.useRef<HTMLDivElement>(null);
+  const artistRef = React.useRef<HTMLDivElement>(null);
+  const artistRef2 = React.useRef<HTMLDivElement>(null);
 
   function convertToMMSS(timeInSeconds: number) {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -96,6 +100,60 @@ export default function LinearProgressBar({
     };
   }, [currentSongMetadata.common?.title]);
 
+  React.useEffect(() => {
+    const checkOverflow3 = () => {
+      if (artistRef.current) {
+        const isOverflowing =
+          artistRef.current.scrollWidth >
+          (artistRef.current.parentElement?.parentElement?.parentElement
+            ?.scrollWidth || 10000000);
+        setIsArtistScrolling(isOverflowing);
+      }
+    };
+
+    checkOverflow3();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkOverflow3);
+    if (artistRef.current) {
+      resizeObserver.observe(artistRef.current);
+    }
+
+    const currentArtistRef = artistRef.current;
+    return () => {
+      if (currentArtistRef) {
+        resizeObserver.unobserve(currentArtistRef);
+      }
+    };
+  }, [currentSongMetadata.common?.artist]);
+
+  React.useEffect(() => {
+    const checkOverflow4 = () => {
+      if (artistRef2.current) {
+        const isOverflowing =
+          artistRef2.current.scrollWidth >
+          (artistRef2.current.parentElement?.parentElement?.parentElement
+            ?.scrollWidth || 10000000);
+        setIsArtistScrolling(isOverflowing);
+      }
+    };
+
+    checkOverflow4();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkOverflow4);
+    if (artistRef2.current) {
+      resizeObserver.observe(artistRef2.current);
+    }
+
+    const currentArtistRef = artistRef2.current;
+    return () => {
+      if (currentArtistRef) {
+        resizeObserver.unobserve(currentArtistRef);
+      }
+    };
+  }, [currentSongMetadata.common?.artist]);
+
   return (
     <Box
       className="sm:w-1/3 w-full sm:px-0 px-4"
@@ -138,7 +196,7 @@ export default function LinearProgressBar({
             }}
           >
             {isScrolling ? (
-              <Marquee>
+              <Marquee pauseOnHover speed={10}>
                 <div ref={titleRef2}>
                   {currentSongMetadata.common?.title || 'No song selected'}
                   &nbsp;&nbsp;•&nbsp;&nbsp;
@@ -192,10 +250,11 @@ export default function LinearProgressBar({
         <LessOpaqueTinyText aria-label="current-time">
           {convertToMMSS(position)}
         </LessOpaqueTinyText>
-
         <LessOpaqueTinyText
-          aria-label="current-artist"
+          aria-label="current-title"
           onClick={() => {
+            // find the index of this song in the library
+            // @TODO: this really needs to be extracted into a helper function
             const libraryArray = Object.values(filteredLibrary);
             const index = libraryArray.findIndex(
               (song) =>
@@ -204,6 +263,7 @@ export default function LinearProgressBar({
                 song.common.album === currentSongMetadata.common?.album,
             );
 
+            // flip between undefined and the index very quickly
             setOverrideScrollToIndex(index);
           }}
           sx={{
@@ -218,11 +278,21 @@ export default function LinearProgressBar({
             },
           }}
         >
-          {currentSongMetadata.common?.artist || '--'}
+          {isArtistScrolling ? (
+            <Marquee pauseOnHover speed={10}>
+              <div ref={artistRef2}>
+                {currentSongMetadata.common?.artist || 'No song selected'}
+                &nbsp;&nbsp;•&nbsp;&nbsp;
+              </div>
+            </Marquee>
+          ) : (
+            <div ref={artistRef}>
+              {currentSongMetadata.common?.artist || 'No song selected'}
+            </div>
+          )}
         </LessOpaqueTinyText>
-
         <LessOpaqueTinyText aria-label="current-max-time">
-          -{convertToMMSS(max - position)}
+          {convertToMMSS(max - position)}-{' '}
         </LessOpaqueTinyText>
       </Box>
     </Box>
