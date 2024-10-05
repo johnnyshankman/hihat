@@ -443,7 +443,6 @@ export default function Main() {
 
     if (width && albumArtMaxWidth) {
       // set
-
     }
   }, [height, width, albumArtMaxWidth]);
 
