@@ -47,6 +47,7 @@ export default function LinearProgressBar({
   React.useEffect(() => {
     const checkOverflow1 = () => {
       if (titleRef.current) {
+        // requires going up three parent elements to get out of the marquee
         const isOverflowing =
           titleRef.current.scrollWidth >
           (titleRef.current.parentElement?.parentElement?.parentElement
@@ -75,10 +76,11 @@ export default function LinearProgressBar({
   React.useEffect(() => {
     const checkOverflow2 = () => {
       if (titleRef2.current) {
+        // requires going up three parent elements to get out of the marquee
         const isOverflowing =
           titleRef2.current.scrollWidth >
           (titleRef2.current.parentElement?.parentElement?.parentElement
-            ?.scrollWidth || 10000000);
+            ?.clientWidth || 10000000);
         setIsScrolling(isOverflowing);
       }
     };
@@ -103,10 +105,9 @@ export default function LinearProgressBar({
   React.useEffect(() => {
     const checkOverflow3 = () => {
       if (artistRef.current) {
+        // requires going up three parent elements to get out of the marquee
         const isOverflowing =
-          artistRef.current.scrollWidth >
-          (artistRef.current.parentElement?.parentElement?.parentElement
-            ?.scrollWidth || 10000000);
+          artistRef.current.scrollWidth > artistRef.current.clientWidth;
         setIsArtistScrolling(isOverflowing);
       }
     };
@@ -130,10 +131,11 @@ export default function LinearProgressBar({
   React.useEffect(() => {
     const checkOverflow4 = () => {
       if (artistRef2.current) {
+        // requires going up three parent elements to get out of the marquee
         const isOverflowing =
           artistRef2.current.scrollWidth >
           (artistRef2.current.parentElement?.parentElement?.parentElement
-            ?.scrollWidth || 10000000);
+            ?.clientWidth || 10000000);
         setIsArtistScrolling(isOverflowing);
       }
     };
@@ -196,7 +198,7 @@ export default function LinearProgressBar({
             }}
           >
             {isScrolling ? (
-              <Marquee pauseOnHover speed={10}>
+              <Marquee delay={0.5} pauseOnHover speed={10}>
                 <div ref={titleRef2}>
                   {currentSongMetadata.common?.title || 'No song selected'}
                   &nbsp;&nbsp;•&nbsp;&nbsp;
