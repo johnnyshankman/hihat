@@ -56,7 +56,7 @@ export const TinyText = styled(Typography)({
   letterSpacing: 0.2,
 });
 
-export const LessOpaqueTinyText = styled(Typography)({
+export const LessOpaqueTinyText = styled('div')({
   fontSize: '0.75rem',
   textAlign: 'center',
   opacity: 0.5,

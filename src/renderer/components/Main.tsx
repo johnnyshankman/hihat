@@ -1,17 +1,11 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import React, { useState, useRef, useEffect } from 'react';
 import Box from '@mui/material/Box';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
 import Tooltip from '@mui/material/Tooltip';
 import { useResizeDetector } from 'react-resize-detector';
-import LinearProgress from '@mui/material/LinearProgress';
 import SearchIcon from '@mui/icons-material/Search';
 import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
-import { DialogContent } from '@mui/material';
-import Draggable from 'react-draggable';
 import { StoreStructure, LightweightAudioMetadata } from '../../common/common';
-import AlbumArtRightClickMenu from './AlbumArtRightClickMenu';
 import useMainStore from '../store/main';
 import { bufferToDataUrl } from '../utils/utils';
 import usePlayerStore from '../store/player';
@@ -21,9 +15,13 @@ import {
   Search,
   SearchIconWrapper,
   StyledInputBase,
-  TinyText,
 } from './SimpleStyledMaterialUIComponents';
 import BackupConfirmationDialog from './Dialog/BackupConfirmationDialog';
+import ConfirmDedupingDialog from './Dialog/ConfirmDedupingDialog';
+import BackingUpLibraryDialog from './Dialog/BackingUpLibraryDialog';
+import DedupingProgressDialog from './Dialog/DedupingProgressDialog';
+import ImportProgressDialog from './Dialog/ImportProgressDialog';
+import AlbumArt from './AlbumArt';
 
 type AlbumArtMenuState =
   | {
@@ -51,9 +49,6 @@ export default function Main() {
   const currentSong = usePlayerStore((store) => store.currentSong);
   const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const setInitialized = useMainStore((store) => store.setInitialized);
-  const currentSongDataURL = usePlayerStore(
-    (store) => store.currentSongDataURL,
-  );
   const setCurrentSongDataURL = usePlayerStore(
     (store) => store.setCurrentSongDataURL,
   );
@@ -555,11 +550,9 @@ export default function Main() {
   return (
     <div ref={ref} className="h-full flex flex-col dark">
       {/**
-       * @dev this is the audio tag that plays the song.
-       * it is hidden and only used to play the song, as well as
-       * hook into the current time, pause, and play states.
-       * never let the user click on this directly.
-       * */}
+       * @important This is the hidden audio tag that plays the song.
+       * We use it to hook into the current time, pause, and play states.
+       */}
       <audio
         ref={audioTagRef}
         autoPlay={!paused}
@@ -577,56 +570,15 @@ export default function Main() {
         src={`my-magic-protocol://getMediaFile/${currentSong}`}
       />
 
-      {/**
-       * @dev IMPORT PROGRESS DIALOG
-       */}
-      <Dialog
-        className="flex flex-col items-center justify-center content-center p-10"
+      <ImportProgressDialog
+        estimatedTimeRemainingString={estimatedTimeRemainingString}
         open={showImportingProgress}
-      >
-        <div className="flex flex-col items-center px-20 pb-6">
-          <DialogTitle>Importing Songs</DialogTitle>
-          <Box sx={{ width: '100%', marginBottom: '12px' }}>
-            <LinearProgress
-              color="inherit"
-              value={(songsImported / totalSongs) * 100}
-              variant={
-                songsImported === totalSongs ? 'indeterminate' : 'determinate'
-              }
-            />
-          </Box>
-          <div className="flex w-full justify-center mt-1 px-2 ">
-            <h4>{`${songsImported} / ${totalSongs}`}</h4>
-          </div>
-          <div className="flex w-full justify-center pt-2 pb-1 px-2">
-            <TinyText>{`${
-              estimatedTimeRemainingString || 'Calculating...'
-            }`}</TinyText>
-          </div>
-        </div>
-      </Dialog>
+        songsImported={songsImported}
+        totalSongs={totalSongs}
+      />
 
-      {/**
-       * @dev DEDUPING PROGRESS DIALOG
-       */}
-      <Dialog
-        className="flex flex-col items-center justify-center content-center p-10"
-        open={showDedupingProgress}
-      >
-        <div className="flex flex-col items-center px-20 pb-6">
-          <DialogTitle>Deduplicating Songs</DialogTitle>
-          <Box sx={{ width: '100%', marginBottom: '12px' }}>
-            <LinearProgress color="inherit" variant="indeterminate" />
-          </Box>
-          <div className="flex w-full justify-center pt-2 pb-1 px-2">
-            <TinyText>This operation will take three to five minutes</TinyText>
-          </div>
-        </div>
-      </Dialog>
+      <DedupingProgressDialog open={showDedupingProgress} />
 
-      {/**
-       * @dev BACKUP CONFIRMATION DIALOG
-       */}
       <BackupConfirmationDialog
         onBackup={() => {
           setShowBackupConfirmationDialog(false);
@@ -637,77 +589,18 @@ export default function Main() {
         open={showBackupConfirmationDialog}
       />
 
-      {/**
-       * @dev BACKING UP LIBRARY DIALOG
-       */}
-      <Dialog
-        className="flex flex-col items-center justify-center content-center p-10"
-        open={showBackingUpLibraryDialog}
-      >
-        <div className="flex flex-col items-center pb-4 max-w-[240px]">
-          <DialogTitle>Backing Up</DialogTitle>
-          <DialogContent>
-            <div className="flex w-full justify-center px-2 flex-col gap-6">
-              <TinyText className="text-center">
-                Syncing your library with the chosen folder. This may take a
-                while so go grab some tea!
-              </TinyText>
-              <Box sx={{ width: '100%', marginBottom: '12px' }}>
-                <LinearProgress color="inherit" variant="indeterminate" />
-              </Box>
-            </div>
-          </DialogContent>
-        </div>
-      </Dialog>
+      <BackingUpLibraryDialog open={showBackingUpLibraryDialog} />
 
-      {/**
-       * @dev CONFIRM DEDUPING DIALOG
-       */}
-      <Dialog
-        className="flex flex-col items-center justify-center content-center p-10"
+      <ConfirmDedupingDialog
+        onClose={() => setShowConfirmDedupeAndDeleteDialog(false)}
+        onConfirm={() => {
+          setShowConfirmDedupeAndDeleteDialog(false);
+          setShowDedupingProgress(true);
+          // @note: responds with update-store
+          window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
+        }}
         open={showConfirmDedupeAndDeleteDialog}
-      >
-        <div className="flex flex-col items-center pb-4 max-w-[400px]">
-          <DialogTitle>Deduplicate Library</DialogTitle>
-          <DialogContent>
-            <div className="flex w-full justify-center px-2">
-              <TinyText>
-                This will find any dupilcate song files with identical title,
-                artist, and album and keep only the highest quality version of
-                each song. That way your library will contain only the best
-                quality files.
-              </TinyText>
-            </div>
-          </DialogContent>
-          <div className="flex flex-row">
-            <div className="flex w-full justify-center pt-2 pb-1 px-2">
-              <button
-                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-                onClick={() => {
-                  setShowConfirmDedupeAndDeleteDialog(false);
-                }}
-                type="button"
-              >
-                Cancel
-              </button>
-            </div>
-            <div className="flex w-full justify-center pt-2 pb-1 px-2">
-              <button
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                onClick={() => {
-                  setShowConfirmDedupeAndDeleteDialog(false);
-                  setShowDedupingProgress(true);
-                  // @note: responds with update-store
-                  window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
-                }}
-                type="button"
-              >
-                Deduplicate
-              </button>
-            </div>
-          </div>
-        </div>
-      </Dialog>
+      />
 
       {/**
        * @dev top third of the screen with
@@ -716,110 +609,13 @@ export default function Main() {
        *  -- search bar etc
        */}
       <div className="flex art drag justify-center p-4 space-x-4 md:flex-row ">
-        {/**
-         * @dev ALBUM ART
-         */}
-        {!currentSongDataURL ? (
-          <div
-            className="relative aspect-square w-[40%] bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
-            style={{
-              maxWidth: `${albumArtMaxWidth}px`,
-            }}
-          >
-            {/**
-             * @dev PLACEHOLDER ALBUM ART
-             */}
-            <div className="inset-0 h-full w-full flex items-center justify-center rounded-lg">
-              <svg
-                className=" text-neutral-300 w-1/5 h-1/5 animate-bounce"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M9 18V5l12-2v13" />
-                <circle cx="6" cy="18" r="3" />
-                <circle cx="18" cy="16" r="3" />
-              </svg>
-              <TinyText className="absolute bottom-3 left-3">hihat</TinyText>
-            </div>
-          </div>
-        ) : (
-          <div
-            className="relative aspect-square w-full bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg"
-            style={{
-              maxWidth: `${albumArtMaxWidth}px`,
-            }}
-          >
-            {/**
-             * @dev ACTUAL ALBUM ART
-             */}
-            <img
-              alt="Album Art"
-              aria-hidden="true"
-              className="album-art h-full w-full rounded-lg hover:cursor-pointer"
-              onClick={() => {
-                // find the index of this song in the library
-                // @TODO: this really needs to be extracted into a helper function
-                const libraryArray = Object.values(filteredLibrary);
-                const index = libraryArray.findIndex(
-                  (song) =>
-                    song.common.title === currentSongMetadata.common?.title &&
-                    song.common.artist === currentSongMetadata.common?.artist &&
-                    song.common.album === currentSongMetadata.common?.album,
-                );
-
-                setOverrideScrollToIndex(index);
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setShowAlbumArtMenu({
-                  mouseX: e.clientX - 2,
-                  mouseY: e.clientY - 4,
-                });
-              }}
-              src={currentSongDataURL}
-              style={{
-                maxWidth: `${albumArtMaxWidth}px`,
-              }}
-            />
-            {showAlbumArtMenu && currentSong && (
-              <AlbumArtRightClickMenu
-                anchorEl={document.querySelector('.album-art')}
-                mouseX={showAlbumArtMenu.mouseX}
-                mouseY={showAlbumArtMenu.mouseY}
-                onClose={() => {
-                  setShowAlbumArtMenu(undefined);
-                }}
-                song={currentSong}
-              />
-            )}
-            {/**
-             * @dev INVISIBLE RESIZER
-             */}
-            <Draggable
-              axis="y"
-              onDrag={(e, data) => {
-                if (!width) return;
-
-                const newMaxWidth = albumArtMaxWidth + data.deltaY;
-                const clampedMaxWidth = Math.max(
-                  120,
-                  Math.min(newMaxWidth, width * 0.4),
-                );
-                setAlbumArtMaxWidth(clampedMaxWidth);
-              }}
-              position={{ x: 0, y: 0 }}
-            >
-              <div className="w-full absolute bottom-0 h-[20px] bg-transparent cursor-ns-resize hover:cursor-ns-resize bg-red-400" />
-            </Draggable>
-          </div>
-        )}
+        <AlbumArt
+          albumArtMaxWidth={albumArtMaxWidth}
+          setAlbumArtMaxWidth={setAlbumArtMaxWidth}
+          setShowAlbumArtMenu={setShowAlbumArtMenu}
+          showAlbumArtMenu={showAlbumArtMenu}
+          width={width || null}
+        />
 
         {/**
          * @dev IMPORT LIBRARY BUTTON
@@ -893,9 +689,6 @@ export default function Main() {
         </Box>
       </div>
 
-      {/**
-       * @dev LIBRARY LIST
-       */}
       {width && (
         <LibraryList
           initialScrollIndex={initialScrollIndex}
@@ -913,9 +706,6 @@ export default function Main() {
         />
       )}
 
-      {/**
-       * @dev PLAYER
-       */}
       <StaticPlayer
         audioTagRef={audioTagRef}
         playNextSong={playNextSong}
