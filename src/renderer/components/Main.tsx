@@ -71,6 +71,9 @@ export default function Main() {
   const setCurrentSongTime = usePlayerStore(
     (store) => store.setCurrentSongTime,
   );
+  const setOverrideScrollToIndex = usePlayerStore(
+    (store) => store.setOverrideScrollToIndex,
+  );
 
   /**
    * @dev JSX refs
@@ -754,7 +757,21 @@ export default function Main() {
              */}
             <img
               alt="Album Art"
-              className="album-art h-full w-full rounded-lg"
+              aria-hidden="true"
+              className="album-art h-full w-full rounded-lg hover:cursor-pointer"
+              onClick={() => {
+                // find the index of this song in the library
+                // @TODO: this really needs to be extracted into a helper function
+                const libraryArray = Object.values(filteredLibrary);
+                const index = libraryArray.findIndex(
+                  (song) =>
+                    song.common.title === currentSongMetadata.common?.title &&
+                    song.common.artist === currentSongMetadata.common?.artist &&
+                    song.common.album === currentSongMetadata.common?.album,
+                );
+
+                setOverrideScrollToIndex(index);
+              }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setShowAlbumArtMenu({
