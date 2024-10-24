@@ -91,12 +91,11 @@ export default function LibraryList({
   );
 
   /**
-   * @dev state
+   * @dev component state
    */
   const [rowContainerHeight, setRowContainerHeight] = useState(0);
   const [staleWidth, setStaleWidth] = useState(width);
   const [isDragging, setIsDragging] = useState(false);
-
   const [columnUXInfo, setColumnUXInfo] = useState([
     {
       id: 'title',

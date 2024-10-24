@@ -18,6 +18,9 @@ export default function ImportNewSongsButton({
   setEstimatedTimeRemainingString,
   setInitialScrollIndex,
 }: ImportNewSongsButtonProps) {
+  /**
+   * @dev global store hooks
+   */
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
   );

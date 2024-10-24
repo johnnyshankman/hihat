@@ -15,6 +15,9 @@ export default function AlbumArt({
   showAlbumArtMenu,
   width,
 }: AlbumArtProps) {
+  /**
+   * @dev global store hooks
+   */
   const currentSong = usePlayerStore((store) => store.currentSong);
   const currentSongMetadata = usePlayerStore(
     (store) => store.currentSongMetadata,
@@ -27,6 +30,9 @@ export default function AlbumArt({
     (store) => store.setOverrideScrollToIndex,
   );
 
+  /**
+   * @dev component state
+   */
   const [albumArtMaxWidth, setAlbumArtMaxWidth] = useState(320);
 
   if (!currentSongDataURL) {
