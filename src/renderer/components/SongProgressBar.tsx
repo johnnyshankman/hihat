@@ -6,7 +6,7 @@ import Marquee from 'react-fast-marquee';
 import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
 import usePlayerStore from '../store/player';
 
-export default function LinearProgressBar({
+export default function SongProgressBar({
   value,
   onManualChange,
   max,
@@ -182,7 +182,6 @@ export default function LinearProgressBar({
                   song.common.album === currentSongMetadata.common?.album,
               );
 
-              // flip between undefined and the index very quickly
               setOverrideScrollToIndex(index);
             }}
             sx={{
@@ -265,7 +264,6 @@ export default function LinearProgressBar({
                 song.common.album === currentSongMetadata.common?.album,
             );
 
-            // flip between undefined and the index very quickly
             setOverrideScrollToIndex(index);
           }}
           sx={{
@@ -294,7 +292,7 @@ export default function LinearProgressBar({
           )}
         </LessOpaqueTinyText>
         <LessOpaqueTinyText aria-label="current-max-time">
-          {convertToMMSS(max - position)}-{' '}
+          -{convertToMMSS(max - position)}
         </LessOpaqueTinyText>
       </Box>
     </Box>
