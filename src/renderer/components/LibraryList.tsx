@@ -342,16 +342,19 @@ export default function LibraryList({
     setFilterType(filter);
   };
 
-  const updateRowContainerHeight = () => {
-    if (!height || !width) return;
+  const updateRowContainerHeight = (
+    currentHeight: number | undefined,
+    currentWidth: number | undefined,
+  ) => {
+    if (!currentHeight || !currentWidth) return;
 
     const artContainerHeight =
       document.querySelector('.art')?.clientHeight || 0;
 
-    if (width > 640) {
-      setRowContainerHeight(height - artContainerHeight - 110);
+    if (currentWidth > 640) {
+      setRowContainerHeight(currentHeight - artContainerHeight - 110);
     } else {
-      setRowContainerHeight(height - artContainerHeight - 160);
+      setRowContainerHeight(currentHeight - artContainerHeight - 160);
     }
   };
 
@@ -361,23 +364,32 @@ export default function LibraryList({
    * always has the right size and right amount of rows visible.
    */
   useEffect(() => {
-    updateRowContainerHeight();
-  }, [height, width]); // eslint-disable-line react-hooks/exhaustive-deps
-
+    updateRowContainerHeight(height, width);
+  }, [height, width]);
   /**
    * @dev update the row container height when the album art width changes
    * using the draggable component to resize the album art.
    * @see AlbumArt.tsx
    */
   useEffect(() => {
+    const handleAlbumArtWidthChange = () => {
+      updateRowContainerHeight(height, width);
+    };
+
     window.addEventListener(
       'album-art-width-changed',
-      updateRowContainerHeight,
+      handleAlbumArtWidthChange,
     );
 
-    updateRowContainerHeight();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    updateRowContainerHeight(height, width);
 
+    return () => {
+      window.removeEventListener(
+        'album-art-width-changed',
+        handleAlbumArtWidthChange,
+      );
+    };
+  }, [height, width]);
   /**
    * @dev render the row for the virtualized table, reps a single song
    */
