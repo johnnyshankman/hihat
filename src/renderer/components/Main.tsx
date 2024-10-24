@@ -1,29 +1,20 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import React, { useState, useRef, useEffect } from 'react';
-import Box from '@mui/material/Box';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import Tooltip from '@mui/material/Tooltip';
 import { useResizeDetector } from 'react-resize-detector';
-import LinearProgress from '@mui/material/LinearProgress';
-import SearchIcon from '@mui/icons-material/Search';
-import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
-import { DialogContent } from '@mui/material';
-import Draggable from 'react-draggable';
-import { StoreStructure, LightweightAudioMetadata } from '../../common/common';
-import AlbumArtRightClickMenu from './AlbumArtRightClickMenu';
+import { LightweightAudioMetadata } from '../../common/common';
 import useMainStore from '../store/main';
 import { bufferToDataUrl } from '../utils/utils';
 import usePlayerStore from '../store/player';
 import LibraryList from './LibraryList';
 import StaticPlayer from './StaticPlayer';
-import {
-  Search,
-  SearchIconWrapper,
-  StyledInputBase,
-  TinyText,
-} from './SimpleStyledMaterialUIComponents';
 import BackupConfirmationDialog from './Dialog/BackupConfirmationDialog';
+import ConfirmDedupingDialog from './Dialog/ConfirmDedupingDialog';
+import BackingUpLibraryDialog from './Dialog/BackingUpLibraryDialog';
+import DedupingProgressDialog from './Dialog/DedupingProgressDialog';
+import ImportProgressDialog from './Dialog/ImportProgressDialog';
+import AlbumArt from './AlbumArt';
+import ImportNewSongsButton from './ImportNewSongsButtons';
+import SearchBar from './SearchBar';
 
 type AlbumArtMenuState =
   | {
@@ -51,9 +42,6 @@ export default function Main() {
   const currentSong = usePlayerStore((store) => store.currentSong);
   const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const setInitialized = useMainStore((store) => store.setInitialized);
-  const currentSongDataURL = usePlayerStore(
-    (store) => store.currentSongDataURL,
-  );
   const setCurrentSongDataURL = usePlayerStore(
     (store) => store.setCurrentSongDataURL,
   );
@@ -79,11 +67,11 @@ export default function Main() {
    * @dev JSX refs
    */
   const audioTagRef = useRef<HTMLAudioElement>(null);
+  const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
   /**
    * @dev component state
    */
-  const [rowContainerHeight, setRowContainerHeight] = useState(0);
   const [showImportingProgress, setShowImportingProgress] = useState(false);
   const [songsImported, setSongsImported] = useState(0);
   const [totalSongs, setTotalSongs] = useState(0);
@@ -103,7 +91,6 @@ export default function Main() {
     useState(false);
   const [showBackingUpLibraryDialog, setShowBackingUpLibraryDialog] =
     useState(false);
-  const [albumArtMaxWidth, setAlbumArtMaxWidth] = useState(320);
 
   /**
    * @def functions
@@ -135,26 +122,6 @@ export default function Main() {
         ];
       }
     });
-  };
-
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const query = event.target.value;
-    if (!storeLibrary) return;
-    const filtered = Object.keys(storeLibrary).filter((song) => {
-      const meta = storeLibrary[song];
-      return (
-        meta.common.title?.toLowerCase().includes(query.toLowerCase()) ||
-        meta.common.artist?.toLowerCase().includes(query.toLowerCase()) ||
-        meta.common.album?.toLowerCase().includes(query.toLowerCase())
-      );
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
-
-    setFilteredLibrary(filteredLib);
   };
 
   /**
@@ -364,93 +331,6 @@ export default function Main() {
   };
 
   /**
-   * @dev allow user to select some files and import them into the library
-   */
-  const importNewSongs = async () => {
-    /**
-     * @dev fires when one song is imported, that way we can update
-     * our progress bar in the UI and the EstimatedTimeRemainingString
-     */
-    window.electron.ipcRenderer.on('song-imported', (args) => {
-      setShowImportingProgress(true);
-      setSongsImported(args.songsImported);
-      setTotalSongs(args.totalSongs);
-
-      // completion time is roughly 5ms per song
-      const estimatedTimeRemaining = Math.floor(
-        (args.totalSongs - args.songsImported) * 5,
-      );
-
-      // convert the estimated time from ms to a human readable format
-      const minutes = Math.floor(estimatedTimeRemaining / 60000);
-      const seconds = Math.floor(estimatedTimeRemaining / 1000);
-      const timeRemainingString =
-        // eslint-disable-next-line no-nested-ternary
-        minutes < 1
-          ? seconds === 0
-            ? 'Processing Metadata...'
-            : `${seconds}s left`
-          : `${minutes}mins left`;
-      setEstimatedTimeRemainingString(timeRemainingString);
-    });
-
-    /**
-     * @dev fires when adding songs to the library is complete.
-     * Is given the new store/library and the index of the song to scroll to
-     */
-    window.electron.ipcRenderer.once('add-to-library', (arg) => {
-      // exit early if the user cancels the import or the args are malformed
-      if (!arg || !arg.library) {
-        setShowImportingProgress(false);
-        return;
-      }
-
-      // update the library, the filtered library, the current song, and pause.
-      setLibraryInStore(arg.library);
-      setFilteredLibrary(arg.library);
-
-      // scroll one of the new songs into view
-      setInitialScrollIndex(arg.scrollToIndex);
-
-      // hide the dialog
-      setShowImportingProgress(false);
-
-      // reset the internal ux of the progress bar for next time its used
-      // do it way after the importing progress dialog is closed
-      // so that the ux update does not get batched together
-      window.setTimeout(() => {
-        setSongsImported(0);
-        setTotalSongs(0);
-      }, 100);
-    });
-
-    /**
-     * ask the user what songs to add to the library.
-     * will respond with add-to-library and song-imported events
-     */
-    window.electron.ipcRenderer.sendMessage('add-to-library');
-  };
-
-  /**
-   * @dev useEffect to update the row container height when
-   * the window is resized in any way. that way our virtualized table
-   * always has the right size and right amount of rows visible.
-   */
-  useEffect(() => {
-    const artContainerHeight =
-      document.querySelector('.art')?.clientHeight || 0;
-    const playerHeight = document.querySelector('.player')?.clientHeight || 0;
-
-    if (height) {
-      setRowContainerHeight(height - playerHeight - artContainerHeight - 26);
-    }
-
-    if (width && albumArtMaxWidth) {
-      // set
-    }
-  }, [height, width, albumArtMaxWidth]);
-
-  /**
    * @dev useEffect to initialize the app and set up the internal store
    * for the library etc. also sets the current song and album art.
    * also sets the row container height for the library list.
@@ -462,14 +342,6 @@ export default function Main() {
       setInitialized(true);
       setLibraryInStore(arg.library);
       setFilteredLibrary(arg.library);
-
-      const artContainerHeight =
-        document.querySelector('.art')?.clientHeight || 0;
-
-      if (height) {
-        // since the player has no actual height, we use 120 to implicitly set the height
-        setRowContainerHeight(height - 120 - artContainerHeight);
-      }
 
       if (arg.lastPlayedSong) {
         setCurrentSong(arg.lastPlayedSong);
@@ -500,7 +372,10 @@ export default function Main() {
     });
 
     window.electron.ipcRenderer.on('menu-add-songs', () => {
-      importNewSongs();
+      // @dev: click the button inside the div for the import button
+      // to trigger the import dialog UX, that way I can keep all that
+      // logic in the ImportNewSongsButton component
+      importNewSongsButtonRef.current?.querySelector('button')?.click();
     });
 
     window.electron.ipcRenderer.on('menu-reset-library', () => {
@@ -555,11 +430,9 @@ export default function Main() {
   return (
     <div ref={ref} className="h-full flex flex-col dark">
       {/**
-       * @dev this is the audio tag that plays the song.
-       * it is hidden and only used to play the song, as well as
-       * hook into the current time, pause, and play states.
-       * never let the user click on this directly.
-       * */}
+       * @important This is the hidden audio tag that plays the song.
+       * We use it to hook into the current time, pause, and play states.
+       */}
       <audio
         ref={audioTagRef}
         autoPlay={!paused}
@@ -577,56 +450,15 @@ export default function Main() {
         src={`my-magic-protocol://getMediaFile/${currentSong}`}
       />
 
-      {/**
-       * @dev IMPORT PROGRESS DIALOG
-       */}
-      <Dialog
-        className="flex flex-col items-center justify-center content-center p-10"
+      <ImportProgressDialog
+        estimatedTimeRemainingString={estimatedTimeRemainingString}
         open={showImportingProgress}
-      >
-        <div className="flex flex-col items-center px-20 pb-6">
-          <DialogTitle>Importing Songs</DialogTitle>
-          <Box sx={{ width: '100%', marginBottom: '12px' }}>
-            <LinearProgress
-              color="inherit"
-              value={(songsImported / totalSongs) * 100}
-              variant={
-                songsImported === totalSongs ? 'indeterminate' : 'determinate'
-              }
-            />
-          </Box>
-          <div className="flex w-full justify-center mt-1 px-2 ">
-            <h4>{`${songsImported} / ${totalSongs}`}</h4>
-          </div>
-          <div className="flex w-full justify-center pt-2 pb-1 px-2">
-            <TinyText>{`${
-              estimatedTimeRemainingString || 'Calculating...'
-            }`}</TinyText>
-          </div>
-        </div>
-      </Dialog>
+        songsImported={songsImported}
+        totalSongs={totalSongs}
+      />
 
-      {/**
-       * @dev DEDUPING PROGRESS DIALOG
-       */}
-      <Dialog
-        className="flex flex-col items-center justify-center content-center p-10"
-        open={showDedupingProgress}
-      >
-        <div className="flex flex-col items-center px-20 pb-6">
-          <DialogTitle>Deduplicating Songs</DialogTitle>
-          <Box sx={{ width: '100%', marginBottom: '12px' }}>
-            <LinearProgress color="inherit" variant="indeterminate" />
-          </Box>
-          <div className="flex w-full justify-center pt-2 pb-1 px-2">
-            <TinyText>This operation will take three to five minutes</TinyText>
-          </div>
-        </div>
-      </Dialog>
+      <DedupingProgressDialog open={showDedupingProgress} />
 
-      {/**
-       * @dev BACKUP CONFIRMATION DIALOG
-       */}
       <BackupConfirmationDialog
         onBackup={() => {
           setShowBackupConfirmationDialog(false);
@@ -637,267 +469,48 @@ export default function Main() {
         open={showBackupConfirmationDialog}
       />
 
-      {/**
-       * @dev BACKING UP LIBRARY DIALOG
-       */}
-      <Dialog
-        className="flex flex-col items-center justify-center content-center p-10"
-        open={showBackingUpLibraryDialog}
-      >
-        <div className="flex flex-col items-center pb-4 max-w-[240px]">
-          <DialogTitle>Backing Up</DialogTitle>
-          <DialogContent>
-            <div className="flex w-full justify-center px-2 flex-col gap-6">
-              <TinyText className="text-center">
-                Syncing your library with the chosen folder. This may take a
-                while so go grab some tea!
-              </TinyText>
-              <Box sx={{ width: '100%', marginBottom: '12px' }}>
-                <LinearProgress color="inherit" variant="indeterminate" />
-              </Box>
-            </div>
-          </DialogContent>
-        </div>
-      </Dialog>
+      <BackingUpLibraryDialog open={showBackingUpLibraryDialog} />
 
-      {/**
-       * @dev CONFIRM DEDUPING DIALOG
-       */}
-      <Dialog
-        className="flex flex-col items-center justify-center content-center p-10"
+      <ConfirmDedupingDialog
+        onClose={() => setShowConfirmDedupeAndDeleteDialog(false)}
+        onConfirm={() => {
+          setShowConfirmDedupeAndDeleteDialog(false);
+          setShowDedupingProgress(true);
+          // @note: responds with update-store
+          window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
+        }}
         open={showConfirmDedupeAndDeleteDialog}
-      >
-        <div className="flex flex-col items-center pb-4 max-w-[400px]">
-          <DialogTitle>Deduplicate Library</DialogTitle>
-          <DialogContent>
-            <div className="flex w-full justify-center px-2">
-              <TinyText>
-                This will find any dupilcate song files with identical title,
-                artist, and album and keep only the highest quality version of
-                each song. That way your library will contain only the best
-                quality files.
-              </TinyText>
-            </div>
-          </DialogContent>
-          <div className="flex flex-row">
-            <div className="flex w-full justify-center pt-2 pb-1 px-2">
-              <button
-                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-                onClick={() => {
-                  setShowConfirmDedupeAndDeleteDialog(false);
-                }}
-                type="button"
-              >
-                Cancel
-              </button>
-            </div>
-            <div className="flex w-full justify-center pt-2 pb-1 px-2">
-              <button
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                onClick={() => {
-                  setShowConfirmDedupeAndDeleteDialog(false);
-                  setShowDedupingProgress(true);
-                  // @note: responds with update-store
-                  window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
-                }}
-                type="button"
-              >
-                Deduplicate
-              </button>
-            </div>
-          </div>
-        </div>
-      </Dialog>
+      />
 
       {/**
-       * @dev top third of the screen with
-       *  -- the artwork
-       *  -- import button
-       *  -- search bar etc
+       * @dev top chunk of the screen's UX
        */}
       <div className="flex art drag justify-center p-4 space-x-4 md:flex-row ">
-        {/**
-         * @dev ALBUM ART
-         */}
-        {!currentSongDataURL ? (
-          <div
-            className="relative aspect-square w-[40%] bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
-            style={{
-              maxWidth: `${albumArtMaxWidth}px`,
-            }}
-          >
-            {/**
-             * @dev PLACEHOLDER ALBUM ART
-             */}
-            <div className="inset-0 h-full w-full flex items-center justify-center rounded-lg">
-              <svg
-                className=" text-neutral-300 w-1/5 h-1/5 animate-bounce"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M9 18V5l12-2v13" />
-                <circle cx="6" cy="18" r="3" />
-                <circle cx="18" cy="16" r="3" />
-              </svg>
-              <TinyText className="absolute bottom-3 left-3">hihat</TinyText>
-            </div>
-          </div>
-        ) : (
-          <div
-            className="relative aspect-square w-full bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg"
-            style={{
-              maxWidth: `${albumArtMaxWidth}px`,
-            }}
-          >
-            {/**
-             * @dev ACTUAL ALBUM ART
-             */}
-            <img
-              alt="Album Art"
-              aria-hidden="true"
-              className="album-art h-full w-full rounded-lg hover:cursor-pointer"
-              onClick={() => {
-                // find the index of this song in the library
-                // @TODO: this really needs to be extracted into a helper function
-                const libraryArray = Object.values(filteredLibrary);
-                const index = libraryArray.findIndex(
-                  (song) =>
-                    song.common.title === currentSongMetadata.common?.title &&
-                    song.common.artist === currentSongMetadata.common?.artist &&
-                    song.common.album === currentSongMetadata.common?.album,
-                );
+        <AlbumArt
+          setShowAlbumArtMenu={setShowAlbumArtMenu}
+          showAlbumArtMenu={showAlbumArtMenu}
+          width={width || null}
+        />
 
-                setOverrideScrollToIndex(index);
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setShowAlbumArtMenu({
-                  mouseX: e.clientX - 2,
-                  mouseY: e.clientY - 4,
-                });
-              }}
-              src={currentSongDataURL}
-              style={{
-                maxWidth: `${albumArtMaxWidth}px`,
-              }}
-            />
-            {showAlbumArtMenu && currentSong && (
-              <AlbumArtRightClickMenu
-                anchorEl={document.querySelector('.album-art')}
-                mouseX={showAlbumArtMenu.mouseX}
-                mouseY={showAlbumArtMenu.mouseY}
-                onClose={() => {
-                  setShowAlbumArtMenu(undefined);
-                }}
-                song={currentSong}
-              />
-            )}
-            {/**
-             * @dev INVISIBLE RESIZER
-             */}
-            <Draggable
-              axis="y"
-              onDrag={(e, data) => {
-                if (!width) return;
+        <div ref={importNewSongsButtonRef}>
+          <ImportNewSongsButton
+            setEstimatedTimeRemainingString={setEstimatedTimeRemainingString}
+            setInitialScrollIndex={setInitialScrollIndex}
+            setShowImportingProgress={setShowImportingProgress}
+            setSongsImported={setSongsImported}
+            setTotalSongs={setTotalSongs}
+          />
+        </div>
 
-                const newMaxWidth = albumArtMaxWidth + data.deltaY;
-                const clampedMaxWidth = Math.max(
-                  120,
-                  Math.min(newMaxWidth, width * 0.4),
-                );
-                setAlbumArtMaxWidth(clampedMaxWidth);
-              }}
-              position={{ x: 0, y: 0 }}
-            >
-              <div className="w-full absolute bottom-0 h-[20px] bg-transparent cursor-ns-resize hover:cursor-ns-resize bg-red-400" />
-            </Draggable>
-          </div>
-        )}
-
-        {/**
-         * @dev IMPORT LIBRARY BUTTON
-         */}
-        {!storeLibrary ? (
-          <Tooltip title="Import Library From Folder">
-            <button
-              aria-label="select library folder"
-              className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
-          rounded-md text-[18px] ring-offset-background transition-colors
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-          focus-visible:ring-offset-2 disabled:pointer-events-none
-          disabled:opacity-50 border border-neutral-800 bg-black
-          hover:bg-white hover:text-black
-          px-4 py-[7px] text-sm"
-              onClick={() => importNewLibrary()}
-              type="button"
-            >
-              <LibraryMusic
-                fontSize="inherit"
-                sx={{
-                  position: 'relative',
-                  bottom: '1px',
-                }}
-              />
-            </button>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Import New Songs">
-            <button
-              aria-label="import to songs"
-              className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
-          rounded-md text-[18px] ring-offset-background transition-colors
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-          focus-visible:ring-offset-2 disabled:pointer-events-none
-          disabled:opacity-50 border border-neutral-800 bg-black
-          hover:bg-white hover:text-black
-          px-4 py-[7px] text-sm"
-              onClick={importNewSongs}
-              type="button"
-            >
-              <LibraryAdd
-                fontSize="inherit"
-                sx={{
-                  position: 'relative',
-                  bottom: '1px',
-                }}
-              />
-            </button>
-          </Tooltip>
-        )}
-
-        {/**
-         * @dev SEARCH BAR
-         */}
-        <Box className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white">
-          <Search
-            sx={{
-              borderRadius: '0.375rem',
-            }}
-          >
-            <StyledInputBase
-              inputProps={{ 'aria-label': 'search' }}
-              onChange={handleSearch}
-              placeholder="Search"
-            />
-            <SearchIconWrapper className="text-[16px]">
-              <SearchIcon fontSize="inherit" />
-            </SearchIconWrapper>
-          </Search>
-        </Box>
+        <SearchBar className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white" />
       </div>
 
       {/**
-       * @dev LIBRARY LIST
+       * @dev middle chunk of the screen's UX
        */}
       {width && (
         <LibraryList
+          height={height}
           initialScrollIndex={initialScrollIndex}
           onImportLibrary={importNewLibrary}
           playSong={async (song, meta) => {
@@ -908,13 +521,12 @@ export default function Main() {
               await playSong(song, meta);
             }
           }}
-          rowContainerHeight={rowContainerHeight}
           width={width}
         />
       )}
 
       {/**
-       * @dev PLAYER
+       * @dev bottom chunk of the screen's UX
        */}
       <StaticPlayer
         audioTagRef={audioTagRef}
