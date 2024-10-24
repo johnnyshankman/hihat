@@ -248,12 +248,13 @@ export default function Main() {
       return;
     }
 
-    // @dev: if shuffle is on, pick a random song and return early
+    // @dev: if shuffle is on, pick a random song, scroll to it, and return early
     if (shuffle) {
       const randomIndex = Math.floor(Math.random() * keys.length);
       const randomSong = keys[randomIndex];
       const randomSongMeta = filteredLibrary[randomSong];
       await playSong(randomSong, randomSongMeta);
+      setOverrideScrollToIndex(randomIndex);
       return;
     }
 
