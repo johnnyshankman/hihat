@@ -127,17 +127,15 @@ You are now all set.
 
 ### First Time Setup
 
-1. Launch hihat.
-2. Click the "Select Library Folder" button.
-3. Choose the folder on your computer where you store your music library.
-4. Wait for the import process to complete (about 1 minute per 10,000 songs).
-5. You're all set! Your music library is now ready to use.
+1. Click the "Select Library Folder" button.
+2. Choose the folder on your computer where you store your music library.
+3. Wait for the import process to complete (about 1 minute per 10,000 songs).
+4. You're all set! Your music library is now ready to use.
 
 ### Playing Music
 
 * Double click on a song to play it
-* Use the playback controls at the bottom of the app to pause, skip, adjust volume, engage shuffle, or engage song repeat.
-* Click on the song name or artist name in the player at the bottom to scroll back to the currently playing song!
+* Use the playback controls at the bottom of the app to pause, skip, adjust volume, shuffle, or enable song-repeat.
 
 <img width="749" alt="Screenshot 2024-09-15 at 8 39 53 PM" src="https://github.com/user-attachments/assets/1d21bf27-d808-49fb-b5ba-7108454c0dcc">
 
@@ -164,6 +162,8 @@ If you've added songs to your library folder manually that hihat is unaware of:
 * Right-click on a song for more options.
 * Right-click on the album art for more options.
 * Explore the hihat menu for additional features like backing up your library or managing duplicate songs.
+* Click on the song name or artist name in the player at the bottom to scroll back to the current song
+* Click on the album art to scroll back to the current song
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
