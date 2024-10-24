@@ -1,22 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Draggable from 'react-draggable';
 import { TinyText } from './SimpleStyledMaterialUIComponents';
 import AlbumArtRightClickMenu from './AlbumArtRightClickMenu';
 import usePlayerStore from '../store/player';
 
 interface AlbumArtProps {
-  albumArtMaxWidth: number;
   setShowAlbumArtMenu: (menu: any) => void;
   showAlbumArtMenu: any;
-  setAlbumArtMaxWidth: (width: number) => void;
   width: number | null;
 }
 
 export default function AlbumArt({
-  albumArtMaxWidth,
   setShowAlbumArtMenu,
   showAlbumArtMenu,
-  setAlbumArtMaxWidth,
   width,
 }: AlbumArtProps) {
   const currentSong = usePlayerStore((store) => store.currentSong);
@@ -30,6 +26,8 @@ export default function AlbumArt({
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
   );
+
+  const [albumArtMaxWidth, setAlbumArtMaxWidth] = useState(320);
 
   if (!currentSongDataURL) {
     return (

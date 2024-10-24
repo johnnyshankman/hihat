@@ -91,7 +91,6 @@ export default function Main() {
     useState(false);
   const [showBackingUpLibraryDialog, setShowBackingUpLibraryDialog] =
     useState(false);
-  const [albumArtMaxWidth, setAlbumArtMaxWidth] = useState(320);
 
   /**
    * @def functions
@@ -488,8 +487,6 @@ export default function Main() {
        */}
       <div className="flex art drag justify-center p-4 space-x-4 md:flex-row ">
         <AlbumArt
-          albumArtMaxWidth={albumArtMaxWidth}
-          setAlbumArtMaxWidth={setAlbumArtMaxWidth}
           setShowAlbumArtMenu={setShowAlbumArtMenu}
           showAlbumArtMenu={showAlbumArtMenu}
           width={width || null}
