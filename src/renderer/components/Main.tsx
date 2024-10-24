@@ -11,7 +11,7 @@ import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
 import { DialogContent } from '@mui/material';
 import Draggable from 'react-draggable';
 import { StoreStructure, LightweightAudioMetadata } from '../../common/common';
-import AlbumArtMenu from './AlbumArtMenu';
+import AlbumArtRightClickMenu from './AlbumArtRightClickMenu';
 import useMainStore from '../store/main';
 import { bufferToDataUrl } from '../utils/utils';
 import usePlayerStore from '../store/player';
@@ -70,6 +70,9 @@ export default function Main() {
   const currentSongTime = usePlayerStore((store) => store.currentSongTime);
   const setCurrentSongTime = usePlayerStore(
     (store) => store.setCurrentSongTime,
+  );
+  const setOverrideScrollToIndex = usePlayerStore(
+    (store) => store.setOverrideScrollToIndex,
   );
 
   /**
@@ -245,12 +248,13 @@ export default function Main() {
       return;
     }
 
-    // @dev: if shuffle is on, pick a random song and return early
+    // @dev: if shuffle is on, pick a random song, scroll to it, and return early
     if (shuffle) {
       const randomIndex = Math.floor(Math.random() * keys.length);
       const randomSong = keys[randomIndex];
       const randomSongMeta = filteredLibrary[randomSong];
       await playSong(randomSong, randomSongMeta);
+      setOverrideScrollToIndex(randomIndex);
       return;
     }
 
@@ -620,6 +624,9 @@ export default function Main() {
         </div>
       </Dialog>
 
+      {/**
+       * @dev BACKUP CONFIRMATION DIALOG
+       */}
       <BackupConfirmationDialog
         onBackup={() => {
           setShowBackupConfirmationDialog(false);
@@ -754,7 +761,21 @@ export default function Main() {
              */}
             <img
               alt="Album Art"
-              className="album-art h-full w-full rounded-lg"
+              aria-hidden="true"
+              className="album-art h-full w-full rounded-lg hover:cursor-pointer"
+              onClick={() => {
+                // find the index of this song in the library
+                // @TODO: this really needs to be extracted into a helper function
+                const libraryArray = Object.values(filteredLibrary);
+                const index = libraryArray.findIndex(
+                  (song) =>
+                    song.common.title === currentSongMetadata.common?.title &&
+                    song.common.artist === currentSongMetadata.common?.artist &&
+                    song.common.album === currentSongMetadata.common?.album,
+                );
+
+                setOverrideScrollToIndex(index);
+              }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setShowAlbumArtMenu({
@@ -768,7 +789,7 @@ export default function Main() {
               }}
             />
             {showAlbumArtMenu && currentSong && (
-              <AlbumArtMenu
+              <AlbumArtRightClickMenu
                 anchorEl={document.querySelector('.album-art')}
                 mouseX={showAlbumArtMenu.mouseX}
                 mouseY={showAlbumArtMenu.mouseY}

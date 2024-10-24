@@ -14,7 +14,7 @@ import { LightweightAudioMetadata, StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
 import { convertToMMSS } from '../utils/utils';
 import usePlayerStore from '../store/player';
-import SongMenu from './SongMenu';
+import SongRightClickMenu from './SongRightClickMenu';
 
 const ROW_HEIGHT = 25.5;
 
@@ -438,7 +438,7 @@ export default function LibraryList({
        * @dev this is the menu that pops up when the user right clicks on a song
        */}
       {songMenu && (
-        <SongMenu
+        <SongRightClickMenu
           anchorEl={songMenu?.anchorEl}
           mouseX={songMenu.mouseX}
           mouseY={songMenu.mouseY}

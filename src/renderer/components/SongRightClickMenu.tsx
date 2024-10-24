@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { LightweightAudioMetadata } from '../../common/common';
 import { TinyText } from './SimpleStyledMaterialUIComponents';
 
-type SongMenuProps = {
+type SongRightClickMenuProps = {
   anchorEl: HTMLElement | null;
   onClose: () => void;
   song: string;
@@ -14,7 +14,7 @@ type SongMenuProps = {
   mouseY: number;
 };
 
-export default function SongMenu(props: SongMenuProps) {
+export default function SongRightClickMenu(props: SongRightClickMenuProps) {
   const { anchorEl, onClose, song, songInfo, mouseX, mouseY } = props;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showHideDialog, setShowHideDialog] = useState(false);
