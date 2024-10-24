@@ -11,7 +11,7 @@ import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
 import { DialogContent } from '@mui/material';
 import Draggable from 'react-draggable';
 import { StoreStructure, LightweightAudioMetadata } from '../../common/common';
-import AlbumArtMenu from './AlbumArtMenu';
+import AlbumArtRightClickMenu from './AlbumArtRightClickMenu';
 import useMainStore from '../store/main';
 import { bufferToDataUrl } from '../utils/utils';
 import usePlayerStore from '../store/player';
@@ -624,6 +624,9 @@ export default function Main() {
         </div>
       </Dialog>
 
+      {/**
+       * @dev BACKUP CONFIRMATION DIALOG
+       */}
       <BackupConfirmationDialog
         onBackup={() => {
           setShowBackupConfirmationDialog(false);
@@ -786,7 +789,7 @@ export default function Main() {
               }}
             />
             {showAlbumArtMenu && currentSong && (
-              <AlbumArtMenu
+              <AlbumArtRightClickMenu
                 anchorEl={document.querySelector('.album-art')}
                 mouseX={showAlbumArtMenu.mouseX}
                 mouseY={showAlbumArtMenu.mouseY}

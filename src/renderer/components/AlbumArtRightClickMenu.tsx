@@ -1,7 +1,7 @@
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
-type AlbumArtMenuProps = {
+type AlbumArtRightClickMenuProps = {
   anchorEl: HTMLElement | null;
   onClose: () => void;
   song: string;
@@ -9,7 +9,9 @@ type AlbumArtMenuProps = {
   mouseY: number;
 };
 
-export default function AlbumArtMenu(props: AlbumArtMenuProps) {
+export default function AlbumArtRightClickMenu(
+  props: AlbumArtRightClickMenuProps,
+) {
   const { anchorEl, onClose, song, mouseX, mouseY } = props;
 
   const copyAlbumArt = () => {
