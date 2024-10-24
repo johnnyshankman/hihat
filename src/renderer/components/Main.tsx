@@ -1,27 +1,20 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import React, { useState, useRef, useEffect } from 'react';
-import Box from '@mui/material/Box';
-import Tooltip from '@mui/material/Tooltip';
 import { useResizeDetector } from 'react-resize-detector';
-import SearchIcon from '@mui/icons-material/Search';
-import { LibraryAdd, LibraryMusic } from '@mui/icons-material';
-import { StoreStructure, LightweightAudioMetadata } from '../../common/common';
+import { LightweightAudioMetadata } from '../../common/common';
 import useMainStore from '../store/main';
 import { bufferToDataUrl } from '../utils/utils';
 import usePlayerStore from '../store/player';
 import LibraryList from './LibraryList';
 import StaticPlayer from './StaticPlayer';
-import {
-  Search,
-  SearchIconWrapper,
-  StyledInputBase,
-} from './SimpleStyledMaterialUIComponents';
 import BackupConfirmationDialog from './Dialog/BackupConfirmationDialog';
 import ConfirmDedupingDialog from './Dialog/ConfirmDedupingDialog';
 import BackingUpLibraryDialog from './Dialog/BackingUpLibraryDialog';
 import DedupingProgressDialog from './Dialog/DedupingProgressDialog';
 import ImportProgressDialog from './Dialog/ImportProgressDialog';
 import AlbumArt from './AlbumArt';
+import ImportNewSongsButton from './ImportNewSongsButtons';
+import SearchBar from './SearchBar';
 
 type AlbumArtMenuState =
   | {
@@ -74,6 +67,7 @@ export default function Main() {
    * @dev JSX refs
    */
   const audioTagRef = useRef<HTMLAudioElement>(null);
+  const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
   /**
    * @dev component state
@@ -130,26 +124,6 @@ export default function Main() {
         ];
       }
     });
-  };
-
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const query = event.target.value;
-    if (!storeLibrary) return;
-    const filtered = Object.keys(storeLibrary).filter((song) => {
-      const meta = storeLibrary[song];
-      return (
-        meta.common.title?.toLowerCase().includes(query.toLowerCase()) ||
-        meta.common.artist?.toLowerCase().includes(query.toLowerCase()) ||
-        meta.common.album?.toLowerCase().includes(query.toLowerCase())
-      );
-    });
-
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
-
-    setFilteredLibrary(filteredLib);
   };
 
   /**
@@ -359,74 +333,6 @@ export default function Main() {
   };
 
   /**
-   * @dev allow user to select some files and import them into the library
-   */
-  const importNewSongs = async () => {
-    /**
-     * @dev fires when one song is imported, that way we can update
-     * our progress bar in the UI and the EstimatedTimeRemainingString
-     */
-    window.electron.ipcRenderer.on('song-imported', (args) => {
-      setShowImportingProgress(true);
-      setSongsImported(args.songsImported);
-      setTotalSongs(args.totalSongs);
-
-      // completion time is roughly 5ms per song
-      const estimatedTimeRemaining = Math.floor(
-        (args.totalSongs - args.songsImported) * 5,
-      );
-
-      // convert the estimated time from ms to a human readable format
-      const minutes = Math.floor(estimatedTimeRemaining / 60000);
-      const seconds = Math.floor(estimatedTimeRemaining / 1000);
-      const timeRemainingString =
-        // eslint-disable-next-line no-nested-ternary
-        minutes < 1
-          ? seconds === 0
-            ? 'Processing Metadata...'
-            : `${seconds}s left`
-          : `${minutes}mins left`;
-      setEstimatedTimeRemainingString(timeRemainingString);
-    });
-
-    /**
-     * @dev fires when adding songs to the library is complete.
-     * Is given the new store/library and the index of the song to scroll to
-     */
-    window.electron.ipcRenderer.once('add-to-library', (arg) => {
-      // exit early if the user cancels the import or the args are malformed
-      if (!arg || !arg.library) {
-        setShowImportingProgress(false);
-        return;
-      }
-
-      // update the library, the filtered library, the current song, and pause.
-      setLibraryInStore(arg.library);
-      setFilteredLibrary(arg.library);
-
-      // scroll one of the new songs into view
-      setInitialScrollIndex(arg.scrollToIndex);
-
-      // hide the dialog
-      setShowImportingProgress(false);
-
-      // reset the internal ux of the progress bar for next time its used
-      // do it way after the importing progress dialog is closed
-      // so that the ux update does not get batched together
-      window.setTimeout(() => {
-        setSongsImported(0);
-        setTotalSongs(0);
-      }, 100);
-    });
-
-    /**
-     * ask the user what songs to add to the library.
-     * will respond with add-to-library and song-imported events
-     */
-    window.electron.ipcRenderer.sendMessage('add-to-library');
-  };
-
-  /**
    * @dev useEffect to update the row container height when
    * the window is resized in any way. that way our virtualized table
    * always has the right size and right amount of rows visible.
@@ -495,7 +401,10 @@ export default function Main() {
     });
 
     window.electron.ipcRenderer.on('menu-add-songs', () => {
-      importNewSongs();
+      // @dev: click the button inside the div for the import button
+      // to trigger the import dialog UX, that way I can keep all that
+      // logic in the ImportNewSongsButton component
+      importNewSongsButtonRef.current?.querySelector('button')?.click();
     });
 
     window.electron.ipcRenderer.on('menu-reset-library', () => {
@@ -603,10 +512,7 @@ export default function Main() {
       />
 
       {/**
-       * @dev top third of the screen with
-       *  -- the artwork
-       *  -- import button
-       *  -- search bar etc
+       * @dev top chunk of the screen's UX
        */}
       <div className="flex art drag justify-center p-4 space-x-4 md:flex-row ">
         <AlbumArt
@@ -617,78 +523,22 @@ export default function Main() {
           width={width || null}
         />
 
-        {/**
-         * @dev IMPORT LIBRARY BUTTON
-         */}
-        {!storeLibrary ? (
-          <Tooltip title="Import Library From Folder">
-            <button
-              aria-label="select library folder"
-              className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
-          rounded-md text-[18px] ring-offset-background transition-colors
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-          focus-visible:ring-offset-2 disabled:pointer-events-none
-          disabled:opacity-50 border border-neutral-800 bg-black
-          hover:bg-white hover:text-black
-          px-4 py-[7px] text-sm"
-              onClick={() => importNewLibrary()}
-              type="button"
-            >
-              <LibraryMusic
-                fontSize="inherit"
-                sx={{
-                  position: 'relative',
-                  bottom: '1px',
-                }}
-              />
-            </button>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Import New Songs">
-            <button
-              aria-label="import to songs"
-              className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
-          rounded-md text-[18px] ring-offset-background transition-colors
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-          focus-visible:ring-offset-2 disabled:pointer-events-none
-          disabled:opacity-50 border border-neutral-800 bg-black
-          hover:bg-white hover:text-black
-          px-4 py-[7px] text-sm"
-              onClick={importNewSongs}
-              type="button"
-            >
-              <LibraryAdd
-                fontSize="inherit"
-                sx={{
-                  position: 'relative',
-                  bottom: '1px',
-                }}
-              />
-            </button>
-          </Tooltip>
-        )}
+        <div ref={importNewSongsButtonRef}>
+          <ImportNewSongsButton
+            setEstimatedTimeRemainingString={setEstimatedTimeRemainingString}
+            setInitialScrollIndex={setInitialScrollIndex}
+            setShowImportingProgress={setShowImportingProgress}
+            setSongsImported={setSongsImported}
+            setTotalSongs={setTotalSongs}
+          />
+        </div>
 
-        {/**
-         * @dev SEARCH BAR
-         */}
-        <Box className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white">
-          <Search
-            sx={{
-              borderRadius: '0.375rem',
-            }}
-          >
-            <StyledInputBase
-              inputProps={{ 'aria-label': 'search' }}
-              onChange={handleSearch}
-              placeholder="Search"
-            />
-            <SearchIconWrapper className="text-[16px]">
-              <SearchIcon fontSize="inherit" />
-            </SearchIconWrapper>
-          </Search>
-        </Box>
+        <SearchBar className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white" />
       </div>
 
+      {/**
+       * @dev middle chunk of the screen's UX
+       */}
       {width && (
         <LibraryList
           initialScrollIndex={initialScrollIndex}
@@ -706,6 +556,9 @@ export default function Main() {
         />
       )}
 
+      {/**
+       * @dev bottom chunk of the screen's UX
+       */}
       <StaticPlayer
         audioTagRef={audioTagRef}
         playNextSong={playNextSong}
