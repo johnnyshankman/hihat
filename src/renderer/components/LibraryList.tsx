@@ -42,9 +42,9 @@ type LibraryListProps = {
    */
   width: number;
   /**
-   * @dev the height of the row container
+   * @dev the height of the list container
    */
-  rowContainerHeight: number;
+  height: number | undefined;
   /**
    * @dev the height of the row container
    */
@@ -71,7 +71,7 @@ type SongMenuState =
 
 export default function LibraryList({
   width,
-  rowContainerHeight,
+  height,
   initialScrollIndex,
   playSong,
   onImportLibrary,
@@ -89,6 +89,11 @@ export default function LibraryList({
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
   );
+
+  /**
+   * @dev state
+   */
+  const [rowContainerHeight, setRowContainerHeight] = useState(0);
   const [staleWidth, setStaleWidth] = useState(width);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -337,6 +342,42 @@ export default function LibraryList({
     setFilteredLibrary(filteredLib);
     setFilterType(filter);
   };
+
+  const updateRowContainerHeight = () => {
+    if (!height || !width) return;
+
+    const artContainerHeight =
+      document.querySelector('.art')?.clientHeight || 0;
+
+    if (width > 640) {
+      setRowContainerHeight(height - artContainerHeight - 110);
+    } else {
+      setRowContainerHeight(height - artContainerHeight - 160);
+    }
+  };
+
+  /**
+   * @dev update the row container height when
+   * the window is resized in any way. that way our virtualized table
+   * always has the right size and right amount of rows visible.
+   */
+  useEffect(() => {
+    updateRowContainerHeight();
+  }, [height, width]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * @dev update the row container height when the album art width changes
+   * using the draggable component to resize the album art.
+   * @see AlbumArt.tsx
+   */
+  useEffect(() => {
+    window.addEventListener(
+      'album-art-width-changed',
+      updateRowContainerHeight,
+    );
+
+    updateRowContainerHeight();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * @dev render the row for the virtualized table, reps a single song

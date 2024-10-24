@@ -116,6 +116,12 @@ export default function AlbumArt({
             Math.min(newMaxWidth, width * 0.4),
           );
           setAlbumArtMaxWidth(clampedMaxWidth);
+
+          /**
+           * @important dispatch an event to let all components know the width has changed
+           * @see LibraryList.tsx
+           */
+          window.dispatchEvent(new Event('album-art-width-changed'));
         }}
         position={{ x: 0, y: 0 }}
       >

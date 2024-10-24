@@ -72,7 +72,6 @@ export default function Main() {
   /**
    * @dev component state
    */
-  const [rowContainerHeight, setRowContainerHeight] = useState(0);
   const [showImportingProgress, setShowImportingProgress] = useState(false);
   const [songsImported, setSongsImported] = useState(0);
   const [totalSongs, setTotalSongs] = useState(0);
@@ -333,25 +332,6 @@ export default function Main() {
   };
 
   /**
-   * @dev useEffect to update the row container height when
-   * the window is resized in any way. that way our virtualized table
-   * always has the right size and right amount of rows visible.
-   */
-  useEffect(() => {
-    const artContainerHeight =
-      document.querySelector('.art')?.clientHeight || 0;
-    const playerHeight = document.querySelector('.player')?.clientHeight || 0;
-
-    if (height) {
-      setRowContainerHeight(height - playerHeight - artContainerHeight - 26);
-    }
-
-    if (width && albumArtMaxWidth) {
-      // set
-    }
-  }, [height, width, albumArtMaxWidth]);
-
-  /**
    * @dev useEffect to initialize the app and set up the internal store
    * for the library etc. also sets the current song and album art.
    * also sets the row container height for the library list.
@@ -363,14 +343,6 @@ export default function Main() {
       setInitialized(true);
       setLibraryInStore(arg.library);
       setFilteredLibrary(arg.library);
-
-      const artContainerHeight =
-        document.querySelector('.art')?.clientHeight || 0;
-
-      if (height) {
-        // since the player has no actual height, we use 120 to implicitly set the height
-        setRowContainerHeight(height - 120 - artContainerHeight);
-      }
 
       if (arg.lastPlayedSong) {
         setCurrentSong(arg.lastPlayedSong);
@@ -541,6 +513,7 @@ export default function Main() {
        */}
       {width && (
         <LibraryList
+          height={height}
           initialScrollIndex={initialScrollIndex}
           onImportLibrary={importNewLibrary}
           playSong={async (song, meta) => {
@@ -551,7 +524,6 @@ export default function Main() {
               await playSong(song, meta);
             }
           }}
-          rowContainerHeight={rowContainerHeight}
           width={width}
         />
       )}
