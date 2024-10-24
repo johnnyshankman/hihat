@@ -11,8 +11,8 @@ import RepeatIcon from '@mui/icons-material/Repeat';
 import Stack from '@mui/material/Stack';
 import RepeatOnIcon from '@mui/icons-material/RepeatOn';
 import SpatialAudioIcon from '@mui/icons-material/SpatialAudio';
-import ContinuousSlider from './ContinuousSlider';
-import LinearProgressBar from './LinearProgressBar';
+import VolumeSliderStack from './VolumeSliderStack';
+import SongProgressBar from './SongProgressBar';
 import usePlayerStore from '../store/player';
 
 type StaticPlayerProps = {
@@ -169,7 +169,7 @@ export default function StaticPlayer({
          * @dev this is the volume slider on mobile and desktop
          */}
         <div className="flex sm:hidden justify-end flex-1 mt-1 mb-1">
-          <ContinuousSlider
+          <VolumeSliderStack
             onChange={(event, value) => {
               audioTagRef.current!.volume = (value as number) / 100;
               setVolume(value as number);
@@ -182,7 +182,7 @@ export default function StaticPlayer({
       {/**
        * @dev this is song progress bar on mobile and desktop
        */}
-      <LinearProgressBar
+      <SongProgressBar
         max={currentSongMetadata?.format?.duration || 0}
         onManualChange={(e: number) => {
           setCurrentSongTime(e);
@@ -250,7 +250,7 @@ export default function StaticPlayer({
             </IconButton>
           </Tooltip>
         </div>
-        <ContinuousSlider
+        <VolumeSliderStack
           onChange={(event, value) => {
             audioTagRef.current!.volume = (value as number) / 100;
             setVolume(value as number);
