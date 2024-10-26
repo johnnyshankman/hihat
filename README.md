@@ -70,21 +70,22 @@
 *hihat* core features:
 * 100% offline
 * always dark mode
-* audiophile fidelity (supports all file types)
+* audiophile fidelity (supports all codecs)
 * mix 'n match file types in one library
 * limitless library size
 * responsive design
+* blazing fast import (faster than Cog, Evermusic, etc)
 * song shuffle
 * song repeat
 * media key support
 * OSX menu bar integration
-* downloadable album art
+* one-click album art downloads
+* playcount tracking
 * quick search
-* quick import
-* intelligent sorting by song, artist, album
-* nested folder support for libraries and new imports
-* Spotify and Apple Music one-click search
-* sync your library to a backup drive, phone, or retro device running [Rockbox](https://www.rockbox.org/) in two clicks
+* smart sorting by song, artist, and album
+* nested folder support (finds all music files)
+* one-click Apple Music or Spotify lookup
+* sync your library to a backup drive or device running [Rockbox](https://www.rockbox.org/) in one click
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -110,6 +111,8 @@ If you'd like to see more detailed information, check out:
 Don't know where to download files of your favorite albums and tracks? I suggest:
 * [tidal-media-downloader](https://github.com/yaronzz/Tidal-Media-Downloader) (Works with Tidal)
 * [spotify-downloader](https://github.com/spotDL/spotify-downloader) (Works with Spotify and Youtube Music)
+
+Just as a note, *hihat* does not support video files of any sort (yet).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -159,11 +162,12 @@ If you've added songs to your library folder manually that hihat is unaware of:
 ### Tips
 
 * Use the search bar to quickly find songs.
-* Right-click on a song for more options.
-* Right-click on the album art for more options.
+* Right-click on a song for more options, like lookup on Spotify and Delete
+* Right-click on the album art to Download or Copy to Clipboard
 * Explore the hihat menu for additional features like backing up your library or managing duplicate songs.
-* Click on the song name or artist name in the player at the bottom to scroll back to the current song
+* Click on the song name in the player to scroll back to the current song
 * Click on the album art to scroll back to the current song
+* Try resizing the window, it fits all sorts of sizes!
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -219,6 +223,7 @@ This project was built with the following technologies:
 - [ ] Hide and show columns in the explorer
 - [ ] iTunes-1.0-like "browser" for seeing scrollable list of artists or albums
 - [ ] Queue next-up song
+- [ ] Proper "previous" behavior during shuffle
 
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
