@@ -43,6 +43,7 @@
         <li><a href="#rescanning-your-library">Refreshing Your Library</a></li>
       </ul>
     </li>
+    <li><a href="#updating-hihat-to-latest-version">Updating hihat to latest version</a></li>
     <li><a href="#feature-roadmap">Feature Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
