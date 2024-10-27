@@ -171,7 +171,7 @@ If you've added songs to your library folder manually that hihat is unaware of:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## How to Update hihat to a new version
+## Updating hihat to latest version
 
 Updating *hihat* is simple and ensures that you keep your library and all your settings intact. Follow these steps to update *hihat*:
 
