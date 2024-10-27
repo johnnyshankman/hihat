@@ -351,9 +351,12 @@ export default function LibraryList({
     const artContainerHeight =
       document.querySelector('.art')?.clientHeight || 0;
 
-    if (currentWidth > 640) {
-      setRowContainerHeight(currentHeight - artContainerHeight - 110);
+    // current width is greater than tailwind's sm breakpoint
+    if (currentWidth > 500) {
+      // 106 is the height of the static player
+      setRowContainerHeight(currentHeight - artContainerHeight - 106);
     } else {
+      // 160 is the height of the mobile static player
       setRowContainerHeight(currentHeight - artContainerHeight - 160);
     }
   };
