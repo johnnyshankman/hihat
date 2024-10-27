@@ -42,6 +42,8 @@ export default function Main() {
   const currentSong = usePlayerStore((store) => store.currentSong);
   const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const setInitialized = useMainStore((store) => store.setInitialized);
+  const shuffleHistory = usePlayerStore((store) => store.shuffleHistory);
+  const setShuffleHistory = usePlayerStore((store) => store.setShuffleHistory);
   const setCurrentSongDataURL = usePlayerStore(
     (store) => store.setCurrentSongDataURL,
   );
@@ -222,6 +224,8 @@ export default function Main() {
       const randomSongMeta = filteredLibrary[randomSong];
       await playSong(randomSong, randomSongMeta);
       setOverrideScrollToIndex(randomIndex);
+      // @dev: add the current song to the shuffle history
+      setShuffleHistory([...shuffleHistory, currentSong]);
       return;
     }
 
@@ -256,7 +260,18 @@ export default function Main() {
       return;
     }
 
-    // @TODO: previous during shuffle does not work bc we don't hold a history of songs
+    // @dev: if shuffle is on and we have a history, play the previous song in the history, and scroll to it
+    if (shuffle && shuffleHistory.length > 0) {
+      const previousSong = shuffleHistory[shuffleHistory.length - 1];
+      const previousSongMeta = filteredLibrary[previousSong];
+      await playSong(previousSong, previousSongMeta);
+      // find the index of the song within the library
+      const historicalSongIndex = keys.indexOf(previousSong);
+      setOverrideScrollToIndex(historicalSongIndex);
+      // then pop the song from the history
+      setShuffleHistory(shuffleHistory.slice(0, -1));
+      return;
+    }
 
     const previousSong = keys[previousSongIndex];
     const previousSongMeta = filteredLibrary[previousSong];
