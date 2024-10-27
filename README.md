@@ -220,10 +220,10 @@ This project was built with the following technologies:
 - [x] Adjustable album art size
 - [x] Shuffle "history" for hitting previous
 - [x] Mute and max buttons
+- [x] Show stats about your library somewhere, like GB and # of songs
 - [ ] Edit song metadata
-- [ ] Show stats about your library somewhere, like GB and # of songs
-- [ ] Hide and show columns in the explorer
-- [ ] iTunes-1.0-like "browser" for seeing scrollable list of artists or albums
+- [ ] Toggle column visibility in the explorer
+- [ ] iTunes-1.0-like browser with list of artists or albums
 - [ ] Queue next-up song
 
 
