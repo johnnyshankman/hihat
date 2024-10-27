@@ -44,6 +44,11 @@ module.exports = {
       height: {
         vh80: '80vh',
       },
+      /**
+       * @dev This is not a mobile app so the sm breakpoint being 640 is too big.
+       * I'm using 500px as the breakpoint for the "small" UX as that's when
+       * the StaticPlayer component looks good snapping into a vertical layout.
+       */
       screens: {
         sm: '500px',
         // => @media (min-width: 500px) { ... }
