@@ -4,11 +4,58 @@ import {
   shell,
   BrowserWindow,
   MenuItemConstructorOptions,
+  dialog,
 } from 'electron';
+import fs from 'fs';
+import path from 'path';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
   submenu?: DarwinMenuItemConstructorOptions[] | Menu;
+}
+
+/**
+ * Get JSON data from a file at some filepath
+ *
+ * @param fp filepath
+ * @returns the parsed data from the file at the filepath
+ */
+function parseData(fp: string): any {
+  try {
+    return JSON.parse(fs.readFileSync(fp, 'utf8')) as any;
+  } catch (error) {
+    return {};
+  }
+}
+
+/**
+ * Get the user's configuration data from the userConfig.json file
+ *
+ * @returns the user's configuration data as a StoreStructure
+ */
+function getUserConfig(): any {
+  return parseData(path.join(app.getPath('userData'), 'userConfig.json'));
+}
+
+function getLibraryStats(): { songCount: number; sizeInGB: number } {
+  const userConfig = getUserConfig();
+  const { library } = userConfig;
+  const songCount = Object.keys(library).length;
+
+  let totalSize = 0;
+  // eslint-disable-next-line no-restricted-syntax
+  for (const filePath of Object.keys(library)) {
+    try {
+      const stats = fs.statSync(filePath);
+      totalSize += stats.size;
+    } catch (error) {
+      console.error(`Error reading file size for ${filePath}:`, error);
+    }
+  }
+
+  const sizeInGB = totalSize / (1024 * 1024 * 1024);
+
+  return { songCount, sizeInGB };
 }
 
 export default class MenuBuilder {
@@ -103,6 +150,22 @@ export default class MenuBuilder {
         //     this.mainWindow.webContents.send('menu-reset-library');
         //   },
         // },
+        { type: 'separator' },
+
+        {
+          label: 'see library stats',
+          click: () => {
+            const stats = getLibraryStats();
+            dialog.showMessageBox(this.mainWindow, {
+              type: 'info',
+              title: 'Library Stats',
+              message: `Songs: ${
+                stats.songCount
+              }\nSize: ${stats.sizeInGB.toFixed(2)} GB`,
+            });
+          },
+        },
+
         { type: 'separator' },
 
         {
