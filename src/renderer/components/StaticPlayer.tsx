@@ -106,7 +106,6 @@ export default function StaticPlayer({
             <IconButton
               onClick={() => {
                 // set the volume to 0.02 so you can listen to a podcast or hear the person next to you
-                audioTagRef.current!.volume = 2 / 100;
                 setVolume(2);
               }}
               sx={{
@@ -171,7 +170,6 @@ export default function StaticPlayer({
         <div className="flex sm:hidden justify-end flex-1 mt-1 mb-1">
           <VolumeSliderStack
             onChange={(event, value) => {
-              audioTagRef.current!.volume = (value as number) / 100;
               setVolume(value as number);
             }}
             value={volume}
@@ -237,8 +235,6 @@ export default function StaticPlayer({
           <Tooltip title="Quiet Mode">
             <IconButton
               onClick={() => {
-                // set the volume to 0.025
-                audioTagRef.current!.volume = 2.5 / 100;
                 setVolume(2.5);
               }}
               sx={{
@@ -252,7 +248,6 @@ export default function StaticPlayer({
         </div>
         <VolumeSliderStack
           onChange={(event, value) => {
-            audioTagRef.current!.volume = (value as number) / 100;
             setVolume(value as number);
           }}
           value={volume}

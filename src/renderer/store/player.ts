@@ -12,6 +12,7 @@ interface PlayerStore {
   currentSongTime: number;
   filteredLibrary: { [key: string]: LightweightAudioMetadata };
   overrideScrollToIndex: number | undefined;
+  shuffleHistory: string[];
 
   deleteEverything: () => void;
   setVolume: (volume: number) => void;
@@ -26,6 +27,7 @@ interface PlayerStore {
     [key: string]: LightweightAudioMetadata;
   }) => void;
   setOverrideScrollToIndex: (index: number | undefined) => void;
+  setShuffleHistory: (history: string[]) => void;
 }
 
 const usePlayerStore = create<PlayerStore>((set) => ({
@@ -39,11 +41,22 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   currentSongTime: 0,
   filteredLibrary: {},
   overrideScrollToIndex: undefined,
-
+  shuffleHistory: [],
   deleteEverything: () => set({}, true),
-  setVolume: (volume) => set({ volume }),
+  setVolume: (volume) => {
+    /**
+     * @dev set the volume of the audio tag to the new volume automatically
+     * as there is only one audio tag in the entire app
+     */
+    const audioTag = document.querySelector('audio');
+    if (audioTag) {
+      audioTag.volume = volume / 100;
+    }
+    return set({ volume });
+  },
   setPaused: (paused) => set({ paused }),
-  setShuffle: (shuffle) => set({ shuffle }),
+  // @note: when shuffle is toggled on or off we clear the shuffle history
+  setShuffle: (shuffle) => set({ shuffle, shuffleHistory: [] }),
   setRepeating: (repeating) => set({ repeating }),
   setCurrentSong: (currentSong) => set({ currentSong }),
   setCurrentSongDataURL: (currentSongDataURL) => set({ currentSongDataURL }),
@@ -53,6 +66,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   setOverrideScrollToIndex: (overrideScrollToIndex) => {
     return set({ overrideScrollToIndex });
   },
+  setShuffleHistory: (shuffleHistory) => set({ shuffleHistory }),
 }));
 
 export default usePlayerStore;
