@@ -171,6 +171,27 @@ If you've added songs to your library folder manually that hihat is unaware of:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## How to Update hihat to a new version
+
+Updating *hihat* is simple and ensures that you keep your library and all your settings intact. Follow these steps to update *hihat*:
+
+1. **Download the Latest Version:**
+   - Visit our [Releases](https://github.com/johnnyshankman/hihat/releases/latest) page and download the latest version of the `.dmg` file for *hihat*.
+
+2. **Mount the DMG File:**
+   - Double-click the downloaded `.dmg` file to open it. This will mount the disk image on your Mac.
+
+3. **Replace the Existing App:**
+   - In the opened window, drag and drop the *hihat* icon into the `/Applications` folder. If prompted, confirm to replace the existing application.
+
+4. **Launch the Updated App:**
+   - Go to your `/Applications` folder and run *hihat*. Your settings and configurations from previous versions will remain intact.
+
+### Important Note
+- **Preserved Settings:** Your library and all your settings are stored in a separate directory from the application itself, and therefore will not be affected by the update process!
+
+If you encounter any issues during the update process, please refer to our [Issues](https://github.com/johnnyshankman/hihat/issues) page for assistance.
+
 ## Built With
 
 This project was built with the following technologies:
