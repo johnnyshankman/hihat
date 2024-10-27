@@ -1,4 +1,4 @@
-import { styled, alpha } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import InputBase from '@mui/material/InputBase';
 import Typography from '@mui/material/Typography';
 
@@ -19,7 +19,7 @@ export const Search = styled('div')(({ theme }) => ({
   borderRadius: theme.shape.borderRadius,
   border: '1px solid rgb(40, 40, 40)',
   '&:hover': {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
+    backgroundColor: 'rgb(20, 20, 20)', // Slightly lighter than black
   },
   background: 'black',
 

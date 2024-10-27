@@ -487,6 +487,7 @@ export default function Main() {
        */}
       <div className="flex art drag justify-center p-4 space-x-4 md:flex-row ">
         <AlbumArt
+          height={height || null}
           setShowAlbumArtMenu={setShowAlbumArtMenu}
           showAlbumArtMenu={showAlbumArtMenu}
           width={width || null}

@@ -44,6 +44,10 @@ module.exports = {
       height: {
         vh80: '80vh',
       },
+      screens: {
+        sm: '500px',
+        // => @media (min-width: 500px) { ... }
+      },
       keyframes: {
         'sui--accordion-down': {
           from: { height: 0 },

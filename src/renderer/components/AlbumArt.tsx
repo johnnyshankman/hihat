@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Draggable from 'react-draggable';
 import { TinyText } from './SimpleStyledMaterialUIComponents';
 import AlbumArtRightClickMenu from './AlbumArtRightClickMenu';
@@ -8,12 +8,14 @@ interface AlbumArtProps {
   setShowAlbumArtMenu: (menu: any) => void;
   showAlbumArtMenu: any;
   width: number | null;
+  height: number | null;
 }
 
 export default function AlbumArt({
   setShowAlbumArtMenu,
   showAlbumArtMenu,
   width,
+  height,
 }: AlbumArtProps) {
   /**
    * @dev global store hooks
@@ -34,6 +36,27 @@ export default function AlbumArt({
    * @dev component state
    */
   const [albumArtMaxWidth, setAlbumArtMaxWidth] = useState(320);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (width && height) {
+        const maxWidthBasedOnWidth = Math.min(320, width * 0.4);
+        const maxWidthBasedOnHeight = Math.min(320, height * 0.5);
+        const newMaxWidth = Math.max(
+          120,
+          Math.min(maxWidthBasedOnWidth, maxWidthBasedOnHeight),
+        );
+        setAlbumArtMaxWidth(newMaxWidth);
+      }
+    };
+
+    handleResize(); // Call once to set initial size
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [width, height]);
 
   if (!currentSongDataURL) {
     return (
@@ -113,11 +136,13 @@ export default function AlbumArt({
       <Draggable
         axis="y"
         onDrag={(e, data) => {
-          if (!width) return;
+          if (!width || !height) return;
           const newMaxWidth = albumArtMaxWidth + data.deltaY;
+          const maxWidthBasedOnWidth = Math.min(320, width * 0.4);
+          const maxWidthBasedOnHeight = Math.min(320, height * 0.6);
           const clampedMaxWidth = Math.max(
             120,
-            Math.min(newMaxWidth, width * 0.4),
+            Math.min(newMaxWidth, maxWidthBasedOnWidth, maxWidthBasedOnHeight),
           );
           setAlbumArtMaxWidth(clampedMaxWidth);
 
@@ -129,7 +154,7 @@ export default function AlbumArt({
         }}
         position={{ x: 0, y: 0 }}
       >
-        <div className="w-full absolute bottom-0 h-[20px] bg-transparent cursor-ns-resize hover:cursor-ns-resize bg-red-400" />
+        <div className="w-full absolute bottom-0 h-[20px] bg-transparent cursor-ns-resize hover:cursor-ns-resize" />
       </Draggable>
     </div>
   );
