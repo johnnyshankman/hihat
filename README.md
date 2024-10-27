@@ -218,12 +218,13 @@ This project was built with the following technologies:
 - [x] Adjustable column widths for songname, artist, and album
 - [x] Sort by albumartist not the plain old artist, pretty much only used by rap albums with features (2Pac - All Eyez On Me)
 - [x] Adjustable album art size
+- [x] Shuffle "history" for hitting previous
+- [x] Mute and max buttons
 - [ ] Edit song metadata
 - [ ] Show stats about your library somewhere, like GB and # of songs
 - [ ] Hide and show columns in the explorer
 - [ ] iTunes-1.0-like "browser" for seeing scrollable list of artists or albums
 - [ ] Queue next-up song
-- [ ] Proper "previous" behavior during shuffle
 
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
