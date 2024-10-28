@@ -158,6 +158,7 @@ You are now all set.
 3. hihat will copy these files into your library folder.
 
 <img width="747" alt="Screenshot 2024-09-15 at 8 40 37 PM" src="https://github.com/user-attachments/assets/eb899b57-99a5-4110-8873-83bec7f6970a">
+<img width="677" alt="Screenshot 2024-09-15 at 8 37 54 PM" src="https://github.com/user-attachments/assets/5ac58659-bf89-420a-a69f-0f1d04aefb38">
 
 ### Rescanning Your Library
 
@@ -165,8 +166,6 @@ If you've added songs to your library manually, hihat will not see them. To scan
 1. Go to the hihat menu.
 2. Select "Rescan Library Folder".
 3. hihat will update its database with any new songs while preserving play counts and dates for existing tracks.
-
-<img width="677" alt="Screenshot 2024-09-15 at 8 37 54 PM" src="https://github.com/user-attachments/assets/5ac58659-bf89-420a-a69f-0f1d04aefb38">
 
 ### Filtering Your Library
 
