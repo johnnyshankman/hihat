@@ -38,9 +38,14 @@
     <li>
       <a href="#usage">Usage</a>
       <ul>
-        <li><a href="#initializing-your-library">Setting Your Library</a></li>
-        <li><a href="#adding-new-songs">Adding More Songs</a></li>
-        <li><a href="#rescanning-your-library">Refreshing Your Library</a></li>
+        <li><a href="#installing-hihat">Installing hihat</a></li>
+        <li><a href="#first-time-setup">First Time Setup</a></li>
+        <li><a href="#playing-songs">Playing Songs</a></li>
+        <li><a href="#importing-songs">Importing Songs</a></li>
+        <li><a href="#rescanning-your-library">Rescanning Your Library</a></li>
+        <li><a href="#filtering-your-library">Filtering Your Library</a></li>
+        <li><a href="#sorting-your-library">Sorting Your Library</a></li>
+        <li><a href="#tips">Tips</a></li>
       </ul>
     </li>
     <li><a href="#updating-hihat-to-latest-version">Updating hihat to latest version</a></li>
@@ -58,9 +63,9 @@
 
 *hihat* was born out of frustration with the lackluster offline music players available for OSX today.
 
-Ever tried Evermusic, Cog, Pine, Swinsian, or VLC? They just don't have the sleek & lagless vibes of iTunes back in 2002. 
+Ever tried Evermusic, Cog, Pine, Swinsian, or VLC? They just don't have the sleek & lagless vibes of iTunes back in 2002.
 
-That's why I decided to create *hihat* - a free, open-source music player that ditches ads, respects your privacy, and works perfectly without an internet connection. 
+That's why I decided to create *hihat* - a free, open-source music player that ditches ads, respects your privacy, and works perfectly without an internet connection.
 
 All wrapped up in a minimalist dark-mode design that's easy on the eyes during late nights and long listening sessions.
 
