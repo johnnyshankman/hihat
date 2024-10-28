@@ -79,7 +79,19 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
 
   // Update available albums when artist is selected
   useEffect(() => {
-    if (!storeLibrary || !selection.artist) return;
+    if (!storeLibrary || !selection.artist) {
+      // Reset albums to full list when artist is deselected
+      const albumSet = new Set<string>();
+      Object.values(storeLibrary || {}).forEach(
+        (song: LightweightAudioMetadata) => {
+          if (song.common.album) {
+            albumSet.add(song.common.album);
+          }
+        },
+      );
+      setAlbums(Array.from(albumSet).sort());
+      return;
+    }
 
     const albumSet = new Set<string>();
     Object.values(storeLibrary).forEach((song: LightweightAudioMetadata) => {
@@ -93,23 +105,20 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
 
   const [position, setPosition] = useState({ x: 100, y: 100 });
 
-  // Add this useEffect right after the position state declaration
   useEffect(() => {
     if (!width || !height) return;
 
     const browserWidth = columnWidth * 2 + 8;
     const browserHeight = height * 0.4;
 
-    // Ensure x position is within visible bounds
     let newX = position.x;
     if (position.x + browserWidth > width) {
-      newX = width - browserWidth - 10; // 10px padding from edge
+      newX = width - browserWidth - 10;
     }
     if (newX < 0) {
-      newX = 10; // 10px padding from edge
+      newX = 10;
     }
 
-    // Ensure y position is within visible bounds
     let newY = position.y;
     if (position.y + browserHeight > height) {
       newY = height - browserHeight - 10;
@@ -118,7 +127,6 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
       newY = 10;
     }
 
-    // Only update if position changed
     if (newX !== position.x || newY !== position.y) {
       setPosition({ x: newX, y: newY });
     }
@@ -127,7 +135,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
   const renderRow = (
     list: string[],
     selectedItem: string | null,
-    onClick: (item: string) => void,
+    onClick: (item: string | null) => void,
   ) =>
     // eslint-disable-next-line react/no-unstable-nested-components
     function ({
@@ -144,7 +152,14 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
           key={key}
           className="flex w-full items-center border-b last:border-b-0 border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1"
           data-state={list[index] === selectedItem ? 'selected' : undefined}
-          onClick={() => onClick(list[index])}
+          onClick={() => {
+            // If clicking the already selected item, unselect it
+            if (list[index] === selectedItem) {
+              onClick(null);
+            } else {
+              onClick(list[index]);
+            }
+          }}
           onKeyDown={() => {}}
           role="button"
           style={style}
@@ -174,7 +189,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
     >
       <div
         className="absolute bg-[#1d1d1d] border-2 border-neutral-800 rounded-lg shadow-2xl z-[1000000000] drag"
-        style={{ width: columnWidth * 2 + 8 }} // Add 8px for padding
+        style={{ width: columnWidth * 2 + 8 }}
       >
         <div className="drag-handle flex items-center justify-between px-2 py-0.5 border-b border-neutral-800 cursor-move">
           <div className="flex items-center gap-2">
@@ -185,7 +200,20 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
           </div>
           <IconButton
             className="text-neutral-400 hover:text-white"
-            onClick={onClose}
+            onClick={() => {
+              // Reset selection state
+              setSelection({
+                artist: null,
+                album: null,
+              });
+
+              // Reset filtered library to show all songs
+              if (storeLibrary) {
+                setFilteredLibrary(storeLibrary);
+              }
+
+              onClose();
+            }}
             size="small"
           >
             <CloseIcon fontSize="small" />
@@ -204,7 +232,10 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
               rowCount={artists.length}
               rowHeight={ROW_HEIGHT}
               rowRenderer={renderRow(artists, selection.artist, (artist) =>
-                setSelection((prev) => ({ ...prev, artist })),
+                setSelection((prev) => ({
+                  artist,
+                  album: null, // Clear album selection when artist changes
+                })),
               )}
               width={columnWidth}
             />
