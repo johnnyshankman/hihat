@@ -24,39 +24,25 @@
   </p>
 </div>
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#core-features">Core Features</a></li>
-        <li><a href="#supported-audio-and-metadata-formats">Supported Audio and Metadata Formats</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#usage">Usage</a>
-      <ul>
-        <li><a href="#installing-hihat">Installing hihat</a></li>
-        <li><a href="#first-time-setup">First Time Setup</a></li>
-        <li><a href="#playing-songs">Playing Songs</a></li>
-        <li><a href="#importing-songs">Importing Songs</a></li>
-        <li><a href="#rescanning-your-library">Rescanning Your Library</a></li>
-        <li><a href="#filtering-your-library">Filtering Your Library</a></li>
-        <li><a href="#sorting-your-library">Sorting Your Library</a></li>
-        <li><a href="#tips">Tips</a></li>
-      </ul>
-    </li>
-    <li><a href="#updating-hihat-to-latest-version">Updating hihat to latest version</a></li>
-    <li><a href="#feature-roadmap">Feature Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-  </ol>
-</details>
+## Table of Contents
 
-
+1. [About The Project](#about-the-project)
+    - [Core Features](#core-features)
+    - [Supported Audio and Metadata Formats](#supported-audio-and-metadata-formats)
+2. [Usage](#usage)
+    - [Installing hihat](#installing-hihat)
+    - [First Time Setup](#first-time-setup)
+    - [Playing Songs](#playing-songs)
+    - [Importing Songs](#importing-songs)
+    - [Rescanning Your Library](#rescanning-your-library)
+    - [Filtering Your Library](#filtering-your-library)
+    - [Sorting Your Library](#sorting-your-library)
+    - [Tips](#tips)
+3. [Updating hihat to latest version](#updating-hihat-to-latest-version)
+4. [Feature Roadmap](#feature-roadmap)
+5. [Contributing](#contributing)
+6. [License](#license)
+7. [Contact](#contact)
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
