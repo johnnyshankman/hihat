@@ -422,6 +422,10 @@ export default function Main() {
       setShowBackupConfirmationDialog(false);
     });
 
+    window.addEventListener('toggle-browser-view', () => {
+      setShowBrowser((prev) => !prev);
+    });
+
     window.electron.ipcRenderer.on('menu-toggle-browser', () => {
       setShowBrowser((prev) => !prev);
     });
