@@ -135,7 +135,7 @@ Just as a note, *hihat* does not support video files of any sort (yet).
 
 You are now all set.
 
-**Warning:** The first time you open *hihat*, OSX will warn you that it's from an unidentified developer and ask you to confirm you actually want to open *hihat*. Confirm. *This warning is why the application is free, I do not pay for a BS Apple Developer License yearly just to remove this dialog*.
+**Warning: The first time you open hihat OSX will warn you that it's from an unidentified developer and ask you to confirm you want to open *hihat*. Confirm. This warning is why the application is free, I do not pay for a BS Apple Developer License just to remove this dialog.**
 
 ### First Time Setup
 
