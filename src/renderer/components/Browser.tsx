@@ -232,7 +232,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
               rowCount={artists.length}
               rowHeight={ROW_HEIGHT}
               rowRenderer={renderRow(artists, selection.artist, (artist) =>
-                setSelection((prev) => ({
+                setSelection((_prev) => ({
                   artist,
                   album: null, // Clear album selection when artist changes
                 })),
