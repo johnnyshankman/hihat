@@ -78,7 +78,6 @@ All wrapped up in a minimalist dark-mode design that's easy on the eyes during l
 * playcount tracking
 * quick search
 * library stats
-* gapless playback
 * smart sorting by song, artist, and album
 * nested folder support (finds all music files)
 * legacy iTunes library importing
