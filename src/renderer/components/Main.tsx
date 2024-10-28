@@ -15,6 +15,7 @@ import ImportProgressDialog from './Dialog/ImportProgressDialog';
 import AlbumArt from './AlbumArt';
 import ImportNewSongsButton from './ImportNewSongsButtons';
 import SearchBar from './SearchBar';
+import Browser from './Browser';
 
 type AlbumArtMenuState =
   | {
@@ -93,6 +94,7 @@ export default function Main() {
     useState(false);
   const [showBackingUpLibraryDialog, setShowBackingUpLibraryDialog] =
     useState(false);
+  const [showBrowser, setShowBrowser] = useState(false);
 
   /**
    * @def functions
@@ -419,6 +421,10 @@ export default function Main() {
       setShowBackingUpLibraryDialog(false);
       setShowBackupConfirmationDialog(false);
     });
+
+    window.electron.ipcRenderer.on('menu-toggle-browser', () => {
+      setShowBrowser((prev) => !prev);
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
@@ -520,6 +526,14 @@ export default function Main() {
 
         <SearchBar className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white" />
       </div>
+
+      {showBrowser && (
+        <Browser
+          height={height || null}
+          onClose={() => setShowBrowser(false)}
+          width={width || null}
+        />
+      )}
 
       {/**
        * @dev middle chunk of the screen's UX

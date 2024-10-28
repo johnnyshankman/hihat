@@ -232,6 +232,17 @@ export default function SongRightClickMenu(props: SongRightClickMenuProps) {
           Show In Finder
         </MenuItem>
         <MenuItem
+          onClick={() => {
+            window.dispatchEvent(new Event('toggle-browser-view'));
+            onClose();
+          }}
+          sx={{
+            fontSize: '11px',
+          }}
+        >
+          Toggle Browser View
+        </MenuItem>
+        <MenuItem
           onClick={downloadAlbumArt}
           sx={{
             fontSize: '11px',
