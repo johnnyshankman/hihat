@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { List } from 'react-virtualized';
 import Draggable from 'react-draggable';
 import { IconButton } from '@mui/material';
@@ -20,6 +20,7 @@ type BrowserSelection = {
 };
 
 const ROW_HEIGHT = 25.5;
+const BROWSER_WIDTH = 800; // Fixed browser width
 
 export default function Browser({ width, height, onClose }: BrowserProps) {
   const setFilteredLibrary = usePlayerStore(
@@ -34,10 +35,37 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
 
   const [artists, setArtists] = useState<string[]>([]);
   const [albums, setAlbums] = useState<string[]>([]);
+  const [position, setPosition] = useState({ x: 100, y: 100 });
+  const [browserDimensions, setBrowserDimensions] = useState({
+    width: BROWSER_WIDTH,
+    height: height ? height * 0.4 : 400,
+  });
 
-  const columnWidth = width
-    ? Math.min(Math.floor((width * 0.6) / 2), 400)
-    : 180;
+  const browserRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!browserRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      // eslint-disable-next-line no-restricted-syntax
+      for (const entry of entries) {
+        const { width: newWidth, height: newHeight } = entry.contentRect;
+        setBrowserDimensions({
+          width: newWidth,
+          height: newHeight,
+        });
+
+        window.dispatchEvent(new Event('browser-resized'));
+      }
+    });
+
+    resizeObserver.observe(browserRef.current);
+
+    // eslint-disable-next-line consistent-return
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Calculate available artists and albums based on library
   useEffect(() => {
@@ -103,17 +131,14 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
     setSelection((prev) => ({ ...prev, album: null }));
   }, [selection.artist, storeLibrary]);
 
-  const [position, setPosition] = useState({ x: 100, y: 100 });
-
   useEffect(() => {
     if (!width || !height) return;
 
-    const browserWidth = columnWidth * 2 + 8;
     const browserHeight = height * 0.4;
 
     let newX = position.x;
-    if (position.x + browserWidth > width) {
-      newX = width - browserWidth - 10;
+    if (position.x + BROWSER_WIDTH > width) {
+      newX = width - BROWSER_WIDTH - 10;
     }
     if (newX < 0) {
       newX = 10;
@@ -130,7 +155,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
     if (newX !== position.x || newY !== position.y) {
       setPosition({ x: newX, y: newY });
     }
-  }, [width, height, columnWidth, position.x, position.y]);
+  }, [width, height, position.x, position.y]);
 
   const renderRow = (
     list: string[],
@@ -153,7 +178,6 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
           className="flex w-full items-center border-b last:border-b-0 border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1"
           data-state={list[index] === selectedItem ? 'selected' : undefined}
           onClick={() => {
-            // If clicking the already selected item, unselect it
             if (list[index] === selectedItem) {
               onClick(null);
             } else {
@@ -174,12 +198,6 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
 
   if (!width || !height) return null;
 
-  if (width < columnWidth * 2 + 8) {
-    return null;
-  }
-
-  const listHeight = height * 0.4;
-
   return (
     <Draggable
       bounds="parent"
@@ -188,8 +206,17 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
       position={position}
     >
       <div
-        className="absolute bg-[#1d1d1d] border-2 border-neutral-800 rounded-lg shadow-2xl z-[1000000000] drag"
-        style={{ width: columnWidth * 2 + 8 }}
+        ref={browserRef}
+        className="absolute bg-[#1d1d1d] border-2 border-neutral-800 rounded-lg shadow-2xl z-[1000000000] drag resize overflow-hidden"
+        style={{
+          width: browserDimensions.width,
+          height: browserDimensions.height,
+          resize: 'both',
+          minWidth: '400px',
+          minHeight: '200px',
+          maxWidth: width ? width - 20 : '1200px',
+          maxHeight: height ? height - 20 : '800px',
+        }}
       >
         <div className="drag-handle flex items-center justify-between px-2 py-0.5 border-b border-neutral-800 cursor-move">
           <div className="flex items-center gap-2">
@@ -201,17 +228,13 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
           <IconButton
             className="text-neutral-400 hover:text-white"
             onClick={() => {
-              // Reset selection state
               setSelection({
                 artist: null,
                 album: null,
               });
-
-              // Reset filtered library to show all songs
               if (storeLibrary) {
                 setFilteredLibrary(storeLibrary);
               }
-
               onClose();
             }}
             size="small"
@@ -220,40 +243,40 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
           </IconButton>
         </div>
 
-        <div className="flex">
-          <div style={{ width: columnWidth }}>
+        <div className="grid grid-cols-2 divide-x divide-neutral-800 h-[calc(100%-32px)]">
+          <div>
             <div className="sticky top-0 z-50 bg-[#1d1d1d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
               <div className="select-none flex flow-row leading-[1em] items-center py-1.5 px-4 text-left align-middle font-medium text-xs text-neutral-500">
                 Artist
               </div>
             </div>
             <List
-              height={listHeight - 20}
+              height={browserDimensions.height - 52}
               rowCount={artists.length}
               rowHeight={ROW_HEIGHT}
               rowRenderer={renderRow(artists, selection.artist, (artist) =>
                 setSelection((_prev) => ({
                   artist,
-                  album: null, // Clear album selection when artist changes
+                  album: null,
                 })),
               )}
-              width={columnWidth}
+              width={browserDimensions.width / 2}
             />
           </div>
-          <div style={{ width: columnWidth }}>
+          <div>
             <div className="sticky top-0 z-50 bg-[#1d1d1d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
               <div className="select-none flex flow-row leading-[1em] items-center py-1.5 px-4 text-left align-middle font-medium text-xs text-neutral-500">
                 Album
               </div>
             </div>
             <List
-              height={listHeight - 20}
+              height={browserDimensions.height - 52}
               rowCount={albums.length}
               rowHeight={ROW_HEIGHT}
               rowRenderer={renderRow(albums, selection.album, (album) =>
                 setSelection((prev) => ({ ...prev, album })),
               )}
-              width={columnWidth}
+              width={browserDimensions.width / 2}
             />
           </div>
         </div>
