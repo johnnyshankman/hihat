@@ -187,10 +187,9 @@ By clicking on the table headers of your library, you can sort by:
 
 ### Tips
 
-* Use the search bar to quickly find songs.
 * Right-click on a song for more options, like lookup on Spotify and Delete
-* Right-click on the album art to Download or Copy to Clipboard
-* Explore the hihat menu for additional features like backing up your library or managing duplicate songs.
+* Right-click on the album art for more options, like Download or Copy to Clipboard
+* Explore the hihat menu for features like backing up your library or deduplicating your library
 * Click on the song name in the player to scroll back to the current song
 * Click on the album art to scroll back to the current song
 * Try resizing the window, it fits all sorts of sizes!
