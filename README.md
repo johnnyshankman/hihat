@@ -56,11 +56,13 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-*hihat* is the best way play your music library offline on OSX, similar to iTunes or Windows Media Player circa 2002.
+*hihat* was born out of frustration with the lackluster offline music players available for OSX today.
 
-*hihat* has *no* socials, *no* lag, and *no* ads.
+Ever tried Evermusic, Cog, Pine, Swinsian, or VLC? They just don't have the sleek & lagless vibes of iTunes back in 2002. 
 
-*hihat* is completely free-to-use and open-source.
+That's why I decided to create *hihat* - a free, open-source music player that ditches ads, respects your privacy, and works perfectly without an internet connection. 
+
+Plus, it's all wrapped in a minimalist dark-mode design that's easy on the eyes during late nights and long listening session.
 
 [![hihat desktop preview][product-screenshot]](https://whitelights.rip)
 
@@ -70,6 +72,7 @@
 
 *hihat* core features:
 * 100% offline
+* freeware
 * always dark mode
 * audiophile fidelity (supports all codecs)
 * mix 'n match file types in one library
