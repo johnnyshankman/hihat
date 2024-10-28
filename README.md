@@ -121,7 +121,7 @@ Don't know where to download files of your favorite albums and tracks? I suggest
 * [tidal-media-downloader](https://github.com/yaronzz/Tidal-Media-Downloader) (Works with Tidal)
 * [spotify-downloader](https://github.com/spotDL/spotify-downloader) (Works with Spotify and Youtube Music)
 
-Just as a note, *hihat* does not support video files of any sort (yet).
+Just as a note, *hihat* does not support video files of any sort (yet) nor protected AAX audiobooks.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
