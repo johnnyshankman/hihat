@@ -79,6 +79,7 @@ All wrapped up in a minimalist dark-mode design that's easy on the eyes during l
 * quick search
 * smart sorting by song, artist, and album
 * nested folder support (finds all music files)
+* legacy iTunes library importing
 * one-click Apple Music or Spotify lookup
 * sync your library to a backup drive or device running [Rockbox](https://www.rockbox.org/) in one click
 
