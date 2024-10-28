@@ -69,16 +69,17 @@ All wrapped up in a minimalist dark-mode design that's easy on the eyes during l
 * mix 'n match file types in one library
 * limitless library size
 * responsive design
-* blazing fast import (faster than Cog, Evermusic, etc)
+* smart sorting by song, artist, and album
+* fast library import (faster than Cog, Evermusic, etc)
 * song shuffle
 * song repeat
-* media key support
+* media key/keyboard support
 * OSX menu bar integration
 * one-click album art downloads
 * playcount tracking
 * quick search
 * library stats
-* smart sorting by song, artist, and album
+* smart library deduplicator
 * nested folder support (finds all music files)
 * legacy iTunes library importing
 * one-click Apple Music or Spotify lookup
