@@ -50,12 +50,11 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
       // eslint-disable-next-line no-restricted-syntax
       for (const entry of entries) {
         const { width: newWidth, height: newHeight } = entry.contentRect;
+
         setBrowserDimensions({
           width: newWidth,
           height: newHeight,
         });
-
-        window.dispatchEvent(new Event('browser-resized'));
       }
     });
 
@@ -65,7 +64,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [browserRef]);
 
   // Calculate available artists and albums based on library
   useEffect(() => {
@@ -134,28 +133,33 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
   useEffect(() => {
     if (!width || !height) return;
 
-    const browserHeight = height * 0.4;
-
     let newX = position.x;
-    if (position.x + BROWSER_WIDTH > width) {
-      newX = width - BROWSER_WIDTH - 10;
+    if (position.x + browserDimensions.width > width) {
+      newX = width - browserDimensions.width - 10;
     }
     if (newX < 0) {
-      newX = 10;
+      newX = 0;
     }
 
     let newY = position.y;
-    if (position.y + browserHeight > height) {
-      newY = height - browserHeight - 10;
+    if (position.y + browserDimensions.height > height - 80) {
+      newY = height - browserDimensions.height - 80;
     }
-    if (newY < 0) {
-      newY = 10;
+    if (newY < 60) {
+      newY = 60;
     }
 
     if (newX !== position.x || newY !== position.y) {
       setPosition({ x: newX, y: newY });
     }
-  }, [width, height, position.x, position.y]);
+  }, [
+    width,
+    height,
+    position.x,
+    position.y,
+    browserDimensions.width,
+    browserDimensions.height,
+  ]);
 
   const renderRow = (
     list: string[],
@@ -175,7 +179,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
       return (
         <div
           key={key}
-          className="flex w-full items-center border-b last:border-b-0 border-neutral-800 transition-colors hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1"
+          className="flex w-full items-center border-b last:border-b-0 border-neutral-800 transition-colors duration-75 hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1"
           data-state={list[index] === selectedItem ? 'selected' : undefined}
           onClick={() => {
             if (list[index] === selectedItem) {
@@ -198,6 +202,8 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
 
   if (!width || !height) return null;
 
+  console.log(browserDimensions.width / 2);
+
   return (
     <Draggable
       bounds="parent"
@@ -207,7 +213,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
     >
       <div
         ref={browserRef}
-        className="absolute bg-[#1d1d1d] border-2 border-neutral-800 rounded-lg shadow-2xl z-[1000000000] drag resize overflow-hidden"
+        className="absolute bg-[#1d1d1d] rounded-lg shadow-2xl z-[1000000000] drag resize overflow-hidden"
         style={{
           width: browserDimensions.width,
           height: browserDimensions.height,
@@ -215,10 +221,10 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
           minWidth: '400px',
           minHeight: '200px',
           maxWidth: width ? width - 20 : '1200px',
-          maxHeight: height ? height - 20 : '800px',
+          maxHeight: height ? height - 60 - 120 : '800px',
         }}
       >
-        <div className="drag-handle flex items-center justify-between px-2 py-0.5 border-b border-neutral-800 cursor-move">
+        <div className="drag-handle flex items-center justify-between px-2 py-0.5 border-b border-neutral-800 cursor-move border-t-2 border-l-2 border-r-2">
           <div className="flex items-center gap-2">
             <DragIndicatorIcon className="text-neutral-400" fontSize="small" />
             <span className="text-xs font-medium text-neutral-400">
@@ -243,7 +249,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
           </IconButton>
         </div>
 
-        <div className="grid grid-cols-2 divide-x divide-neutral-800 h-[calc(100%-32px)]">
+        <div className="grid grid-cols-2 divide-x divide-neutral-800 h-[calc(100%-32px)] border-neutral-800  border-b-2 border-l-2 border-r-2 rounded-b-lg">
           <div>
             <div className="sticky top-0 z-50 bg-[#1d1d1d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
               <div className="select-none flex flow-row leading-[1em] items-center py-1.5 px-4 text-left align-middle font-medium text-xs text-neutral-500">
@@ -251,7 +257,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
               </div>
             </div>
             <List
-              height={browserDimensions.height - 52}
+              height={browserDimensions.height - 64}
               rowCount={artists.length}
               rowHeight={ROW_HEIGHT}
               rowRenderer={renderRow(artists, selection.artist, (artist) =>
@@ -270,7 +276,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
               </div>
             </div>
             <List
-              height={browserDimensions.height - 52}
+              height={browserDimensions.height - 64}
               rowCount={albums.length}
               rowHeight={ROW_HEIGHT}
               rowRenderer={renderRow(albums, selection.album, (album) =>

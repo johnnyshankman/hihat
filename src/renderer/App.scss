@@ -145,3 +145,18 @@ button:focus {
 ::-webkit-scrollbar-thumb:hover {
   border: 1px solid white;
 }
+
+
+.resize::after {
+  pointer-events: none;
+  content: " ";
+  font-size: 14px;
+  position: absolute;
+  height: 13px;
+  width: 13px;
+  text-align: center;
+  bottom: 0;
+  right: 0;
+  z-index: 2;
+  background-color: #0d0d0d;
+}
