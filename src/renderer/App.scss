@@ -160,3 +160,13 @@ button:focus {
   z-index: 2;
   background-color: #0d0d0d;
 }
+
+.resize-handle-sw {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 15px;
+  height: 15px;
+  cursor: sw-resize;
+  z-index: 3;
+}
