@@ -256,11 +256,13 @@ This project was built with the following technologies:
 - [x] Shuffle "history" for hitting previous
 - [x] Mute and max buttons
 - [x] Show stats about your library somewhere, like GB and # of songs
+- [x] iTunes-like browser with list of artist and album filters
+- [ ] True gapless playback
 - [ ] Edit song metadata
-- [ ] Toggle column visibility in the explorer
-- [x] iTunes-like browser with list of artists and albums filters
-- [ ] Queue next-up song
-- [ ] Playlist support
+- [ ] Hide/show columns in the Library List
+- [ ] Queue a next-up song
+- [ ] Smart playlists (Top 50, Recently Played, Recently Added)
+- [ ] User defined playlists
 
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
