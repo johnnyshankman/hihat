@@ -216,6 +216,7 @@ export default function SongRightClickMenu(props: SongRightClickMenuProps) {
         }}
         anchorPosition={{ top: mouseY, left: mouseX }}
         anchorReference="anchorPosition"
+        className="nodrag"
         id="basic-menu"
         MenuListProps={{
           'aria-labelledby': 'basic-button',
@@ -230,6 +231,17 @@ export default function SongRightClickMenu(props: SongRightClickMenuProps) {
           }}
         >
           Show In Finder
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            window.dispatchEvent(new Event('toggle-browser-view'));
+            onClose();
+          }}
+          sx={{
+            fontSize: '11px',
+          }}
+        >
+          Toggle Browser View
         </MenuItem>
         <MenuItem
           onClick={downloadAlbumArt}

@@ -3,20 +3,19 @@ import Draggable from 'react-draggable';
 import { TinyText } from './SimpleStyledMaterialUIComponents';
 import AlbumArtRightClickMenu from './AlbumArtRightClickMenu';
 import usePlayerStore from '../store/player';
+import { useWindowDimensions } from '../hooks/useWindowDimensions';
 
 interface AlbumArtProps {
   setShowAlbumArtMenu: (menu: any) => void;
   showAlbumArtMenu: any;
-  width: number | null;
-  height: number | null;
 }
 
 export default function AlbumArt({
   setShowAlbumArtMenu,
   showAlbumArtMenu,
-  width,
-  height,
 }: AlbumArtProps) {
+  const { width, height } = useWindowDimensions();
+
   /**
    * @dev global store hooks
    */

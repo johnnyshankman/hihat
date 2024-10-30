@@ -25,6 +25,7 @@ export type Channels =
   | 'hide-song'
   | 'delete-song'
   | 'delete-album'
+  | 'menu-toggle-browser'
   // TODO: use this way more for replies
   | 'update-store';
 
@@ -35,6 +36,7 @@ export interface SendMessageArgs extends ArgsBase {
     rescan: boolean;
   };
   'add-to-library': undefined;
+  'menu-toggle-browser': undefined;
   'get-album-art': string;
   'set-last-played-song': string;
   'modify-tag-of-file': {

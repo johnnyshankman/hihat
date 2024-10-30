@@ -28,6 +28,11 @@ export default function AlbumArtRightClickMenu(
     onClose();
   };
 
+  const toggleBrowserView = () => {
+    window.dispatchEvent(new Event('toggle-browser-view'));
+    onClose();
+  };
+
   return (
     <Menu
       anchorEl={anchorEl}
@@ -37,6 +42,7 @@ export default function AlbumArtRightClickMenu(
       }}
       anchorPosition={{ top: mouseY, left: mouseX }}
       anchorReference="anchorPosition"
+      className="nodrag"
       id="basic-menu"
       MenuListProps={{
         'aria-labelledby': 'basic-button',
@@ -59,6 +65,14 @@ export default function AlbumArtRightClickMenu(
         }}
       >
         Download Artwork
+      </MenuItem>
+      <MenuItem
+        onClick={toggleBrowserView}
+        sx={{
+          fontSize: '11px',
+        }}
+      >
+        Toggle Browser View
       </MenuItem>
     </Menu>
   );

@@ -229,6 +229,14 @@ export default class MenuBuilder {
             this.mainWindow.webContents.toggleDevTools();
           },
         },
+        { type: 'separator' },
+        {
+          label: 'Toggle Browser View',
+          accelerator: 'Command+B',
+          click: () => {
+            this.mainWindow.webContents.send('menu-toggle-browser');
+          },
+        },
       ],
     };
     const subMenuViewProd: MenuItemConstructorOptions = {
@@ -239,6 +247,14 @@ export default class MenuBuilder {
           accelerator: 'Ctrl+Command+F',
           click: () => {
             this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle Browser View',
+          accelerator: 'Command+B',
+          click: () => {
+            this.mainWindow.webContents.send('menu-toggle-browser');
           },
         },
       ],
