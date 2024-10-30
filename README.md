@@ -49,7 +49,7 @@
 
 *hihat* was born out of frustration with the lackluster offline music players available for OSX today.
 
-Ever tried Evermusic, Cog, Pine, Swinsian, or VLC? They just don't have the sleek & lagless vibes of iTunes back in 2002. Plus they aren't even free!
+Ever tried Evermusic, Cog, Pine, Swinsian, Plexamp, or VLC? They just don't have the sleek & lagless vibes of iTunes back in 2002. Plus most aren't even freeware anymore!
 
 That's why I decided to create *hihat* - a free, open-source music player that ditches ads, respects your privacy, and works perfectly without an internet connection.
 
@@ -69,16 +69,19 @@ All wrapped up in a minimalist dark-mode design that's easy on the eyes during l
 * mix 'n match file types in one library
 * limitless library size
 * responsive design
-* blazing fast import (faster than Cog, Evermusic, etc)
+* smart sorting by song, artist, and album
+* fast library import (faster than Cog, Evermusic, etc)
 * song shuffle
 * song repeat
-* media key support
+* media key/keyboard support
 * OSX menu bar integration
 * one-click album art downloads
 * playcount tracking
 * quick search
-* smart sorting by song, artist, and album
+* library stats
+* smart library deduplicator
 * nested folder support (finds all music files)
+* legacy iTunes library importing
 * one-click Apple Music or Spotify lookup
 * sync your library to a backup drive or device running [Rockbox](https://www.rockbox.org/) in one click
 
@@ -141,7 +144,7 @@ You are now all set.
 
 1. Click the "+" icon in the top right corner of hihat.
 2. Select the songs or folders of songs you want to add.
-3. hihat will copy these files into your library folder.
+3. hihat will copy these files into your library folder (and intelligently ignore all non-music files)
 
 <img width="747" alt="Screenshot 2024-09-15 at 8 40 37 PM" src="https://github.com/user-attachments/assets/eb899b57-99a5-4110-8873-83bec7f6970a">
 <img width="677" alt="Screenshot 2024-09-15 at 8 37 54 PM" src="https://github.com/user-attachments/assets/5ac58659-bf89-420a-a69f-0f1d04aefb38">
