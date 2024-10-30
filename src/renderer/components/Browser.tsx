@@ -7,10 +7,9 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import usePlayerStore from '../store/player';
 import useMainStore from '../store/main';
 import { LightweightAudioMetadata } from '../../common/common';
+import { useWindowDimensions } from '../hooks/useWindowDimensions';
 
 interface BrowserProps {
-  width: number | null;
-  height: number | null;
   onClose: () => void;
 }
 
@@ -22,7 +21,8 @@ type BrowserSelection = {
 const ROW_HEIGHT = 25.5;
 const BROWSER_WIDTH = 800; // Fixed browser width
 
-export default function Browser({ width, height, onClose }: BrowserProps) {
+export default function Browser({ onClose }: BrowserProps) {
+  const { width, height } = useWindowDimensions();
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
   );

@@ -5,6 +5,7 @@ import { Tooltip } from '@mui/material';
 import Marquee from 'react-fast-marquee';
 import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
 import usePlayerStore from '../store/player';
+import { useWindowDimensions } from '../hooks/useWindowDimensions';
 
 export default function SongProgressBar({
   value,
@@ -18,6 +19,7 @@ export default function SongProgressBar({
   const [position, setPosition] = React.useState(32);
   const [isScrolling, setIsScrolling] = React.useState(false);
   const [isArtistScrolling, setIsArtistScrolling] = React.useState(false);
+  const { width, height } = useWindowDimensions();
 
   const filteredLibrary = usePlayerStore((state) => state.filteredLibrary);
   const currentSongMetadata = usePlayerStore(
@@ -71,7 +73,7 @@ export default function SongProgressBar({
         resizeObserver.unobserve(currentTitleRef);
       }
     };
-  }, [currentSongMetadata.common?.title]);
+  }, [currentSongMetadata.common?.title, width, height]);
 
   React.useEffect(() => {
     const checkOverflow2 = () => {
@@ -100,7 +102,7 @@ export default function SongProgressBar({
         resizeObserver.unobserve(currentTitleRef2);
       }
     };
-  }, [currentSongMetadata.common?.title]);
+  }, [currentSongMetadata.common?.title, width, height]);
 
   React.useEffect(() => {
     const checkOverflow3 = () => {
@@ -126,7 +128,7 @@ export default function SongProgressBar({
         resizeObserver.unobserve(currentArtistRef);
       }
     };
-  }, [currentSongMetadata.common?.artist]);
+  }, [currentSongMetadata.common?.artist, width, height]);
 
   React.useEffect(() => {
     const checkOverflow4 = () => {
@@ -154,7 +156,7 @@ export default function SongProgressBar({
         resizeObserver.unobserve(currentArtistRef);
       }
     };
-  }, [currentSongMetadata.common?.artist]);
+  }, [currentSongMetadata.common?.artist, width, height]);
 
   return (
     <Box
