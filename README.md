@@ -258,7 +258,7 @@ This project was built with the following technologies:
 - [x] Show stats about your library somewhere, like GB and # of songs
 - [ ] Edit song metadata
 - [ ] Toggle column visibility in the explorer
-- [ ] iTunes-1.0-like browser with list of artists or albums
+- [x] iTunes-like browser with list of artists and albums filters
 - [ ] Queue next-up song
 - [ ] Playlist support
 
