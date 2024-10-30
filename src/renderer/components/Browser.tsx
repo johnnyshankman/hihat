@@ -256,7 +256,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
     >
       <div
         ref={browserRef}
-        className="absolute bg-[#1d1d1d] rounded-lg shadow-2xl z-[1000000000] drag resize overflow-hidden"
+        className="absolute nodrag bg-[#1d1d1d] rounded-lg shadow-2xl resize overflow-hidden"
         style={{
           width: browserDimensions.width,
           height: browserDimensions.height,
@@ -265,6 +265,7 @@ export default function Browser({ width, height, onClose }: BrowserProps) {
           minHeight: '200px',
           maxWidth: width ? width - 20 : '1200px',
           maxHeight: height ? height - 60 - 120 : '800px',
+          zIndex: 1000000000,
         }}
       >
         {/* Add this line right after the opening div */}

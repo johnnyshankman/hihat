@@ -42,6 +42,7 @@ export default function AlbumArtRightClickMenu(
       }}
       anchorPosition={{ top: mouseY, left: mouseX }}
       anchorReference="anchorPosition"
+      className="nodrag"
       id="basic-menu"
       MenuListProps={{
         'aria-labelledby': 'basic-button',

@@ -216,6 +216,7 @@ export default function SongRightClickMenu(props: SongRightClickMenuProps) {
         }}
         anchorPosition={{ top: mouseY, left: mouseX }}
         anchorReference="anchorPosition"
+        className="nodrag"
         id="basic-menu"
         MenuListProps={{
           'aria-labelledby': 'basic-button',

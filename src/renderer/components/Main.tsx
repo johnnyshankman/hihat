@@ -474,16 +474,13 @@ export default function Main() {
         }}
         src={`my-magic-protocol://getMediaFile/${currentSong}`}
       />
-
       <ImportProgressDialog
         estimatedTimeRemainingString={estimatedTimeRemainingString}
         open={showImportingProgress}
         songsImported={songsImported}
         totalSongs={totalSongs}
       />
-
       <DedupingProgressDialog open={showDedupingProgress} />
-
       <BackupConfirmationDialog
         onBackup={() => {
           setShowBackupConfirmationDialog(false);
@@ -493,9 +490,7 @@ export default function Main() {
         onClose={() => setShowBackupConfirmationDialog(false)}
         open={showBackupConfirmationDialog}
       />
-
       <BackingUpLibraryDialog open={showBackingUpLibraryDialog} />
-
       <ConfirmDedupingDialog
         onClose={() => setShowConfirmDedupeAndDeleteDialog(false)}
         onConfirm={() => {
@@ -506,11 +501,10 @@ export default function Main() {
         }}
         open={showConfirmDedupeAndDeleteDialog}
       />
-
       {/**
        * @dev top chunk of the screen's UX
        */}
-      <div className="flex art drag justify-center p-4 space-x-4 md:flex-row ">
+      <div className="flex drag art justify-center p-4 space-x-4 md:flex-row">
         <AlbumArt
           height={height || null}
           setShowAlbumArtMenu={setShowAlbumArtMenu}
@@ -558,7 +552,6 @@ export default function Main() {
           width={width}
         />
       )}
-
       {/**
        * @dev bottom chunk of the screen's UX
        */}

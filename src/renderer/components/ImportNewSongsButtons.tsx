@@ -72,7 +72,7 @@ export default function ImportNewSongsButton({
     <Tooltip title="Import New Songs">
       <button
         aria-label="import to songs"
-        className="nodrag absolute top-[60px] md:top-4 right-4 items-center justify-center
+        className="absolute top-[60px] md:top-4 right-4 items-center justify-center
     rounded-md text-[18px] ring-offset-background transition-colors
     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
     focus-visible:ring-offset-2 disabled:pointer-events-none

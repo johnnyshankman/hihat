@@ -39,17 +39,16 @@ button:focus {
   outline: none;
 }
 
-.nodrag {
-  -webkit-app-region: no-drag;
-  overflow: hidden;
-}
-
 .drag {
   -webkit-app-region: drag;
 
   & * {
     -webkit-app-region: no-drag;
   }
+}
+
+.nodrag {
+  -webkit-app-region: no-drag !important;
 }
 
 .ReactVirtualized__List {

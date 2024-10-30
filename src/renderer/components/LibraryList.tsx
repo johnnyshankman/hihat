@@ -619,7 +619,7 @@ export default function LibraryList({
               <Tooltip title="Import Library">
                 <button
                   aria-label="select library folder"
-                  className="nodrag items-center justify-center
+                  className="items-center justify-center
           rounded-md text-[18px] ring-offset-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           focus-visible:ring-offset-2 disabled:pointer-events-none
