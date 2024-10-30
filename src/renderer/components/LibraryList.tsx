@@ -348,17 +348,17 @@ export default function LibraryList({
   ) => {
     if (!currentHeight || !currentWidth) return;
 
-    const artContainerHeight =
-      document.querySelector('.art')?.clientHeight || 0;
-
-    // current width is greater than tailwind's sm breakpoint
-    if (currentWidth > 500) {
-      // 106 is the height of the static player
-      setRowContainerHeight(currentHeight - artContainerHeight - 106);
-    } else {
-      // 160 is the height of the mobile static player
-      setRowContainerHeight(currentHeight - artContainerHeight - 160);
-    }
+    // Add setTimeout to ensure AlbumArt has finished resizing
+    setTimeout(() => {
+      const artContainerHeight =
+        document.querySelector('.art')?.clientHeight || 0;
+      if (currentWidth > 500) {
+        const newHeight = currentHeight - artContainerHeight - 106;
+        setRowContainerHeight(newHeight);
+      } else {
+        setRowContainerHeight(currentHeight - artContainerHeight - 160);
+      }
+    }, 100);
   };
 
   /**
@@ -369,6 +369,7 @@ export default function LibraryList({
   useEffect(() => {
     updateRowContainerHeight(height, width);
   }, [height, width]);
+
   /**
    * @dev update the row container height when the album art width changes
    * using the draggable component to resize the album art.

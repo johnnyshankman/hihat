@@ -504,7 +504,7 @@ export default function Main() {
       {/**
        * @dev top chunk of the screen's UX
        */}
-      <div className="flex drag art justify-center p-4 space-x-4 md:flex-row">
+      <div className="flex art drag justify-center p-4 space-x-4 md:flex-row">
         <AlbumArt
           height={height || null}
           setShowAlbumArtMenu={setShowAlbumArtMenu}
