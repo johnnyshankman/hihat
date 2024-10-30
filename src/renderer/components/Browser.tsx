@@ -245,8 +245,6 @@ export default function Browser({ onClose }: BrowserProps) {
 
   if (!width || !height) return null;
 
-  console.log(browserDimensions.width / 2);
-
   return (
     <Draggable
       bounds="parent"
