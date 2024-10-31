@@ -18,7 +18,7 @@ type BrowserSelection = {
   album: string | null;
 };
 
-const ROW_HEIGHT = 25.5;
+const ROW_HEIGHT = 25.5; // Fixed row height
 const BROWSER_WIDTH = 800; // Fixed browser width
 
 export default function Browser({ onClose }: BrowserProps) {
@@ -38,7 +38,7 @@ export default function Browser({ onClose }: BrowserProps) {
   const [position, setPosition] = useState({ x: 100, y: 100 });
   const [browserDimensions, setBrowserDimensions] = useState({
     width: BROWSER_WIDTH,
-    height: height ? height * 0.4 : 400,
+    height: height ? height * 0.25 : 400,
   });
 
   const browserRef = useRef<HTMLDivElement>(null);
@@ -261,8 +261,8 @@ export default function Browser({ onClose }: BrowserProps) {
           resize: 'both',
           minWidth: '400px',
           minHeight: '200px',
-          maxWidth: width ? width - 20 : '1200px',
-          maxHeight: height ? height - 60 - 120 : '800px',
+          maxWidth: width ? width - 20 : BROWSER_WIDTH,
+          maxHeight: height ? height - 60 - 120 : '400px',
           zIndex: 1000000000,
         }}
       >
