@@ -64,12 +64,6 @@ type SongMenuState =
     }
   | undefined;
 
-/**
- * @TODO Refactor to use the useWindowDimensions hook. The tricky part is
- * that this component relies on width and height not being <undefined />
- * on initial render, which isn't always the case due to the way the original
- * window dimensions hooks works in the Main component.
- */
 export default function LibraryList({
   initialScrollIndex,
   playSong,
