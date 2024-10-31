@@ -324,7 +324,10 @@ export default function Main() {
       if (arg.lastPlayedSong) {
         setCurrentSong(arg.lastPlayedSong, storeLibrary);
 
-        // now find the index of the song within the library
+        /**
+         * find the index of the song within the library
+         * and scroll to it on boot
+         */
         const songIndex = Object.keys(arg.library).findIndex(
           (song) => song === arg.lastPlayedSong,
         );
