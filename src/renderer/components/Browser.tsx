@@ -161,134 +161,68 @@ export default function Browser({ onClose }: BrowserProps) {
     browserDimensions.height,
   ]);
 
-  // Add this function inside the Browser component, before the return statement
-  const handleBottomLeftResize = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!browserRef.current) return;
+  type ResizeCorner = 'topLeft' | 'topRight' | 'bottomLeft';
 
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startWidth = browserRef.current.offsetWidth;
-    const startHeight = browserRef.current.offsetHeight;
-    const startLeft = position.x;
+  const handleResize =
+    (corner: ResizeCorner) => (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!browserRef.current) return;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = startX - moveEvent.clientX;
-      const deltaY = moveEvent.clientY - startY;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startWidth = browserRef.current.offsetWidth;
+      const startHeight = browserRef.current.offsetHeight;
+      const startLeft = position.x;
+      const startTop = position.y;
 
-      const newWidth = Math.min(
-        Math.max(400, startWidth + deltaX),
-        width ? width - 20 : 1200,
-      );
-      const newHeight = Math.min(
-        Math.max(200, startHeight + deltaY),
-        height ? height - 60 - 120 : 800,
-      );
-      const newLeft = startLeft - (newWidth - startWidth);
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        // Calculate deltas based on corner
+        const deltaX =
+          corner === 'topRight'
+            ? moveEvent.clientX - startX
+            : startX - moveEvent.clientX;
 
-      setBrowserDimensions({
-        width: newWidth,
-        height: newHeight,
-      });
-      setPosition((prev) => ({
-        ...prev,
-        x: newLeft,
-      }));
+        const deltaY = corner.startsWith('top')
+          ? startY - moveEvent.clientY
+          : moveEvent.clientY - startY;
+
+        const newWidth = Math.min(
+          Math.max(400, startWidth + deltaX),
+          width ? width - 20 : 1200,
+        );
+        const newHeight = Math.min(
+          Math.max(200, startHeight + deltaY),
+          height ? height - 60 - 120 : 800,
+        );
+
+        // Update position based on corner
+        const newLeft =
+          corner !== 'topRight'
+            ? startLeft - (newWidth - startWidth)
+            : startLeft;
+
+        const newTop = corner.startsWith('top')
+          ? startTop - (newHeight - startHeight)
+          : startTop;
+
+        setBrowserDimensions({
+          width: newWidth,
+          height: newHeight,
+        });
+
+        setPosition({
+          x: corner !== 'topRight' ? newLeft : position.x,
+          y: corner.startsWith('top') ? Math.max(60, newTop) : position.y,
+        });
+      };
+
+      const handleMouseUp = () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
     };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleTopLeftResize = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!browserRef.current) return;
-
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startWidth = browserRef.current.offsetWidth;
-    const startHeight = browserRef.current.offsetHeight;
-    const startLeft = position.x;
-    const startTop = position.y;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = startX - moveEvent.clientX;
-      const deltaY = startY - moveEvent.clientY;
-
-      const newWidth = Math.min(
-        Math.max(400, startWidth + deltaX),
-        width ? width - 20 : 1200,
-      );
-      const newHeight = Math.min(
-        Math.max(200, startHeight + deltaY),
-        height ? height - 60 - 120 : 800,
-      );
-      const newLeft = startLeft - (newWidth - startWidth);
-      const newTop = startTop - (newHeight - startHeight);
-
-      setBrowserDimensions({
-        width: newWidth,
-        height: newHeight,
-      });
-      setPosition({
-        x: newLeft,
-        y: Math.max(60, newTop),
-      });
-    };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleTopRightResize = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!browserRef.current) return;
-
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startWidth = browserRef.current.offsetWidth;
-    const startHeight = browserRef.current.offsetHeight;
-    const startTop = position.y;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const deltaY = startY - moveEvent.clientY;
-
-      const newWidth = Math.min(
-        Math.max(400, startWidth + deltaX),
-        width ? width - 20 : 1200,
-      );
-      const newHeight = Math.min(
-        Math.max(200, startHeight + deltaY),
-        height ? height - 60 - 120 : 800,
-      );
-      const newTop = startTop - (newHeight - startHeight);
-
-      setBrowserDimensions({
-        width: newWidth,
-        height: newHeight,
-      });
-      setPosition((prev) => ({
-        ...prev,
-        y: Math.max(60, newTop),
-      }));
-    };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
 
   const renderRow = (
     list: string[],
@@ -356,7 +290,7 @@ export default function Browser({ onClose }: BrowserProps) {
         <div
           aria-label="Resize browser"
           className="resize-handle-nw"
-          onMouseDown={handleTopLeftResize}
+          onMouseDown={handleResize('topLeft')}
           role="button"
           tabIndex={0}
         />
@@ -364,7 +298,7 @@ export default function Browser({ onClose }: BrowserProps) {
         <div
           aria-label="Resize browser"
           className="resize-handle-ne"
-          onMouseDown={handleTopRightResize}
+          onMouseDown={handleResize('topRight')}
           role="button"
           tabIndex={0}
         />
@@ -372,7 +306,7 @@ export default function Browser({ onClose }: BrowserProps) {
         <div
           aria-label="Resize browser"
           className="resize-handle-sw"
-          onMouseDown={handleBottomLeftResize}
+          onMouseDown={handleResize('bottomLeft')}
           role="button"
           tabIndex={0}
         />
