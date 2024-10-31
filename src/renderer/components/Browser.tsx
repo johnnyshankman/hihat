@@ -233,7 +233,7 @@ export default function Browser({ onClose }: BrowserProps) {
     selectedItem: string | null,
     onClick: (item: string | null) => void,
   ) =>
-    // eslint-disable-next-line react/no-unstable-nested-components
+    // eslint-disable-next-line react/no-unstable-nested-components, func-names
     function ({
       index,
       key,

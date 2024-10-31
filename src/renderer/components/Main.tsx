@@ -59,7 +59,7 @@ export default function Main() {
     (store) => store.setOverrideScrollToIndex,
   );
   const setCurrentSongWithDetails = usePlayerStore(
-    (store) => store.setCurrentSongWithDetails,
+    (store) => store.setCurrentSong,
   );
 
   /**

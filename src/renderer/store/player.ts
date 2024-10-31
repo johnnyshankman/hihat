@@ -7,9 +7,9 @@ interface PlayerStore {
    * state
    */
   paused: boolean;
-  currentSong: string;
-  currentSongDataURL: string;
-  currentSongMetadata: LightweightAudioMetadata;
+  currentSong: string; // holds the path of the current song
+  currentSongArtworkDataURL: string; // holds the artwork of the current song
+  currentSongMetadata: LightweightAudioMetadata; // holds the metadata of the current song
   shuffle: boolean;
   repeating: boolean;
   volume: number;
@@ -26,7 +26,7 @@ interface PlayerStore {
   setPaused: (paused: boolean) => void;
   setShuffle: (shuffle: boolean) => void;
   setRepeating: (repeating: boolean) => void;
-  setCurrentSongWithDetails: (
+  setCurrentSong: (
     songPath: string,
     library?: { [key: string]: LightweightAudioMetadata },
   ) => void;
@@ -44,7 +44,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
    */
   paused: true,
   currentSong: '',
-  currentSongDataURL: '',
+  currentSongArtworkDataURL: '',
   currentSongMetadata: {} as LightweightAudioMetadata,
   shuffle: false,
   repeating: false,
@@ -73,7 +73,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   // @note: when shuffle is toggled on or off we clear the shuffle history
   setShuffle: (shuffle) => set({ shuffle, shuffleHistory: [] }),
   setRepeating: (repeating) => set({ repeating }),
-  setCurrentSongWithDetails: (songPath: string, library) => {
+  setCurrentSong: (songPath: string, library) => {
     if (!library) {
       // eslint-disable-next-line no-console
       console.error('No library provided to setCurrentSongWithDetails');
@@ -110,7 +110,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         url = await bufferToDataUrl(event.data, event.format);
       }
 
-      set({ currentSongDataURL: url });
+      set({ currentSongArtworkDataURL: url });
 
       if (navigator.mediaSession.metadata?.artwork) {
         navigator.mediaSession.metadata.artwork = [
