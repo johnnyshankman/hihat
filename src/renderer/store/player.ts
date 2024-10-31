@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 import { LightweightAudioMetadata } from '../../common/common';
+import { bufferToDataUrl } from '../utils/utils';
 
 interface PlayerStore {
+  /**
+   * state
+   */
   paused: boolean;
   currentSong: string;
   currentSongDataURL: string;
@@ -14,14 +18,18 @@ interface PlayerStore {
   overrideScrollToIndex: number | undefined;
   shuffleHistory: string[];
 
+  /**
+   * actions
+   */
   deleteEverything: () => void;
   setVolume: (volume: number) => void;
   setPaused: (paused: boolean) => void;
   setShuffle: (shuffle: boolean) => void;
   setRepeating: (repeating: boolean) => void;
-  setCurrentSong: (song: string) => void;
-  setCurrentSongDataURL: (dataURL: string) => void;
-  setCurrentSongMetadata: (metadata: LightweightAudioMetadata) => void;
+  setCurrentSongWithDetails: (
+    songPath: string,
+    library?: { [key: string]: LightweightAudioMetadata },
+  ) => void;
   setCurrentSongTime: (time: number) => void;
   setFilteredLibrary: (filteredLibrary: {
     [key: string]: LightweightAudioMetadata;
@@ -31,6 +39,9 @@ interface PlayerStore {
 }
 
 const usePlayerStore = create<PlayerStore>((set) => ({
+  /**
+   * default state
+   */
   paused: true,
   currentSong: '',
   currentSongDataURL: '',
@@ -42,6 +53,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   filteredLibrary: {},
   overrideScrollToIndex: undefined,
   shuffleHistory: [],
+
+  /**
+   * action implementations
+   */
   deleteEverything: () => set({}, true),
   setVolume: (volume) => {
     /**
@@ -58,9 +73,59 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   // @note: when shuffle is toggled on or off we clear the shuffle history
   setShuffle: (shuffle) => set({ shuffle, shuffleHistory: [] }),
   setRepeating: (repeating) => set({ repeating }),
-  setCurrentSong: (currentSong) => set({ currentSong }),
-  setCurrentSongDataURL: (currentSongDataURL) => set({ currentSongDataURL }),
-  setCurrentSongMetadata: (currentSongMetadata) => set({ currentSongMetadata }),
+  setCurrentSongWithDetails: (songPath: string, library) => {
+    if (!library) {
+      // eslint-disable-next-line no-console
+      console.error('No library provided to setCurrentSongWithDetails');
+      return;
+    }
+
+    const songLibrary = library;
+    const metadata = songLibrary[songPath];
+
+    /**
+     * @important need this feature so we can restart the currently playing
+     * song by first clearing the current song and then setting it again
+     */
+    if (songPath === '') {
+      set({ currentSong: songPath });
+      return;
+    }
+
+    if (!metadata) {
+      // eslint-disable-next-line no-console
+      console.warn('No metadata found for song:', songPath);
+      return;
+    }
+
+    set({
+      currentSong: songPath,
+      currentSongMetadata: metadata,
+    });
+
+    // Set album art on response
+    window.electron.ipcRenderer.once('get-album-art', async (event) => {
+      let url = '';
+      if (event.data) {
+        url = await bufferToDataUrl(event.data, event.format);
+      }
+
+      set({ currentSongDataURL: url });
+
+      if (navigator.mediaSession.metadata?.artwork) {
+        navigator.mediaSession.metadata.artwork = [
+          {
+            src: url,
+            sizes: '192x192',
+            type: event.format,
+          },
+        ];
+      }
+    });
+
+    // Request album art, response handler is above
+    window.electron.ipcRenderer.sendMessage('get-album-art', songPath);
+  },
   setFilteredLibrary: (filteredLibrary) => set({ filteredLibrary }),
   setCurrentSongTime: (currentSongTime) => set({ currentSongTime }),
   setOverrideScrollToIndex: (overrideScrollToIndex) => {

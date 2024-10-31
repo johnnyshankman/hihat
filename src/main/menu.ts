@@ -49,6 +49,7 @@ function getLibraryStats(): { songCount: number; sizeInGB: number } {
       const stats = fs.statSync(filePath);
       totalSize += stats.size;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`Error reading file size for ${filePath}:`, error);
     }
   }

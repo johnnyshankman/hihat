@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import { LightweightAudioMetadata } from '../../common/common';
 import useMainStore from '../store/main';
-import { bufferToDataUrl } from '../utils/utils';
 import usePlayerStore from '../store/player';
 import LibraryList from './LibraryList';
 import StaticPlayer from './StaticPlayer';
@@ -42,18 +41,11 @@ export default function Main() {
   const shuffle = usePlayerStore((store) => store.shuffle);
   const repeating = usePlayerStore((store) => store.repeating);
   const currentSong = usePlayerStore((store) => store.currentSong);
-  const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const setInitialized = useMainStore((store) => store.setInitialized);
   const shuffleHistory = usePlayerStore((store) => store.shuffleHistory);
   const setShuffleHistory = usePlayerStore((store) => store.setShuffleHistory);
-  const setCurrentSongDataURL = usePlayerStore(
-    (store) => store.setCurrentSongDataURL,
-  );
   const currentSongMetadata = usePlayerStore(
     (store) => store.currentSongMetadata,
-  );
-  const setCurrentSongMetadata = usePlayerStore(
-    (store) => store.setCurrentSongMetadata,
   );
   const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
   const setFilteredLibrary = usePlayerStore(
@@ -65,6 +57,9 @@ export default function Main() {
   );
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
+  );
+  const setCurrentSongWithDetails = usePlayerStore(
+    (store) => store.setCurrentSongWithDetails,
   );
 
   /**
@@ -102,34 +97,6 @@ export default function Main() {
    */
 
   /**
-   * It takes the IPicture and converts it to a data url.
-   * It then sets the current song data url in the player store.
-   * It also sets the album art in the navigator media session metadata (if it exists).
-   * @param event an IPicture
-   */
-  const requestAndSetAlbumArtForSong = (song: string) => {
-    window.electron.ipcRenderer.sendMessage('get-album-art', song);
-    window.electron.ipcRenderer.once('get-album-art', async (event) => {
-      let url = '';
-      // @important: handle no image metadata for file
-      if (event.data) {
-        url = await bufferToDataUrl(event.data, event.format);
-      }
-
-      setCurrentSongDataURL(url);
-      if (navigator.mediaSession.metadata?.artwork) {
-        navigator.mediaSession.metadata.artwork = [
-          {
-            src: url,
-            sizes: '192x192',
-            type: event.format,
-          },
-        ];
-      }
-    });
-  };
-
-  /**
    * @dev update the current song and metadata then let the song play.
    *      in the bg request and set the album art from main process.
    *      the main process handler for the album art also saves the
@@ -155,9 +122,7 @@ export default function Main() {
       });
     }
 
-    setCurrentSong(song);
-    setCurrentSongMetadata(meta);
-    requestAndSetAlbumArtForSong(song);
+    setCurrentSongWithDetails(song, storeLibrary);
 
     // @dev: send message that syncs the BE with the FE
     // that way on next boot we can restore the last played song
@@ -185,7 +150,7 @@ export default function Main() {
   const startCurrentSongOver = async () => {
     return new Promise((resolve, reject) => {
       if (currentSong && currentSongMetadata) {
-        setCurrentSong('');
+        setCurrentSongWithDetails('', filteredLibrary);
         window.setTimeout(() => {
           playSong(currentSong, currentSongMetadata);
           resolve(null);
@@ -324,10 +289,7 @@ export default function Main() {
 
       // set current song to the first song in the library
       const firstSong = Object.keys(arg.library)[0];
-      const firstSongMeta = arg.library[firstSong];
-      setCurrentSong(firstSong);
-      setCurrentSongMetadata(firstSongMeta);
-      requestAndSetAlbumArtForSong(firstSong);
+      setCurrentSongWithDetails(firstSong, storeLibrary);
 
       setPaused(true);
       setInitialScrollIndex(2);
@@ -362,9 +324,7 @@ export default function Main() {
       setFilteredLibrary(arg.library);
 
       if (arg.lastPlayedSong) {
-        setCurrentSong(arg.lastPlayedSong);
-        setCurrentSongMetadata(arg.library[arg.lastPlayedSong]);
-        requestAndSetAlbumArtForSong(arg.lastPlayedSong);
+        setCurrentSongWithDetails(arg.lastPlayedSong, storeLibrary);
 
         // now find the index of the song within the library
         const songIndex = Object.keys(arg.library).findIndex(
