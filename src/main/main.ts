@@ -300,11 +300,12 @@ const hideOrDeleteDupes = async (event: IpcMainEvent, del: boolean) => {
  */
 
 /**
- * @dev for requesting album art data.
- * @important storing album art in the user's config file and sending it over
- * is much too large for the IPC so we lazy load the art for one song at
- * a time when the user clicks on a song via this event.
- * @note I would take a similar approach to lyrics, and any other large data
+ * @dev for requesting album art data, sends it back over the IPC
+ * @important storing album art in the user's config file causes us to redundtantly
+ * save their image data twice on their machine. It also makes our config file
+ * so big that we could no longer send it over the IPC.
+ * Instead, we use this IPC event to lazy load the album art for just the
+ * currently playing song and send it back over the IPC to the renderer process.
  */
 ipcMain.on('get-album-art', async (event, arg: string) => {
   const songFilePath = arg;

@@ -16,6 +16,8 @@ import { convertToMMSS } from '../utils/utils';
 import usePlayerStore from '../store/player';
 import SongRightClickMenu from './SongRightClickMenu';
 
+import { useWindowDimensions } from '../hooks/useWindowDimensions';
+
 const ROW_HEIGHT = 25.5;
 
 type FilterTypes =
@@ -25,6 +27,7 @@ type FilterTypes =
   | 'playCount'
   | 'dateAdded'
   | 'duration';
+
 const FILTER_TYPES: FilterTypes[] = [
   'title',
   'artist',
@@ -37,14 +40,6 @@ const FILTER_TYPES: FilterTypes[] = [
 type FilterDirections = 'asc' | 'desc';
 
 type LibraryListProps = {
-  /**
-   * @dev the width of the list container
-   */
-  width: number;
-  /**
-   * @dev the height of the list container
-   */
-  height: number | undefined;
   /**
    * @dev the height of the row container
    */
@@ -70,12 +65,12 @@ type SongMenuState =
   | undefined;
 
 export default function LibraryList({
-  width,
-  height,
   initialScrollIndex,
   playSong,
   onImportLibrary,
 }: LibraryListProps) {
+  const { width, height } = useWindowDimensions();
+
   /**
    * @dev store hooks
    */

@@ -174,8 +174,9 @@ export default function SongProgressBar({
           <LessOpaqueTinyText
             aria-label="current-title"
             onClick={() => {
-              // find the index of this song in the library
-              // @TODO: this really needs to be extracted into a helper function
+              /**
+               * on click, scroll to the song title in the library
+               */
               const libraryArray = Object.values(filteredLibrary);
               const index = libraryArray.findIndex(
                 (song) =>
@@ -256,8 +257,9 @@ export default function SongProgressBar({
         <LessOpaqueTinyText
           aria-label="current-title"
           onClick={() => {
-            // find the index of this song in the library
-            // @TODO: this really needs to be extracted into a helper function
+            /**
+             * on click, scroll to the artist in the library
+             */
             const libraryArray = Object.values(filteredLibrary);
             const index = libraryArray.findIndex(
               (song) =>
@@ -265,7 +267,6 @@ export default function SongProgressBar({
                 song.common.artist === currentSongMetadata.common?.artist &&
                 song.common.album === currentSongMetadata.common?.album,
             );
-
             setOverrideScrollToIndex(index);
           }}
           sx={{

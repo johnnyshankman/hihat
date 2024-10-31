@@ -24,7 +24,7 @@ export default function AlbumArt({
     (store) => store.currentSongMetadata,
   );
   const currentSongDataURL = usePlayerStore(
-    (store) => store.currentSongDataURL,
+    (store) => store.currentSongArtworkDataURL,
   );
   const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
   const setOverrideScrollToIndex = usePlayerStore(

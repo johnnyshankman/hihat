@@ -1,13 +1,16 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type WindowDimensionsContextType = {
-  width: number | null;
-  height: number | null;
+  width: number;
+  height: number;
 };
 
 const WindowDimensionsContext = createContext<WindowDimensionsContextType>({
-  width: null,
-  height: null,
+  /**
+   * @note these default dimensions come from the window main.ts
+   */
+  width: 1024,
+  height: 1024,
 });
 
 export function WindowDimensionsProvider({
@@ -16,8 +19,8 @@ export function WindowDimensionsProvider({
   height,
 }: {
   children: React.ReactNode;
-  width: number | null;
-  height: number | null;
+  width: number;
+  height: number;
 }) {
   const [dimensions, setDimensions] = useState<WindowDimensionsContextType>({
     width,

@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import { LightweightAudioMetadata } from '../../common/common';
 import useMainStore from '../store/main';
-import { bufferToDataUrl } from '../utils/utils';
 import usePlayerStore from '../store/player';
 import LibraryList from './LibraryList';
 import StaticPlayer from './StaticPlayer';
@@ -42,19 +41,13 @@ export default function Main() {
   const shuffle = usePlayerStore((store) => store.shuffle);
   const repeating = usePlayerStore((store) => store.repeating);
   const currentSong = usePlayerStore((store) => store.currentSong);
-  const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const setInitialized = useMainStore((store) => store.setInitialized);
   const shuffleHistory = usePlayerStore((store) => store.shuffleHistory);
   const setShuffleHistory = usePlayerStore((store) => store.setShuffleHistory);
-  const setCurrentSongDataURL = usePlayerStore(
-    (store) => store.setCurrentSongDataURL,
-  );
   const currentSongMetadata = usePlayerStore(
     (store) => store.currentSongMetadata,
   );
-  const setCurrentSongMetadata = usePlayerStore(
-    (store) => store.setCurrentSongMetadata,
-  );
+  const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
@@ -102,34 +95,6 @@ export default function Main() {
    */
 
   /**
-   * It takes the IPicture and converts it to a data url.
-   * It then sets the current song data url in the player store.
-   * It also sets the album art in the navigator media session metadata (if it exists).
-   * @param event an IPicture
-   */
-  const requestAndSetAlbumArtForSong = (song: string) => {
-    window.electron.ipcRenderer.sendMessage('get-album-art', song);
-    window.electron.ipcRenderer.once('get-album-art', async (event) => {
-      let url = '';
-      // @important: handle no image metadata for file
-      if (event.data) {
-        url = await bufferToDataUrl(event.data, event.format);
-      }
-
-      setCurrentSongDataURL(url);
-      if (navigator.mediaSession.metadata?.artwork) {
-        navigator.mediaSession.metadata.artwork = [
-          {
-            src: url,
-            sizes: '192x192',
-            type: event.format,
-          },
-        ];
-      }
-    });
-  };
-
-  /**
    * @dev update the current song and metadata then let the song play.
    *      in the bg request and set the album art from main process.
    *      the main process handler for the album art also saves the
@@ -155,9 +120,7 @@ export default function Main() {
       });
     }
 
-    setCurrentSong(song);
-    setCurrentSongMetadata(meta);
-    requestAndSetAlbumArtForSong(song);
+    setCurrentSong(song, storeLibrary);
 
     // @dev: send message that syncs the BE with the FE
     // that way on next boot we can restore the last played song
@@ -185,7 +148,7 @@ export default function Main() {
   const startCurrentSongOver = async () => {
     return new Promise((resolve, reject) => {
       if (currentSong && currentSongMetadata) {
-        setCurrentSong('');
+        setCurrentSong('', filteredLibrary);
         window.setTimeout(() => {
           playSong(currentSong, currentSongMetadata);
           resolve(null);
@@ -324,10 +287,7 @@ export default function Main() {
 
       // set current song to the first song in the library
       const firstSong = Object.keys(arg.library)[0];
-      const firstSongMeta = arg.library[firstSong];
-      setCurrentSong(firstSong);
-      setCurrentSongMetadata(firstSongMeta);
-      requestAndSetAlbumArtForSong(firstSong);
+      setCurrentSong(firstSong, storeLibrary);
 
       setPaused(true);
       setInitialScrollIndex(2);
@@ -362,11 +322,12 @@ export default function Main() {
       setFilteredLibrary(arg.library);
 
       if (arg.lastPlayedSong) {
-        setCurrentSong(arg.lastPlayedSong);
-        setCurrentSongMetadata(arg.library[arg.lastPlayedSong]);
-        requestAndSetAlbumArtForSong(arg.lastPlayedSong);
+        setCurrentSong(arg.lastPlayedSong, storeLibrary);
 
-        // now find the index of the song within the library
+        /**
+         * find the index of the song within the library
+         * and scroll to it on boot
+         */
         const songIndex = Object.keys(arg.library).findIndex(
           (song) => song === arg.lastPlayedSong,
         );
@@ -455,106 +416,111 @@ export default function Main() {
 
   return (
     <div ref={ref} className="h-full flex flex-col dark">
-      <WindowDimensionsProvider height={height ?? null} width={width ?? null}>
-        {/**
-         * @important This is the hidden audio tag that plays the song.
-         * We use it to hook into the current time, pause, and play states.
-         */}
-        <audio
-          ref={audioTagRef}
-          autoPlay={!paused}
-          className="hidden"
-          onEnded={playNextSong}
-          onPause={() => {
-            setPaused(true);
-          }}
-          onPlay={() => {
-            setPaused(false);
-          }}
-          onTimeUpdate={(e) => {
-            setCurrentSongTime(e.currentTarget.currentTime);
-          }}
-          src={`my-magic-protocol://getMediaFile/${currentSong}`}
-        />
-        <ImportProgressDialog
-          estimatedTimeRemainingString={estimatedTimeRemainingString}
-          open={showImportingProgress}
-          songsImported={songsImported}
-          totalSongs={totalSongs}
-        />
-        <DedupingProgressDialog open={showDedupingProgress} />
-        <BackupConfirmationDialog
-          onBackup={() => {
-            setShowBackupConfirmationDialog(false);
-            setShowBackingUpLibraryDialog(true);
-            window.electron.ipcRenderer.sendMessage('menu-backup-library');
-          }}
-          onClose={() => setShowBackupConfirmationDialog(false)}
-          open={showBackupConfirmationDialog}
-        />
-        <BackingUpLibraryDialog open={showBackingUpLibraryDialog} />
-        <ConfirmDedupingDialog
-          onClose={() => setShowConfirmDedupeAndDeleteDialog(false)}
-          onConfirm={() => {
-            setShowConfirmDedupeAndDeleteDialog(false);
-            setShowDedupingProgress(true);
-            // @note: responds with update-store
-            window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
-          }}
-          open={showConfirmDedupeAndDeleteDialog}
-        />
-        {/**
-         * @dev top chunk of the screen's UX
-         */}
-        <div className="flex art drag justify-center p-4 space-x-4 md:flex-row">
-          <AlbumArt
-            setShowAlbumArtMenu={setShowAlbumArtMenu}
-            showAlbumArtMenu={showAlbumArtMenu}
+      {width && height && (
+        <WindowDimensionsProvider height={height} width={width}>
+          {/**
+           * @important This is the hidden audio tag that plays the song.
+           * We sync the player store's state with the audio tag's state
+           * to keep the UI in sync (time, pause, play).
+           * We use the onEnded event to autoplay the next song.
+           * We use the ref to easily trigger play/pause with the UI.
+           */}
+          <audio
+            ref={audioTagRef}
+            autoPlay={!paused}
+            className="hidden"
+            onEnded={playNextSong}
+            onPause={() => {
+              setPaused(true);
+            }}
+            onPlay={() => {
+              setPaused(false);
+            }}
+            onTimeUpdate={(e) => {
+              setCurrentSongTime(e.currentTarget.currentTime);
+            }}
+            src={`my-magic-protocol://getMediaFile/${currentSong}`}
           />
-
-          <div ref={importNewSongsButtonRef}>
-            <ImportNewSongsButton
-              setEstimatedTimeRemainingString={setEstimatedTimeRemainingString}
-              setInitialScrollIndex={setInitialScrollIndex}
-              setShowImportingProgress={setShowImportingProgress}
-              setSongsImported={setSongsImported}
-              setTotalSongs={setTotalSongs}
+          <ImportProgressDialog
+            estimatedTimeRemainingString={estimatedTimeRemainingString}
+            open={showImportingProgress}
+            songsImported={songsImported}
+            totalSongs={totalSongs}
+          />
+          <DedupingProgressDialog open={showDedupingProgress} />
+          <BackupConfirmationDialog
+            onBackup={() => {
+              setShowBackupConfirmationDialog(false);
+              setShowBackingUpLibraryDialog(true);
+              window.electron.ipcRenderer.sendMessage('menu-backup-library');
+            }}
+            onClose={() => setShowBackupConfirmationDialog(false)}
+            open={showBackupConfirmationDialog}
+          />
+          <BackingUpLibraryDialog open={showBackingUpLibraryDialog} />
+          <ConfirmDedupingDialog
+            onClose={() => setShowConfirmDedupeAndDeleteDialog(false)}
+            onConfirm={() => {
+              setShowConfirmDedupeAndDeleteDialog(false);
+              setShowDedupingProgress(true);
+              // @note: responds with update-store
+              window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
+            }}
+            open={showConfirmDedupeAndDeleteDialog}
+          />
+          {/**
+           * @dev top chunk of the screen's UX
+           */}
+          <div className="flex art drag justify-center p-4 space-x-4 md:flex-row">
+            <AlbumArt
+              setShowAlbumArtMenu={setShowAlbumArtMenu}
+              showAlbumArtMenu={showAlbumArtMenu}
             />
+
+            <div ref={importNewSongsButtonRef}>
+              <ImportNewSongsButton
+                setEstimatedTimeRemainingString={
+                  setEstimatedTimeRemainingString
+                }
+                setInitialScrollIndex={setInitialScrollIndex}
+                setShowImportingProgress={setShowImportingProgress}
+                setSongsImported={setSongsImported}
+                setTotalSongs={setTotalSongs}
+              />
+            </div>
+
+            <SearchBar className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white" />
           </div>
 
-          <SearchBar className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white" />
-        </div>
+          {showBrowser && <Browser onClose={() => setShowBrowser(false)} />}
 
-        {showBrowser && <Browser onClose={() => setShowBrowser(false)} />}
-
-        {/**
-         * @dev middle chunk of the screen's UX
-         */}
-        {width && (
-          <LibraryList
-            height={height}
-            initialScrollIndex={initialScrollIndex}
-            onImportLibrary={importNewLibrary}
-            playSong={async (song, meta) => {
-              // if the user clicks on the currently playing song, start it over
-              if (currentSong === song) {
-                await startCurrentSongOver();
-              } else {
-                await playSong(song, meta);
-              }
-            }}
-            width={width}
+          {/**
+           * @dev middle chunk of the screen's UX
+           */}
+          {width && (
+            <LibraryList
+              initialScrollIndex={initialScrollIndex}
+              onImportLibrary={importNewLibrary}
+              playSong={async (song, meta) => {
+                // if the user clicks on the currently playing song, start it over
+                if (currentSong === song) {
+                  await startCurrentSongOver();
+                } else {
+                  await playSong(song, meta);
+                }
+              }}
+            />
+          )}
+          {/**
+           * @dev bottom chunk of the screen's UX
+           */}
+          <StaticPlayer
+            audioTagRef={audioTagRef}
+            playNextSong={playNextSong}
+            playPreviousSong={playPreviousSong}
           />
-        )}
-        {/**
-         * @dev bottom chunk of the screen's UX
-         */}
-        <StaticPlayer
-          audioTagRef={audioTagRef}
-          playNextSong={playNextSong}
-          playPreviousSong={playPreviousSong}
-        />
-      </WindowDimensionsProvider>
+        </WindowDimensionsProvider>
+      )}
     </div>
   );
 }
