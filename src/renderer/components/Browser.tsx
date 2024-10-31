@@ -26,6 +26,10 @@ export default function Browser({ onClose }: BrowserProps) {
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
   );
+  const setOverrideScrollToIndex = usePlayerStore(
+    (store) => store.setOverrideScrollToIndex,
+  );
+  const currentSong = usePlayerStore((store) => store.currentSong);
   const storeLibrary = useMainStore((store) => store.library);
 
   const [selection, setSelection] = useState<BrowserSelection>({
@@ -321,13 +325,39 @@ export default function Browser({ onClose }: BrowserProps) {
           <IconButton
             className="text-neutral-400 hover:text-white"
             onClick={() => {
+              const oldSelection = selection;
+
               setSelection({
                 artist: null,
                 album: null,
               });
+
               if (storeLibrary) {
                 setFilteredLibrary(storeLibrary);
               }
+
+              if (oldSelection.album) {
+                // scroll to the album's first song in the library
+                const firstSongIndex = Object.keys(storeLibrary).findIndex(
+                  (key) =>
+                    storeLibrary[key].common.album === oldSelection.album,
+                );
+                setOverrideScrollToIndex(firstSongIndex);
+              } else if (oldSelection.artist) {
+                // scroll to the artist's first song in the library
+                const firstSongIndex = Object.keys(storeLibrary).findIndex(
+                  (key) =>
+                    storeLibrary[key].common.artist === oldSelection.artist,
+                );
+                setOverrideScrollToIndex(firstSongIndex);
+              } else if (currentSong) {
+                // scroll to the currently playing song
+                const currentSongIndex = Object.keys(storeLibrary).findIndex(
+                  (key) => key === currentSong,
+                );
+                setOverrideScrollToIndex(currentSongIndex);
+              }
+
               onClose();
             }}
             size="small"
