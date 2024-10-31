@@ -35,6 +35,7 @@ export default function StaticPlayer({
   const setShuffle = usePlayerStore((state) => state.setShuffle);
   const paused = usePlayerStore((state) => state.paused);
   const setPaused = usePlayerStore((state) => state.setPaused);
+  // @note this is used as state to know when the song's info is done loading
   const currentSongMetadata = usePlayerStore(
     (state) => state.currentSongMetadata,
   );
@@ -142,10 +143,19 @@ export default function StaticPlayer({
             disabled={!currentSongMetadata}
             onClick={() => {
               setPaused(!paused);
-              // eslint-disable-next-line no-unused-expressions
-              audioTagRef.current!.paused
-                ? audioTagRef.current!.play()
-                : audioTagRef.current!.pause();
+              if (audioTagRef.current) {
+                /**
+                 * @important we manually trigger play/pause via the <autio> tag
+                 * because the player store's state will automatically sync
+                 * itself to the <audio> tag's state
+                 * @todo should i be using the store for this?
+                 */
+                if (audioTagRef.current.paused) {
+                  audioTagRef.current.play();
+                } else {
+                  audioTagRef.current.pause();
+                }
+              }
             }}
           >
             {paused ? (

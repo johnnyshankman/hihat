@@ -415,106 +415,111 @@ export default function Main() {
 
   return (
     <div ref={ref} className="h-full flex flex-col dark">
-      <WindowDimensionsProvider height={height ?? null} width={width ?? null}>
-        {/**
-         * @important This is the hidden audio tag that plays the song.
-         * We use it to hook into the current time, pause, and play states.
-         */}
-        <audio
-          ref={audioTagRef}
-          autoPlay={!paused}
-          className="hidden"
-          onEnded={playNextSong}
-          onPause={() => {
-            setPaused(true);
-          }}
-          onPlay={() => {
-            setPaused(false);
-          }}
-          onTimeUpdate={(e) => {
-            setCurrentSongTime(e.currentTarget.currentTime);
-          }}
-          src={`my-magic-protocol://getMediaFile/${currentSong}`}
-        />
-        <ImportProgressDialog
-          estimatedTimeRemainingString={estimatedTimeRemainingString}
-          open={showImportingProgress}
-          songsImported={songsImported}
-          totalSongs={totalSongs}
-        />
-        <DedupingProgressDialog open={showDedupingProgress} />
-        <BackupConfirmationDialog
-          onBackup={() => {
-            setShowBackupConfirmationDialog(false);
-            setShowBackingUpLibraryDialog(true);
-            window.electron.ipcRenderer.sendMessage('menu-backup-library');
-          }}
-          onClose={() => setShowBackupConfirmationDialog(false)}
-          open={showBackupConfirmationDialog}
-        />
-        <BackingUpLibraryDialog open={showBackingUpLibraryDialog} />
-        <ConfirmDedupingDialog
-          onClose={() => setShowConfirmDedupeAndDeleteDialog(false)}
-          onConfirm={() => {
-            setShowConfirmDedupeAndDeleteDialog(false);
-            setShowDedupingProgress(true);
-            // @note: responds with update-store
-            window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
-          }}
-          open={showConfirmDedupeAndDeleteDialog}
-        />
-        {/**
-         * @dev top chunk of the screen's UX
-         */}
-        <div className="flex art drag justify-center p-4 space-x-4 md:flex-row">
-          <AlbumArt
-            setShowAlbumArtMenu={setShowAlbumArtMenu}
-            showAlbumArtMenu={showAlbumArtMenu}
+      {width && height && (
+        <WindowDimensionsProvider height={height} width={width}>
+          {/**
+           * @important This is the hidden audio tag that plays the song.
+           * We sync the player store's state with the audio tag's state
+           * to keep the UI in sync (time, pause, play).
+           * We use the onEnded event to autoplay the next song.
+           * We use the ref to easily trigger play/pause with the UI.
+           */}
+          <audio
+            ref={audioTagRef}
+            autoPlay={!paused}
+            className="hidden"
+            onEnded={playNextSong}
+            onPause={() => {
+              setPaused(true);
+            }}
+            onPlay={() => {
+              setPaused(false);
+            }}
+            onTimeUpdate={(e) => {
+              setCurrentSongTime(e.currentTarget.currentTime);
+            }}
+            src={`my-magic-protocol://getMediaFile/${currentSong}`}
           />
-
-          <div ref={importNewSongsButtonRef}>
-            <ImportNewSongsButton
-              setEstimatedTimeRemainingString={setEstimatedTimeRemainingString}
-              setInitialScrollIndex={setInitialScrollIndex}
-              setShowImportingProgress={setShowImportingProgress}
-              setSongsImported={setSongsImported}
-              setTotalSongs={setTotalSongs}
+          <ImportProgressDialog
+            estimatedTimeRemainingString={estimatedTimeRemainingString}
+            open={showImportingProgress}
+            songsImported={songsImported}
+            totalSongs={totalSongs}
+          />
+          <DedupingProgressDialog open={showDedupingProgress} />
+          <BackupConfirmationDialog
+            onBackup={() => {
+              setShowBackupConfirmationDialog(false);
+              setShowBackingUpLibraryDialog(true);
+              window.electron.ipcRenderer.sendMessage('menu-backup-library');
+            }}
+            onClose={() => setShowBackupConfirmationDialog(false)}
+            open={showBackupConfirmationDialog}
+          />
+          <BackingUpLibraryDialog open={showBackingUpLibraryDialog} />
+          <ConfirmDedupingDialog
+            onClose={() => setShowConfirmDedupeAndDeleteDialog(false)}
+            onConfirm={() => {
+              setShowConfirmDedupeAndDeleteDialog(false);
+              setShowDedupingProgress(true);
+              // @note: responds with update-store
+              window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
+            }}
+            open={showConfirmDedupeAndDeleteDialog}
+          />
+          {/**
+           * @dev top chunk of the screen's UX
+           */}
+          <div className="flex art drag justify-center p-4 space-x-4 md:flex-row">
+            <AlbumArt
+              setShowAlbumArtMenu={setShowAlbumArtMenu}
+              showAlbumArtMenu={showAlbumArtMenu}
             />
+
+            <div ref={importNewSongsButtonRef}>
+              <ImportNewSongsButton
+                setEstimatedTimeRemainingString={
+                  setEstimatedTimeRemainingString
+                }
+                setInitialScrollIndex={setInitialScrollIndex}
+                setShowImportingProgress={setShowImportingProgress}
+                setSongsImported={setSongsImported}
+                setTotalSongs={setTotalSongs}
+              />
+            </div>
+
+            <SearchBar className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white" />
           </div>
 
-          <SearchBar className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white" />
-        </div>
+          {showBrowser && <Browser onClose={() => setShowBrowser(false)} />}
 
-        {showBrowser && <Browser onClose={() => setShowBrowser(false)} />}
-
-        {/**
-         * @dev middle chunk of the screen's UX
-         */}
-        {width && (
-          <LibraryList
-            height={height}
-            initialScrollIndex={initialScrollIndex}
-            onImportLibrary={importNewLibrary}
-            playSong={async (song, meta) => {
-              // if the user clicks on the currently playing song, start it over
-              if (currentSong === song) {
-                await startCurrentSongOver();
-              } else {
-                await playSong(song, meta);
-              }
-            }}
-            width={width}
+          {/**
+           * @dev middle chunk of the screen's UX
+           */}
+          {width && (
+            <LibraryList
+              initialScrollIndex={initialScrollIndex}
+              onImportLibrary={importNewLibrary}
+              playSong={async (song, meta) => {
+                // if the user clicks on the currently playing song, start it over
+                if (currentSong === song) {
+                  await startCurrentSongOver();
+                } else {
+                  await playSong(song, meta);
+                }
+              }}
+            />
+          )}
+          {/**
+           * @dev bottom chunk of the screen's UX
+           */}
+          <StaticPlayer
+            audioTagRef={audioTagRef}
+            playNextSong={playNextSong}
+            playPreviousSong={playPreviousSong}
           />
-        )}
-        {/**
-         * @dev bottom chunk of the screen's UX
-         */}
-        <StaticPlayer
-          audioTagRef={audioTagRef}
-          playNextSong={playNextSong}
-          playPreviousSong={playPreviousSong}
-        />
-      </WindowDimensionsProvider>
+        </WindowDimensionsProvider>
+      )}
     </div>
   );
 }

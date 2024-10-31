@@ -16,6 +16,8 @@ import { convertToMMSS } from '../utils/utils';
 import usePlayerStore from '../store/player';
 import SongRightClickMenu from './SongRightClickMenu';
 
+import { useWindowDimensions } from '../hooks/useWindowDimensions';
+
 const ROW_HEIGHT = 25.5;
 
 type FilterTypes =
@@ -25,6 +27,7 @@ type FilterTypes =
   | 'playCount'
   | 'dateAdded'
   | 'duration';
+
 const FILTER_TYPES: FilterTypes[] = [
   'title',
   'artist',
@@ -37,14 +40,6 @@ const FILTER_TYPES: FilterTypes[] = [
 type FilterDirections = 'asc' | 'desc';
 
 type LibraryListProps = {
-  /**
-   * @dev the width of the list container
-   */
-  width: number;
-  /**
-   * @dev the height of the list container
-   */
-  height: number | undefined;
   /**
    * @dev the height of the row container
    */
@@ -69,13 +64,19 @@ type SongMenuState =
     }
   | undefined;
 
+/**
+ * @TODO Refactor to use the useWindowDimensions hook. The tricky part is
+ * that this component relies on width and height not being <undefined />
+ * on initial render, which isn't always the case due to the way the original
+ * window dimensions hooks works in the Main component.
+ */
 export default function LibraryList({
-  width,
-  height,
   initialScrollIndex,
   playSong,
   onImportLibrary,
 }: LibraryListProps) {
+  const { width, height } = useWindowDimensions();
+
   /**
    * @dev store hooks
    */
