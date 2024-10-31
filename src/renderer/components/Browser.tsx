@@ -161,48 +161,68 @@ export default function Browser({ onClose }: BrowserProps) {
     browserDimensions.height,
   ]);
 
-  // Add this function inside the Browser component, before the return statement
-  const handleBottomLeftResize = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!browserRef.current) return;
+  type ResizeCorner = 'topLeft' | 'topRight' | 'bottomLeft';
 
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startWidth = browserRef.current.offsetWidth;
-    const startHeight = browserRef.current.offsetHeight;
-    const startLeft = position.x;
+  const handleResize =
+    (corner: ResizeCorner) => (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!browserRef.current) return;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = startX - moveEvent.clientX;
-      const deltaY = moveEvent.clientY - startY;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startWidth = browserRef.current.offsetWidth;
+      const startHeight = browserRef.current.offsetHeight;
+      const startLeft = position.x;
+      const startTop = position.y;
 
-      const newWidth = Math.min(
-        Math.max(400, startWidth + deltaX),
-        width ? width - 20 : 1200,
-      );
-      const newHeight = Math.min(
-        Math.max(200, startHeight + deltaY),
-        height ? height - 60 - 120 : 800,
-      );
-      const newLeft = startLeft - (newWidth - startWidth);
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        // Calculate deltas based on corner
+        const deltaX =
+          corner === 'topRight'
+            ? moveEvent.clientX - startX
+            : startX - moveEvent.clientX;
 
-      setBrowserDimensions({
-        width: newWidth,
-        height: newHeight,
-      });
-      setPosition((prev) => ({
-        ...prev,
-        x: newLeft,
-      }));
+        const deltaY = corner.startsWith('top')
+          ? startY - moveEvent.clientY
+          : moveEvent.clientY - startY;
+
+        const newWidth = Math.min(
+          Math.max(400, startWidth + deltaX),
+          width ? width - 20 : 1200,
+        );
+        const newHeight = Math.min(
+          Math.max(200, startHeight + deltaY),
+          height ? height - 60 - 120 : 800,
+        );
+
+        // Update position based on corner
+        const newLeft =
+          corner !== 'topRight'
+            ? startLeft - (newWidth - startWidth)
+            : startLeft;
+
+        const newTop = corner.startsWith('top')
+          ? startTop - (newHeight - startHeight)
+          : startTop;
+
+        setBrowserDimensions({
+          width: newWidth,
+          height: newHeight,
+        });
+
+        setPosition({
+          x: corner !== 'topRight' ? newLeft : position.x,
+          y: corner.startsWith('top') ? Math.max(60, newTop) : position.y,
+        });
+      };
+
+      const handleMouseUp = () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
     };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
 
   const renderRow = (
     list: string[],
@@ -269,11 +289,28 @@ export default function Browser({ onClose }: BrowserProps) {
         {/* Add this line right after the opening div */}
         <div
           aria-label="Resize browser"
-          className="resize-handle-sw"
-          onMouseDown={handleBottomLeftResize}
+          className="resize-handle-nw"
+          onMouseDown={handleResize('topLeft')}
           role="button"
           tabIndex={0}
         />
+
+        <div
+          aria-label="Resize browser"
+          className="resize-handle-ne"
+          onMouseDown={handleResize('topRight')}
+          role="button"
+          tabIndex={0}
+        />
+
+        <div
+          aria-label="Resize browser"
+          className="resize-handle-sw"
+          onMouseDown={handleResize('bottomLeft')}
+          role="button"
+          tabIndex={0}
+        />
+
         <div className="drag-handle flex items-center justify-between px-2 py-0.5 border-b border-neutral-800 cursor-move border-t-2 border-l-2 border-r-2">
           <div className="flex items-center gap-2">
             <DragIndicatorIcon className="text-neutral-400" fontSize="small" />
