@@ -47,6 +47,7 @@ export default function Main() {
   const currentSongMetadata = usePlayerStore(
     (store) => store.currentSongMetadata,
   );
+  const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
@@ -57,9 +58,6 @@ export default function Main() {
   );
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
-  );
-  const setCurrentSongWithDetails = usePlayerStore(
-    (store) => store.setCurrentSong,
   );
 
   /**
@@ -122,7 +120,7 @@ export default function Main() {
       });
     }
 
-    setCurrentSongWithDetails(song, storeLibrary);
+    setCurrentSong(song, storeLibrary);
 
     // @dev: send message that syncs the BE with the FE
     // that way on next boot we can restore the last played song
@@ -150,7 +148,7 @@ export default function Main() {
   const startCurrentSongOver = async () => {
     return new Promise((resolve, reject) => {
       if (currentSong && currentSongMetadata) {
-        setCurrentSongWithDetails('', filteredLibrary);
+        setCurrentSong('', filteredLibrary);
         window.setTimeout(() => {
           playSong(currentSong, currentSongMetadata);
           resolve(null);
@@ -289,7 +287,7 @@ export default function Main() {
 
       // set current song to the first song in the library
       const firstSong = Object.keys(arg.library)[0];
-      setCurrentSongWithDetails(firstSong, storeLibrary);
+      setCurrentSong(firstSong, storeLibrary);
 
       setPaused(true);
       setInitialScrollIndex(2);
@@ -324,7 +322,7 @@ export default function Main() {
       setFilteredLibrary(arg.library);
 
       if (arg.lastPlayedSong) {
-        setCurrentSongWithDetails(arg.lastPlayedSong, storeLibrary);
+        setCurrentSong(arg.lastPlayedSong, storeLibrary);
 
         // now find the index of the song within the library
         const songIndex = Object.keys(arg.library).findIndex(
