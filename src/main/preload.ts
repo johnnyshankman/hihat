@@ -26,7 +26,6 @@ export type Channels =
   | 'delete-song'
   | 'delete-album'
   | 'menu-toggle-browser'
-  // TODO: use this way more for replies
   | 'update-store';
 
 export type ArgsBase = Record<Channels, unknown>;

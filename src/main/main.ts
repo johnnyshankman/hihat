@@ -325,7 +325,6 @@ ipcMain.on('hide-song', async (event, arg) => {
   };
   writeFileSyncToUserConfig(updatedStore);
 
-  // @todo: rename to update-store not update-store
   event.reply('update-store', updatedStore);
 });
 
