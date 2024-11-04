@@ -342,6 +342,12 @@ ipcMain.on('delete-song', async (event, arg) => {
   };
   writeFileSyncToUserConfig(updatedStore);
 
+  /**
+   * @todo this is great but we it causes us to scroll back to the
+   * top of the library list. We should instead remember the index
+   * that the user was at before deleting the song and then scroll
+   * back to that index.
+   */
   event.reply('update-store', updatedStore);
 });
 
@@ -373,6 +379,12 @@ ipcMain.on('delete-album', async (event, arg) => {
 
   writeFileSyncToUserConfig(updatedStore);
 
+  /**
+   * @todo this is great but we it causes us to scroll back to the
+   * top of the library list. We should instead remember the index
+   * that the user was at before deleting the album and then scroll
+   * back to that index.
+   */
   event.reply('update-store', updatedStore);
 });
 
@@ -382,6 +394,12 @@ ipcMain.on('delete-album', async (event, arg) => {
 ipcMain.on('menu-hide-dupes', async (event) => {
   const updatedStore = await hideOrDeleteDupes(event, false);
   writeFileSyncToUserConfig(updatedStore);
+  /**
+   * @todo this is great but we it causes us to scroll back to the
+   * top of the library list. We should instead remember the index
+   * that the user was at before deleting the album and then scroll
+   * back to that index.
+   */
   event.reply('update-store', updatedStore);
 });
 
@@ -391,6 +409,12 @@ ipcMain.on('menu-hide-dupes', async (event) => {
 ipcMain.on('menu-delete-dupes', async (event) => {
   const updatedStore = await hideOrDeleteDupes(event, true);
   writeFileSyncToUserConfig(updatedStore);
+  /**
+   * @todo this is great but we it causes us to scroll back to the
+   * top of the library list. We should instead remember the index
+   * that the user was at before deleting the album and then scroll
+   * back to that index.
+   */
   event.reply('update-store', updatedStore);
 });
 
