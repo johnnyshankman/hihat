@@ -64,14 +64,12 @@ export default function Main() {
     showBackingUpLibrary: false,
     showBrowser: false,
   });
-
   const [importState, setImportState] = useState({
     songsImported: 0,
     totalSongs: 0,
     estimatedTimeRemainingString: '',
     initialScrollIndex: undefined as number | undefined,
   });
-
   const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
 
   const playSong = async (song: string, meta: LightweightAudioMetadata) => {
