@@ -171,7 +171,7 @@ export default function Main() {
       rescan,
     });
 
-    window.electron.ipcRenderer.once('song-imported', (args) => {
+    window.electron.ipcRenderer.on('song-imported', (args) => {
       setImportState((prev) => ({
         ...prev,
         songsImported: args.songsImported,
