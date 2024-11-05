@@ -16,32 +16,27 @@ import ImportNewSongsButton from './ImportNewSongsButtons';
 import SearchBar from './SearchBar';
 import Browser from './Browser';
 import { WindowDimensionsProvider } from '../hooks/useWindowDimensions';
+import { Channels, ResponseArgs } from '../../main/preload';
 
-type AlbumArtMenuState =
-  | {
-      mouseX: number;
-      mouseY: number;
-    }
-  | undefined;
+type AlbumArtMenuState = { mouseX: number; mouseY: number } | undefined;
 
 export default function Main() {
-  /**
-   * @dev external hooks
-   */
   const { width, height, ref } = useResizeDetector();
+  const audioTagRef = useRef<HTMLAudioElement>(null);
+  const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * @dev global store hooks
-   */
+  // Main store hooks
   const storeLibrary = useMainStore((store) => store.library);
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
   const setLastPlayedSong = useMainStore((store) => store.setLastPlayedSong);
+  const setInitialized = useMainStore((store) => store.setInitialized);
+
+  // Player store hooks
   const paused = usePlayerStore((store) => store.paused);
   const setPaused = usePlayerStore((store) => store.setPaused);
   const shuffle = usePlayerStore((store) => store.shuffle);
   const repeating = usePlayerStore((store) => store.repeating);
   const currentSong = usePlayerStore((store) => store.currentSong);
-  const setInitialized = useMainStore((store) => store.setInitialized);
   const shuffleHistory = usePlayerStore((store) => store.shuffleHistory);
   const setShuffleHistory = usePlayerStore((store) => store.setShuffleHistory);
   const currentSongMetadata = usePlayerStore(
@@ -60,463 +55,358 @@ export default function Main() {
     (store) => store.setOverrideScrollToIndex,
   );
 
-  /**
-   * @dev JSX refs
-   */
-  const audioTagRef = useRef<HTMLAudioElement>(null);
-  const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
+  // Component state
+  const [dialogState, setDialogState] = useState({
+    showImportingProgress: false,
+    showDedupingProgress: false,
+    showConfirmDedupeAndDelete: false,
+    showBackupConfirmation: false,
+    showBackingUpLibrary: false,
+    showBrowser: false,
+  });
 
-  /**
-   * @dev component state
-   */
-  const [showImportingProgress, setShowImportingProgress] = useState(false);
-  const [songsImported, setSongsImported] = useState(0);
-  const [totalSongs, setTotalSongs] = useState(0);
-  const [estimatedTimeRemainingString, setEstimatedTimeRemainingString] =
-    useState('');
-  const [initialScrollIndex, setInitialScrollIndex] = useState<
-    number | undefined
-  >(undefined);
-  const [showAlbumArtMenu, setShowAlbumArtMenu] =
-    useState<AlbumArtMenuState>(undefined);
-  const [showDedupingProgress, setShowDedupingProgress] = useState(false);
-  const [
-    showConfirmDedupeAndDeleteDialog,
-    setShowConfirmDedupeAndDeleteDialog,
-  ] = useState(false);
-  const [showBackupConfirmationDialog, setShowBackupConfirmationDialog] =
-    useState(false);
-  const [showBackingUpLibraryDialog, setShowBackingUpLibraryDialog] =
-    useState(false);
-  const [showBrowser, setShowBrowser] = useState(false);
+  const [importState, setImportState] = useState({
+    songsImported: 0,
+    totalSongs: 0,
+    estimatedTimeRemainingString: '',
+    initialScrollIndex: undefined as number | undefined,
+  });
 
-  /**
-   * @def functions
-   */
+  const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
 
-  /**
-   * @dev update the current song and metadata then let the song play.
-   *      in the bg request and set the album art from main process.
-   *      the main process handler for the album art also saves the
-   *      last played song into the userConfig for persistence.
-   */
   const playSong = async (song: string, meta: LightweightAudioMetadata) => {
-    if (
-      navigator.mediaSession.metadata?.title &&
-      meta.common.title &&
-      navigator.mediaSession.metadata?.artist &&
-      meta.common.artist &&
-      navigator.mediaSession.metadata?.album &&
-      meta.common.album
-    ) {
-      navigator.mediaSession.metadata.title = meta.common.title;
-      navigator.mediaSession.metadata.artist = meta.common.artist;
-      navigator.mediaSession.metadata.album = meta.common.album;
+    const mediaData = {
+      title: meta.common.title,
+      artist: meta.common.artist,
+      album: meta.common.album,
+    };
+
+    if (navigator.mediaSession.metadata) {
+      Object.assign(navigator.mediaSession.metadata, mediaData);
     } else {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: meta.common.title,
-        artist: meta.common.artist,
-        album: meta.common.album,
-      });
+      navigator.mediaSession.metadata = new MediaMetadata(mediaData);
     }
 
     setCurrentSong(song, storeLibrary);
-
-    // @dev: send message that syncs the BE with the FE
-    // that way on next boot we can restore the last played song
     setLastPlayedSong(song);
+
     window.electron.ipcRenderer.once('set-last-played-song', (args) => {
-      const newLibrary = { ...storeLibrary };
-      newLibrary[args.song] = args.songData;
+      const newLibrary = { ...storeLibrary, [args.song]: args.songData };
       setLibraryInStore(newLibrary);
-
-      const newFilteredLibrary = { ...filteredLibrary };
-      newFilteredLibrary[args.song] = args.songData;
-      setFilteredLibrary(newFilteredLibrary);
+      setFilteredLibrary({ ...filteredLibrary, [args.song]: args.songData });
     });
-    window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
 
-    // play the song regardless of when the main process responds
+    window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
     setPaused(false);
   };
 
-  /**
-   * @dev plays a blank song THEN plays the real song
-   * exactly 10ms later in order to start it over
-   * from the start
-   */
-  const startCurrentSongOver = async () => {
-    return new Promise((resolve, reject) => {
-      if (currentSong && currentSongMetadata) {
-        setCurrentSong('', filteredLibrary);
-        window.setTimeout(() => {
-          playSong(currentSong, currentSongMetadata);
-          resolve(null);
-        }, 10);
-      } else {
-        reject();
-      }
+  const startCurrentSongOver = () =>
+    // eslint-disable-next-line consistent-return
+    new Promise((resolve, reject) => {
+      // eslint-disable-next-line no-promise-executor-return
+      if (!currentSong || !currentSongMetadata) return reject();
+      setCurrentSong('', filteredLibrary);
+      setTimeout(() => {
+        playSong(currentSong, currentSongMetadata);
+        resolve(null);
+      }, 10);
     });
-  };
 
   const playNextSong = async () => {
     if (!filteredLibrary) return;
 
     const keys = Object.keys(filteredLibrary);
-    const currentSongIndex = keys.indexOf(currentSong || '');
-    const nextSongIndex = currentSongIndex + 1;
+    const currentIndex = keys.indexOf(currentSong || '');
 
-    // @dev: if user has reached the end of their library, play 0th song
-    if (nextSongIndex >= keys.length) {
-      const song = keys[0];
-      const songMeta = filteredLibrary[song];
-      await playSong(song, songMeta);
-      return;
-    }
-
-    const nextSong = keys[nextSongIndex];
-    const nextSongMeta = filteredLibrary[nextSong];
-
-    // @dev: if repeating is on, repeat the same song and return early
     if (repeating && currentSong && currentSongMetadata) {
       await startCurrentSongOver();
       return;
     }
 
-    // @dev: if shuffle is on, pick a random song, scroll to it, and return early
     if (shuffle) {
       const randomIndex = Math.floor(Math.random() * keys.length);
       const randomSong = keys[randomIndex];
-      const randomSongMeta = filteredLibrary[randomSong];
-      await playSong(randomSong, randomSongMeta);
+      await playSong(randomSong, filteredLibrary[randomSong]);
       setOverrideScrollToIndex(randomIndex);
-      // @dev: add the current song to the shuffle history
       setShuffleHistory([...shuffleHistory, currentSong]);
       return;
     }
 
-    // @dev: if neither shuffle nor repeating is on, play next song in library
-    await playSong(nextSong, nextSongMeta);
+    const nextIndex = currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
+    const nextSong = keys[nextIndex];
+    await playSong(nextSong, filteredLibrary[nextSong]);
   };
 
   const playPreviousSong = async () => {
     if (!filteredLibrary) return;
 
-    // @dev: if the song is > 2s into playtime, just start it over.
     if (!paused && currentSong && currentSongMetadata && currentSongTime > 2) {
       await startCurrentSongOver();
       return;
     }
 
     const keys = Object.keys(filteredLibrary);
-    const currentSongIndex = keys.indexOf(currentSong || '');
-    const previousSongIndex = currentSongIndex - 1;
+    const currentIndex = keys.indexOf(currentSong || '');
 
-    // @dev: if the user has reached the beginning of their library, wrap to the end
-    if (previousSongIndex < 0) {
-      const lastSong = keys[keys.length - 1];
-      const lastSongMeta = filteredLibrary[lastSong];
-      await playSong(lastSong, lastSongMeta);
-      return;
-    }
-
-    // @dev: if repeating is on, repeat the same song and return early
     if (repeating && currentSong && currentSongMetadata) {
       await startCurrentSongOver();
       return;
     }
 
-    // @dev: if shuffle is on and we have a history, play the previous song in the history, and scroll to it
     if (shuffle && shuffleHistory.length > 0) {
       const previousSong = shuffleHistory[shuffleHistory.length - 1];
-      const previousSongMeta = filteredLibrary[previousSong];
-      await playSong(previousSong, previousSongMeta);
-      // find the index of the song within the library
-      const historicalSongIndex = keys.indexOf(previousSong);
-      setOverrideScrollToIndex(historicalSongIndex);
-      // then pop the song from the history
+      await playSong(previousSong, filteredLibrary[previousSong]);
+      setOverrideScrollToIndex(keys.indexOf(previousSong));
       setShuffleHistory(shuffleHistory.slice(0, -1));
       return;
     }
 
-    const previousSong = keys[previousSongIndex];
-    const previousSongMeta = filteredLibrary[previousSong];
-    await playSong(previousSong, previousSongMeta);
+    const prevIndex = currentIndex - 1 < 0 ? keys.length - 1 : currentIndex - 1;
+    const prevSong = keys[prevIndex];
+    await playSong(prevSong, filteredLibrary[prevSong]);
   };
 
-  /**
-   * @dev allow user to select a directory and import all songs within it
-   */
   const importNewLibrary = async (rescan = false) => {
-    // fires when one song is imported
-    // used for the importing UX with progress
-    window.electron.ipcRenderer.on('song-imported', (args) => {
-      setShowImportingProgress(true);
-      setSongsImported(args.songsImported);
-      setTotalSongs(args.totalSongs);
+    setDialogState((prev) => ({ ...prev, showImportingProgress: true }));
 
-      // @note: completion time is roughly 5ms/song
-      const estimatedTimeRemaining = Math.floor(
-        (args.totalSongs - args.songsImported) * 5,
-      );
-
-      // convert the estimated time from ms to a human readable format
-      const minutes = Math.floor(estimatedTimeRemaining / 60000);
-      const seconds = Math.floor(estimatedTimeRemaining / 1000);
-      const timeRemainingString =
-        // eslint-disable-next-line no-nested-ternary
-        minutes < 1
-          ? seconds === 0
-            ? 'Processing...'
-            : `${seconds}s left`
-          : `${minutes}mins left`;
-      setEstimatedTimeRemainingString(timeRemainingString);
-    });
-
-    // fires once the import is complete
-    window.electron.ipcRenderer.once('select-library', (arg) => {
-      // exit early if the user canceled or the args are malformed
-      if (!arg || !arg.library) {
-        setShowImportingProgress(false);
-        return;
-      }
-
-      // reset the library, the filtered library
-      setLibraryInStore(arg.library);
-      setFilteredLibrary(arg.library);
-
-      // set current song to the first song in the library
-      const firstSong = Object.keys(arg.library)[0];
-      setCurrentSong(firstSong, storeLibrary);
-
-      setPaused(true);
-      setInitialScrollIndex(2);
-      setShowImportingProgress(false);
-
-      // reset the internal ux of the progress bar for next time its used
-      // do it way after the importing progress dialog is closed
-      // so that the ux update does not get batched together
-      window.setTimeout(() => {
-        setSongsImported(0);
-        setTotalSongs(0);
-      }, 100);
-    });
-
-    // request that the user selects a directory and that main process processes
     window.electron.ipcRenderer.sendMessage('select-library', {
       rescan,
     });
+
+    window.electron.ipcRenderer.once('song-imported', (args) => {
+      setImportState((prev) => ({
+        ...prev,
+        songsImported: args.songsImported,
+        totalSongs: args.totalSongs,
+      }));
+
+      // Calculate estimated time remaining
+      const timePerSong = 0.1; // seconds per song (approximate)
+      const remainingSongs = args.totalSongs - args.songsImported;
+      const estimatedSeconds = remainingSongs * timePerSong;
+      const minutes = Math.floor(estimatedSeconds / 60);
+      const seconds = Math.floor(estimatedSeconds % 60);
+
+      setImportState((prev) => ({
+        ...prev,
+        estimatedTimeRemainingString: `${minutes}:${seconds
+          .toString()
+          .padStart(2, '0')}`,
+      }));
+    });
+
+    window.electron.ipcRenderer.once('select-library', (store) => {
+      setInitialized(true);
+      if (store) {
+        setLibraryInStore(store.library);
+        setFilteredLibrary(store.library);
+      }
+      setDialogState((prev) => ({ ...prev, showImportingProgress: false }));
+    });
   };
 
-  /**
-   * @dev useEffect to initialize the app and set up the internal store
-   * for the library etc. also sets the current song and album art.
-   * also sets the row container height for the library list.
-   * also sets the initial scroll index to the last played song.
-   * also sets up the menu callbacks for the main process.
-   */
   useEffect(() => {
-    window.electron.ipcRenderer.once('initialize', (arg) => {
-      setInitialized(true);
-      setLibraryInStore(arg.library);
-      setFilteredLibrary(arg.library);
+    const handlers = {
+      initialize: (arg: ResponseArgs['initialize']) => {
+        setInitialized(true);
+        setLibraryInStore(arg.library);
+        setFilteredLibrary(arg.library);
+        if (arg.lastPlayedSong) {
+          setCurrentSong(arg.lastPlayedSong, arg.library);
+          const songIndex = Object.keys(arg.library).findIndex(
+            (song) => song === arg.lastPlayedSong,
+          );
+          setImportState((prev) => ({
+            ...prev,
+            initialScrollIndex: songIndex,
+          }));
+        }
+      },
+      'update-store': (arg: ResponseArgs['update-store']) => {
+        setInitialized(true);
+        setDialogState((prev) => ({ ...prev, showDedupingProgress: false }));
+        setLibraryInStore(arg.store.library);
+        setFilteredLibrary(arg.store.library);
+        if (arg.scrollToIndex) {
+          setImportState((prev) => ({
+            ...prev,
+            initialScrollIndex: arg.scrollToIndex,
+          }));
+        }
+      },
+      'menu-toggle-browser': () => {
+        setDialogState((prev) => ({ ...prev, showBrowser: true }));
+      },
+      'menu-select-library': () => {
+        importNewLibrary();
+      },
+      'menu-rescan-library': () => {
+        importNewLibrary(true);
+      },
+      'menu-add-songs': () => {
+        (
+          importNewSongsButtonRef.current?.firstChild as HTMLButtonElement
+        )?.click();
+      },
+      'menu-backup-library': () => {
+        setDialogState((prev) => ({ ...prev, showBackupConfirmation: true }));
+      },
+      'menu-delete-dupes': () => {
+        setDialogState((prev) => ({
+          ...prev,
+          showConfirmDedupeAndDelete: true,
+        }));
+      },
+      'menu-hide-dupes': () => {
+        setDialogState((prev) => ({
+          ...prev,
+          showConfirmDedupeAndDelete: false,
+          showDedupingProgress: true,
+        }));
+        window.electron.ipcRenderer.sendMessage('menu-hide-dupes');
+      },
+      'backup-library-success': () => {
+        setDialogState((prev) => ({
+          ...prev,
+          showBackingUpLibrary: false,
+          showBackupConfirmation: false,
+        }));
+      },
+    };
 
-      if (arg.lastPlayedSong) {
-        setCurrentSong(arg.lastPlayedSong, storeLibrary);
-
-        /**
-         * find the index of the song within the library
-         * and scroll to it on boot
-         */
-        const songIndex = Object.keys(arg.library).findIndex(
-          (song) => song === arg.lastPlayedSong,
-        );
-        setInitialScrollIndex(songIndex);
-      }
-    });
-
-    window.electron.ipcRenderer.on('update-store', (arg) => {
-      setInitialized(true);
-      setShowDedupingProgress(false);
-      setLibraryInStore(arg.store.library);
-      setFilteredLibrary(arg.store.library);
-      if (arg.scrollToIndex) {
-        setInitialScrollIndex(arg.scrollToIndex);
-      }
-    });
-
-    window.electron.ipcRenderer.on('menu-select-library', () => {
-      importNewLibrary();
-    });
-
-    window.electron.ipcRenderer.on('menu-rescan-library', () => {
-      importNewLibrary(true);
-    });
-
-    window.electron.ipcRenderer.on('menu-add-songs', () => {
-      // @dev: click the button inside the div for the import button
-      // to trigger the import dialog UX, that way I can keep all that
-      // logic in the ImportNewSongsButton component
-      importNewSongsButtonRef.current?.querySelector('button')?.click();
-    });
-
-    window.electron.ipcRenderer.on('menu-reset-library', () => {
-      window.electron.ipcRenderer.sendMessage('menu-reset-library');
-    });
-
-    window.electron.ipcRenderer.on('menu-hide-dupes', () => {
-      setShowDedupingProgress(true);
-      // responds with 'update-store' on completion
-      window.electron.ipcRenderer.sendMessage('menu-hide-dupes');
-    });
-
-    window.electron.ipcRenderer.on('menu-delete-dupes', () => {
-      // open the confirmation dialog, which handles the other ipc calls
-      setShowConfirmDedupeAndDeleteDialog(true);
-      // eventually this will respond with 'update-store' on completion
-    });
-
-    window.electron.ipcRenderer.on('menu-backup-library', () => {
-      // open the confirmation dialog, which handles the other ipc calls
-      setShowBackupConfirmationDialog(true);
-    });
-
-    window.electron.ipcRenderer.once('backup-library-success', () => {
-      // close the dialogs
-      setShowBackingUpLibraryDialog(false);
-      setShowBackupConfirmationDialog(false);
+    Object.entries(handlers).forEach(([event, handler]) => {
+      window.electron.ipcRenderer.on(event as Channels, handler as any);
     });
 
     window.addEventListener('toggle-browser-view', () => {
-      setShowBrowser((prev) => !prev);
+      setDialogState((prev) => ({ ...prev, showBrowser: true }));
     });
 
-    window.electron.ipcRenderer.on('menu-toggle-browser', () => {
-      setShowBrowser((prev) => !prev);
-    });
+    navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
+    navigator.mediaSession.setActionHandler('nexttrack', playNextSong);
+
+    return () => {
+      // Cleanup handlers if needed in the future here
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /**
-   * @dev anytime initial scroll index changes, set a timeout to
-   * reset it to undefined after 10ms. this is to prevent the
-   * library list from scrolling to the wrong index when the
-   * library is updated.
-   */
-  useEffect(() => {
-    if (initialScrollIndex !== undefined) {
-      setTimeout(() => {
-        setInitialScrollIndex(undefined);
-      }, 10);
-    }
-  }, [initialScrollIndex]);
-
-  navigator.mediaSession.setActionHandler('previoustrack', () => {
-    playPreviousSong();
-  });
-  navigator.mediaSession.setActionHandler('nexttrack', () => {
-    playNextSong();
-  });
 
   return (
     <div ref={ref} className="h-full flex flex-col dark">
       {width && height && (
         <WindowDimensionsProvider height={height} width={width}>
-          {/**
-           * @important This is the hidden audio tag that plays the song.
-           * We sync the player store's state with the audio tag's state
-           * to keep the UI in sync (time, pause, play).
-           * We use the onEnded event to autoplay the next song.
-           * We use the ref to easily trigger play/pause with the UI.
-           */}
           <audio
             ref={audioTagRef}
             autoPlay={!paused}
             className="hidden"
             onEnded={playNextSong}
-            onPause={() => {
-              setPaused(true);
-            }}
-            onPlay={() => {
-              setPaused(false);
-            }}
-            onTimeUpdate={(e) => {
-              setCurrentSongTime(e.currentTarget.currentTime);
-            }}
+            onPause={() => setPaused(true)}
+            onPlay={() => setPaused(false)}
+            onTimeUpdate={(e) =>
+              setCurrentSongTime(e.currentTarget.currentTime)
+            }
             src={`my-magic-protocol://getMediaFile/${currentSong}`}
           />
+
+          {/* Dialogs */}
           <ImportProgressDialog
-            estimatedTimeRemainingString={estimatedTimeRemainingString}
-            open={showImportingProgress}
-            songsImported={songsImported}
-            totalSongs={totalSongs}
+            // eslint-disable-next-line react/jsx-props-no-spreading
+            {...importState}
+            open={dialogState.showImportingProgress}
           />
-          <DedupingProgressDialog open={showDedupingProgress} />
+          <DedupingProgressDialog open={dialogState.showDedupingProgress} />
           <BackupConfirmationDialog
             onBackup={() => {
-              setShowBackupConfirmationDialog(false);
-              setShowBackingUpLibraryDialog(true);
+              setDialogState((prev) => ({
+                ...prev,
+                showBackupConfirmation: false,
+                showBackingUpLibrary: true,
+              }));
               window.electron.ipcRenderer.sendMessage('menu-backup-library');
             }}
-            onClose={() => setShowBackupConfirmationDialog(false)}
-            open={showBackupConfirmationDialog}
+            onClose={() =>
+              setDialogState((prev) => ({
+                ...prev,
+                showBackupConfirmation: false,
+              }))
+            }
+            open={dialogState.showBackupConfirmation}
           />
-          <BackingUpLibraryDialog open={showBackingUpLibraryDialog} />
+          <BackingUpLibraryDialog open={dialogState.showBackingUpLibrary} />
           <ConfirmDedupingDialog
-            onClose={() => setShowConfirmDedupeAndDeleteDialog(false)}
+            onClose={() =>
+              setDialogState((prev) => ({
+                ...prev,
+                showConfirmDedupeAndDelete: false,
+              }))
+            }
             onConfirm={() => {
-              setShowConfirmDedupeAndDeleteDialog(false);
-              setShowDedupingProgress(true);
-              // @note: responds with update-store
+              setDialogState((prev) => ({
+                ...prev,
+                showConfirmDedupeAndDelete: false,
+                showDedupingProgress: true,
+              }));
               window.electron.ipcRenderer.sendMessage('menu-delete-dupes');
             }}
-            open={showConfirmDedupeAndDeleteDialog}
+            open={dialogState.showConfirmDedupeAndDelete}
           />
-          {/**
-           * @dev top chunk of the screen's UX
-           */}
+
+          {/* Main Content */}
           <div className="flex art drag justify-center p-4 space-x-4 md:flex-row">
             <AlbumArt
               setShowAlbumArtMenu={setShowAlbumArtMenu}
               showAlbumArtMenu={showAlbumArtMenu}
             />
-
             <div ref={importNewSongsButtonRef}>
               <ImportNewSongsButton
-                setEstimatedTimeRemainingString={
-                  setEstimatedTimeRemainingString
+                setEstimatedTimeRemainingString={(str) =>
+                  setImportState((prev) => ({
+                    ...prev,
+                    estimatedTimeRemainingString: str,
+                  }))
                 }
-                setInitialScrollIndex={setInitialScrollIndex}
-                setShowImportingProgress={setShowImportingProgress}
-                setSongsImported={setSongsImported}
-                setTotalSongs={setTotalSongs}
+                setInitialScrollIndex={(idx) =>
+                  setImportState((prev) => ({
+                    ...prev,
+                    initialScrollIndex: idx,
+                  }))
+                }
+                setShowImportingProgress={(show) =>
+                  setDialogState((prev) => ({
+                    ...prev,
+                    showImportingProgress: show,
+                  }))
+                }
+                setSongsImported={(num) =>
+                  setImportState((prev) => ({ ...prev, songsImported: num }))
+                }
+                setTotalSongs={(num) =>
+                  setImportState((prev) => ({ ...prev, totalSongs: num }))
+                }
               />
             </div>
-
             <SearchBar className="absolute h-[45px] top-4 md:top-4 md:right-[4.5rem] right-4 w-auto text-white" />
           </div>
 
-          {showBrowser && <Browser onClose={() => setShowBrowser(false)} />}
+          {dialogState.showBrowser && (
+            <Browser
+              onClose={() =>
+                setDialogState((prev) => ({ ...prev, showBrowser: false }))
+              }
+            />
+          )}
 
-          {/**
-           * @dev middle chunk of the screen's UX
-           */}
           {width && (
             <LibraryList
-              initialScrollIndex={initialScrollIndex}
+              initialScrollIndex={importState.initialScrollIndex}
               onImportLibrary={importNewLibrary}
               playSong={async (song, meta) => {
-                // if the user clicks on the currently playing song, start it over
-                if (currentSong === song) {
-                  await startCurrentSongOver();
-                } else {
-                  await playSong(song, meta);
-                }
+                await (currentSong === song
+                  ? startCurrentSongOver()
+                  : playSong(song, meta));
               }}
             />
           )}
-          {/**
-           * @dev bottom chunk of the screen's UX
-           */}
+
           <StaticPlayer
             audioTagRef={audioTagRef}
             playNextSong={playNextSong}
