@@ -338,8 +338,11 @@ export default function Main() {
     window.electron.ipcRenderer.on('update-store', (arg) => {
       setInitialized(true);
       setShowDedupingProgress(false);
-      setLibraryInStore(arg.library);
-      setFilteredLibrary(arg.library);
+      setLibraryInStore(arg.store.library);
+      setFilteredLibrary(arg.store.library);
+      if (arg.scrollToIndex) {
+        setInitialScrollIndex(arg.scrollToIndex);
+      }
     });
 
     window.electron.ipcRenderer.on('menu-select-library', () => {

@@ -319,13 +319,20 @@ ipcMain.on('get-album-art', async (event, arg: string) => {
 ipcMain.on('hide-song', async (event, arg) => {
   const userConfig = getUserConfig();
 
+  // get the index of the song in the library
+  const index = Object.keys(userConfig.library).findIndex(
+    (key) => key === arg.song,
+  );
   delete userConfig.library[arg.song];
   const updatedStore = {
     ...userConfig,
   };
   writeFileSyncToUserConfig(updatedStore);
 
-  event.reply('update-store', updatedStore);
+  event.reply('update-store', {
+    store: updatedStore,
+    scrollToIndex: index,
+  });
 });
 
 /**
@@ -334,6 +341,10 @@ ipcMain.on('hide-song', async (event, arg) => {
 ipcMain.on('delete-song', async (event, arg) => {
   const userConfig = getUserConfig();
 
+  // get the index of the song in the library
+  const index = Object.keys(userConfig.library).findIndex(
+    (key) => key === arg.song,
+  );
   delete userConfig.library[arg.song];
   fs.unlinkSync(arg.song);
   const updatedStore = {
@@ -347,7 +358,10 @@ ipcMain.on('delete-song', async (event, arg) => {
    * that the user was at before deleting the song and then scroll
    * back to that index.
    */
-  event.reply('update-store', updatedStore);
+  event.reply('update-store', {
+    store: updatedStore,
+    scrollToIndex: index,
+  });
 });
 
 /**
@@ -367,6 +381,11 @@ ipcMain.on('delete-album', async (event, arg) => {
       userConfig.library[key].common.album === album,
   );
 
+  // get the index of the first song we're deleting
+  const index = Object.keys(userConfig.library).findIndex(
+    (key) => key === songsToDelete[0],
+  );
+
   songsToDelete.forEach((songToDelete) => {
     delete userConfig.library[songToDelete];
     fs.unlinkSync(songToDelete);
@@ -384,13 +403,18 @@ ipcMain.on('delete-album', async (event, arg) => {
    * that the user was at before deleting the album and then scroll
    * back to that index.
    */
-  event.reply('update-store', updatedStore);
+  event.reply('update-store', {
+    store: updatedStore,
+    scrollToIndex: index,
+  });
 });
 
 /**
  * @dev for hiding duplicate songs in the user's library
  */
 ipcMain.on('menu-hide-dupes', async (event) => {
+  // @TODO: pass the current scroll index to the hideOrDeleteDupes function
+  // that way we can scroll back to the same index after hiding the dupes
   const updatedStore = await hideOrDeleteDupes(event, false);
   writeFileSyncToUserConfig(updatedStore);
   /**
@@ -399,7 +423,9 @@ ipcMain.on('menu-hide-dupes', async (event) => {
    * that the user was at before deleting the album and then scroll
    * back to that index.
    */
-  event.reply('update-store', updatedStore);
+  event.reply('update-store', {
+    store: updatedStore,
+  });
 });
 
 /**
@@ -414,7 +440,9 @@ ipcMain.on('menu-delete-dupes', async (event) => {
    * that the user was at before deleting the album and then scroll
    * back to that index.
    */
-  event.reply('update-store', updatedStore);
+  event.reply('update-store', {
+    store: updatedStore,
+  });
 });
 
 /**

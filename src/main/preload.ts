@@ -79,7 +79,10 @@ export interface ResponseArgs extends ArgsBase {
     song: string;
     songData: StoreStructure['library'][string];
   };
-  'update-store': StoreStructure;
+  'update-store': {
+    store: StoreStructure;
+    scrollToIndex?: number;
+  };
   'backup-library-success': undefined;
 }
 
