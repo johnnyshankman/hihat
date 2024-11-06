@@ -15,7 +15,7 @@ interface PlayerStore {
   volume: number;
   currentSongTime: number;
   filteredLibrary: { [key: string]: LightweightAudioMetadata };
-  overrideScrollToIndex: number | undefined;
+  overrideScrollToIndex: number;
   shuffleHistory: string[];
 
   /**
@@ -51,7 +51,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   volume: 100,
   currentSongTime: 0,
   filteredLibrary: {},
-  overrideScrollToIndex: undefined,
+  overrideScrollToIndex: -1,
   shuffleHistory: [],
 
   /**

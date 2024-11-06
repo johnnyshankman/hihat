@@ -263,9 +263,7 @@ export default function SongProgressBar({
             const libraryArray = Object.values(filteredLibrary);
             const index = libraryArray.findIndex(
               (song) =>
-                song.common.title === currentSongMetadata.common?.title &&
-                song.common.artist === currentSongMetadata.common?.artist &&
-                song.common.album === currentSongMetadata.common?.album,
+                song.common.artist === currentSongMetadata.common?.artist,
             );
             setOverrideScrollToIndex(index);
           }}

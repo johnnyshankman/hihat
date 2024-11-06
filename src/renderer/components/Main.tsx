@@ -68,7 +68,6 @@ export default function Main() {
     songsImported: 0,
     totalSongs: 0,
     estimatedTimeRemainingString: '',
-    initialScrollIndex: undefined as number | undefined,
   });
   const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
 
@@ -214,10 +213,7 @@ export default function Main() {
           const songIndex = Object.keys(arg.library).findIndex(
             (song) => song === arg.lastPlayedSong,
           );
-          setImportState((prev) => ({
-            ...prev,
-            initialScrollIndex: songIndex,
-          }));
+          setOverrideScrollToIndex(songIndex);
         }
       },
       'update-store': (arg: ResponseArgs['update-store']) => {
@@ -226,10 +222,7 @@ export default function Main() {
         setLibraryInStore(arg.store.library);
         setFilteredLibrary(arg.store.library);
         if (arg.scrollToIndex) {
-          setImportState((prev) => ({
-            ...prev,
-            initialScrollIndex: arg.scrollToIndex,
-          }));
+          setOverrideScrollToIndex(arg.scrollToIndex);
         }
       },
       'menu-toggle-browser': () => {
@@ -362,12 +355,6 @@ export default function Main() {
                     estimatedTimeRemainingString: str,
                   }))
                 }
-                setInitialScrollIndex={(idx) =>
-                  setImportState((prev) => ({
-                    ...prev,
-                    initialScrollIndex: idx,
-                  }))
-                }
                 setShowImportingProgress={(show) =>
                   setDialogState((prev) => ({
                     ...prev,
@@ -395,7 +382,6 @@ export default function Main() {
 
           {width && (
             <LibraryList
-              initialScrollIndex={importState.initialScrollIndex}
               onImportLibrary={importNewLibrary}
               playSong={async (song, meta) => {
                 await (currentSong === song

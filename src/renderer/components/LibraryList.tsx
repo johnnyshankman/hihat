@@ -41,10 +41,6 @@ type FilterDirections = 'asc' | 'desc';
 
 type LibraryListProps = {
   /**
-   * @dev the height of the row container
-   */
-  initialScrollIndex: number | undefined;
-  /**
    * @dev a hook for when the song is double clicked
    */
   playSong: (song: string, info: StoreStructure['library'][string]) => void;
@@ -65,7 +61,6 @@ type SongMenuState =
   | undefined;
 
 export default function LibraryList({
-  initialScrollIndex,
   playSong,
   onImportLibrary,
 }: LibraryListProps) {
@@ -151,22 +146,17 @@ export default function LibraryList({
 
   /**
    * @dev anytime overrideScrollToIndex changes, set a timeout to
-   * reset it to undefined after 10ms. this is to prevent the
+   * reset it to undefined after 200ms. this is to prevent the
    * library list from scrolling to the wrong index when the
    * library is updated.
    */
   useEffect(() => {
     if (overrideScrollToIndex !== undefined) {
       setTimeout(() => {
-        setOverrideScrollToIndex(undefined);
-      }, 10);
+        setOverrideScrollToIndex(-1);
+      }, 200);
     }
   }, [overrideScrollToIndex, setOverrideScrollToIndex]);
-
-  const scrollToIndex =
-    overrideScrollToIndex === undefined
-      ? initialScrollIndex
-      : overrideScrollToIndex;
 
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
@@ -213,6 +203,8 @@ export default function LibraryList({
 
     setColumnUXInfo(newColumnUXInfo);
   };
+
+  console.log('overrideScrollToIndex', overrideScrollToIndex);
 
   /**
    * @dev state
@@ -593,7 +585,7 @@ export default function LibraryList({
             rowHeight={ROW_HEIGHT}
             rowRenderer={renderSongRow}
             scrollToAlignment="center"
-            scrollToIndex={scrollToIndex}
+            scrollToIndex={overrideScrollToIndex}
             width={width}
           />
         )}
