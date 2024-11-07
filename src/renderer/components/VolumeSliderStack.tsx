@@ -20,13 +20,13 @@ export default function VolumeSliderStack({
   };
 
   return (
-    <Box sx={{ width: '75%', maxWidth: 180, minWidth: 80 }}>
+    <Box sx={{ width: '75%', maxWidth: 220, minWidth: 80 }}>
       <Stack
         alignItems="center"
         direction="row"
         justifyContent="center"
         justifyItems="start"
-        spacing={1.5}
+        spacing={0.5}
       >
         <IconButton
           onClick={() => {
