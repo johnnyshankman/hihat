@@ -18,6 +18,11 @@ interface PlayerStore {
   overrideScrollToIndex: number;
   shuffleHistory: string[];
 
+  activeAudioElement: 'A' | 'B';
+  nextSongPreloaded: boolean;
+  nextSongPath: string;
+  nextSongMetadata: LightweightAudioMetadata | null;
+
   /**
    * actions
    */
@@ -36,6 +41,11 @@ interface PlayerStore {
   }) => void;
   setOverrideScrollToIndex: (index: number | undefined) => void;
   setShuffleHistory: (history: string[]) => void;
+
+  setActiveAudioElement: (element: 'A' | 'B') => void;
+  setNextSongPreloaded: (preloaded: boolean) => void;
+  setNextSongPath: (path: string) => void;
+  setNextSongMetadata: (metadata: LightweightAudioMetadata | null) => void;
 }
 
 const usePlayerStore = create<PlayerStore>((set) => ({
@@ -54,6 +64,11 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   overrideScrollToIndex: -1,
   shuffleHistory: [],
 
+  activeAudioElement: 'A',
+  nextSongPreloaded: false,
+  nextSongPath: '',
+  nextSongMetadata: null,
+
   /**
    * action implementations
    */
@@ -63,9 +78,11 @@ const usePlayerStore = create<PlayerStore>((set) => ({
      * @dev set the volume of the audio tag to the new volume automatically
      * as there is only one audio tag in the entire app
      */
-    const audioTag = document.querySelector('audio');
-    if (audioTag) {
-      audioTag.volume = volume / 100;
+    const audioTags = document.querySelectorAll('audio');
+    if (audioTags.length) {
+      audioTags.forEach((audioTag) => {
+        audioTag.volume = volume / 100;
+      });
     }
     return set({ volume });
   },
@@ -132,6 +149,11 @@ const usePlayerStore = create<PlayerStore>((set) => ({
     return set({ overrideScrollToIndex });
   },
   setShuffleHistory: (shuffleHistory) => set({ shuffleHistory }),
+
+  setActiveAudioElement: (element) => set({ activeAudioElement: element }),
+  setNextSongPreloaded: (preloaded) => set({ nextSongPreloaded: preloaded }),
+  setNextSongPath: (path) => set({ nextSongPath: path }),
+  setNextSongMetadata: (metadata) => set({ nextSongMetadata: metadata }),
 }));
 
 export default usePlayerStore;

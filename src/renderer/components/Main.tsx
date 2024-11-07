@@ -22,7 +22,9 @@ type AlbumArtMenuState = { mouseX: number; mouseY: number } | undefined;
 
 export default function Main() {
   const { width, height, ref } = useResizeDetector();
-  const audioTagRef = useRef<HTMLAudioElement>(null);
+  const audioTagRefA = useRef<HTMLAudioElement>(null);
+  const audioTagRefB = useRef<HTMLAudioElement>(null);
+
   const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
   // Main store hooks
@@ -32,6 +34,22 @@ export default function Main() {
   const setInitialized = useMainStore((store) => store.setInitialized);
 
   // Player store hooks
+  const activeAudioElement = usePlayerStore(
+    (store) => store.activeAudioElement,
+  );
+  const setActiveAudioElement = usePlayerStore(
+    (store) => store.setActiveAudioElement,
+  );
+  const nextSongPreloaded = usePlayerStore((store) => store.nextSongPreloaded);
+  const setNextSongPreloaded = usePlayerStore(
+    (store) => store.setNextSongPreloaded,
+  );
+  const nextSongPath = usePlayerStore((store) => store.nextSongPath);
+  const setNextSongPath = usePlayerStore((store) => store.setNextSongPath);
+  const setNextSongMetadata = usePlayerStore(
+    (store) => store.setNextSongMetadata,
+  );
+
   const paused = usePlayerStore((store) => store.paused);
   const setPaused = usePlayerStore((store) => store.setPaused);
   const shuffle = usePlayerStore((store) => store.shuffle);
@@ -71,6 +89,53 @@ export default function Main() {
   });
   const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
 
+  // Add function to preload next song
+  const preloadNextSong = async (currentlyPlayingSong: string) => {
+    if (!filteredLibrary) return;
+    setNextSongPreloaded(false);
+
+    const keys = Object.keys(filteredLibrary);
+    const currentIndex = keys.indexOf(currentlyPlayingSong);
+
+    let nextSong: string;
+    let nextMeta: LightweightAudioMetadata;
+
+    if (shuffle) {
+      const randomIndex = Math.floor(Math.random() * keys.length);
+      nextSong = keys[randomIndex];
+      nextMeta = filteredLibrary[nextSong];
+    } else {
+      const nextIndex = currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
+      nextSong = keys[nextIndex];
+      nextMeta = filteredLibrary[nextSong];
+    }
+
+    const inactiveAudioRef =
+      activeAudioElement === 'A' ? audioTagRefB : audioTagRefA;
+    if (inactiveAudioRef.current) {
+      inactiveAudioRef.current.src = `my-magic-protocol://getMediaFile/${nextSong}`;
+      inactiveAudioRef.current.load();
+
+      await new Promise((resolve) => {
+        const handleCanPlay = () => {
+          inactiveAudioRef.current?.removeEventListener(
+            'canplaythrough',
+            handleCanPlay,
+          );
+          resolve(null);
+        };
+        inactiveAudioRef.current?.addEventListener(
+          'canplaythrough',
+          handleCanPlay,
+        );
+      });
+
+      setNextSongPath(nextSong);
+      setNextSongMetadata(nextMeta);
+      setNextSongPreloaded(true);
+    }
+  };
+
   const playSong = async (song: string, meta: LightweightAudioMetadata) => {
     const mediaData = {
       title: meta.common.title,
@@ -87,6 +152,15 @@ export default function Main() {
     setCurrentSong(song, storeLibrary);
     setLastPlayedSong(song);
 
+    const activeAudioRef =
+      activeAudioElement === 'A' ? audioTagRefA : audioTagRefB;
+    if (activeAudioRef.current) {
+      activeAudioRef.current.src = `my-magic-protocol://getMediaFile/${song}`;
+      activeAudioRef.current.play();
+    }
+
+    await preloadNextSong(song);
+
     window.electron.ipcRenderer.once('set-last-played-song', (args) => {
       const newLibrary = { ...storeLibrary, [args.song]: args.songData };
       setLibraryInStore(newLibrary);
@@ -98,9 +172,7 @@ export default function Main() {
   };
 
   const startCurrentSongOver = () =>
-    // eslint-disable-next-line consistent-return
     new Promise((resolve, reject) => {
-      // eslint-disable-next-line no-promise-executor-return
       if (!currentSong || !currentSongMetadata) return reject();
       setCurrentSong('', filteredLibrary);
       setTimeout(() => {
@@ -177,7 +249,6 @@ export default function Main() {
         totalSongs: args.totalSongs,
       }));
 
-      // Calculate estimated time remaining
       const timePerSong = 0.1; // seconds per song (approximate)
       const remainingSongs = args.totalSongs - args.songsImported;
       const estimatedSeconds = remainingSongs * timePerSong;
@@ -214,6 +285,8 @@ export default function Main() {
             (song) => song === arg.lastPlayedSong,
           );
           setOverrideScrollToIndex(songIndex);
+          setActiveAudioElement('A');
+          preloadNextSong(arg.lastPlayedSong);
         }
       },
       'update-store': (arg: ResponseArgs['update-store']) => {
@@ -285,17 +358,79 @@ export default function Main() {
     <div ref={ref} className="h-full flex flex-col dark">
       {width && height && (
         <WindowDimensionsProvider height={height} width={width}>
+          {/* Audio Element A */}
           <audio
-            ref={audioTagRef}
-            autoPlay={!paused}
-            className="hidden"
-            onEnded={playNextSong}
+            ref={audioTagRefA}
+            className="hidden one"
+            id={activeAudioElement === 'A' ? 'active' : ''}
+            muted={activeAudioElement === 'B'}
+            // For Audio Element A
+            onEnded={() => {
+              if (nextSongPreloaded && audioTagRefA.current) {
+                // Switch to the preloaded audio element
+                setActiveAudioElement('B');
+
+                // Update the current song UX state
+                setCurrentSong(nextSongPath, storeLibrary);
+                setLastPlayedSong(nextSongPath);
+
+                // Play the preloaded audio element
+                audioTagRefB.current?.play();
+
+                // Preload the next song using nextSongPath as reference
+                // @DEBUG broken
+                window.setTimeout(() => {
+                  preloadNextSong(nextSongPath);
+                }, 1000);
+              } else {
+                playNextSong();
+              }
+            }}
             onPause={() => setPaused(true)}
             onPlay={() => setPaused(false)}
             onTimeUpdate={(e) =>
               setCurrentSongTime(e.currentTarget.currentTime)
             }
-            src={`my-magic-protocol://getMediaFile/${currentSong}`}
+            preload="auto"
+          />
+
+          {/* Audio Element B */}
+          <audio
+            ref={audioTagRefB}
+            className="hidden two"
+            id={activeAudioElement === 'B' ? 'active' : ''}
+            muted={activeAudioElement !== 'B'}
+            // For Audio Element A
+            onEnded={() => {
+              if (nextSongPreloaded && audioTagRefA.current) {
+                // Switch to the preloaded audio element
+                setActiveAudioElement('A');
+
+                // Update the current song UX state
+                setCurrentSong(nextSongPath, storeLibrary);
+                setLastPlayedSong(nextSongPath);
+
+                // Play the preloaded audio element
+                audioTagRefA.current?.play();
+
+                // Preload the next song using nextSongPath as reference
+                // @DEBUG broken
+                window.setTimeout(() => {
+                  preloadNextSong(nextSongPath);
+                }, 1000);
+              } else {
+                playNextSong();
+              }
+            }}
+            onPause={() => setPaused(true)}
+            onPlay={() => {
+              console.log('played 2!!!');
+              setPaused(false);
+            }}
+            onTimeUpdate={(e) =>
+              setCurrentSongTime(e.currentTarget.currentTime)
+            }
+            preload="auto"
           />
 
           {/* Dialogs */}
@@ -395,7 +530,8 @@ export default function Main() {
           )}
 
           <StaticPlayer
-            audioTagRef={audioTagRef}
+            audioTagRefA={audioTagRefA}
+            audioTagRefB={audioTagRefB}
             playNextSong={playNextSong}
             playPreviousSong={playPreviousSong}
           />
