@@ -96,16 +96,16 @@ Almost every format under the sun is supported, and they can all be mixed togeth
 Just to name a few:
 * MP3
 * MP4
+* M4A
 * AAC
-* Ogg Vorbis
 * WAV
 * FLAC
 * ALAC
 * Opus
+* Ogg Vorbis
 * PCM
 
-Audio files which cannot contain album art metadata will not display album art (such as WAV). *hihat* does **not** support video files of any sort and never plans to support AAX audiobooks.
-
+Audio files which cannot contain album art metadata will not display album art (such as WAV). *hihat* does not support video files and never plans to support AAX audiobooks.
 
 If you'd like to see more detailed information, check out:
 * [The Chromium Project](https://www.chromium.org/audio-video/) for info on supported audio formats.
