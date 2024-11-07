@@ -204,8 +204,6 @@ export default function LibraryList({
     setColumnUXInfo(newColumnUXInfo);
   };
 
-  console.log('overrideScrollToIndex', overrideScrollToIndex);
-
   /**
    * @dev state
    */
