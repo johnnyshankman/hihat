@@ -60,7 +60,7 @@ export default function AlbumArt({
   if (!currentSongDataURL) {
     return (
       <div
-        className="relative aspect-square w-[40%] bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-500"
+        className="relative aspect-square w-[40%] bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-200"
         style={{
           maxWidth: `${albumArtMaxWidth}px`,
         }}

@@ -475,9 +475,6 @@ export default function LibraryList({
 
   return (
     <div className="w-full">
-      {/**
-       * @dev this is the menu that pops up when the user right clicks on a song
-       */}
       {songMenu && (
         <SongRightClickMenu
           anchorEl={songMenu?.anchorEl}
@@ -490,7 +487,11 @@ export default function LibraryList({
           songInfo={songMenu?.songInfo}
         />
       )}
+
       <div className="w-full text-[11px]">
+        {/**
+         * @dev the header of the library list
+         */}
         <div className="sticky top-0 z-50 bg-[#0d0d0d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
           <div className="flex transition-colors divide-neutral-800 divide-x mr-4">
             {FILTER_TYPES.map((filter, index) => (
@@ -538,7 +539,7 @@ export default function LibraryList({
                             setIsDragging(false);
                           }, 100);
                         }}
-                        // @ts-expect-error - purposely breaking the lib so transform results in bunk transform
+                        // @ts-expect-error - purposely breaking the lib so transform results in bunk transform and gives me the ability to drag the column
                         position={{ x: 0 }}
                       >
                         <DragIndicator fontSize="inherit" />
@@ -551,7 +552,7 @@ export default function LibraryList({
         </div>
 
         {/**
-         * @dev Loading UX for when the library is being loaded from main process over IPC
+         * @dev Loading UX for when the library is being loaded from main process over IPC.
          */}
         {!initialized && (
           <div
@@ -573,10 +574,10 @@ export default function LibraryList({
           </div>
         )}
 
-        {/**
-         * @dev since the list could be 1000s of songs long we must virtualize it
-         */}
-        {initialized && width && hasSongs && (
+        {initialized && width && hasSongs > 0 && (
+          /**
+           * @dev Virtualized list of songs
+           */
           <List
             height={rowContainerHeight}
             rowCount={Object.keys(filteredLibrary || {}).length}
@@ -588,10 +589,10 @@ export default function LibraryList({
           />
         )}
 
-        {/**
-         * @dev FTUE for when the user has no songs in their library
-         */}
-        {!hasSongs && initialized && (
+        {initialized && width && !hasSongs && (
+          /**
+           * @dev FTUX for when the library is empty
+           */
           <div
             className="w-full flex items-center justify-center"
             style={{
