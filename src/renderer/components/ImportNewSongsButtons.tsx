@@ -8,7 +8,6 @@ interface ImportNewSongsButtonProps {
   setSongsImported: (count: number) => void;
   setTotalSongs: (count: number) => void;
   setEstimatedTimeRemainingString: (time: string) => void;
-  setInitialScrollIndex: (index: number | undefined) => void;
 }
 
 export default function ImportNewSongsButton({
@@ -16,7 +15,6 @@ export default function ImportNewSongsButton({
   setSongsImported,
   setTotalSongs,
   setEstimatedTimeRemainingString,
-  setInitialScrollIndex,
 }: ImportNewSongsButtonProps) {
   /**
    * @dev global store hooks
@@ -25,6 +23,9 @@ export default function ImportNewSongsButton({
     (store) => store.setFilteredLibrary,
   );
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
+  const setOverrideScrollToIndex = usePlayerStore(
+    (store) => store.setOverrideScrollToIndex,
+  );
 
   const importNewSongs = async () => {
     window.electron.ipcRenderer.on('song-imported', (args) => {
@@ -56,7 +57,7 @@ export default function ImportNewSongsButton({
 
       setLibraryInStore(arg.library);
       setFilteredLibrary(arg.library);
-      setInitialScrollIndex(arg.scrollToIndex);
+      setOverrideScrollToIndex(arg.scrollToIndex);
       setShowImportingProgress(false);
 
       window.setTimeout(() => {

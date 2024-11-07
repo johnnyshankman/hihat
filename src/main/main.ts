@@ -868,7 +868,6 @@ ipcMain.on('menu-backup-library', async (event, _arg): Promise<any> => {
 
   if (backupPath) {
     const rsync = new Rsync();
-
     rsync
       .set('ignore-existing')
       .flags(['v', 'P', 'r', 'h'])
@@ -877,9 +876,11 @@ ipcMain.on('menu-backup-library', async (event, _arg): Promise<any> => {
 
     // Execute the command
     rsync.execute((error, code, cmd) => {
-      // we are done, respond to the renderer process
-      console.log('rsync error:', error);
       console.log('rsync command:', cmd);
+      if (error) {
+        console.error('rsync error:', error);
+      }
+      // we are done, respond to the renderer process
       event.reply('backup-library-success');
     });
   }
