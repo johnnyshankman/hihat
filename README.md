@@ -154,6 +154,8 @@ You are now all set.
 3. hihat will copy these files into your library folder (and intelligently ignore all non-music files)
 
 <img width="747" alt="Screenshot 2024-09-15 at 8 40 37 PM" src="https://github.com/user-attachments/assets/eb899b57-99a5-4110-8873-83bec7f6970a">
+
+You'll see the progress of your import
 <img width="677" alt="Screenshot 2024-09-15 at 8 37 54 PM" src="https://github.com/user-attachments/assets/5ac58659-bf89-420a-a69f-0f1d04aefb38">
 
 ### Rescanning Your Library
