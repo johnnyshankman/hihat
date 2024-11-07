@@ -84,7 +84,7 @@ All wrapped up in a minimalist dark-mode design that's easy on the eyes during l
 * smart library deduplicator
 * nested folder support (finds all music files)
 * legacy iTunes library importing
-* one-click Apple Music or Spotify lookup
+* Apple Music and Spotify song lookup in one click
 * sync your library to a backup drive or device running [Rockbox](https://www.rockbox.org/) in one click
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
