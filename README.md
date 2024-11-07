@@ -137,6 +137,9 @@ You are now all set.
 3. Wait for the import process to complete (about 1 minute per 10,000 songs).
 4. You're all set! Your music library is now ready to use.
 
+<img width="681" alt="Screenshot 2024-11-07 at 5 41 45 PM" src="https://github.com/user-attachments/assets/3a66aabb-43e8-4ba8-b6ce-3340c102dad7">
+
+
 ### Playing Songs
 
 * Double click on a song to play it
