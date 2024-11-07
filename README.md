@@ -104,6 +104,10 @@ Just to name a few:
 * Opus
 * PCM
 
+*hihat* does **not** support video files of any sort (yet) and never plans to support AAX. 
+
+Audio files which cannot contain album art metadata will not display album art (such as WAV).
+
 If you'd like to see more detailed information, check out:
 * [The Chromium Project](https://www.chromium.org/audio-video/) for info on supported audio formats.
 * [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
@@ -112,9 +116,7 @@ Don't know where to download files of your favorite albums and tracks? I suggest
 * [tidal-media-downloader](https://github.com/yaronzz/Tidal-Media-Downloader) (Works with Tidal)
 * [spotify-downloader](https://github.com/spotDL/spotify-downloader) (Works with Spotify and Youtube Music)
 
-*hihat* does **not** support video files of any sort (yet) and never plans to support AAX. 
 
-Audio files which do not contain album art metadata will not display album art (such as WAV).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
