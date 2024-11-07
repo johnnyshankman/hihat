@@ -263,6 +263,9 @@ export default function Main() {
           showBackupConfirmation: false,
         }));
       },
+      'menu-reset-library': () => {
+        window.electron.ipcRenderer.sendMessage('menu-reset-library');
+      },
     };
 
     Object.entries(handlers).forEach(([event, handler]) => {
