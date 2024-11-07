@@ -1,11 +1,11 @@
 {
   "name": "hihat",
-  "version": "0.0.1",
-  "description": "An elegant music player",
+  "version": "1.0.0",
+  "description": "A minimalist offline music player for OSX audiophiles :: Based on iTunes circa 2002 :: by White Lights",
   "license": "MIT",
   "author": {
-    "name": "Electron React Boilerplate Maintainers",
-    "email": "electronreactboilerplate@gmail.com",
+    "name": "Johnny Shankman aka White Lights",
+    "email": "johnny@white-lights.net",
     "url": "https://github.com/johnnyshankman/hihat"
   },
   "main": "./dist/main/main.js",
