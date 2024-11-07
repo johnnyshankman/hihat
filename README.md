@@ -244,6 +244,7 @@ This project was built with the following technologies:
 - [x] Shuffle songs
 - [x] Repeat song
 - [x] Resort by column
+- [x] When deleting/hiding a song don't lose user's place
 - [x] Support keyboard previous/next
 - [x] Fix the player UX on thin windows (400px)
 - [x] OSX song info in the menu bar tray thing
@@ -267,6 +268,7 @@ This project was built with the following technologies:
 - [x] Mute and max buttons
 - [x] Show stats about your library somewhere, like GB and # of songs
 - [x] iTunes-like browser with list of artist and album filters
+- [x] Quiet mode creating bg music to a video/audiobook/podcast in another app
 - [ ] True gapless playback
 - [ ] Edit song metadata
 - [ ] Hide/show columns in the Library List
