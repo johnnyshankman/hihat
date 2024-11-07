@@ -104,7 +104,7 @@ Just to name a few:
 * Ogg Vorbis
 * PCM
 
-Audio files which cannot contain album art metadata will not display album art (such as WAV). Video files and AAX audiobooksa are not supported.
+Audio files which cannot contain album art metadata will not display album art (such as WAV). Video files and AAX audiobooks are not supported.
 
 If you'd like to see more detailed information, check out:
 * [The Chromium Project](https://www.chromium.org/audio-video/) for info on supported audio formats.
