@@ -95,8 +95,7 @@ Almost every format under the sun is supported, and they can all be mixed togeth
 
 Just to name a few:
 * MP3
-* MP4
-* M4A
+* MP4/M4A
 * AAC
 * WAV
 * FLAC
