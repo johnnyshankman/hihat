@@ -137,7 +137,7 @@ You are now all set.
 3. Wait for the import process to complete (about 1 minute per 10,000 songs).
 4. You're all set! Your music library is now ready to use.
 
-<img width="681" alt="Screenshot 2024-11-07 at 5 41 45 PM" src="https://github.com/user-attachments/assets/3a66aabb-43e8-4ba8-b6ce-3340c102dad7">
+<img width="700" alt="Screenshot 2024-11-07 at 5 41 45 PM" src="https://github.com/user-attachments/assets/3a66aabb-43e8-4ba8-b6ce-3340c102dad7">
 
 
 ### Playing Songs
@@ -145,7 +145,7 @@ You are now all set.
 * Double click on a song to play it
 * Use the playback controls at the bottom of the app to pause, skip, adjust volume, shuffle, or enable song-repeat.
 
-<img width="749" alt="Screenshot 2024-09-15 at 8 39 53 PM" src="https://github.com/user-attachments/assets/1d21bf27-d808-49fb-b5ba-7108454c0dcc">
+<img width="700" alt="Screenshot 2024-09-15 at 8 39 53 PM" src="https://github.com/user-attachments/assets/1d21bf27-d808-49fb-b5ba-7108454c0dcc">
 
 ### Importing Songs
 
@@ -153,10 +153,9 @@ You are now all set.
 2. Select the songs or folders of songs you want to add.
 3. hihat will copy these files into your library folder (and intelligently ignore all non-music files)
 
-<img width="747" alt="Screenshot 2024-09-15 at 8 40 37 PM" src="https://github.com/user-attachments/assets/eb899b57-99a5-4110-8873-83bec7f6970a">
+<img width="700" alt="Screenshot 2024-09-15 at 8 40 37 PM" src="https://github.com/user-attachments/assets/eb899b57-99a5-4110-8873-83bec7f6970a">
 
-You'll see the progress of your import
-<img width="677" alt="Screenshot 2024-09-15 at 8 37 54 PM" src="https://github.com/user-attachments/assets/5ac58659-bf89-420a-a69f-0f1d04aefb38">
+  <img width="700" alt="Screenshot 2024-09-15 at 8 37 54 PM" src="https://github.com/user-attachments/assets/5ac58659-bf89-420a-a69f-0f1d04aefb38">
 
 ### Rescanning Your Library
 
@@ -169,7 +168,7 @@ If you've added songs to your library manually, hihat will not see them. To scan
 
 There is a search bar in the top right for searching through your library.
 
-<img width="754" alt="Screenshot_2024-10-27_at_9_48_50 PM" src="https://github.com/user-attachments/assets/dd01f664-7d8e-42bd-85d0-69ac721c14ce">
+<img width="700" alt="Screenshot_2024-10-27_at_9_48_50 PM" src="https://github.com/user-attachments/assets/dd01f664-7d8e-42bd-85d0-69ac721c14ce">
 
 ### Sorting Your Library
 
@@ -181,7 +180,7 @@ By clicking on the table headers of your library, you can sort by:
 * Date Added
 * Playcount
 
-<img width="751" alt="Screenshot_2024-10-27_at_9_49_32 PM" src="https://github.com/user-attachments/assets/f2b3db65-0572-4e0f-ac6a-e0f9c099c9ea">
+<img width="700" alt="Screenshot_2024-10-27_at_9_49_32 PM" src="https://github.com/user-attachments/assets/f2b3db65-0572-4e0f-ac6a-e0f9c099c9ea">
 
 ### Tips
 
