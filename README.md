@@ -53,7 +53,7 @@ Ever tried Evermusic, Cog, Pine, Swinsian, Plexamp, or VLC? They just don't have
 
 That's why I decided to create *hihat* - a free, open-source music player that ditches ads, respects your privacy, and works perfectly without an internet connection.
 
-All wrapped up in a minimalist dark-mode design that's easy on the eyes during late nights and long listening sessions.
+All wrapped up in a minimalist dark-mode design that's easy on the eyes during late night listening sessions.
 
 <a href="https://whitelights.rip" target="_blank">
 <img width="1608" alt="hihat-preview" src="https://github.com/user-attachments/assets/39784fc5-ce3e-4b9a-8e45-dc35b0dcce38">
