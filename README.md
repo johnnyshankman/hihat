@@ -77,10 +77,10 @@ All wrapped up in a minimalist dark-mode design that's easy on the eyes during l
 * song repeat
 * media key/keyboard support
 * OSX menu bar integration
-* one-click album art downloads
 * playcount tracking
-* quick search
+* quick library search
 * library stats
+* simple album art download
 * smart library deduplicator
 * nested folder support (finds all music files)
 * legacy iTunes library importing
