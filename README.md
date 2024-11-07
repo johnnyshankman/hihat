@@ -304,8 +304,14 @@ _Follow the steps below to install the local development environment and serve t
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
+* node v20
+  ```sh
+  brew install nvm
+  nvm install v20
+  nvm use v20
+  ```
+
+* npm v10 or higher
   ```sh
   npm install npm@latest -g
   ```
