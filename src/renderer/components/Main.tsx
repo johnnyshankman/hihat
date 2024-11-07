@@ -300,9 +300,12 @@ export default function Main() {
 
           {/* Dialogs */}
           <ImportProgressDialog
-            // eslint-disable-next-line react/jsx-props-no-spreading
-            {...importState}
+            estimatedTimeRemainingString={
+              importState.estimatedTimeRemainingString
+            }
             open={dialogState.showImportingProgress}
+            songsImported={importState.songsImported}
+            totalSongs={importState.totalSongs}
           />
           <DedupingProgressDialog open={dialogState.showDedupingProgress} />
           <BackupConfirmationDialog
