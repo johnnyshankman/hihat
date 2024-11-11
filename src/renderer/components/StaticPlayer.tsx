@@ -139,7 +139,6 @@ export default function StaticPlayer({
             disabled={!currentSongMetadata}
             onClick={() => {
               setPaused(!paused);
-              player.playpause();
             }}
           >
             {paused ? (

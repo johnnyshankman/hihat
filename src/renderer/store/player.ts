@@ -28,7 +28,7 @@ interface PlayerStore {
   setPaused: (paused: boolean) => void;
   setShuffle: (shuffle: boolean) => void;
   setRepeating: (repeating: boolean) => void;
-  setCurrentSong: (
+  selectSpecificSong: (
     songPath: string,
     library?: { [key: string]: LightweightAudioMetadata },
   ) => void;
@@ -38,6 +38,7 @@ interface PlayerStore {
   }) => void;
   setOverrideScrollToIndex: (index: number | undefined) => void;
   setShuffleHistory: (history: string[]) => void;
+  playNextSong: () => void;
 }
 
 const usePlayerStore = create<PlayerStore>((set) => ({
@@ -67,11 +68,23 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       return { volume };
     });
   },
-  setPaused: (paused) => set({ paused }),
+  setPaused: (paused) => {
+    return set((state) => {
+      if (paused) {
+        state.player.pause();
+      } else {
+        console.log('playing');
+        state.player.play();
+      }
+      return { paused };
+    });
+  },
   // @note: when shuffle is toggled on or off we clear the shuffle history
   setShuffle: (shuffle) => set({ shuffle, shuffleHistory: [] }),
+  // @note: repeating does not cause the player's trackList to change
   setRepeating: (repeating) => set({ repeating }),
-  setCurrentSong: (songPath: string, library) => {
+  // @note: cues up the next song
+  selectSpecificSong: (songPath: string, library) => {
     return set((state) => {
       if (!library) {
         // eslint-disable-next-line no-console
@@ -82,23 +95,32 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       const songLibrary = library;
       const metadata = songLibrary[songPath];
 
-      /**
-       * @important need this feature so we can restart the currently playing
-       * song by first clearing the current song and then setting it again
-       */
-      if (songPath === '') {
-        return { currentSong: songPath };
-      }
-
       if (!metadata) {
         // eslint-disable-next-line no-console
-        console.warn('No metadata found for song:', songPath);
+        console.warn('No metadata found for requested song:', songPath);
         return {};
       }
 
-      state.player.addTrack(`my-magic-protocol://getMediaFile/${songPath}`);
+      const keys = Object.keys(library);
+      const currentIndex = keys.indexOf(songPath || '');
 
-      // Set album art on response
+      /**
+       * @important handle next song in queue
+       * @note REPEAT situation is not handled here, it's handled
+       * by just calling player.cue() somewhere else
+       */
+      let nextSong = '';
+      if (state.shuffle) {
+        const randomIndex = Math.floor(Math.random() * keys.length);
+        nextSong = keys[randomIndex];
+        state.setShuffleHistory([...state.shuffleHistory, songPath]);
+      } else {
+        const nextIndex =
+          currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
+        nextSong = keys[nextIndex];
+      }
+
+      // Set album art on response to request below
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
         let url = '';
         if (event.data) {
@@ -118,12 +140,64 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         }
       });
 
-      // Request album art, response handler is above
+      // Request album art -- response handler is above
       window.electron.ipcRenderer.sendMessage('get-album-art', songPath);
+
+      state.player.removeAllTracks();
+      state.player.addTrack(`my-magic-protocol://getMediaFile/${songPath}`);
+      state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
+
+      // setup the naviagtor metadata
+      const mediaData = {
+        title: metadata.common.title,
+        artist: metadata.common.artist,
+        album: metadata.common.album,
+      };
+
+      if (navigator.mediaSession.metadata) {
+        Object.assign(navigator.mediaSession.metadata, mediaData);
+      } else {
+        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
+      }
 
       return {
         currentSong: songPath,
         currentSongMetadata: metadata,
+      };
+    });
+  },
+  playNextSong: () => {
+    return set((state) => {
+      state.player.removeTrack(0);
+
+      /**
+       * @important handle putting the next song in track list (spot 1 not 0)
+       * @note REPEAT situation is not handled here, it's handled
+       * by just calling player.cue() somewhere else
+       * @note swapping SHUFFLE or changing the filteredLibrary
+       * will cause recalculation of the 2nd song in the track list
+       */
+      const keys = Object.keys(state.filteredLibrary);
+      const currentIndex = keys.indexOf(state.currentSong);
+      let nextSong = '';
+      if (state.shuffle) {
+        const randomIndex = Math.floor(Math.random() * keys.length);
+        nextSong = keys[randomIndex];
+        state.setOverrideScrollToIndex(randomIndex);
+        state.setShuffleHistory([...state.shuffleHistory, state.currentSong]);
+        state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
+      } else {
+        const nextIndex =
+          currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
+        nextSong = keys[nextIndex];
+        state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
+      }
+
+      console.log(state.player.getTracks());
+
+      return {
+        currentSong: nextSong,
+        currentSongMetadata: state.filteredLibrary[nextSong],
       };
     });
   },

@@ -1,8 +1,6 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import React, { useState, useRef, useEffect } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
-import { Gapless5 } from '@regosen/gapless-5';
-import { LightweightAudioMetadata } from '../../common/common';
 import useMainStore from '../store/main';
 import usePlayerStore from '../store/player';
 import LibraryList from './LibraryList';
@@ -23,7 +21,6 @@ type AlbumArtMenuState = { mouseX: number; mouseY: number } | undefined;
 
 export default function Main() {
   const { width, height, ref } = useResizeDetector();
-  const audioTagRef = useRef<HTMLAudioElement>(null);
   const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
   // Main store hooks
@@ -41,10 +38,9 @@ export default function Main() {
   const currentSong = usePlayerStore((store) => store.currentSong);
   const shuffleHistory = usePlayerStore((store) => store.shuffleHistory);
   const setShuffleHistory = usePlayerStore((store) => store.setShuffleHistory);
-  const currentSongMetadata = usePlayerStore(
-    (store) => store.currentSongMetadata,
+  const selectSpecificSong = usePlayerStore(
+    (store) => store.selectSpecificSong,
   );
-  const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
   const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
@@ -56,6 +52,7 @@ export default function Main() {
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
   );
+  const playNextSong = usePlayerStore((store) => store.playNextSong);
 
   // Component state
   const [dialogState, setDialogState] = useState({
@@ -73,108 +70,45 @@ export default function Main() {
   });
   const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
 
-  const playSong = async (song: string, meta: LightweightAudioMetadata) => {
-    const mediaData = {
-      title: meta.common.title,
-      artist: meta.common.artist,
-      album: meta.common.album,
-    };
+  const playSpecificSong = async (song: string) => {
+    // update player store
+    selectSpecificSong(song, storeLibrary);
 
-    if (navigator.mediaSession.metadata) {
-      Object.assign(navigator.mediaSession.metadata, mediaData);
-    } else {
-      navigator.mediaSession.metadata = new MediaMetadata(mediaData);
-    }
-
-    setCurrentSong(song, storeLibrary);
+    // update main store and the user config with last played song
     setLastPlayedSong(song);
-    setPaused(false);
-    player.play();
-
     window.electron.ipcRenderer.once('set-last-played-song', (args) => {
       const newLibrary = { ...storeLibrary, [args.song]: args.songData };
       setLibraryInStore(newLibrary);
       setFilteredLibrary({ ...filteredLibrary, [args.song]: args.songData });
+
+      // play the song
+      setPaused(false);
     });
-
-    console.log('tracks', player.getTracks());
-
     window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
-
-    if (!filteredLibrary) return;
-
-    const keys = Object.keys(filteredLibrary);
-    const currentIndex = keys.indexOf(currentSong || '');
-
-    if (repeating && currentSong && currentSongMetadata) {
-      player.addTrack(`my-magic-protocol://getMediaFile/${currentSong}`);
-      return;
-    }
-
-    if (shuffle) {
-      const randomIndex = Math.floor(Math.random() * keys.length);
-      const randomSong = keys[randomIndex];
-      setOverrideScrollToIndex(randomIndex);
-      setShuffleHistory([...shuffleHistory, currentSong]);
-      player.addTrack(`my-magic-protocol://getMediaFile/${randomSong}`);
-      return;
-    }
-
-    const nextIndex = currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
-    const nextSong = keys[nextIndex];
-    player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
-
-    // @note: if the user updates the repeating, shuffle, or updates
-    // the current filters, we need to clear the 1st (not 0th) track
-    // in the queue and replace it with the next song
-    // i have not done this yet
-  };
-
-  const startCurrentSongOver = () =>
-    // eslint-disable-next-line consistent-return
-    new Promise((resolve, reject) => {
-      // eslint-disable-next-line no-promise-executor-return
-      if (!currentSong || !currentSongMetadata) return reject();
-      setCurrentSong('', filteredLibrary);
-      setTimeout(() => {
-        playSong(currentSong, currentSongMetadata);
-        resolve(null);
-      }, 10);
-    });
-
-  const playNextSong = async () => {
-    player.next(0, 0, 0);
-    player.removeTrack(0);
-    console.log(player.getTracks());
-    // queue up the next song
-    // logically im fucked rn bc what i should do is when
-    // the user selects a song, we queue up the next song
-    // using add track
-    // that way this actually doesn't need to do any of the next song
-    // handling besides next, and remove track calls
-    // the logic for putting the next song in the queue should be
-    // earlier
   };
 
   const playPreviousSong = async () => {
     if (!filteredLibrary) return;
 
-    if (!paused && currentSong && currentSongMetadata && currentSongTime > 2) {
-      await startCurrentSongOver();
-      return;
-    }
-
     const keys = Object.keys(filteredLibrary);
     const currentIndex = keys.indexOf(currentSong || '');
 
-    if (repeating && currentSong && currentSongMetadata) {
-      await startCurrentSongOver();
+    // repeating case, start the song over
+    if (repeating) {
+      player.cue();
       return;
     }
 
+    // if the song is less than 2 seconds in, start it over
+    if (!paused && currentSongTime < 2) {
+      player.cue();
+      return;
+    }
+
+    // shuffle case
     if (shuffle && shuffleHistory.length > 0) {
       const previousSong = shuffleHistory[shuffleHistory.length - 1];
-      await playSong(previousSong, filteredLibrary[previousSong]);
+      await playSpecificSong(previousSong);
       setOverrideScrollToIndex(keys.indexOf(previousSong));
       setShuffleHistory(shuffleHistory.slice(0, -1));
       return;
@@ -182,7 +116,7 @@ export default function Main() {
 
     const prevIndex = currentIndex - 1 < 0 ? keys.length - 1 : currentIndex - 1;
     const prevSong = keys[prevIndex];
-    await playSong(prevSong, filteredLibrary[prevSong]);
+    await playSpecificSong(prevSong);
   };
 
   const importNewLibrary = async (rescan = false) => {
@@ -233,12 +167,22 @@ export default function Main() {
         setLibraryInStore(arg.library);
         setFilteredLibrary(arg.library);
         if (arg.lastPlayedSong) {
-          setCurrentSong(arg.lastPlayedSong, arg.library);
           const songIndex = Object.keys(arg.library).findIndex(
             (song) => song === arg.lastPlayedSong,
           );
+          selectSpecificSong(arg.lastPlayedSong, arg.library);
           setOverrideScrollToIndex(songIndex);
         }
+
+        player.ontimeupdate = (
+          currentTrackTime: number,
+          _currentTrackIndex: number,
+        ) => {
+          setCurrentSongTime(currentTrackTime / 1000);
+        };
+
+        // todo: untested
+        player.onfinishedtrack = playNextSong;
       },
       'update-store': (arg: ResponseArgs['update-store']) => {
         setInitialized(true);
@@ -308,22 +252,14 @@ export default function Main() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // todo: this goes off a lot
-  player.ontimeupdate = (
-    currentTrackTime: number,
-    _currentTrackIndex: number,
-  ) => {
-    setCurrentSongTime(currentTrackTime / 1000);
-  };
-
-  player.onfinishedtrack = playNextSong;
-
   /**
    * player is the thing that:
    * - plays the song, pauses the song
    * - updates the global song time in our store
    * - holds the current song and the next song in "tracks" for gapless playback
    */
+
+  // console.log('tracks', player.getTracks());
 
   return (
     <div ref={ref} className="h-full flex flex-col dark">
@@ -417,10 +353,8 @@ export default function Main() {
           {width && (
             <LibraryList
               onImportLibrary={importNewLibrary}
-              playSong={async (song, meta) => {
-                await (currentSong === song
-                  ? player.cue()
-                  : playSong(song, meta));
+              playSong={async (song) => {
+                playSpecificSong(song);
               }}
             />
           )}

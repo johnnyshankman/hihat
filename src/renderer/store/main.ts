@@ -4,9 +4,9 @@ import { LightweightAudioMetadata, StoreStructure } from '../../common/common';
 interface AdditionalActions {
   deleteEverything: () => void;
   setLibrary: (library: { [key: string]: LightweightAudioMetadata }) => void;
-  setLastPlayedSong: (song: string) => void;
   setLibraryPath: (path: string) => void;
   setInitialized: (initialized: boolean) => void;
+  setLastPlayedSong: (song: string) => void;
 }
 
 const useMainStore = create<StoreStructure & AdditionalActions>((set) => ({
