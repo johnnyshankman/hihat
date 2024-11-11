@@ -71,19 +71,12 @@ export default function Main() {
   const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
 
   const playSpecificSong = async (song: string) => {
-    // update player store
     selectSpecificSong(song, storeLibrary);
+    setPaused(false);
 
-    // update main store and the user config with last played song
+    // update internal store and user config to store the last played song
+    // @note: putting it in the current store doesnt really do anything...
     setLastPlayedSong(song);
-    window.electron.ipcRenderer.once('set-last-played-song', (args) => {
-      const newLibrary = { ...storeLibrary, [args.song]: args.songData };
-      setLibraryInStore(newLibrary);
-      setFilteredLibrary({ ...filteredLibrary, [args.song]: args.songData });
-
-      // play the song
-      setPaused(false);
-    });
     window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
   };
 
@@ -251,15 +244,6 @@ export default function Main() {
       // Cleanup handlers if needed in the future here
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /**
-   * player is the thing that:
-   * - plays the song, pauses the song
-   * - updates the global song time in our store
-   * - holds the current song and the next song in "tracks" for gapless playback
-   */
-
-  // console.log('tracks', player.getTracks());
 
   return (
     <div ref={ref} className="h-full flex flex-col dark">

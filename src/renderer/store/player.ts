@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Gapless5 } from '@regosen/gapless-5';
+import { CrossfadeShape, Gapless5 } from '@regosen/gapless-5';
 import { LightweightAudioMetadata } from '../../common/common';
 import { bufferToDataUrl } from '../utils/utils';
 
@@ -45,7 +45,9 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   /**
    * default state
    */
-  player: new Gapless5(),
+  player: new Gapless5({
+    useHTML5Audio: false,
+  }),
   paused: true,
   currentSong: '',
   currentSongArtworkDataURL: '',
@@ -83,11 +85,11 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   setShuffle: (shuffle) => set({ shuffle, shuffleHistory: [] }),
   // @note: repeating does not cause the player's trackList to change
   setRepeating: (repeating) => set({ repeating }),
-  // @note: cues up the next song
+  // @note: makes it so that the track list is set to the 2 songs
+  // that we want to play in a row, the current song and the next song
   selectSpecificSong: (songPath: string, library) => {
     return set((state) => {
       if (!library) {
-        // eslint-disable-next-line no-console
         console.error('No library provided to setCurrentSongWithDetails');
         return {};
       }
@@ -96,7 +98,6 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       const metadata = songLibrary[songPath];
 
       if (!metadata) {
-        // eslint-disable-next-line no-console
         console.warn('No metadata found for requested song:', songPath);
         return {};
       }
@@ -104,11 +105,6 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       const keys = Object.keys(library);
       const currentIndex = keys.indexOf(songPath || '');
 
-      /**
-       * @important handle next song in queue
-       * @note REPEAT situation is not handled here, it's handled
-       * by just calling player.cue() somewhere else
-       */
       let nextSong = '';
       if (state.shuffle) {
         const randomIndex = Math.floor(Math.random() * keys.length);
@@ -120,7 +116,11 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         nextSong = keys[nextIndex];
       }
 
-      // Set album art on response to request below
+      // Clear and add new tracks
+      state.player.removeAllTracks();
+      state.player.addTrack(`my-magic-protocol://getMediaFile/${songPath}`);
+      state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
+
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
         let url = '';
         if (event.data) {
@@ -139,26 +139,13 @@ const usePlayerStore = create<PlayerStore>((set) => ({
           ];
         }
       });
-
-      // Request album art -- response handler is above
       window.electron.ipcRenderer.sendMessage('get-album-art', songPath);
 
-      state.player.removeAllTracks();
-      state.player.addTrack(`my-magic-protocol://getMediaFile/${songPath}`);
-      state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
-
-      // setup the naviagtor metadata
-      const mediaData = {
-        title: metadata.common.title,
-        artist: metadata.common.artist,
-        album: metadata.common.album,
+      state.player.onload = (trackPath: string, fullyLoaded: boolean) => {
+        if (fullyLoaded) {
+          state.player.play();
+        }
       };
-
-      if (navigator.mediaSession.metadata) {
-        Object.assign(navigator.mediaSession.metadata, mediaData);
-      } else {
-        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
-      }
 
       return {
         currentSong: songPath,
@@ -166,38 +153,69 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       };
     });
   },
+  /**
+   * plays song at index 1, then removes song at index 0, then adds the next song
+   */
   playNextSong: () => {
     return set((state) => {
-      state.player.removeTrack(0);
+      // play the next song gaplessly, if possible
+      state.player.next(0, 0, 0);
 
-      /**
-       * @important handle putting the next song in track list (spot 1 not 0)
-       * @note REPEAT situation is not handled here, it's handled
-       * by just calling player.cue() somewhere else
-       * @note swapping SHUFFLE or changing the filteredLibrary
-       * will cause recalculation of the 2nd song in the track list
-       */
+      // get the name of the song that is playing now which is at index 1
+      // be sure to remove the my-magic-protocol://getMediaFile/ prefix
+      const currentSong = state.player
+        .getTracks()[1]
+        .replace('my-magic-protocol://getMediaFile/', '');
+
+      // remove the track at index 0 a second later
+      window.setTimeout(() => {
+        state.player.removeTrack(0);
+      }, 10);
+
       const keys = Object.keys(state.filteredLibrary);
-      const currentIndex = keys.indexOf(state.currentSong);
+      const currentIndex = keys.indexOf(currentSong || '');
+      const currentSongMetadata = state.filteredLibrary[currentSong];
+
+      // calculate the song to play after this one
       let nextSong = '';
       if (state.shuffle) {
         const randomIndex = Math.floor(Math.random() * keys.length);
         nextSong = keys[randomIndex];
-        state.setOverrideScrollToIndex(randomIndex);
-        state.setShuffleHistory([...state.shuffleHistory, state.currentSong]);
-        state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
+        state.setShuffleHistory([...state.shuffleHistory, currentSong]);
       } else {
         const nextIndex =
           currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
         nextSong = keys[nextIndex];
-        state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
       }
 
-      console.log(state.player.getTracks());
+      // add the next song
+      state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
+
+      // Handle album art
+      window.electron.ipcRenderer.once('get-album-art', async (event) => {
+        let url = '';
+        if (event.data) {
+          url = await bufferToDataUrl(event.data, event.format);
+        }
+
+        set({ currentSongArtworkDataURL: url });
+
+        if (navigator.mediaSession.metadata?.artwork) {
+          navigator.mediaSession.metadata.artwork = [
+            {
+              src: url,
+              sizes: '192x192',
+              type: event.format,
+            },
+          ];
+        }
+      });
+      window.electron.ipcRenderer.sendMessage('get-album-art', currentSong);
 
       return {
-        currentSong: nextSong,
-        currentSongMetadata: state.filteredLibrary[nextSong],
+        currentSong,
+        currentSongMetadata,
+        paused: false,
       };
     });
   },
