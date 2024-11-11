@@ -16,19 +16,18 @@ import SongProgressBar from './SongProgressBar';
 import usePlayerStore from '../store/player';
 
 type StaticPlayerProps = {
-  audioTagRef: React.RefObject<HTMLAudioElement>;
   playNextSong: () => void;
   playPreviousSong: () => void;
 };
 
 export default function StaticPlayer({
-  audioTagRef,
   playNextSong,
   playPreviousSong,
 }: StaticPlayerProps) {
   /**
    * @dev store
    */
+  const player = usePlayerStore((state) => state.player);
   const repeating = usePlayerStore((state) => state.repeating);
   const setRepeating = usePlayerStore((state) => state.setRepeating);
   const shuffle = usePlayerStore((state) => state.shuffle);
@@ -42,9 +41,6 @@ export default function StaticPlayer({
   const volume = usePlayerStore((state) => state.volume);
   const setVolume = usePlayerStore((state) => state.setVolume);
   const currentSongTime = usePlayerStore((state) => state.currentSongTime);
-  const setCurrentSongTime = usePlayerStore(
-    (state) => state.setCurrentSongTime,
-  );
 
   return (
     <div
@@ -143,19 +139,7 @@ export default function StaticPlayer({
             disabled={!currentSongMetadata}
             onClick={() => {
               setPaused(!paused);
-              if (audioTagRef.current) {
-                /**
-                 * @important we manually trigger play/pause via the <autio> tag
-                 * because the player store's state will automatically sync
-                 * itself to the <audio> tag's state
-                 * @todo should i be using the store for this?
-                 */
-                if (audioTagRef.current.paused) {
-                  audioTagRef.current.play();
-                } else {
-                  audioTagRef.current.pause();
-                }
-              }
+              player.playpause();
             }}
           >
             {paused ? (
@@ -193,10 +177,8 @@ export default function StaticPlayer({
       <SongProgressBar
         max={currentSongMetadata?.format?.duration || 0}
         onManualChange={(e: number) => {
-          setCurrentSongTime(e);
-          if (audioTagRef?.current) {
-            audioTagRef.current.currentTime = e;
-          }
+          // manually update the player
+          player.setPosition(e * 1000);
         }}
         value={currentSongTime}
       />

@@ -1,6 +1,7 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import React, { useState, useRef, useEffect } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
+import { Gapless5 } from '@regosen/gapless-5';
 import { LightweightAudioMetadata } from '../../common/common';
 import useMainStore from '../store/main';
 import usePlayerStore from '../store/player';
@@ -32,6 +33,7 @@ export default function Main() {
   const setInitialized = useMainStore((store) => store.setInitialized);
 
   // Player store hooks
+  const player = usePlayerStore((store) => store.player);
   const paused = usePlayerStore((store) => store.paused);
   const setPaused = usePlayerStore((store) => store.setPaused);
   const shuffle = usePlayerStore((store) => store.shuffle);
@@ -86,6 +88,8 @@ export default function Main() {
 
     setCurrentSong(song, storeLibrary);
     setLastPlayedSong(song);
+    setPaused(false);
+    player.play();
 
     window.electron.ipcRenderer.once('set-last-played-song', (args) => {
       const newLibrary = { ...storeLibrary, [args.song]: args.songData };
@@ -93,8 +97,37 @@ export default function Main() {
       setFilteredLibrary({ ...filteredLibrary, [args.song]: args.songData });
     });
 
+    console.log('tracks', player.getTracks());
+
     window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
-    setPaused(false);
+
+    if (!filteredLibrary) return;
+
+    const keys = Object.keys(filteredLibrary);
+    const currentIndex = keys.indexOf(currentSong || '');
+
+    if (repeating && currentSong && currentSongMetadata) {
+      player.addTrack(`my-magic-protocol://getMediaFile/${currentSong}`);
+      return;
+    }
+
+    if (shuffle) {
+      const randomIndex = Math.floor(Math.random() * keys.length);
+      const randomSong = keys[randomIndex];
+      setOverrideScrollToIndex(randomIndex);
+      setShuffleHistory([...shuffleHistory, currentSong]);
+      player.addTrack(`my-magic-protocol://getMediaFile/${randomSong}`);
+      return;
+    }
+
+    const nextIndex = currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
+    const nextSong = keys[nextIndex];
+    player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
+
+    // @note: if the user updates the repeating, shuffle, or updates
+    // the current filters, we need to clear the 1st (not 0th) track
+    // in the queue and replace it with the next song
+    // i have not done this yet
   };
 
   const startCurrentSongOver = () =>
@@ -110,28 +143,17 @@ export default function Main() {
     });
 
   const playNextSong = async () => {
-    if (!filteredLibrary) return;
-
-    const keys = Object.keys(filteredLibrary);
-    const currentIndex = keys.indexOf(currentSong || '');
-
-    if (repeating && currentSong && currentSongMetadata) {
-      await startCurrentSongOver();
-      return;
-    }
-
-    if (shuffle) {
-      const randomIndex = Math.floor(Math.random() * keys.length);
-      const randomSong = keys[randomIndex];
-      await playSong(randomSong, filteredLibrary[randomSong]);
-      setOverrideScrollToIndex(randomIndex);
-      setShuffleHistory([...shuffleHistory, currentSong]);
-      return;
-    }
-
-    const nextIndex = currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
-    const nextSong = keys[nextIndex];
-    await playSong(nextSong, filteredLibrary[nextSong]);
+    player.next(0, 0, 0);
+    player.removeTrack(0);
+    console.log(player.getTracks());
+    // queue up the next song
+    // logically im fucked rn bc what i should do is when
+    // the user selects a song, we queue up the next song
+    // using add track
+    // that way this actually doesn't need to do any of the next song
+    // handling besides next, and remove track calls
+    // the logic for putting the next song in the queue should be
+    // earlier
   };
 
   const playPreviousSong = async () => {
@@ -193,7 +215,9 @@ export default function Main() {
     });
 
     window.electron.ipcRenderer.once('select-library', (store) => {
+      // @TODO: not sure i still need this?
       setInitialized(true);
+
       if (store) {
         setLibraryInStore(store.library);
         setFilteredLibrary(store.library);
@@ -284,23 +308,27 @@ export default function Main() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // todo: this goes off a lot
+  player.ontimeupdate = (
+    currentTrackTime: number,
+    _currentTrackIndex: number,
+  ) => {
+    setCurrentSongTime(currentTrackTime / 1000);
+  };
+
+  player.onfinishedtrack = playNextSong;
+
+  /**
+   * player is the thing that:
+   * - plays the song, pauses the song
+   * - updates the global song time in our store
+   * - holds the current song and the next song in "tracks" for gapless playback
+   */
+
   return (
     <div ref={ref} className="h-full flex flex-col dark">
       {width && height && (
         <WindowDimensionsProvider height={height} width={width}>
-          <audio
-            ref={audioTagRef}
-            autoPlay={!paused}
-            className="hidden"
-            onEnded={playNextSong}
-            onPause={() => setPaused(true)}
-            onPlay={() => setPaused(false)}
-            onTimeUpdate={(e) =>
-              setCurrentSongTime(e.currentTarget.currentTime)
-            }
-            src={`my-magic-protocol://getMediaFile/${currentSong}`}
-          />
-
           {/* Dialogs */}
           <ImportProgressDialog
             estimatedTimeRemainingString={
@@ -391,14 +419,13 @@ export default function Main() {
               onImportLibrary={importNewLibrary}
               playSong={async (song, meta) => {
                 await (currentSong === song
-                  ? startCurrentSongOver()
+                  ? player.cue()
                   : playSong(song, meta));
               }}
             />
           )}
 
           <StaticPlayer
-            audioTagRef={audioTagRef}
             playNextSong={playNextSong}
             playPreviousSong={playPreviousSong}
           />
