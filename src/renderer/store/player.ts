@@ -133,7 +133,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         `my-magic-protocol://getMediaFile/${nextSong.songPath}`,
       );
 
-      // @important: wait 500ms before playing to avoid the stutter in Gapless5
+      // @important: wait 1s before playing to avoid the stutter in Gapless5
       window.setTimeout(() => {
         state.player.play();
       }, 1000);
