@@ -52,7 +52,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
     crossfade: 100,
     exclusive: true,
   }),
-  paused: true,
+  paused: false,
   currentSong: '',
   currentSongArtworkDataURL: '',
   currentSongMetadata: {} as LightweightAudioMetadata,
@@ -134,6 +134,18 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       );
       state.player.play();
 
+      const mediaData = {
+        title: metadata.common.title,
+        artist: metadata.common.artist,
+        album: metadata.common.album,
+      };
+
+      if (navigator.mediaSession.metadata) {
+        Object.assign(navigator.mediaSession.metadata, mediaData);
+      } else {
+        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
+      }
+
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
         let url = '';
         if (event.data) {
@@ -173,10 +185,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       // remove the old track at index 0 instantly after hitting next
       state.player.removeTrack(0);
 
+      state.player.play();
+
       state.player.onload = () => {
-        if (!state.paused) {
-          state.player.play();
-        }
+        state.player.play();
       };
 
       // get the name of the song that is playing now
@@ -225,6 +237,18 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       });
       window.electron.ipcRenderer.sendMessage('get-album-art', currentSong);
 
+      const mediaData = {
+        title: currentSongMetadata.common.title,
+        artist: currentSongMetadata.common.artist,
+        album: currentSongMetadata.common.album,
+      };
+
+      if (navigator.mediaSession.metadata) {
+        Object.assign(navigator.mediaSession.metadata, mediaData);
+      } else {
+        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
+      }
+
       return {
         currentSong,
         currentSongMetadata,
@@ -247,16 +271,13 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         .getTracks()[1]
         .replace('my-magic-protocol://getMediaFile/', '');
 
-      // remove the track at index 0 a half second later to avoid pausing unintentionally
+      // remove the track at index 0 just after the crossfade is complete
       window.setTimeout(() => {
         state.player.removeTrack(0);
       }, 150);
 
       state.player.onload = () => {
-        if (!state.paused) {
-          state.player.play();
-          state.player.onload = () => {};
-        }
+        state.player.play();
       };
 
       const currentSongMetadata = state.filteredLibrary[currentSong];
@@ -299,6 +320,18 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         }
       });
       window.electron.ipcRenderer.sendMessage('get-album-art', currentSong);
+
+      const mediaData = {
+        title: currentSongMetadata.common.title,
+        artist: currentSongMetadata.common.artist,
+        album: currentSongMetadata.common.album,
+      };
+
+      if (navigator.mediaSession.metadata) {
+        Object.assign(navigator.mediaSession.metadata, mediaData);
+      } else {
+        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
+      }
 
       return {
         currentSong,

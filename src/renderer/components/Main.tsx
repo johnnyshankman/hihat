@@ -31,6 +31,7 @@ export default function Main() {
 
   // Player store hooks
   const player = usePlayerStore((store) => store.player);
+  const setPaused = usePlayerStore((store) => store.setPaused);
   const paused = usePlayerStore((store) => store.paused);
   const autoPlayNextSong = usePlayerStore((store) => store.autoPlayNextSong);
   const shuffle = usePlayerStore((store) => store.shuffle);
@@ -246,16 +247,44 @@ export default function Main() {
       setDialogState((prev) => ({ ...prev, showBrowser: true }));
     });
 
-    navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
-    navigator.mediaSession.setActionHandler('nexttrack', playNextSong);
-
     return () => {
       // Cleanup handlers if needed in the future here
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * @dev Since we are using Gapless5, we need to handle the media session
+   * manually and ensure that the audio plays + pauses as expected.
+   * We loop a blank audio file to keep the media session alive indefinitely.
+   * Scrubbing through it will do nothing.
+   * We play and pause the blank audio file in time with the gapless5 player
+   * so that all the smoke and mirrors are in sync.
+   */
+  useEffect(() => {
+    navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
+    navigator.mediaSession.setActionHandler('nexttrack', playNextSong);
+    navigator.mediaSession.setActionHandler('play', () => {
+      setPaused(!paused);
+      document.querySelector('audio')?.play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      setPaused(!paused);
+      document.querySelector('audio')?.pause();
+    });
+    navigator.mediaSession.setPositionState({
+      duration: 0,
+      playbackRate: 1,
+      position: 0,
+    });
+  }, [paused, playNextSong, playPreviousSong, setPaused]);
+
   return (
     <div ref={ref} className="h-full flex flex-col dark">
+      <audio
+        autoPlay={!paused}
+        loop
+        src="https://github.com/anars/blank-audio/raw/refs/heads/master/2-minutes-and-30-seconds-of-silence.mp3"
+      />
       {width && height && (
         <WindowDimensionsProvider height={height} width={width}>
           {/* Dialogs */}
