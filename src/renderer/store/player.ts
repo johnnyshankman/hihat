@@ -87,14 +87,9 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   // @note: when shuffle is toggled on or off we clear the shuffle history
   setShuffle: (shuffle) => {
     return set((state) => {
-      // Get the current song path by removing the protocol prefix from track at index 0
-      const currentSong = state.player
-        .getTracks()[0]
-        .replace('my-magic-protocol://getMediaFile/', '');
-
       // Calculate new next song based on new shuffle state
       const nextSong = findNextSong(
-        currentSong,
+        state.currentSong,
         state.filteredLibrary,
         shuffle,
       );
