@@ -90,8 +90,9 @@ export default function Main() {
       return;
     }
 
-    // if the song is less than 2 seconds in, start it over
-    if (!paused && currentSongTime < 2) {
+    // if the song is between 1 and 3 seconds in, restart it
+    // if its still at 0-1 let them go back bc they're probably quickly flipping back
+    if (!paused && currentSongTime < 3 && currentSongTime > 1) {
       player.cue();
       return;
     }

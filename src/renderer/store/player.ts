@@ -47,7 +47,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
    * default state
    */
   player: new Gapless5({
-    useHTML5Audio: true,
+    useHTML5Audio: false,
     loglevel: LogLevel.Debug,
     crossfade: 100,
     exclusive: true,
@@ -132,11 +132,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       state.player.addTrack(
         `my-magic-protocol://getMediaFile/${nextSong.songPath}`,
       );
-
-      // @important: wait 1s before playing to avoid the stutter in Gapless5
-      window.setTimeout(() => {
-        state.player.play();
-      }, 1000);
+      state.player.play();
 
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
         let url = '';
@@ -176,6 +172,12 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       state.player.next(0, 0, 0);
       // remove the old track at index 0 instantly after hitting next
       state.player.removeTrack(0);
+
+      state.player.onload = () => {
+        if (!state.paused) {
+          state.player.play();
+        }
+      };
 
       // get the name of the song that is playing now
       const currentSong = state.player
@@ -249,6 +251,13 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       window.setTimeout(() => {
         state.player.removeTrack(0);
       }, 150);
+
+      state.player.onload = () => {
+        if (!state.paused) {
+          state.player.play();
+          state.player.onload = () => {};
+        }
+      };
 
       const currentSongMetadata = state.filteredLibrary[currentSong];
       const currentSongIndex = Object.keys(state.filteredLibrary).findIndex(
