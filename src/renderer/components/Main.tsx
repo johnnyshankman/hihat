@@ -32,7 +32,7 @@ export default function Main() {
   // Player store hooks
   const player = usePlayerStore((store) => store.player);
   const paused = usePlayerStore((store) => store.paused);
-  const setPaused = usePlayerStore((store) => store.setPaused);
+  const autoPlayNextSong = usePlayerStore((store) => store.autoPlayNextSong);
   const shuffle = usePlayerStore((store) => store.shuffle);
   const repeating = usePlayerStore((store) => store.repeating);
   const currentSong = usePlayerStore((store) => store.currentSong);
@@ -72,8 +72,6 @@ export default function Main() {
 
   const playSpecificSong = async (song: string) => {
     selectSpecificSong(song, storeLibrary);
-    setPaused(false);
-
     // update internal store and user config to store the last played song
     // @note: putting it in the current store doesnt really do anything...
     setLastPlayedSong(song);
@@ -167,15 +165,25 @@ export default function Main() {
           setOverrideScrollToIndex(songIndex);
         }
 
-        player.ontimeupdate = (
-          currentTrackTime: number,
-          _currentTrackIndex: number,
-        ) => {
-          setCurrentSongTime(currentTrackTime / 1000);
-        };
+        /**
+         * @important throttle this to once every 500ms
+         * to keep from updating the store too often causing
+         * react to re-render too much.
+         * @todo: this could be moved to the static player component
+         */
+        player.ontimeupdate = (() => {
+          let lastUpdate = 0;
+          return (currentTrackTime: number, _currentTrackIndex: number) => {
+            const now = Date.now();
+            if (now - lastUpdate >= 500) {
+              setCurrentSongTime(currentTrackTime / 1000);
+              lastUpdate = now;
+            }
+          };
+        })();
 
         // todo: untested
-        player.onfinishedtrack = playNextSong;
+        player.onfinishedtrack = autoPlayNextSong;
       },
       'update-store': (arg: ResponseArgs['update-store']) => {
         setInitialized(true);

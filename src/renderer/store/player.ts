@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CrossfadeShape, Gapless5 } from '@regosen/gapless-5';
+import { Gapless5, LogLevel } from '@regosen/gapless-5';
 import { LightweightAudioMetadata } from '../../common/common';
 import { bufferToDataUrl } from '../utils/utils';
 
@@ -39,6 +39,7 @@ interface PlayerStore {
   setOverrideScrollToIndex: (index: number | undefined) => void;
   setShuffleHistory: (history: string[]) => void;
   playNextSong: () => void;
+  autoPlayNextSong: () => void;
 }
 
 const usePlayerStore = create<PlayerStore>((set) => ({
@@ -46,7 +47,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
    * default state
    */
   player: new Gapless5({
-    useHTML5Audio: false,
+    useHTML5Audio: true,
+    loglevel: LogLevel.Debug,
+    crossfade: 100,
+    exclusive: true,
   }),
   paused: true,
   currentSong: '',
@@ -75,7 +79,6 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       if (paused) {
         state.player.pause();
       } else {
-        console.log('playing');
         state.player.play();
       }
       return { paused };
@@ -117,9 +120,14 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       }
 
       // Clear and add new tracks
+      state.player.pause();
       state.player.removeAllTracks();
       state.player.addTrack(`my-magic-protocol://getMediaFile/${songPath}`);
       state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
+
+      window.setTimeout(() => {
+        state.player.play();
+      }, 500);
 
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
         let url = '';
@@ -141,15 +149,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       });
       window.electron.ipcRenderer.sendMessage('get-album-art', songPath);
 
-      state.player.onload = (trackPath: string, fullyLoaded: boolean) => {
-        if (fullyLoaded) {
-          state.player.play();
-        }
-      };
-
       return {
         currentSong: songPath,
         currentSongMetadata: metadata,
+        paused: false,
       };
     });
   },
@@ -170,7 +173,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       // remove the track at index 0 a second later
       window.setTimeout(() => {
         state.player.removeTrack(0);
-      }, 10);
+      }, 500);
 
       const keys = Object.keys(state.filteredLibrary);
       const currentIndex = keys.indexOf(currentSong || '');
@@ -216,6 +219,64 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         currentSong,
         currentSongMetadata,
         paused: false,
+      };
+    });
+  },
+  autoPlayNextSong: () => {
+    return set((state) => {
+      // get the name of the song that is playing now which is at index 1
+      // be sure to remove the my-magic-protocol://getMediaFile/ prefix
+      const currentSong = state.player
+        .getTracks()[1]
+        .replace('my-magic-protocol://getMediaFile/', '');
+
+      window.setTimeout(() => {
+        state.player.removeTrack(0);
+      }, 500);
+
+      const keys = Object.keys(state.filteredLibrary);
+      const currentIndex = keys.indexOf(currentSong || '');
+      const currentSongMetadata = state.filteredLibrary[currentSong];
+
+      // calculate the song to play after this one
+      let nextSong = '';
+      if (state.shuffle) {
+        const randomIndex = Math.floor(Math.random() * keys.length);
+        nextSong = keys[randomIndex];
+        state.setShuffleHistory([...state.shuffleHistory, currentSong]);
+      } else {
+        const nextIndex =
+          currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
+        nextSong = keys[nextIndex];
+      }
+
+      // add the next song
+      state.player.addTrack(`my-magic-protocol://getMediaFile/${nextSong}`);
+
+      // Handle album art
+      window.electron.ipcRenderer.once('get-album-art', async (event) => {
+        let url = '';
+        if (event.data) {
+          url = await bufferToDataUrl(event.data, event.format);
+        }
+
+        set({ currentSongArtworkDataURL: url });
+
+        if (navigator.mediaSession.metadata?.artwork) {
+          navigator.mediaSession.metadata.artwork = [
+            {
+              src: url,
+              sizes: '192x192',
+              type: event.format,
+            },
+          ];
+        }
+      });
+      window.electron.ipcRenderer.sendMessage('get-album-art', currentSong);
+
+      return {
+        currentSong,
+        currentSongMetadata,
       };
     });
   },
