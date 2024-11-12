@@ -176,6 +176,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         currentSongMetadata: metadata,
         paused: false,
         currentSongTime: 0,
+        setCurrentSongTime: 0,
       };
     });
   },
@@ -224,12 +225,15 @@ const usePlayerStore = create<PlayerStore>((set) => ({
 
       // Remove current track and start playing next track
       state.player.removeTrack(0);
-      state.player.play();
 
-      // @note: sometimes the song doesn't play if we don't wait for the onload event
-      state.player.onload = () => {
+      if (!state.paused) {
         state.player.play();
-      };
+
+        // @note: sometimes the song doesn't play if we don't wait for the onload event
+        state.player.onload = () => {
+          state.player.play();
+        };
+      }
 
       // Add the future next song
       state.player.addTrack(
@@ -272,7 +276,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       return {
         currentSong: nextSongPath,
         currentSongMetadata: nextSongMetadata,
-        paused: false,
+        currentSongTime: 0,
         overrideScrollToIndex: nextSongIndex,
         shuffleHistory,
       };
