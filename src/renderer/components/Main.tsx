@@ -52,7 +52,7 @@ export default function Main() {
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
   );
-  const playNextSong = usePlayerStore((store) => store.playNextSong);
+  const playNextSong = usePlayerStore((store) => store.skipToNextSong);
 
   // Component state
   const [dialogState, setDialogState] = useState({
