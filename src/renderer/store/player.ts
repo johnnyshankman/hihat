@@ -105,7 +105,12 @@ const usePlayerStore = create<PlayerStore>((set) => ({
     });
   },
   // @see: forces calls to player.cue() in certain spots
-  setRepeating: (repeating) => set({ repeating }),
+  setRepeating: (repeating) => {
+    return set((state) => {
+      state.player.singleMode = repeating;
+      return { repeating };
+    });
+  },
   // @note: makes it so that the track list is set to the 2 songs
   // that we want to play in a row, the current song and the next song
   selectSpecificSong: (songPath: string, library) => {
@@ -180,6 +185,11 @@ const usePlayerStore = create<PlayerStore>((set) => ({
    */
   skipToNextSong: () => {
     return set((state) => {
+      if (state.repeating) {
+        state.player.cue();
+        return {};
+      }
+
       const tracks = state.player.getTracks();
       if (tracks.length < 2) return {}; // Safety check
 
@@ -275,6 +285,12 @@ const usePlayerStore = create<PlayerStore>((set) => ({
    */
   autoPlayNextSong: async () => {
     return set((state) => {
+      if (state.repeating) {
+        state.player.gotoTrack(0);
+        state.player.play();
+        return {};
+      }
+
       const tracks = state.player.getTracks();
       if (tracks.length < 2) return {}; // Safety check
 
