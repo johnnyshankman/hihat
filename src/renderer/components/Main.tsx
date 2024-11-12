@@ -53,7 +53,7 @@ export default function Main() {
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
   );
-  const playNextSong = usePlayerStore((store) => store.skipToNextSong);
+  const skipToNextSong = usePlayerStore((store) => store.skipToNextSong);
 
   // Component state
   const [dialogState, setDialogState] = useState({
@@ -277,7 +277,7 @@ export default function Main() {
    */
   useEffect(() => {
     navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
-    navigator.mediaSession.setActionHandler('nexttrack', playNextSong);
+    navigator.mediaSession.setActionHandler('nexttrack', skipToNextSong);
     navigator.mediaSession.setActionHandler('play', () => {
       setPaused(!paused);
       document.querySelector('audio')?.play();
@@ -291,7 +291,7 @@ export default function Main() {
       playbackRate: 1,
       position: 0,
     });
-  }, [paused, playNextSong, playPreviousSong, setPaused]);
+  }, [paused, skipToNextSong, playPreviousSong, setPaused]);
 
   return (
     <div ref={ref} className="h-full flex flex-col dark">
@@ -397,7 +397,7 @@ export default function Main() {
           )}
 
           <StaticPlayer
-            playNextSong={playNextSong}
+            playNextSong={skipToNextSong}
             playPreviousSong={playPreviousSong}
           />
         </WindowDimensionsProvider>

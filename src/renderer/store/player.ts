@@ -39,7 +39,7 @@ interface PlayerStore {
   setOverrideScrollToIndex: (index: number | undefined) => void;
   setShuffleHistory: (history: string[]) => void;
   skipToNextSong: () => void;
-  autoPlayNextSong: () => void;
+  autoPlayNextSong: () => Promise<void>;
 }
 
 const usePlayerStore = create<PlayerStore>((set) => ({
@@ -180,41 +180,51 @@ const usePlayerStore = create<PlayerStore>((set) => ({
    */
   skipToNextSong: () => {
     return set((state) => {
-      // play the next song gaplessly, if possible
-      state.player.next(0, 0, 0);
-      // remove the old track at index 0 instantly after hitting next
-      state.player.removeTrack(0);
+      const tracks = state.player.getTracks();
+      if (tracks.length < 2) return {}; // Safety check
 
+      // Get next song info before removing anything
+      const nextSongPath = tracks[1].replace(
+        'my-magic-protocol://getMediaFile/',
+        '',
+      );
+      const nextSongMetadata = state.filteredLibrary[nextSongPath];
+      const nextSongIndex = Object.keys(state.filteredLibrary).findIndex(
+        (song) => song === nextSongPath,
+      );
+
+      // Calculate the song to play after this one
+      const futureNextSong = findNextSong(
+        nextSongPath,
+        state.filteredLibrary,
+        state.shuffle,
+      );
+
+      // Update shuffle history if needed
+      let shuffleHistory: string[] = [];
+      if (state.shuffle) {
+        shuffleHistory = [...state.shuffleHistory, nextSongPath];
+        if (shuffleHistory.length > 100) {
+          shuffleHistory.shift();
+        }
+      }
+
+      // First pause current playback
+      state.player.pause();
+
+      // Remove current track and start playing next track
+      state.player.removeTrack(0);
       state.player.play();
 
+      // @note: sometimes the song doesn't play if we don't wait for the onload event
       state.player.onload = () => {
         state.player.play();
       };
 
-      // get the name of the song that is playing now
-      const currentSong = state.player
-        .getTracks()[0]
-        .replace('my-magic-protocol://getMediaFile/', '');
-      const currentSongMetadata = state.filteredLibrary[currentSong];
-      const currentSongIndex = Object.keys(state.filteredLibrary).findIndex(
-        (song) => song === currentSong,
-      );
-
-      // calculate the song to play after this one
-      const nextSong = findNextSong(
-        currentSong,
-        state.filteredLibrary,
-        state.shuffle,
-      );
-      // add the next song
+      // Add the future next song
       state.player.addTrack(
-        `my-magic-protocol://getMediaFile/${nextSong.songPath}`,
+        `my-magic-protocol://getMediaFile/${futureNextSong.songPath}`,
       );
-
-      let shuffleHistory: string[] = [];
-      if (state.shuffle) {
-        shuffleHistory = [...state.shuffleHistory, currentSong];
-      }
 
       // Handle album art
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
@@ -222,7 +232,6 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         if (event.data) {
           url = await bufferToDataUrl(event.data, event.format);
         }
-
         set({ currentSongArtworkDataURL: url });
 
         if (navigator.mediaSession.metadata?.artwork) {
@@ -235,12 +244,13 @@ const usePlayerStore = create<PlayerStore>((set) => ({
           ];
         }
       });
-      window.electron.ipcRenderer.sendMessage('get-album-art', currentSong);
+      window.electron.ipcRenderer.sendMessage('get-album-art', nextSongPath);
 
+      // Update media session
       const mediaData = {
-        title: currentSongMetadata.common.title,
-        artist: currentSongMetadata.common.artist,
-        album: currentSongMetadata.common.album,
+        title: nextSongMetadata.common.title,
+        artist: nextSongMetadata.common.artist,
+        album: nextSongMetadata.common.album,
       };
 
       if (navigator.mediaSession.metadata) {
@@ -250,10 +260,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       }
 
       return {
-        currentSong,
-        currentSongMetadata,
+        currentSong: nextSongPath,
+        currentSongMetadata: nextSongMetadata,
         paused: false,
-        overrideScrollToIndex: currentSongIndex,
+        overrideScrollToIndex: nextSongIndex,
         shuffleHistory,
       };
     });
@@ -263,41 +273,40 @@ const usePlayerStore = create<PlayerStore>((set) => ({
    * Needs to be debounced to avoid a second call before the removeTrack call
    * finishes.
    */
-  autoPlayNextSong: () => {
+  autoPlayNextSong: async () => {
     return set((state) => {
-      // get the name of the song that is playing now which is at index 1
-      // since we've completed the song at index 0.
-      const currentSong = state.player
-        .getTracks()[1]
-        .replace('my-magic-protocol://getMediaFile/', '');
+      const tracks = state.player.getTracks();
+      if (tracks.length < 2) return {}; // Safety check
 
-      // remove the track at index 0 just after the crossfade is complete
-      window.setTimeout(() => {
-        state.player.removeTrack(0);
-      }, 150);
-
-      state.player.onload = () => {
-        state.player.play();
-      };
-
-      const currentSongMetadata = state.filteredLibrary[currentSong];
-      const currentSongIndex = Object.keys(state.filteredLibrary).findIndex(
-        (song) => song === currentSong,
+      // Get next song info before removing anything
+      const nextSongPath = tracks[1].replace(
+        'my-magic-protocol://getMediaFile/',
+        '',
       );
-      // calculate the song to play after this one
-      const nextSong = findNextSong(
-        currentSong,
+      const nextSongMetadata = state.filteredLibrary[nextSongPath];
+      const nextSongIndex = Object.keys(state.filteredLibrary).findIndex(
+        (song) => song === nextSongPath,
+      );
+
+      // Calculate the song to play after this one
+      const futureNextSong = findNextSong(
+        nextSongPath,
         state.filteredLibrary,
         state.shuffle,
       );
+
+      // Update shuffle history if needed
       let shuffleHistory: string[] = [];
       if (state.shuffle) {
-        shuffleHistory = [...state.shuffleHistory, currentSong];
+        shuffleHistory = [...state.shuffleHistory, nextSongPath];
+        if (shuffleHistory.length > 100) {
+          shuffleHistory.shift();
+        }
       }
 
-      // add the next song
+      // Add the future next song
       state.player.addTrack(
-        `my-magic-protocol://getMediaFile/${nextSong.songPath}`,
+        `my-magic-protocol://getMediaFile/${futureNextSong.songPath}`,
       );
 
       // Handle album art
@@ -306,9 +315,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         if (event.data) {
           url = await bufferToDataUrl(event.data, event.format);
         }
-
         set({ currentSongArtworkDataURL: url });
-
         if (navigator.mediaSession.metadata?.artwork) {
           navigator.mediaSession.metadata.artwork = [
             {
@@ -319,12 +326,13 @@ const usePlayerStore = create<PlayerStore>((set) => ({
           ];
         }
       });
-      window.electron.ipcRenderer.sendMessage('get-album-art', currentSong);
+      window.electron.ipcRenderer.sendMessage('get-album-art', nextSongPath);
 
+      // Update media session
       const mediaData = {
-        title: currentSongMetadata.common.title,
-        artist: currentSongMetadata.common.artist,
-        album: currentSongMetadata.common.album,
+        title: nextSongMetadata.common.title,
+        artist: nextSongMetadata.common.artist,
+        album: nextSongMetadata.common.album,
       };
 
       if (navigator.mediaSession.metadata) {
@@ -333,11 +341,24 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         navigator.mediaSession.metadata = new MediaMetadata(mediaData);
       }
 
+      // In exactly 1s remove all tracks before the current playing track
+      window.setTimeout(() => {
+        const currentTrack = state.player.currentSource();
+        // find the index in the tracks array of the current track
+        const currentTrackIndex = state.player
+          .getTracks()
+          .findIndex((track) => track === currentTrack.audioPath);
+        // remove all tracks before the current track's index
+        for (let i = 0; i < currentTrackIndex; i += 1) {
+          state.player.removeTrack(i);
+        }
+      }, 1000);
+
       return {
-        currentSong,
-        currentSongMetadata,
+        currentSong: nextSongPath,
+        currentSongMetadata: nextSongMetadata,
         paused: false,
-        overrideScrollToIndex: currentSongIndex,
+        overrideScrollToIndex: nextSongIndex,
         shuffleHistory,
       };
     });
