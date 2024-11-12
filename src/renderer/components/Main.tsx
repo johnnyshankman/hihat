@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/media-has-caption */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import useMainStore from '../store/main';
 import usePlayerStore from '../store/player';
@@ -71,15 +71,18 @@ export default function Main() {
   });
   const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
 
-  const playSpecificSong = async (song: string) => {
-    selectSpecificSong(song, storeLibrary);
-    // update internal store and user config to store the last played song
-    // @note: putting it in the current store doesnt really do anything...
-    setLastPlayedSong(song);
-    window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
-  };
+  const playSpecificSong = useCallback(
+    async (song: string) => {
+      selectSpecificSong(song, storeLibrary);
+      // update internal store and user config to store the last played song
+      // @note: putting it in the current store doesnt really do anything...
+      setLastPlayedSong(song);
+      window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
+    },
+    [selectSpecificSong, storeLibrary, setLastPlayedSong],
+  );
 
-  const playPreviousSong = async () => {
+  const playPreviousSong = useCallback(async () => {
     if (!filteredLibrary) return;
 
     const keys = Object.keys(filteredLibrary);
@@ -110,7 +113,19 @@ export default function Main() {
     const prevIndex = currentIndex - 1 < 0 ? keys.length - 1 : currentIndex - 1;
     const prevSong = keys[prevIndex];
     await playSpecificSong(prevSong);
-  };
+  }, [
+    filteredLibrary,
+    currentSong,
+    repeating,
+    player,
+    paused,
+    currentSongTime,
+    shuffle,
+    shuffleHistory,
+    playSpecificSong,
+    setOverrideScrollToIndex,
+    setShuffleHistory,
+  ]);
 
   const importNewLibrary = async (rescan = false) => {
     setDialogState((prev) => ({ ...prev, showImportingProgress: true }));
@@ -167,6 +182,7 @@ export default function Main() {
           setOverrideScrollToIndex(songIndex);
         }
 
+        player.onfinishedtrack = autoPlayNextSong;
         /**
          * @important throttle this to once every 500ms
          * to keep from updating the store too often causing
@@ -184,8 +200,7 @@ export default function Main() {
           };
         })();
 
-        // todo: untested
-        player.onfinishedtrack = autoPlayNextSong;
+        setPaused(true);
       },
       'update-store': (arg: ResponseArgs['update-store']) => {
         setInitialized(true);
