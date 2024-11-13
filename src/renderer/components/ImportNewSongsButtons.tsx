@@ -28,6 +28,9 @@ export default function ImportNewSongsButton({
   );
 
   const importNewSongs = async () => {
+    setSongsImported(0);
+    setTotalSongs(1);
+
     window.electron.ipcRenderer.on('song-imported', (args) => {
       setShowImportingProgress(true);
       setSongsImported(args.songsImported);
@@ -62,8 +65,8 @@ export default function ImportNewSongsButton({
 
       window.setTimeout(() => {
         setSongsImported(0);
-        setTotalSongs(0);
-      }, 100);
+        setTotalSongs(1);
+      }, 1000);
     });
 
     window.electron.ipcRenderer.sendMessage('add-to-library');

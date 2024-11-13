@@ -947,7 +947,7 @@ const createWindow = async () => {
   });
 
   /**
-   * @importnat Set the global asset path to /assets
+   * @important Set the global asset path to /assets
    */
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
