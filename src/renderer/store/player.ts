@@ -212,9 +212,6 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         '',
       );
       const nextSongMetadata = state.filteredLibrary[nextSongPath];
-      const nextSongIndex = Object.keys(state.filteredLibrary).findIndex(
-        (song) => song === nextSongPath,
-      );
 
       // Calculate the song to play after this one
       const futureNextSong = findNextSong(
@@ -295,7 +292,6 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         currentSong: nextSongPath,
         currentSongMetadata: nextSongMetadata,
         currentSongTime: 0,
-        overrideScrollToIndex: nextSongIndex,
         shuffleHistory,
         lastPlayedSong: nextSongPath,
       };
@@ -329,9 +325,6 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         '',
       );
       const nextSongMetadata = state.filteredLibrary[nextSongPath];
-      const nextSongIndex = Object.keys(state.filteredLibrary).findIndex(
-        (song) => song === nextSongPath,
-      );
 
       // Calculate the song to play after this one
       const futureNextSong = findNextSong(
@@ -401,7 +394,6 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         currentSong: nextSongPath,
         currentSongMetadata: nextSongMetadata,
         paused: false,
-        overrideScrollToIndex: nextSongIndex,
         shuffleHistory,
         lastPlayedSong: nextSongPath,
       };
@@ -422,9 +414,11 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         };
       }
 
-      // if the song is past the 3 second mark, restart it
-      // the song is under 3 seconds, let them go back
-      // this emulates the behavior of most music players / cd players
+      /**
+       * @note if the song is past the 3 second mark, restart it.
+       * if the song is under the 3 second mark, let them go back.
+       * this emulates the behavior of most music players / cd players
+       */
       if (!state.paused && state.currentSongTime > 3) {
         state.player.setPosition(0);
         return {
@@ -448,8 +442,9 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         currentIndex - 1 < 0 ? keys.length - 1 : currentIndex - 1;
       const prevSong = keys[prevIndex];
       state.selectSpecificSong(prevSong, state.filteredLibrary);
-      // @note: we don't need to return anything here bc the song will be set
-      // in the selectSpecificSong function
+
+      // @note: selectSpecificSong does all the heavy lifting for us
+      // so we don't need to return anything here
       return {};
     });
   },
