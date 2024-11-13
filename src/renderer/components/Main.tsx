@@ -32,19 +32,13 @@ export default function Main() {
   const setPaused = usePlayerStore((store) => store.setPaused);
   const paused = usePlayerStore((store) => store.paused);
   const autoPlayNextSong = usePlayerStore((store) => store.autoPlayNextSong);
-  const shuffle = usePlayerStore((store) => store.shuffle);
-  const repeating = usePlayerStore((store) => store.repeating);
-  const currentSong = usePlayerStore((store) => store.currentSong);
-  const shuffleHistory = usePlayerStore((store) => store.shuffleHistory);
-  const setShuffleHistory = usePlayerStore((store) => store.setShuffleHistory);
-  const selectSpecificSong = usePlayerStore(
-    (store) => store.selectSpecificSong,
-  );
-  const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
+  const playPreviousSong = usePlayerStore((store) => store.playPreviousSong);
   const setFilteredLibrary = usePlayerStore(
     (store) => store.setFilteredLibrary,
   );
-  const currentSongTime = usePlayerStore((store) => store.currentSongTime);
+  const selectSpecificSong = usePlayerStore(
+    (store) => store.selectSpecificSong,
+  );
   const setCurrentSongTime = usePlayerStore(
     (store) => store.setCurrentSongTime,
   );
@@ -68,51 +62,6 @@ export default function Main() {
     estimatedTimeRemainingString: '',
   });
   const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
-
-  const playPreviousSong = useCallback(async () => {
-    if (!filteredLibrary) return;
-
-    const keys = Object.keys(filteredLibrary);
-    const currentIndex = keys.indexOf(currentSong || '');
-
-    // repeating case, start the song over
-    if (repeating) {
-      player.setPosition(0);
-      return;
-    }
-
-    // if the song is between 1 and 3 seconds in, restart it
-    // if its still at 0-1 let them go back bc they're probably quickly flipping back
-    if (!paused && currentSongTime < 3 && currentSongTime > 1) {
-      player.setPosition(0);
-      return;
-    }
-
-    // shuffle case
-    if (shuffle && shuffleHistory.length > 0) {
-      const previousSong = shuffleHistory[shuffleHistory.length - 1];
-      await selectSpecificSong(previousSong, filteredLibrary);
-      setOverrideScrollToIndex(keys.indexOf(previousSong));
-      setShuffleHistory(shuffleHistory.slice(0, -1));
-      return;
-    }
-
-    const prevIndex = currentIndex - 1 < 0 ? keys.length - 1 : currentIndex - 1;
-    const prevSong = keys[prevIndex];
-    await selectSpecificSong(prevSong, filteredLibrary);
-  }, [
-    filteredLibrary,
-    currentSong,
-    repeating,
-    player,
-    paused,
-    currentSongTime,
-    shuffle,
-    shuffleHistory,
-    setOverrideScrollToIndex,
-    setShuffleHistory,
-    selectSpecificSong,
-  ]);
 
   const importNewLibrary = async (rescan = false) => {
     setDialogState((prev) => ({ ...prev, showImportingProgress: true }));

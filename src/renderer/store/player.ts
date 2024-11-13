@@ -40,6 +40,7 @@ interface PlayerStore {
   setShuffleHistory: (history: string[]) => void;
   skipToNextSong: () => void;
   autoPlayNextSong: () => Promise<void>;
+  playPreviousSong: () => Promise<void>;
 }
 
 const usePlayerStore = create<PlayerStore>((set) => ({
@@ -403,6 +404,53 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         shuffleHistory,
         lastPlayedSong: nextSongPath,
       };
+    });
+  },
+  playPreviousSong: async () => {
+    return set((state) => {
+      if (!state.filteredLibrary) return {};
+
+      const keys = Object.keys(state.filteredLibrary);
+      const currentIndex = keys.indexOf(state.currentSong || '');
+
+      // repeating case, start the song over
+      if (state.repeating) {
+        state.player.setPosition(0);
+        return {
+          currentSongTime: 0,
+        };
+      }
+
+      // if the song is between 1 and 3 seconds in, restart it
+      // if its still at 0-1 let them go back bc they're probably quickly flipping back
+      if (
+        !state.paused &&
+        state.currentSongTime < 3 &&
+        state.currentSongTime > 1
+      ) {
+        state.player.setPosition(0);
+        return {
+          currentSongTime: 0,
+        };
+      }
+
+      // shuffle case
+      if (state.shuffle && state.shuffleHistory.length > 0) {
+        const previousSong =
+          state.shuffleHistory[state.shuffleHistory.length - 1];
+        state.selectSpecificSong(previousSong, state.filteredLibrary);
+        return {
+          overrideScrollToIndex: keys.indexOf(previousSong),
+          shuffleHistory: state.shuffleHistory.slice(0, -1),
+        };
+      }
+
+      // normal case - go to previous song in list
+      const prevIndex =
+        currentIndex - 1 < 0 ? keys.length - 1 : currentIndex - 1;
+      const prevSong = keys[prevIndex];
+      state.selectSpecificSong(prevSong, state.filteredLibrary);
+      return {};
     });
   },
   setFilteredLibrary: (filteredLibrary) => set({ filteredLibrary }),
