@@ -187,8 +187,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
   skipToNextSong: () => {
     return set((state) => {
       if (state.repeating) {
-        state.player.cue();
-        return {};
+        state.player.setPosition(0);
+        return {
+          currentSongTime: 0,
+        };
       }
 
       const tracks = state.player.getTracks();
@@ -233,6 +235,8 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         state.player.onload = () => {
           state.player.play();
         };
+      } else {
+        state.player.pause();
       }
 
       // Add the future next song

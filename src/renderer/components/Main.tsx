@@ -90,14 +90,14 @@ export default function Main() {
 
     // repeating case, start the song over
     if (repeating) {
-      player.cue();
+      player.setPosition(0);
       return;
     }
 
     // if the song is between 1 and 3 seconds in, restart it
     // if its still at 0-1 let them go back bc they're probably quickly flipping back
     if (!paused && currentSongTime < 3 && currentSongTime > 1) {
-      player.cue();
+      player.setPosition(0);
       return;
     }
 
