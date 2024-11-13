@@ -207,9 +207,9 @@ export default function Main() {
    * @dev Since we are using Gapless5, we need to handle the media session
    * manually and ensure that the audio plays + pauses as expected.
    * We loop a blank audio file to keep the media session alive indefinitely.
-   * Scrubbing through it will do nothing.
    * We play and pause the blank audio file in time with the gapless5 player
-   * so that all the smoke and mirrors are in sync.
+   * so that all the smoke and mirrors are in sync. The only caveat is that
+   * scrubbing through the song from the media session will do nothing.
    */
   useEffect(() => {
     navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
