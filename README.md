@@ -228,6 +228,7 @@ This project was built with the following technologies:
 * [![zustand][zustand.js]][zustand-url]
 * [![Tailwind][Tailwind.js]][Tailwind-url]
 * [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
+* [![Gapless 5][Gapless5.js]][Gapless5-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -390,6 +391,8 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [Typescript-url]: https://typescriptlang.org
 [zustand.js]: https://img.shields.io/badge/Zustand-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
 [zustand-url]: [https://typescriptlang.org](https://github.com/pmndrs/zustand)https://github.com/pmndrs/zustand
+[Gapless5.js]: https://img.shields.io/badge/Gapless5-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
+[Gapless5-url]: https://github.com/regosen/Gapless-5
 
 
 
