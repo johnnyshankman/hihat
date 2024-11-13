@@ -432,6 +432,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
           state.shuffleHistory[state.shuffleHistory.length - 1];
         state.selectSpecificSong(previousSong, state.filteredLibrary);
         return {
+          // @todo: up for debate if we should override the scroll to index
           overrideScrollToIndex: keys.indexOf(previousSong),
           shuffleHistory: state.shuffleHistory.slice(0, -1),
         };
