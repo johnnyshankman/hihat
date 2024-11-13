@@ -79,8 +79,16 @@ const usePlayerStore = create<PlayerStore>((set) => ({
     return set((state) => {
       if (paused) {
         state.player.pause();
+        const audioElement = document.querySelector('audio');
+        if (audioElement) {
+          audioElement.pause();
+        }
       } else {
         state.player.play();
+        const audioElement = document.querySelector('audio');
+        if (audioElement) {
+          audioElement.play();
+        }
       }
       return { paused };
     });
@@ -139,6 +147,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         `my-magic-protocol://getMediaFile/${nextSong.songPath}`,
       );
       state.player.play();
+      const audioElement = document.querySelector('audio');
+      if (audioElement) {
+        audioElement.play();
+      }
 
       const mediaData = {
         title: metadata.common.title,
@@ -234,6 +246,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
 
       if (!state.paused) {
         state.player.play();
+        const audioElement = document.querySelector('audio');
+        if (audioElement) {
+          audioElement.play();
+        }
 
         // @note: sometimes the song doesn't play if we don't wait for the onload event
         state.player.onload = () => {
@@ -241,6 +257,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         };
       } else {
         state.player.pause();
+        const audioElement = document.querySelector('audio');
+        if (audioElement) {
+          audioElement.pause();
+        }
       }
 
       // Add the future next song
@@ -308,6 +328,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       if (state.repeating) {
         state.player.gotoTrack(0);
         state.player.play();
+        const audioElement = document.querySelector('audio');
+        if (audioElement) {
+          audioElement.play();
+        }
         return {
           currentSongTime: 0,
         };

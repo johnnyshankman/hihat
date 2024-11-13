@@ -28,6 +28,7 @@ export default function Main() {
   const setInitialized = useMainStore((store) => store.setInitialized);
 
   // Player store hooks
+  const currentSong = usePlayerStore((store) => store.currentSong);
   const player = usePlayerStore((store) => store.player);
   const setPaused = usePlayerStore((store) => store.setPaused);
   const paused = usePlayerStore((store) => store.paused);
@@ -217,11 +218,11 @@ export default function Main() {
     navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
     navigator.mediaSession.setActionHandler('nexttrack', skipToNextSong);
     navigator.mediaSession.setActionHandler('play', () => {
-      setPaused(!paused);
+      setPaused(false);
       document.querySelector('audio')?.play();
     });
     navigator.mediaSession.setActionHandler('pause', () => {
-      setPaused(!paused);
+      setPaused(true);
       document.querySelector('audio')?.pause();
     });
     navigator.mediaSession.setPositionState({
@@ -234,7 +235,7 @@ export default function Main() {
   return (
     <div ref={ref} className="h-full flex flex-col dark">
       <audio
-        autoPlay={!paused}
+        autoPlay={!paused && !!currentSong}
         loop
         src="https://github.com/anars/blank-audio/raw/refs/heads/master/2-minutes-and-30-seconds-of-silence.mp3"
       />
