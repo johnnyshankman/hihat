@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/media-has-caption */
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import useMainStore from '../store/main';
 import usePlayerStore from '../store/player';
