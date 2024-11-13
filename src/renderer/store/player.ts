@@ -152,6 +152,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         navigator.mediaSession.metadata = new MediaMetadata(mediaData);
       }
 
+      // handle album art request
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
         let url = '';
         if (event.data) {
@@ -170,6 +171,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
           ];
         }
       });
+      // request album art
       window.electron.ipcRenderer.sendMessage('get-album-art', songPath);
 
       window.electron.ipcRenderer.sendMessage('set-last-played-song', songPath);
@@ -306,7 +308,9 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       if (state.repeating) {
         state.player.gotoTrack(0);
         state.player.play();
-        return {};
+        return {
+          currentSongTime: 0,
+        };
       }
 
       const tracks = state.player.getTracks();
@@ -450,6 +454,8 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         currentIndex - 1 < 0 ? keys.length - 1 : currentIndex - 1;
       const prevSong = keys[prevIndex];
       state.selectSpecificSong(prevSong, state.filteredLibrary);
+      // @note: we don't need to return anything here bc the song will be set
+      // in the selectSpecificSong function
       return {};
     });
   },
