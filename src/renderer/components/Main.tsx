@@ -93,9 +93,6 @@ export default function Main() {
     });
 
     window.electron.ipcRenderer.once('select-library', (store) => {
-      // @TODO: not sure i still need this?
-      setInitialized(true);
-
       if (store) {
         setLibraryInStore(store.library);
         setFilteredLibrary(store.library);
@@ -104,6 +101,11 @@ export default function Main() {
     });
   };
 
+  /**
+   * Set up event listeners for the main process to communicate with the renderer
+   * process. Also set up window event listeners for custom events from the
+   * renderer process.
+   */
   useEffect(() => {
     const handlers = {
       initialize: (arg: ResponseArgs['initialize']) => {
