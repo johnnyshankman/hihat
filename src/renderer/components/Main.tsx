@@ -24,9 +24,7 @@ export default function Main() {
   const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
   // Main store hooks
-  const storeLibrary = useMainStore((store) => store.library);
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
-  const setLastPlayedSong = useMainStore((store) => store.setLastPlayedSong);
   const setInitialized = useMainStore((store) => store.setInitialized);
 
   // Player store hooks
@@ -71,17 +69,6 @@ export default function Main() {
   });
   const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
 
-  const playSpecificSong = useCallback(
-    async (song: string) => {
-      selectSpecificSong(song, storeLibrary);
-      // update internal store and user config to store the last played song
-      // @note: putting it in the current store doesnt really do anything...
-      setLastPlayedSong(song);
-      window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
-    },
-    [selectSpecificSong, storeLibrary, setLastPlayedSong],
-  );
-
   const playPreviousSong = useCallback(async () => {
     if (!filteredLibrary) return;
 
@@ -104,7 +91,7 @@ export default function Main() {
     // shuffle case
     if (shuffle && shuffleHistory.length > 0) {
       const previousSong = shuffleHistory[shuffleHistory.length - 1];
-      await playSpecificSong(previousSong);
+      await selectSpecificSong(previousSong, filteredLibrary);
       setOverrideScrollToIndex(keys.indexOf(previousSong));
       setShuffleHistory(shuffleHistory.slice(0, -1));
       return;
@@ -112,7 +99,7 @@ export default function Main() {
 
     const prevIndex = currentIndex - 1 < 0 ? keys.length - 1 : currentIndex - 1;
     const prevSong = keys[prevIndex];
-    await playSpecificSong(prevSong);
+    await selectSpecificSong(prevSong, filteredLibrary);
   }, [
     filteredLibrary,
     currentSong,
@@ -122,9 +109,9 @@ export default function Main() {
     currentSongTime,
     shuffle,
     shuffleHistory,
-    playSpecificSong,
     setOverrideScrollToIndex,
     setShuffleHistory,
+    selectSpecificSong,
   ]);
 
   const importNewLibrary = async (rescan = false) => {
@@ -387,14 +374,7 @@ export default function Main() {
             />
           )}
 
-          {width && (
-            <LibraryList
-              onImportLibrary={importNewLibrary}
-              playSong={async (song) => {
-                playSpecificSong(song);
-              }}
-            />
-          )}
+          {width && <LibraryList onImportLibrary={importNewLibrary} />}
 
           <StaticPlayer
             playNextSong={skipToNextSong}

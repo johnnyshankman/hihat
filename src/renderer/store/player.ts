@@ -171,12 +171,13 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       });
       window.electron.ipcRenderer.sendMessage('get-album-art', songPath);
 
+      window.electron.ipcRenderer.sendMessage('set-last-played-song', songPath);
+
       return {
         currentSong: songPath,
         currentSongMetadata: metadata,
         paused: false,
         currentSongTime: 0,
-        setCurrentSongTime: 0,
       };
     });
   },
@@ -244,7 +245,20 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         `my-magic-protocol://getMediaFile/${futureNextSong.songPath}`,
       );
 
-      // Handle album art
+      // Update media session
+      const mediaData = {
+        title: nextSongMetadata.common.title,
+        artist: nextSongMetadata.common.artist,
+        album: nextSongMetadata.common.album,
+      };
+
+      if (navigator.mediaSession.metadata) {
+        Object.assign(navigator.mediaSession.metadata, mediaData);
+      } else {
+        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
+      }
+
+      // handle album art request
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
         let url = '';
         if (event.data) {
@@ -262,20 +276,14 @@ const usePlayerStore = create<PlayerStore>((set) => ({
           ];
         }
       });
+      // request album art
       window.electron.ipcRenderer.sendMessage('get-album-art', nextSongPath);
 
-      // Update media session
-      const mediaData = {
-        title: nextSongMetadata.common.title,
-        artist: nextSongMetadata.common.artist,
-        album: nextSongMetadata.common.album,
-      };
-
-      if (navigator.mediaSession.metadata) {
-        Object.assign(navigator.mediaSession.metadata, mediaData);
-      } else {
-        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
-      }
+      // update last played song in user config
+      window.electron.ipcRenderer.sendMessage(
+        'set-last-played-song',
+        nextSongPath,
+      );
 
       return {
         currentSong: nextSongPath,
@@ -283,6 +291,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         currentSongTime: 0,
         overrideScrollToIndex: nextSongIndex,
         shuffleHistory,
+        lastPlayedSong: nextSongPath,
       };
     });
   },
@@ -333,7 +342,20 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         `my-magic-protocol://getMediaFile/${futureNextSong.songPath}`,
       );
 
-      // Handle album art
+      // Update media session
+      const mediaData = {
+        title: nextSongMetadata.common.title,
+        artist: nextSongMetadata.common.artist,
+        album: nextSongMetadata.common.album,
+      };
+
+      if (navigator.mediaSession.metadata) {
+        Object.assign(navigator.mediaSession.metadata, mediaData);
+      } else {
+        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
+      }
+
+      // handle album art request
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
         let url = '';
         if (event.data) {
@@ -350,20 +372,15 @@ const usePlayerStore = create<PlayerStore>((set) => ({
           ];
         }
       });
+
+      // request album art, handler is set above
       window.electron.ipcRenderer.sendMessage('get-album-art', nextSongPath);
 
-      // Update media session
-      const mediaData = {
-        title: nextSongMetadata.common.title,
-        artist: nextSongMetadata.common.artist,
-        album: nextSongMetadata.common.album,
-      };
-
-      if (navigator.mediaSession.metadata) {
-        Object.assign(navigator.mediaSession.metadata, mediaData);
-      } else {
-        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
-      }
+      // update last played song in user config
+      window.electron.ipcRenderer.sendMessage(
+        'set-last-played-song',
+        nextSongPath,
+      );
 
       // In exactly 1s remove all tracks before the current playing track
       window.setTimeout(() => {
@@ -384,6 +401,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         paused: false,
         overrideScrollToIndex: nextSongIndex,
         shuffleHistory,
+        lastPlayedSong: nextSongPath,
       };
     });
   },

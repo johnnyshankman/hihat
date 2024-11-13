@@ -41,10 +41,6 @@ type FilterDirections = 'asc' | 'desc';
 
 type LibraryListProps = {
   /**
-   * @dev a hook for when the song is double clicked
-   */
-  playSong: (song: string, info: StoreStructure['library'][string]) => void;
-  /**
    * @dev a hook for when the user wants to import their library
    */
   onImportLibrary: () => void;
@@ -60,10 +56,7 @@ type SongMenuState =
     }
   | undefined;
 
-export default function LibraryList({
-  playSong,
-  onImportLibrary,
-}: LibraryListProps) {
+export default function LibraryList({ onImportLibrary }: LibraryListProps) {
   const { width, height } = useWindowDimensions();
 
   /**
@@ -78,6 +71,9 @@ export default function LibraryList({
   );
   const setOverrideScrollToIndex = usePlayerStore(
     (store) => store.setOverrideScrollToIndex,
+  );
+  const selectSpecificSong = usePlayerStore(
+    (store) => store.selectSpecificSong,
   );
 
   /**
@@ -409,7 +405,7 @@ export default function LibraryList({
           });
         }}
         onDoubleClick={async () => {
-          await playSong(song, filteredLibrary[song]);
+          await selectSpecificSong(song, filteredLibrary);
         }}
         style={style}
       >
