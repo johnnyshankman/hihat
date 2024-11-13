@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 import { Gapless5, LogLevel } from '@regosen/gapless-5';
 import { LightweightAudioMetadata } from '../../common/common';
-import { bufferToDataUrl, findNextSong } from '../utils/utils';
+import {
+  bufferToDataUrl,
+  findNextSong,
+  updateMediaSession,
+} from '../utils/utils';
 
 interface PlayerStore {
   /**
@@ -152,17 +156,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         audioElement.play();
       }
 
-      const mediaData = {
-        title: metadata.common.title,
-        artist: metadata.common.artist,
-        album: metadata.common.album,
-      };
-
-      if (navigator.mediaSession.metadata) {
-        Object.assign(navigator.mediaSession.metadata, mediaData);
-      } else {
-        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
-      }
+      updateMediaSession(metadata);
 
       // handle album art request
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
@@ -268,18 +262,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         `my-magic-protocol://getMediaFile/${futureNextSong.songPath}`,
       );
 
-      // Update media session
-      const mediaData = {
-        title: nextSongMetadata.common.title,
-        artist: nextSongMetadata.common.artist,
-        album: nextSongMetadata.common.album,
-      };
-
-      if (navigator.mediaSession.metadata) {
-        Object.assign(navigator.mediaSession.metadata, mediaData);
-      } else {
-        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
-      }
+      updateMediaSession(nextSongMetadata);
 
       // handle album art request
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
@@ -372,17 +355,7 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       );
 
       // Update media session
-      const mediaData = {
-        title: nextSongMetadata.common.title,
-        artist: nextSongMetadata.common.artist,
-        album: nextSongMetadata.common.album,
-      };
-
-      if (navigator.mediaSession.metadata) {
-        Object.assign(navigator.mediaSession.metadata, mediaData);
-      } else {
-        navigator.mediaSession.metadata = new MediaMetadata(mediaData);
-      }
+      updateMediaSession(nextSongMetadata);
 
       // handle album art request
       window.electron.ipcRenderer.once('get-album-art', async (event) => {

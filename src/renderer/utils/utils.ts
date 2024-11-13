@@ -55,3 +55,17 @@ export const findNextSong = (
     index: nextIndex,
   };
 };
+
+export const updateMediaSession = (metadata: LightweightAudioMetadata) => {
+  const mediaData = {
+    title: metadata.common.title,
+    artist: metadata.common.artist,
+    album: metadata.common.album,
+  };
+
+  if (navigator.mediaSession.metadata) {
+    Object.assign(navigator.mediaSession.metadata, mediaData);
+  } else {
+    navigator.mediaSession.metadata = new MediaMetadata(mediaData);
+  }
+};
