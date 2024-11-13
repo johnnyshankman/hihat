@@ -270,7 +270,7 @@ This project was built with the following technologies:
 - [x] Show stats about your library somewhere, like GB and # of songs
 - [x] iTunes-like browser with list of artist and album filters
 - [x] Quiet mode creating bg music to a video/audiobook/podcast in another app
-- [ ] True gapless playback
+- [x] True gapless playback
 - [ ] Edit song metadata
 - [ ] Hide/show columns in the Library List
 - [ ] Queue a next-up song
