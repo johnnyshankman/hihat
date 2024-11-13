@@ -449,13 +449,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         };
       }
 
-      // if the song is between 1 and 3 seconds in, restart it
-      // if its still at 0-1 let them go back bc they're probably quickly flipping back
-      if (
-        !state.paused &&
-        state.currentSongTime < 3 &&
-        state.currentSongTime > 1
-      ) {
+      // if the song is past the 3 second mark, restart it
+      // the song is under 3 seconds, let them go back
+      // this emulates the behavior of most music players / cd players
+      if (!state.paused && state.currentSongTime > 3) {
         state.player.setPosition(0);
         return {
           currentSongTime: 0,
