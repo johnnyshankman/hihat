@@ -333,7 +333,7 @@ export default function LibraryList({ onImportLibrary }: LibraryListProps) {
     setTimeout(() => {
       const artContainerHeight =
         document.querySelector('.art')?.clientHeight || 0;
-      if (currentWidth > 500) {
+      if (currentWidth > 600) {
         const newHeight = currentHeight - artContainerHeight - 106;
         setRowContainerHeight(newHeight);
       } else {

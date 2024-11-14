@@ -50,8 +50,8 @@ module.exports = {
        * the StaticPlayer component looks good snapping into a vertical layout.
        */
       screens: {
-        sm: '500px',
-        // => @media (min-width: 500px) { ... }
+        sm: '600px',
+        // => @media (min-width: 600px) { ... }
       },
       keyframes: {
         'sui--accordion-down': {
