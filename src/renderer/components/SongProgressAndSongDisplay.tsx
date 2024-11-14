@@ -55,7 +55,7 @@ export default function SongProgressAndSongDisplay({
         song.common.album === currentSongMetadata.common?.album,
     );
 
-    if (index !== -1) {
+    if (index === -1) {
       index = libraryArray.findIndex(
         (song) => song.common.artist === currentSongMetadata.common?.artist,
       );
