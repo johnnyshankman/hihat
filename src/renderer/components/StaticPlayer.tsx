@@ -10,7 +10,6 @@ import ShuffleOnIcon from '@mui/icons-material/ShuffleOn';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import Stack from '@mui/material/Stack';
 import RepeatOnIcon from '@mui/icons-material/RepeatOn';
-import SpatialAudioIcon from '@mui/icons-material/SpatialAudio';
 import VolumeSliderStack from './VolumeSliderStack';
 import SongProgressAndSongDisplay from './SongProgressAndSongDisplay';
 import usePlayerStore from '../store/player';
@@ -97,20 +96,6 @@ export default function StaticPlayer({
               ) : (
                 <ShuffleIcon fontSize="inherit" />
               )}
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Quiet Mode">
-            <IconButton
-              onClick={() => {
-                // set the volume to 0.02 so you can listen to a podcast or hear the person next to you
-                setVolume(2);
-              }}
-              sx={{
-                fontSize: '1rem',
-                color: 'rgb(133,133,133)',
-              }}
-            >
-              <SpatialAudioIcon fontSize="inherit" />
             </IconButton>
           </Tooltip>
         </div>
@@ -221,19 +206,6 @@ export default function StaticPlayer({
               ) : (
                 <ShuffleIcon fontSize="inherit" />
               )}
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Quiet Mode">
-            <IconButton
-              onClick={() => {
-                setVolume(2.5);
-              }}
-              sx={{
-                fontSize: '1rem',
-                color: 'rgb(133,133,133)',
-              }}
-            >
-              <SpatialAudioIcon fontSize="inherit" />
             </IconButton>
           </Tooltip>
         </div>

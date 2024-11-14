@@ -47,6 +47,7 @@ export default function Main() {
     (store) => store.setOverrideScrollToIndex,
   );
   const skipToNextSong = usePlayerStore((store) => store.skipToNextSong);
+  const setVolume = usePlayerStore((store) => store.setVolume);
 
   // Component state
   const [dialogState, setDialogState] = useState({
@@ -207,6 +208,9 @@ export default function Main() {
       },
       'menu-reset-library': () => {
         window.electron.ipcRenderer.sendMessage('menu-reset-library');
+      },
+      'menu-quiet-mode': () => {
+        setVolume(2);
       },
     };
 

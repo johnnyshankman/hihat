@@ -166,6 +166,12 @@ export default class MenuBuilder {
             });
           },
         },
+        {
+          label: 'quiet down',
+          click: () => {
+            this.mainWindow.webContents.send('menu-quiet-mode');
+          },
+        },
 
         { type: 'separator' },
 
