@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack';
 import RepeatOnIcon from '@mui/icons-material/RepeatOn';
 import SpatialAudioIcon from '@mui/icons-material/SpatialAudio';
 import VolumeSliderStack from './VolumeSliderStack';
-import SongProgressBar from './SongProgressBar';
+import SongProgressAndSongDisplay from './SongProgressAndSongDisplay';
 import usePlayerStore from '../store/player';
 
 type StaticPlayerProps = {
@@ -173,7 +173,7 @@ export default function StaticPlayer({
       {/**
        * @dev this is song progress bar on mobile and desktop
        */}
-      <SongProgressBar
+      <SongProgressAndSongDisplay
         max={currentSongMetadata?.format?.duration || 0}
         onManualChange={(e: number) => {
           // manually update the player

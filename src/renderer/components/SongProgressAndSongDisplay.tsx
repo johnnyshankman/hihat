@@ -7,7 +7,7 @@ import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
 import usePlayerStore from '../store/player';
 import { useWindowDimensions } from '../hooks/useWindowDimensions';
 
-export default function SongProgressBar({
+export default function SongProgressAndSongDisplay({
   value,
   onManualChange,
   max,
@@ -33,14 +33,35 @@ export default function SongProgressBar({
   const artistRef = React.useRef<HTMLDivElement>(null);
   const artistRef2 = React.useRef<HTMLDivElement>(null);
 
-  function convertToMMSS(timeInSeconds: number) {
+  const convertToMMSS = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
     // Ensuring the format is two-digits both for minutes and seconds
     return `${minutes.toString().padStart(2, '0')}:${seconds
       .toString()
       .padStart(2, '0')}`;
-  }
+  };
+
+  /**
+   * on click, scroll to the song in the library if possible,
+   * then try to scroll to the artist if the song is not found
+   */
+  const scrollToSong = () => {
+    const libraryArray = Object.values(filteredLibrary);
+    let index = libraryArray.findIndex(
+      (song) =>
+        song.common.title === currentSongMetadata.common?.title &&
+        song.common.artist === currentSongMetadata.common?.artist &&
+        song.common.album === currentSongMetadata.common?.album,
+    );
+
+    if (index !== -1) {
+      index = libraryArray.findIndex(
+        (song) => song.common.artist === currentSongMetadata.common?.artist,
+      );
+    }
+    setOverrideScrollToIndex(index);
+  };
 
   React.useEffect(() => {
     setPosition(value);
@@ -174,18 +195,7 @@ export default function SongProgressBar({
           <LessOpaqueTinyText
             aria-label="current-title"
             onClick={() => {
-              /**
-               * on click, scroll to the song title in the library
-               */
-              const libraryArray = Object.values(filteredLibrary);
-              const index = libraryArray.findIndex(
-                (song) =>
-                  song.common.title === currentSongMetadata.common?.title &&
-                  song.common.artist === currentSongMetadata.common?.artist &&
-                  song.common.album === currentSongMetadata.common?.album,
-              );
-
-              setOverrideScrollToIndex(index);
+              scrollToSong();
             }}
             sx={{
               margin: 0,
@@ -257,15 +267,7 @@ export default function SongProgressBar({
         <LessOpaqueTinyText
           aria-label="current-title"
           onClick={() => {
-            /**
-             * on click, scroll to the artist in the library
-             */
-            const libraryArray = Object.values(filteredLibrary);
-            const index = libraryArray.findIndex(
-              (song) =>
-                song.common.artist === currentSongMetadata.common?.artist,
-            );
-            setOverrideScrollToIndex(index);
+            scrollToSong();
           }}
           sx={{
             margin: 0,
