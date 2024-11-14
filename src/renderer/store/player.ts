@@ -113,8 +113,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
         `my-magic-protocol://getMediaFile/${nextSong.songPath}`,
       );
 
+      const shuffleHistory = shuffle ? [state.currentSong] : [];
+
       // @note: we clear the shuffle history as it's no longer relevant
-      return { shuffle, shuffleHistory: [] };
+      return { shuffle, shuffleHistory };
     });
   },
   // @see: forces calls to player.cue() in certain spots
@@ -139,6 +141,10 @@ const usePlayerStore = create<PlayerStore>((set) => ({
       if (!metadata) {
         console.warn('No metadata found for requested song:', songPath);
         return {};
+      }
+
+      if (state.shuffle) {
+        state.setShuffleHistory([...state.shuffleHistory, songPath]);
       }
 
       const nextSong = findNextSong(songPath, library, state.shuffle);
@@ -432,8 +438,6 @@ const usePlayerStore = create<PlayerStore>((set) => ({
           state.shuffleHistory[state.shuffleHistory.length - 1];
         state.selectSpecificSong(previousSong, state.filteredLibrary);
         return {
-          // @todo: up for debate if we should override the scroll to index
-          overrideScrollToIndex: keys.indexOf(previousSong),
           shuffleHistory: state.shuffleHistory.slice(0, -1),
         };
       }
