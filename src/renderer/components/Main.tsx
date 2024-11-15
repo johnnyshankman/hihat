@@ -255,6 +255,18 @@ export default function Main() {
     });
   }, [paused, skipToNextSong, playPreviousSong, setPaused]);
 
+  /**
+   * @important this handles the play count incrementing.
+   * if the song has ever played passed the 10 second mark,
+   * we increment the play count.
+   * @caveat this means that if the user skips to the 20s mark and then
+   * plays the song for 1s, it will increment the play count.
+   * @note this is based on an avg of spotiy vs apple music vs old itunes.
+   * old itunes did it instantly on start, spotify requires 30 seconds of playing, and
+   * apple music works like my algorithm but with a 20s threshold (0 to 19s = skip)
+   * @important we manually unset the hasIncreasedPlayCount flag
+   * from the store when the user hits next, selects a new song, etc.
+   */
   useEffect(() => {
     let lastUpdate = 0;
 
@@ -270,7 +282,8 @@ export default function Main() {
         if (
           !hasIncreasedPlayCount &&
           currentTrackTime >= 10000 &&
-          currentSong
+          currentSong &&
+          !paused
         ) {
           increasePlayCountOfSong(currentSong);
           setHasIncreasedPlayCount(true);
@@ -286,6 +299,7 @@ export default function Main() {
     setCurrentSongTime,
     setHasIncreasedPlayCount,
     hasIncreasedPlayCount,
+    paused,
   ]);
 
   return (
