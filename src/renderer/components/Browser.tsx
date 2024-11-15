@@ -21,7 +21,14 @@ const ROW_HEIGHT = 25.5; // Fixed row height
 const BROWSER_WIDTH = 800; // Fixed browser width
 
 export default function Browser({ onClose }: BrowserProps) {
+  /**
+   * @dev window provider hook
+   */
   const { width, height } = useWindowDimensions();
+
+  /**
+   * @dev store hooks
+   */
   const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
   const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
@@ -29,6 +36,9 @@ export default function Browser({ onClose }: BrowserProps) {
   const currentSong = useMainStore((store) => store.currentSong);
   const storeLibrary = useMainStore((store) => store.library);
 
+  /**
+   * @dev component state
+   */
   const [selection, setSelection] = useState<BrowserSelection>({
     artist: null,
     album: null,
@@ -42,6 +52,9 @@ export default function Browser({ onClose }: BrowserProps) {
     height: height ? height * 0.25 : 400,
   });
 
+  /**
+   * @dev component refs
+   */
   const browserRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

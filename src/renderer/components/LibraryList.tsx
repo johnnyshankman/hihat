@@ -56,6 +56,9 @@ type SongMenuState =
   | undefined;
 
 export default function LibraryList({ onImportLibrary }: LibraryListProps) {
+  /**
+   * @dev window provider hook
+   */
   const { width, height } = useWindowDimensions();
 
   /**
@@ -72,6 +75,7 @@ export default function LibraryList({ onImportLibrary }: LibraryListProps) {
     (store) => store.setOverrideScrollToIndex,
   );
   const selectSpecificSong = useMainStore((store) => store.selectSpecificSong);
+  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
 
   /**
    * @dev component state
@@ -114,44 +118,15 @@ export default function LibraryList({ onImportLibrary }: LibraryListProps) {
       icon: <PlayArrowRounded fontSize="inherit" />,
     },
   ]);
-
-  useEffect(() => {
-    // recalculate the width of each column proportionally using staleWidth as the base
-    if (staleWidth !== width) {
-      setColumnUXInfo(
-        columnUXInfo.map((column) => {
-          if (
-            column.id === 'dateAdded' ||
-            column.id === 'playCount' ||
-            column.id === 'duration'
-          ) {
-            return column; // Keep these columns at their initial width
-          }
-          return {
-            ...column,
-            width: Math.max((column.width / staleWidth) * width, 60),
-          };
-        }),
-      );
-      setStaleWidth(width);
-    }
-  }, [width]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [filterType, setFilterType] = useState<FilterTypes>('artist');
+  const [filterDirection, setFilterDirection] =
+    useState<FilterDirections>('desc');
+  const [songMenu, setSongMenu] = useState<SongMenuState>(undefined);
 
   /**
-   * @dev anytime overrideScrollToIndex changes, set a timeout to
-   * reset it to undefined after 200ms. this is to prevent the
-   * library list from scrolling to the wrong index when the
-   * library is updated.
+   * @dev template vars
    */
-  useEffect(() => {
-    if (overrideScrollToIndex !== undefined) {
-      setTimeout(() => {
-        setOverrideScrollToIndex(-1);
-      }, 200);
-    }
-  }, [overrideScrollToIndex, setOverrideScrollToIndex]);
-
-  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
+  const hasSongs = Object.keys(filteredLibrary || {}).length;
 
   const updateColumnWidth = (index: number, deltaX: number) => {
     const newColumnUXInfo = [...columnUXInfo];
@@ -194,14 +169,6 @@ export default function LibraryList({ onImportLibrary }: LibraryListProps) {
 
     setColumnUXInfo(newColumnUXInfo);
   };
-
-  /**
-   * @dev state
-   */
-  const [filterType, setFilterType] = useState<FilterTypes>('artist');
-  const [filterDirection, setFilterDirection] =
-    useState<FilterDirections>('desc');
-  const [songMenu, setSongMenu] = useState<SongMenuState>(undefined);
 
   // create a monolothic filter function that takes in the filter type as the first param
   const filterLibrary = (filter: FilterTypes): void => {
@@ -337,6 +304,42 @@ export default function LibraryList({ onImportLibrary }: LibraryListProps) {
     }, 100);
   };
 
+  useEffect(() => {
+    // recalculate the width of each column proportionally using staleWidth as the base
+    if (staleWidth !== width) {
+      setColumnUXInfo(
+        columnUXInfo.map((column) => {
+          if (
+            column.id === 'dateAdded' ||
+            column.id === 'playCount' ||
+            column.id === 'duration'
+          ) {
+            return column; // Keep these columns at their initial width
+          }
+          return {
+            ...column,
+            width: Math.max((column.width / staleWidth) * width, 60),
+          };
+        }),
+      );
+      setStaleWidth(width);
+    }
+  }, [width]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * @dev anytime overrideScrollToIndex changes, set a timeout to
+   * reset it to undefined after 200ms. this is to prevent the
+   * library list from scrolling to the wrong index when the
+   * library is updated.
+   */
+  useEffect(() => {
+    if (overrideScrollToIndex !== undefined) {
+      setTimeout(() => {
+        setOverrideScrollToIndex(-1);
+      }, 200);
+    }
+  }, [overrideScrollToIndex, setOverrideScrollToIndex]);
+
   /**
    * @dev update the row container height when
    * the window is resized in any way. that way our virtualized table
@@ -370,6 +373,7 @@ export default function LibraryList({ onImportLibrary }: LibraryListProps) {
       );
     };
   }, [height, width]);
+
   /**
    * @dev render the row for the virtualized table, reps a single song
    */
@@ -461,8 +465,6 @@ export default function LibraryList({ onImportLibrary }: LibraryListProps) {
       </div>
     );
   };
-
-  const hasSongs = Object.keys(filteredLibrary || {}).length;
 
   return (
     <div className="w-full">

@@ -14,10 +14,13 @@ export default function AlbumArt({
   setShowAlbumArtMenu,
   showAlbumArtMenu,
 }: AlbumArtProps) {
+  /**
+   * @dev window provider hook
+   */
   const { width, height } = useWindowDimensions();
 
   /**
-   * @dev global store hooks
+   * @dev store hooks
    */
   const currentSong = useMainStore((store) => store.currentSong);
   const currentSongMetadata = useMainStore(

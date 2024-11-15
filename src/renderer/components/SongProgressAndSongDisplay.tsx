@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import { Tooltip } from '@mui/material';
@@ -16,11 +16,21 @@ export default function SongProgressAndSongDisplay({
   onManualChange: (value: number) => void;
   max: number;
 }) {
-  const [position, setPosition] = React.useState(32);
-  const [isScrolling, setIsScrolling] = React.useState(false);
-  const [isArtistScrolling, setIsArtistScrolling] = React.useState(false);
+  /**
+   * @dev component state
+   */
+  const [position, setPosition] = useState(32);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [isArtistScrolling, setIsArtistScrolling] = useState(false);
+
+  /**
+   * @dev window provider hook
+   */
   const { width, height } = useWindowDimensions();
 
+  /**
+   * @dev main store hooks
+   */
   const filteredLibrary = useMainStore((state) => state.filteredLibrary);
   const currentSongMetadata = useMainStore(
     (state) => state.currentSongMetadata,
@@ -28,10 +38,14 @@ export default function SongProgressAndSongDisplay({
   const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
-  const titleRef = React.useRef<HTMLDivElement>(null);
-  const titleRef2 = React.useRef<HTMLDivElement>(null);
-  const artistRef = React.useRef<HTMLDivElement>(null);
-  const artistRef2 = React.useRef<HTMLDivElement>(null);
+
+  /**
+   * @dev component refs
+   */
+  const titleRef = useRef<HTMLDivElement>(null);
+  const titleRef2 = useRef<HTMLDivElement>(null);
+  const artistRef = useRef<HTMLDivElement>(null);
+  const artistRef2 = useRef<HTMLDivElement>(null);
 
   const convertToMMSS = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -63,11 +77,11 @@ export default function SongProgressAndSongDisplay({
     setOverrideScrollToIndex(index);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     setPosition(value);
   }, [value]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkOverflow1 = () => {
       if (titleRef.current) {
         // requires going up three parent elements to get out of the marquee
@@ -96,7 +110,7 @@ export default function SongProgressAndSongDisplay({
     };
   }, [currentSongMetadata.common?.title, width, height]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkOverflow2 = () => {
       if (titleRef2.current) {
         // requires going up three parent elements to get out of the marquee
@@ -125,7 +139,7 @@ export default function SongProgressAndSongDisplay({
     };
   }, [currentSongMetadata.common?.title, width, height]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkOverflow3 = () => {
       if (artistRef.current) {
         // requires going up three parent elements to get out of the marquee
@@ -151,7 +165,7 @@ export default function SongProgressAndSongDisplay({
     };
   }, [currentSongMetadata.common?.artist, width, height]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkOverflow4 = () => {
       if (artistRef2.current) {
         // requires going up three parent elements to get out of the marquee

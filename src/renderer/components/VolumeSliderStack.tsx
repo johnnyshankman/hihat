@@ -15,6 +15,7 @@ export default function VolumeSliderStack({
   value: number;
 }) {
   const setVolume = useMainStore((store) => store.setVolume);
+
   const handleChange = (event: Event, newValue: number | number[]) => {
     onChange(event, newValue);
   };

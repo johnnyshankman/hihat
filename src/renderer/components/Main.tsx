@@ -19,14 +19,16 @@ import { Channels, ResponseArgs } from '../../main/preload';
 type AlbumArtMenuState = { mouseX: number; mouseY: number } | undefined;
 
 export default function Main() {
+  /**
+   * @dev external hooks
+   */
   const { width, height, ref } = useResizeDetector();
-  const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
-  // Main store hooks
+  /**
+   * @dev main store hooks
+   */
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
   const setInitialized = useMainStore((store) => store.setInitialized);
-
-  // Player store hooks
   const currentSong = useMainStore((store) => store.currentSong);
   const player = useMainStore((store) => store.player);
   const setPaused = useMainStore((store) => store.setPaused);
@@ -51,7 +53,9 @@ export default function Main() {
     (store) => store.hasIncreasedPlayCount,
   );
 
-  // Component state
+  /**
+   * @dev component state
+   */
   const [dialogState, setDialogState] = useState({
     showImportingProgress: false,
     showDedupingProgress: false,
@@ -66,6 +70,11 @@ export default function Main() {
     estimatedTimeRemainingString: '',
   });
   const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
+
+  /**
+   * @dev components refs
+   */
+  const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
   const importNewLibrary = async (rescan = false) => {
     setDialogState((prev) => ({ ...prev, showImportingProgress: true }));

@@ -33,7 +33,6 @@ export default function StaticPlayer({
   const setShuffle = useMainStore((state) => state.setShuffle);
   const paused = useMainStore((state) => state.paused);
   const setPaused = useMainStore((state) => state.setPaused);
-  // @note this is used as state to know when the song's info is done loading
   const currentSongMetadata = useMainStore(
     (state) => state.currentSongMetadata,
   );
