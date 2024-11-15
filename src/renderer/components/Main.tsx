@@ -151,22 +151,6 @@ export default function Main() {
         }
 
         player.onfinishedtrack = autoPlayNextSong;
-        // /**
-        //  * @important throttle this to once every 500ms
-        //  * to keep from updating the store too often causing
-        //  * react to re-render too much.
-        //  * @todo: this could be moved to the static player component
-        //  */
-        // player.ontimeupdate = (() => {
-        //   let lastUpdate = 0;
-        //   return (currentTrackTime: number, _currentTrackIndex: number) => {
-        //     const now = Date.now();
-        //     if (now - lastUpdate >= 500) {
-        //       setCurrentSongTime(currentTrackTime / 1000);
-        //       lastUpdate = now;
-        //     }
-        //   };
-        // })();
 
         setPaused(true);
       },
