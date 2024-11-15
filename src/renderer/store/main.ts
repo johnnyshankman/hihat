@@ -7,22 +7,6 @@ import {
   updateMediaSession,
 } from '../utils/utils';
 
-const increasePlayCountOfSong = (
-  library: { [key: string]: LightweightAudioMetadata },
-  songPath: string,
-) => {
-  return {
-    ...library,
-    [songPath]: {
-      ...library[songPath],
-      additionalInfo: {
-        ...library[songPath].additionalInfo,
-        playCount: library[songPath].additionalInfo.playCount + 1,
-      },
-    },
-  };
-};
-
 interface StoreActions {
   // Main store actions
   deleteEverything: () => void;
@@ -160,14 +144,33 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
 
   increasePlayCountOfSong: (songPath: string) => {
     return set((state) => {
-      const newLibrary = increasePlayCountOfSong(state.library, songPath);
-      const newFilteredLibrary = increasePlayCountOfSong(
-        state.filteredLibrary,
-        songPath,
-      );
+      const newLibrary = {
+        ...state.library,
+        [songPath]: {
+          ...state.library[songPath],
+          additionalInfo: {
+            ...state.library[songPath].additionalInfo,
+            playCount: state.library[songPath].additionalInfo.playCount + 1,
+          },
+        },
+      };
+      const newFilteredLibrary = {
+        ...state.filteredLibrary,
+        [songPath]: {
+          ...state.filteredLibrary[songPath],
+          additionalInfo: {
+            ...state.filteredLibrary[songPath].additionalInfo,
+            playCount:
+              state.filteredLibrary[songPath].additionalInfo.playCount + 1,
+          },
+        },
+      };
+
+      // @note: ensures the userConfig is updated for next boot of app
       window.electron.ipcRenderer.sendMessage('increment-play-count', {
         song: songPath,
       });
+
       return { library: newLibrary, filteredLibrary: newFilteredLibrary };
     });
   },
