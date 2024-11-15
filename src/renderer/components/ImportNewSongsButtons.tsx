@@ -18,9 +18,7 @@ export default function ImportNewSongsButton({
   /**
    * @dev global store hooks
    */
-  const setFilteredLibrary = useMainStore(
-    (store) => store.setFilteredLibrary,
-  );
+  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
   const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
