@@ -1,6 +1,5 @@
 import Tooltip from '@mui/material/Tooltip';
 import { LibraryAdd } from '@mui/icons-material';
-import usePlayerStore from '../store/player';
 import useMainStore from '../store/main';
 
 interface ImportNewSongsButtonProps {
@@ -19,11 +18,11 @@ export default function ImportNewSongsButton({
   /**
    * @dev global store hooks
    */
-  const setFilteredLibrary = usePlayerStore(
+  const setFilteredLibrary = useMainStore(
     (store) => store.setFilteredLibrary,
   );
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
-  const setOverrideScrollToIndex = usePlayerStore(
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
 

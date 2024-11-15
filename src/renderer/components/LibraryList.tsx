@@ -13,7 +13,6 @@ import Draggable from 'react-draggable';
 import { LightweightAudioMetadata, StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
 import { convertToMMSS } from '../utils/utils';
-import usePlayerStore from '../store/player';
 import SongRightClickMenu from './SongRightClickMenu';
 
 import { useWindowDimensions } from '../hooks/useWindowDimensions';
@@ -64,17 +63,15 @@ export default function LibraryList({ onImportLibrary }: LibraryListProps) {
    */
   const initialized = useMainStore((store) => store.initialized);
   const storeLibrary = useMainStore((store) => store.library);
-  const currentSong = usePlayerStore((store) => store.currentSong);
-  const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
-  const overrideScrollToIndex = usePlayerStore(
+  const currentSong = useMainStore((store) => store.currentSong);
+  const filteredLibrary = useMainStore((store) => store.filteredLibrary);
+  const overrideScrollToIndex = useMainStore(
     (store) => store.overrideScrollToIndex,
   );
-  const setOverrideScrollToIndex = usePlayerStore(
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
-  const selectSpecificSong = usePlayerStore(
-    (store) => store.selectSpecificSong,
-  );
+  const selectSpecificSong = useMainStore((store) => store.selectSpecificSong);
 
   /**
    * @dev component state
@@ -154,9 +151,7 @@ export default function LibraryList({ onImportLibrary }: LibraryListProps) {
     }
   }, [overrideScrollToIndex, setOverrideScrollToIndex]);
 
-  const setFilteredLibrary = usePlayerStore(
-    (store) => store.setFilteredLibrary,
-  );
+  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
 
   const updateColumnWidth = (index: number, deltaX: number) => {
     const newColumnUXInfo = [...columnUXInfo];

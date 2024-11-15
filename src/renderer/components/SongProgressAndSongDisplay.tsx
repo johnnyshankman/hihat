@@ -4,7 +4,7 @@ import Slider from '@mui/material/Slider';
 import { Tooltip } from '@mui/material';
 import Marquee from 'react-fast-marquee';
 import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
-import usePlayerStore from '../store/player';
+import useMainStore from '../store/main';
 import { useWindowDimensions } from '../hooks/useWindowDimensions';
 
 export default function SongProgressAndSongDisplay({
@@ -21,11 +21,11 @@ export default function SongProgressAndSongDisplay({
   const [isArtistScrolling, setIsArtistScrolling] = React.useState(false);
   const { width, height } = useWindowDimensions();
 
-  const filteredLibrary = usePlayerStore((state) => state.filteredLibrary);
-  const currentSongMetadata = usePlayerStore(
+  const filteredLibrary = useMainStore((state) => state.filteredLibrary);
+  const currentSongMetadata = useMainStore(
     (state) => state.currentSongMetadata,
   );
-  const setOverrideScrollToIndex = usePlayerStore(
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
   const titleRef = React.useRef<HTMLDivElement>(null);

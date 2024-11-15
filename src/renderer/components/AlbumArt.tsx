@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Draggable from 'react-draggable';
 import { TinyText } from './SimpleStyledMaterialUIComponents';
 import AlbumArtRightClickMenu from './AlbumArtRightClickMenu';
-import usePlayerStore from '../store/player';
+import useMainStore from '../store/main';
 import { useWindowDimensions } from '../hooks/useWindowDimensions';
 
 interface AlbumArtProps {
@@ -19,15 +19,15 @@ export default function AlbumArt({
   /**
    * @dev global store hooks
    */
-  const currentSong = usePlayerStore((store) => store.currentSong);
-  const currentSongMetadata = usePlayerStore(
+  const currentSong = useMainStore((store) => store.currentSong);
+  const currentSongMetadata = useMainStore(
     (store) => store.currentSongMetadata,
   );
-  const currentSongDataURL = usePlayerStore(
+  const currentSongDataURL = useMainStore(
     (store) => store.currentSongArtworkDataURL,
   );
-  const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
-  const setOverrideScrollToIndex = usePlayerStore(
+  const filteredLibrary = useMainStore((store) => store.filteredLibrary);
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
 

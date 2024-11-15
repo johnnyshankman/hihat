@@ -5,7 +5,7 @@ import Slider from '@mui/material/Slider';
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import IconButton from '@mui/material/IconButton';
-import usePlayerStore from '../store/player';
+import useMainStore from '../store/main';
 
 export default function VolumeSliderStack({
   onChange,
@@ -14,7 +14,7 @@ export default function VolumeSliderStack({
   onChange: (event: Event, newValue: number | number[]) => void;
   value: number;
 }) {
-  const setVolume = usePlayerStore((store) => store.setVolume);
+  const setVolume = useMainStore((store) => store.setVolume);
   const handleChange = (event: Event, newValue: number | number[]) => {
     onChange(event, newValue);
   };

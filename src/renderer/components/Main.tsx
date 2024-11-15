@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
 import useMainStore from '../store/main';
-import usePlayerStore from '../store/player';
 import LibraryList from './LibraryList';
 import StaticPlayer from './StaticPlayer';
 import BackupConfirmationDialog from './Dialog/BackupConfirmationDialog';
@@ -28,26 +27,29 @@ export default function Main() {
   const setInitialized = useMainStore((store) => store.setInitialized);
 
   // Player store hooks
-  const currentSong = usePlayerStore((store) => store.currentSong);
-  const player = usePlayerStore((store) => store.player);
-  const setPaused = usePlayerStore((store) => store.setPaused);
-  const paused = usePlayerStore((store) => store.paused);
-  const autoPlayNextSong = usePlayerStore((store) => store.autoPlayNextSong);
-  const playPreviousSong = usePlayerStore((store) => store.playPreviousSong);
-  const setFilteredLibrary = usePlayerStore(
-    (store) => store.setFilteredLibrary,
-  );
-  const selectSpecificSong = usePlayerStore(
-    (store) => store.selectSpecificSong,
-  );
-  const setCurrentSongTime = usePlayerStore(
-    (store) => store.setCurrentSongTime,
-  );
-  const setOverrideScrollToIndex = usePlayerStore(
+  const currentSong = useMainStore((store) => store.currentSong);
+  const player = useMainStore((store) => store.player);
+  const setPaused = useMainStore((store) => store.setPaused);
+  const paused = useMainStore((store) => store.paused);
+  const autoPlayNextSong = useMainStore((store) => store.autoPlayNextSong);
+  const playPreviousSong = useMainStore((store) => store.playPreviousSong);
+  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
+  const selectSpecificSong = useMainStore((store) => store.selectSpecificSong);
+  const setCurrentSongTime = useMainStore((store) => store.setCurrentSongTime);
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
-  const skipToNextSong = usePlayerStore((store) => store.skipToNextSong);
-  const setVolume = usePlayerStore((store) => store.setVolume);
+  const skipToNextSong = useMainStore((store) => store.skipToNextSong);
+  const setVolume = useMainStore((store) => store.setVolume);
+  const increasePlayCountOfSong = useMainStore(
+    (store) => store.increasePlayCountOfSong,
+  );
+  const setHasIncreasedPlayCount = useMainStore(
+    (store) => store.setHasIncreasedPlayCount,
+  );
+  const hasIncreasedPlayCount = useMainStore(
+    (store) => store.hasIncreasedPlayCount,
+  );
 
   // Component state
   const [dialogState, setDialogState] = useState({
@@ -140,22 +142,22 @@ export default function Main() {
         }
 
         player.onfinishedtrack = autoPlayNextSong;
-        /**
-         * @important throttle this to once every 500ms
-         * to keep from updating the store too often causing
-         * react to re-render too much.
-         * @todo: this could be moved to the static player component
-         */
-        player.ontimeupdate = (() => {
-          let lastUpdate = 0;
-          return (currentTrackTime: number, _currentTrackIndex: number) => {
-            const now = Date.now();
-            if (now - lastUpdate >= 500) {
-              setCurrentSongTime(currentTrackTime / 1000);
-              lastUpdate = now;
-            }
-          };
-        })();
+        // /**
+        //  * @important throttle this to once every 500ms
+        //  * to keep from updating the store too often causing
+        //  * react to re-render too much.
+        //  * @todo: this could be moved to the static player component
+        //  */
+        // player.ontimeupdate = (() => {
+        //   let lastUpdate = 0;
+        //   return (currentTrackTime: number, _currentTrackIndex: number) => {
+        //     const now = Date.now();
+        //     if (now - lastUpdate >= 500) {
+        //       setCurrentSongTime(currentTrackTime / 1000);
+        //       lastUpdate = now;
+        //     }
+        //   };
+        // })();
 
         setPaused(true);
       },
@@ -252,6 +254,39 @@ export default function Main() {
       position: 0,
     });
   }, [paused, skipToNextSong, playPreviousSong, setPaused]);
+
+  useEffect(() => {
+    let lastUpdate = 0;
+
+    player.ontimeupdate = (
+      currentTrackTime: number,
+      _currentTrackIndex: number,
+    ) => {
+      const now = Date.now();
+      if (now - lastUpdate >= 500) {
+        setCurrentSongTime(currentTrackTime / 1000);
+
+        // Increase play count once when song passes 10 second mark
+        if (
+          !hasIncreasedPlayCount &&
+          currentTrackTime >= 10000 &&
+          currentSong
+        ) {
+          increasePlayCountOfSong(currentSong);
+          setHasIncreasedPlayCount(true);
+        }
+
+        lastUpdate = now;
+      }
+    };
+  }, [
+    currentSong,
+    increasePlayCountOfSong,
+    player,
+    setCurrentSongTime,
+    setHasIncreasedPlayCount,
+    hasIncreasedPlayCount,
+  ]);
 
   return (
     <div ref={ref} className="h-full flex flex-col dark">

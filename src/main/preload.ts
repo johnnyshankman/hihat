@@ -26,6 +26,7 @@ export type Channels =
   | 'delete-song'
   | 'delete-album'
   | 'menu-toggle-browser'
+  | 'increment-play-count'
   | 'update-store';
 
 export type ArgsBase = Record<Channels, unknown>;
@@ -63,6 +64,9 @@ export interface SendMessageArgs extends ArgsBase {
   };
   'show-in-finder': {
     path: string;
+  };
+  'increment-play-count': {
+    song: string;
   };
 }
 

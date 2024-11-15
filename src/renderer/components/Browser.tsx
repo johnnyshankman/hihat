@@ -4,7 +4,6 @@ import Draggable from 'react-draggable';
 import { IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import usePlayerStore from '../store/player';
 import useMainStore from '../store/main';
 import { LightweightAudioMetadata } from '../../common/common';
 import { useWindowDimensions } from '../hooks/useWindowDimensions';
@@ -23,13 +22,11 @@ const BROWSER_WIDTH = 800; // Fixed browser width
 
 export default function Browser({ onClose }: BrowserProps) {
   const { width, height } = useWindowDimensions();
-  const setFilteredLibrary = usePlayerStore(
-    (store) => store.setFilteredLibrary,
-  );
-  const setOverrideScrollToIndex = usePlayerStore(
+  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
-  const currentSong = usePlayerStore((store) => store.currentSong);
+  const currentSong = useMainStore((store) => store.currentSong);
   const storeLibrary = useMainStore((store) => store.library);
 
   const [selection, setSelection] = useState<BrowserSelection>({

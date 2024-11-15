@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack';
 import RepeatOnIcon from '@mui/icons-material/RepeatOn';
 import VolumeSliderStack from './VolumeSliderStack';
 import SongProgressAndSongDisplay from './SongProgressAndSongDisplay';
-import usePlayerStore from '../store/player';
+import useMainStore from '../store/main';
 
 type StaticPlayerProps = {
   playNextSong: () => void;
@@ -26,20 +26,20 @@ export default function StaticPlayer({
   /**
    * @dev store
    */
-  const player = usePlayerStore((state) => state.player);
-  const repeating = usePlayerStore((state) => state.repeating);
-  const setRepeating = usePlayerStore((state) => state.setRepeating);
-  const shuffle = usePlayerStore((state) => state.shuffle);
-  const setShuffle = usePlayerStore((state) => state.setShuffle);
-  const paused = usePlayerStore((state) => state.paused);
-  const setPaused = usePlayerStore((state) => state.setPaused);
+  const player = useMainStore((state) => state.player);
+  const repeating = useMainStore((state) => state.repeating);
+  const setRepeating = useMainStore((state) => state.setRepeating);
+  const shuffle = useMainStore((state) => state.shuffle);
+  const setShuffle = useMainStore((state) => state.setShuffle);
+  const paused = useMainStore((state) => state.paused);
+  const setPaused = useMainStore((state) => state.setPaused);
   // @note this is used as state to know when the song's info is done loading
-  const currentSongMetadata = usePlayerStore(
+  const currentSongMetadata = useMainStore(
     (state) => state.currentSongMetadata,
   );
-  const volume = usePlayerStore((state) => state.volume);
-  const setVolume = usePlayerStore((state) => state.setVolume);
-  const currentSongTime = usePlayerStore((state) => state.currentSongTime);
+  const volume = useMainStore((state) => state.volume);
+  const setVolume = useMainStore((state) => state.setVolume);
+  const currentSongTime = useMainStore((state) => state.currentSongTime);
 
   return (
     <div
