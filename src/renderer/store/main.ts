@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Gapless5, LogLevel } from '@regosen/gapless-5';
+import { Gapless5 } from '@regosen/gapless-5';
 import { LightweightAudioMetadata, StoreStructure } from '../../common/common';
 import {
   bufferToDataUrl,
