@@ -10,6 +10,8 @@ interface ImportNewSongsButtonProps {
 }
 
 export default function ImportNewSongsButton({
+  // @TODO: I dislike this pattern of having to pass all these functions as props
+  // but it's the only way to get the async import working atm.
   setShowImportingProgress,
   setSongsImported,
   setTotalSongs,
