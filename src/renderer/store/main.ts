@@ -65,9 +65,9 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
   // Player state
   player: new Gapless5({
     useHTML5Audio: false,
-    loglevel: LogLevel.Debug,
     crossfade: 100,
     exclusive: true,
+    loadLimit: 3,
   }),
   paused: false,
   currentSong: '',
@@ -263,10 +263,10 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
       }
 
       const tracks = state.player.getTracks();
-      if (tracks.length < 2) return {}; // Safety check
+      const index = state.player.getIndex();
 
       // Get next song info before removing anything
-      const nextSongPath = tracks[1].replace(
+      const nextSongPath = tracks[index + 1].replace(
         'my-magic-protocol://getMediaFile/',
         '',
       );
@@ -292,7 +292,7 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
       state.player.pause();
 
       // Remove current track and start playing next track
-      state.player.removeTrack(0);
+      state.player.next(0, 1, 0);
 
       if (!state.paused) {
         state.player.play();
@@ -300,11 +300,6 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         if (audioElement) {
           audioElement.play();
         }
-
-        // @note: sometimes the song doesn't play if we don't wait for the onload event
-        state.player.onload = () => {
-          state.player.play();
-        };
       } else {
         state.player.pause();
         const audioElement = document.querySelector('audio');
@@ -376,11 +371,12 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         };
       }
 
+      // this is already up by one
       const tracks = state.player.getTracks();
-      if (tracks.length < 2) return {}; // Safety check
+      const index = state.player.getIndex();
 
       // Get next song info before removing anything
-      const nextSongPath = tracks[1].replace(
+      const nextSongPath = tracks[index].replace(
         'my-magic-protocol://getMediaFile/',
         '',
       );
@@ -436,19 +432,6 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         'set-last-played-song',
         nextSongPath,
       );
-
-      // In exactly 1s remove all tracks before the current playing track
-      window.setTimeout(() => {
-        const currentTrack = state.player.currentSource();
-        // find the index in the tracks array of the current track
-        const currentTrackIndex = state.player
-          .getTracks()
-          .findIndex((track) => track === currentTrack.audioPath);
-        // remove all tracks before the current track's index
-        for (let i = 0; i < currentTrackIndex; i += 1) {
-          state.player.removeTrack(i);
-        }
-      }, 1000);
 
       return {
         currentSong: nextSongPath,
