@@ -16,8 +16,6 @@ import Browser from './Browser';
 import { WindowDimensionsProvider } from '../hooks/useWindowDimensions';
 import { Channels, ResponseArgs } from '../../main/preload';
 
-type AlbumArtMenuState = { mouseX: number; mouseY: number } | undefined;
-
 export default function Main() {
   /**
    * @dev external hooks
@@ -35,14 +33,14 @@ export default function Main() {
   const paused = useMainStore((store) => store.paused);
   const autoPlayNextSong = useMainStore((store) => store.autoPlayNextSong);
   const playPreviousSong = useMainStore((store) => store.playPreviousSong);
+  const skipToNextSong = useMainStore((store) => store.skipToNextSong);
+  const setVolume = useMainStore((store) => store.setVolume);
   const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
   const selectSpecificSong = useMainStore((store) => store.selectSpecificSong);
   const setCurrentSongTime = useMainStore((store) => store.setCurrentSongTime);
   const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
-  const skipToNextSong = useMainStore((store) => store.skipToNextSong);
-  const setVolume = useMainStore((store) => store.setVolume);
   const increasePlayCountOfSong = useMainStore(
     (store) => store.increasePlayCountOfSong,
   );
@@ -69,7 +67,9 @@ export default function Main() {
     totalSongs: 1,
     estimatedTimeRemainingString: '',
   });
-  const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
+  const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<
+    { mouseX: number; mouseY: number } | undefined
+  >();
 
   /**
    * @dev components refs
@@ -249,16 +249,17 @@ export default function Main() {
   }, [paused, skipToNextSong, playPreviousSong, setPaused]);
 
   /**
-   * @important this handles the play count incrementing.
-   * if the song has ever played passed the 10 second mark,
-   * we increment the play count.
-   * @caveat this means that if the user skips to the 20s mark and then
-   * plays the song for 1s, it will increment the play count.
-   * @note this is based on an avg of spotiy vs apple music vs old itunes.
-   * old itunes did it instantly on start, spotify requires 30 seconds of playing, and
-   * apple music works like my algorithm but with a 20s threshold (0 to 19s = skip)
+   * @important this handles requesting the play count to be incremented.
+   * if the song has ever actively played passed the 10 second mark,
+   * we increment the play count both internally and in the user config.
    * @important we manually unset the hasIncreasedPlayCount flag
    * from the store when the user hits next, selects a new song, etc.
+   * so that we don't increment the play count multiple times for the same song.
+   * @caveat this means that if the user skips to the 20s mark and then
+   * plays the song for 1s, it will increment the play count.
+   * @note this is based on an avg of spotiy vs apple music vs itunes.
+   * itunes did it instantly on start, spotify requires 30 seconds of play,
+   * and apple music is like my algorithm but with a 20s threshold not 10s
    */
   useEffect(() => {
     let lastUpdate = 0;
@@ -268,10 +269,9 @@ export default function Main() {
       _currentTrackIndex: number,
     ) => {
       const now = Date.now();
+      // throttle updates to once every 500ms instead of every 1-10ms
       if (now - lastUpdate >= 500) {
         setCurrentSongTime(currentTrackTime / 1000);
-
-        // Increase play count once when song passes 10 second mark
         if (
           !hasIncreasedPlayCount &&
           currentTrackTime >= 10000 &&
