@@ -7,19 +7,10 @@ import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
 import useMainStore from '../store/main';
 import { useWindowDimensions } from '../hooks/useWindowDimensions';
 
-export default function SongProgressAndSongDisplay({
-  value,
-  onManualChange,
-  max,
-}: {
-  value: number;
-  onManualChange: (value: number) => void;
-  max: number;
-}) {
+export default function SongProgressAndSongDisplay() {
   /**
    * @dev component state
    */
-  const [position, setPosition] = useState(32);
   const [isScrolling, setIsScrolling] = useState(false);
   const [isArtistScrolling, setIsArtistScrolling] = useState(false);
 
@@ -32,12 +23,17 @@ export default function SongProgressAndSongDisplay({
    * @dev main store hooks
    */
   const filteredLibrary = useMainStore((state) => state.filteredLibrary);
+  const setCurrentSongTime = useMainStore((store) => store.setCurrentSongTime);
+  const currentSongTime = useMainStore((store) => store.currentSongTime);
+  const player = useMainStore((store) => store.player);
   const currentSongMetadata = useMainStore(
     (state) => state.currentSongMetadata,
   );
   const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
+
+  const max = currentSongMetadata?.format?.duration || 0;
 
   /**
    * @dev component refs
@@ -76,10 +72,6 @@ export default function SongProgressAndSongDisplay({
     }
     setOverrideScrollToIndex(index);
   };
-
-  useEffect(() => {
-    setPosition(value);
-  }, [value]);
 
   useEffect(() => {
     const checkOverflow1 = () => {
@@ -251,8 +243,11 @@ export default function SongProgressAndSongDisplay({
           max={max}
           min={0}
           onChange={(_, val) => {
-            setPosition(val as number);
-            onManualChange(val as number);
+            // manually update the player's time BUT ALSO the internal state
+            // to ensure that the UX feels snappy. otherwise the UX wouldn't update
+            // until the next ontimeupdate event fired.
+            setCurrentSongTime(val as number);
+            player.setPosition((val as number) * 1000);
           }}
           size="small"
           step={1}
@@ -264,7 +259,7 @@ export default function SongProgressAndSongDisplay({
               width: 8,
             },
           }}
-          value={position}
+          value={currentSongTime}
         />
       </Box>
       <Box
@@ -276,7 +271,7 @@ export default function SongProgressAndSongDisplay({
         }}
       >
         <LessOpaqueTinyText aria-label="current-time">
-          {convertToMMSS(position)}
+          {convertToMMSS(currentSongTime)}
         </LessOpaqueTinyText>
         <LessOpaqueTinyText
           aria-label="current-title"
@@ -309,7 +304,7 @@ export default function SongProgressAndSongDisplay({
           )}
         </LessOpaqueTinyText>
         <LessOpaqueTinyText aria-label="current-max-time">
-          -{convertToMMSS(max - position)}
+          -{convertToMMSS(max - currentSongTime)}
         </LessOpaqueTinyText>
       </Box>
     </Box>

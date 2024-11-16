@@ -391,10 +391,7 @@ export default function Main() {
 
           {width && <LibraryList onImportLibrary={importNewLibrary} />}
 
-          <StaticPlayer
-            playNextSong={skipToNextSong}
-            playPreviousSong={playPreviousSong}
-          />
+          <StaticPlayer />
         </WindowDimensionsProvider>
       )}
     </div>

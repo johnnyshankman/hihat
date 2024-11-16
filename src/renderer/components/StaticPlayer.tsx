@@ -14,32 +14,23 @@ import VolumeSliderStack from './VolumeSliderStack';
 import SongProgressAndSongDisplay from './SongProgressAndSongDisplay';
 import useMainStore from '../store/main';
 
-type StaticPlayerProps = {
-  playNextSong: () => void;
-  playPreviousSong: () => void;
-};
-
-export default function StaticPlayer({
-  playNextSong,
-  playPreviousSong,
-}: StaticPlayerProps) {
+export default function StaticPlayer() {
   /**
    * @dev store
    */
-  const player = useMainStore((state) => state.player);
   const repeating = useMainStore((state) => state.repeating);
   const setRepeating = useMainStore((state) => state.setRepeating);
-  const setCurrentSongTime = useMainStore((state) => state.setCurrentSongTime);
   const shuffle = useMainStore((state) => state.shuffle);
   const setShuffle = useMainStore((state) => state.setShuffle);
   const paused = useMainStore((state) => state.paused);
   const setPaused = useMainStore((state) => state.setPaused);
+  const volume = useMainStore((state) => state.volume);
+  const setVolume = useMainStore((state) => state.setVolume);
   const currentSongMetadata = useMainStore(
     (state) => state.currentSongMetadata,
   );
-  const volume = useMainStore((state) => state.volume);
-  const setVolume = useMainStore((state) => state.setVolume);
-  const currentSongTime = useMainStore((state) => state.currentSongTime);
+  const playPreviousSong = useMainStore((store) => store.playPreviousSong);
+  const skipToNextSong = useMainStore((store) => store.skipToNextSong);
 
   return (
     <div
@@ -136,7 +127,7 @@ export default function StaticPlayer({
             aria-label="next song"
             color="inherit"
             disabled={!currentSongMetadata}
-            onClick={playNextSong}
+            onClick={skipToNextSong}
           >
             <FastForwardRounded fontSize="medium" />
           </IconButton>
@@ -158,17 +149,7 @@ export default function StaticPlayer({
       {/**
        * @dev this is song progress bar on mobile and desktop
        */}
-      <SongProgressAndSongDisplay
-        max={currentSongMetadata?.format?.duration || 0}
-        onManualChange={(e: number) => {
-          // manually update the player's time BUT ALSO the internal state
-          // to ensure that the UX feels snappy. otherwise the UX wouldn't update
-          // until the next ontimeupdate event fired.
-          setCurrentSongTime(e);
-          player.setPosition(e * 1000);
-        }}
-        value={currentSongTime}
-      />
+      <SongProgressAndSongDisplay />
 
       {/**
        * @dev this is the desktop version of the shuffle, repeat, play button
