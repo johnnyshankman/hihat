@@ -29,6 +29,7 @@ export default function StaticPlayer({
   const player = useMainStore((state) => state.player);
   const repeating = useMainStore((state) => state.repeating);
   const setRepeating = useMainStore((state) => state.setRepeating);
+  const setCurrentSongTime = useMainStore((state) => state.setCurrentSongTime);
   const shuffle = useMainStore((state) => state.shuffle);
   const setShuffle = useMainStore((state) => state.setShuffle);
   const paused = useMainStore((state) => state.paused);
@@ -160,7 +161,10 @@ export default function StaticPlayer({
       <SongProgressAndSongDisplay
         max={currentSongMetadata?.format?.duration || 0}
         onManualChange={(e: number) => {
-          // manually update the player
+          // manually update the player's time BUT ALSO the internal state
+          // to ensure that the UX feels snappy. otherwise the UX wouldn't update
+          // until the next ontimeupdate event fired.
+          setCurrentSongTime(e);
           player.setPosition(e * 1000);
         }}
         value={currentSongTime}
