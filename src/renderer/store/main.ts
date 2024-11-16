@@ -124,11 +124,16 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         shuffle,
       );
 
+      // Get the current track index
+      const currentIndex = state.player.getIndex();
+
+      // Replace the last track with the new next song
       state.player.replaceTrack(
-        1,
+        currentIndex + 1,
         `my-magic-protocol://getMediaFile/${nextSong.songPath}`,
       );
 
+      // Seed the shuffle history with the current song that is playing
       const shuffleHistory = shuffle ? [state.currentSong] : [];
 
       return { shuffle, shuffleHistory };
@@ -262,19 +267,9 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         };
       }
 
-      const tracks = state.player.getTracks();
-      const index = state.player.getIndex();
-
-      // Get next song info before removing anything
-      const nextSongPath = tracks[index + 1].replace(
-        'my-magic-protocol://getMediaFile/',
-        '',
-      );
-      const nextSongMetadata = state.filteredLibrary[nextSongPath];
-
-      // Calculate the song to play after this one
-      const futureNextSong = findNextSong(
-        nextSongPath,
+      // If shuffle is on, directly find the next shuffled song
+      const nextSong = findNextSong(
+        state.currentSong,
         state.filteredLibrary,
         state.shuffle,
       );
@@ -282,17 +277,30 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
       // Update shuffle history if needed
       let shuffleHistory: string[] = [];
       if (state.shuffle) {
-        shuffleHistory = [...state.shuffleHistory, nextSongPath];
+        shuffleHistory = [...state.shuffleHistory, nextSong.songPath];
         if (shuffleHistory.length > 100) {
           shuffleHistory.shift();
         }
       }
 
+      // Calculate the song to play after this one
+      const futureNextSong = findNextSong(
+        nextSong.songPath,
+        state.filteredLibrary,
+        state.shuffle,
+      );
+
       // First pause current playback
       state.player.pause();
+      state.player.removeAllTracks();
 
-      // Remove current track and start playing next track
-      state.player.next(0, 1, 0);
+      // Add the next song and future next song
+      state.player.addTrack(
+        `my-magic-protocol://getMediaFile/${nextSong.songPath}`,
+      );
+      state.player.addTrack(
+        `my-magic-protocol://getMediaFile/${futureNextSong.songPath}`,
+      );
 
       if (!state.paused) {
         state.player.play();
@@ -300,20 +308,9 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         if (audioElement) {
           audioElement.play();
         }
-      } else {
-        state.player.pause();
-        const audioElement = document.querySelector('audio');
-        if (audioElement) {
-          audioElement.pause();
-        }
       }
 
-      // Add the future next song
-      state.player.addTrack(
-        `my-magic-protocol://getMediaFile/${futureNextSong.songPath}`,
-      );
-
-      updateMediaSession(nextSongMetadata);
+      updateMediaSession(state.filteredLibrary[nextSong.songPath]);
 
       // handle album art request
       window.electron.ipcRenderer.once('get-album-art', async (event) => {
@@ -333,20 +330,25 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
           ];
         }
       });
+
       // request album art
-      window.electron.ipcRenderer.sendMessage('get-album-art', nextSongPath);
+      window.electron.ipcRenderer.sendMessage(
+        'get-album-art',
+        nextSong.songPath,
+      );
 
       // update last played song in user config
       window.electron.ipcRenderer.sendMessage(
         'set-last-played-song',
-        nextSongPath,
+        nextSong.songPath,
       );
+
       return {
-        currentSong: nextSongPath,
-        currentSongMetadata: nextSongMetadata,
+        currentSong: nextSong.songPath,
+        currentSongMetadata: state.filteredLibrary[nextSong.songPath],
         currentSongTime: 0,
         shuffleHistory,
-        lastPlayedSong: nextSongPath,
+        lastPlayedSong: nextSong.songPath,
         hasIncreasedPlayCount: false,
       };
     });
