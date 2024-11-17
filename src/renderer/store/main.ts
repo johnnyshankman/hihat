@@ -65,7 +65,7 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
   // Player state
   player: new Gapless5({
     useHTML5Audio: false,
-    crossfade: 100,
+    crossfade: 25,
     exclusive: true,
     loadLimit: 3,
   }),
