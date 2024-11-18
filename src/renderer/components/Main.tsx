@@ -233,12 +233,13 @@ export default function Main() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
-   * @dev Since we are using Gapless5, we need to handle the media session
-   * manually and ensure that the audio plays + pauses as expected.
-   * We loop a blank audio file to keep the media session alive indefinitely.
-   * We play and pause the blank audio file in time with the gapless5 player
-   * so that all the smoke and mirrors are in sync. The only caveat is that
-   * scrubbing through the song from the media session will do nothing.
+   * @dev Since we are using Gapless5, we must handle the media session's
+   * position state and actions manually.
+   *
+   * We loop a blank audio file in a hidden audio tag to keep the media
+   * session alive indefinitely. We keep the hidden audio tag in sync with
+   * the gapless5 player so that the media session's state always matches
+   * the actual audio player's state.
    */
   useEffect(() => {
     navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
@@ -255,15 +256,18 @@ export default function Main() {
       setCurrentSongTime(seekDetails.seekTime || 0);
       player.setPosition((seekDetails.seekTime || 0) * 1000);
     });
-
-    // Get the current song's duration from metadata
     const duration = currentSongMetadata?.format?.duration || 0;
-
     navigator.mediaSession.setPositionState({
       duration,
       playbackRate: 1,
       position: currentSongTime,
     });
+    /**
+     * @important text and album artwork metadata for the media session
+     * are handled by the main store when songs change etc. NOT HERE.
+     * @see updateMediaSessionMetadata
+     * @see store/main.ts
+     */
   }, [
     paused,
     skipToNextSong,
