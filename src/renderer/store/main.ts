@@ -195,8 +195,13 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         return {};
       }
 
+      // Update shuffle history if needed, never longer than 100 items
+      let shuffleHistory: string[] = [];
       if (state.shuffle) {
-        state.setShuffleHistory([...state.shuffleHistory, songPath]);
+        shuffleHistory = [...state.shuffleHistory, songPath];
+        if (shuffleHistory.length > 100) {
+          shuffleHistory.shift();
+        }
       }
 
       const nextSong = findNextSong(songPath, library, state.shuffle);
@@ -243,6 +248,7 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         paused: false,
         currentSongTime: 0,
         hasIncreasedPlayCount: false,
+        shuffleHistory,
       };
     });
   },
@@ -274,7 +280,7 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         state.shuffle,
       );
 
-      // Update shuffle history if needed
+      // Update shuffle history if needed, never longer than 100 items
       let shuffleHistory: string[] = [];
       if (state.shuffle) {
         shuffleHistory = [...state.shuffleHistory, nextSong.songPath];
@@ -391,7 +397,7 @@ const useMainStore = create<StoreState & StoreActions>((set) => ({
         state.shuffle,
       );
 
-      // Update shuffle history if needed
+      // Update shuffle history if needed, never longer than 100 items
       let shuffleHistory: string[] = [];
       if (state.shuffle) {
         shuffleHistory = [...state.shuffleHistory, nextSongPath];
