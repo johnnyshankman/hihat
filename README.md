@@ -191,6 +191,8 @@ OSX has a built in player for quickly accessing the play, pause, skip, and previ
 <img width="320" alt="okay" src="https://github.com/user-attachments/assets/2e847aa4-9818-48b5-9c96-62e8613609c1">
 <img width="320" alt="okay" src="https://github.com/user-attachments/assets/29995fd8-b27d-4e4f-a6b7-a2e0fed55aeb">
 
+Alternatively, you can use any keyboard or bluetooth headphones to access these controls. *hihat* should respond to media commands just like any other native OSX application does!
+
 ### Tips
 
 * Right-click on a song for more options, like lookup on Spotify and Delete
