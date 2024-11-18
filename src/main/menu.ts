@@ -168,6 +168,7 @@ export default class MenuBuilder {
         },
         {
           label: 'quiet down',
+          accelerator: 'Command+Down',
           click: () => {
             this.mainWindow.webContents.send('menu-quiet-mode');
           },
