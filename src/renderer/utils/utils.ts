@@ -63,6 +63,11 @@ export const updateMediaSession = (metadata: LightweightAudioMetadata) => {
     album: metadata.common.album,
   };
 
+  if (!navigator.mediaSession) {
+    console.error('Media session not supported');
+    return;
+  }
+
   if (navigator.mediaSession.metadata) {
     Object.assign(navigator.mediaSession.metadata, mediaData);
   } else {

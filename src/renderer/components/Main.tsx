@@ -242,6 +242,11 @@ export default function Main() {
    * the actual audio player's state.
    */
   useEffect(() => {
+    if (!navigator.mediaSession) {
+      console.error('Media session not supported');
+      return () => {};
+    }
+
     navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
     navigator.mediaSession.setActionHandler('nexttrack', skipToNextSong);
     navigator.mediaSession.setActionHandler('play', () => {
@@ -256,18 +261,31 @@ export default function Main() {
       setCurrentSongTime(seekDetails.seekTime || 0);
       player.setPosition((seekDetails.seekTime || 0) * 1000);
     });
-    const duration = currentSongMetadata?.format?.duration || 0;
-    navigator.mediaSession.setPositionState({
-      duration,
-      playbackRate: 1,
-      position: currentSongTime,
-    });
+
+    try {
+      const duration = currentSongMetadata?.format?.duration || 0;
+      const safePosition = Math.min(currentSongTime, duration);
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: 1,
+        position: safePosition,
+      });
+    } catch (error) {
+      console.error('Failed to update media session position state:', error);
+    }
     /**
      * @important text and album artwork metadata for the media session
      * are handled by the main store when songs change etc. NOT HERE.
      * @see updateMediaSessionMetadata
      * @see store/main.ts
      */
+    return () => {
+      navigator.mediaSession.setActionHandler('previoustrack', null);
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('seekto', null);
+    };
   }, [
     paused,
     skipToNextSong,
