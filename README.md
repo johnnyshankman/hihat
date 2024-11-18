@@ -184,6 +184,13 @@ By clicking on the table headers of your library, you can sort by:
 
 <img width="700" alt="Screenshot_2024-10-27_at_9_49_32 PM" src="https://github.com/user-attachments/assets/f2b3db65-0572-4e0f-ac6a-e0f9c099c9ea">
 
+### Using the Media Session
+
+OSX has a built in player for quickly accessing the play, pause, skip, and previous functions of hihat. You can access it via the play button icon in the top bar of OSX, or the side panel in OSX.
+
+<img width="320" alt="okay" src="https://github.com/user-attachments/assets/2e847aa4-9818-48b5-9c96-62e8613609c1">
+<img width="320" alt="okay" src="https://github.com/user-attachments/assets/29995fd8-b27d-4e4f-a6b7-a2e0fed55aeb">
+
 ### Tips
 
 * Right-click on a song for more options, like lookup on Spotify and Delete
