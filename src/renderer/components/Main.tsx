@@ -204,6 +204,12 @@ export default function Main() {
       'menu-reset-library': () => {
         window.electron.ipcRenderer.sendMessage('menu-reset-library');
       },
+      'menu-max-volume': () => {
+        setVolume(100);
+      },
+      'menu-mute-volume': () => {
+        setVolume(0);
+      },
       'menu-quiet-mode': () => {
         setVolume(2);
       },

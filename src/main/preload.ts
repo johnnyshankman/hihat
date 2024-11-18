@@ -21,6 +21,9 @@ export type Channels =
   | 'menu-reset-library'
   | 'menu-hide-dupes'
   | 'menu-delete-dupes'
+  | 'menu-max-volume'
+  | 'menu-quiet-mode'
+  | 'menu-mute-volume'
   | 'song-imported'
   | 'hide-song'
   | 'delete-song'
@@ -88,6 +91,9 @@ export interface ResponseArgs extends ArgsBase {
     scrollToIndex?: number;
   };
   'backup-library-success': undefined;
+  'menu-quiet-mode': undefined;
+  'menu-max-volume': undefined;
+  'menu-mute-volume': undefined;
 }
 
 const electronHandler = {
