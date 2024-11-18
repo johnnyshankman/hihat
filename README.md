@@ -49,7 +49,7 @@
 
 *hihat* was born out of frustration with the lackluster offline music players available for OSX today.
 
-Ever tried Evermusic, Cog, Pine, Swinsian, Plexamp, or VLC? They just don't have the sleek & lagless vibes of iTunes back in 2002. Plus most aren't even freeware anymore!
+Ever tried Evermusic, Cog, Pine, Swinsian, Plexamp, DeaDeeF or VLC? They're okay but they just don't have the sleek & lagless vibes of iTunes back in 2002. Plus most aren't freeware anymore!
 
 That's why I decided to create *hihat* - a free, open-source music player that ditches ads, respects your privacy, and works perfectly without an internet connection.
 
@@ -183,6 +183,15 @@ By clicking on the table headers of your library, you can sort by:
 * Playcount
 
 <img width="700" alt="Screenshot_2024-10-27_at_9_49_32 PM" src="https://github.com/user-attachments/assets/f2b3db65-0572-4e0f-ac6a-e0f9c099c9ea">
+
+### Using the Media Session
+
+OSX has a built in player for quickly accessing the play, pause, skip, and previous functions of hihat. You can access it via the play button icon in the top bar of OSX, or the side panel in OSX.
+
+<img width="320" alt="okay" src="https://github.com/user-attachments/assets/2e847aa4-9818-48b5-9c96-62e8613609c1">
+<img width="320" alt="okay" src="https://github.com/user-attachments/assets/29995fd8-b27d-4e4f-a6b7-a2e0fed55aeb">
+
+Alternatively, you can use any keyboard or bluetooth headphones to access these controls. *hihat* should respond to media commands just like any other native OSX application does!
 
 ### Tips
 
