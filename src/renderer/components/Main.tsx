@@ -38,6 +38,10 @@ export default function Main() {
   const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
   const selectSpecificSong = useMainStore((store) => store.selectSpecificSong);
   const setCurrentSongTime = useMainStore((store) => store.setCurrentSongTime);
+  const currentSongTime = useMainStore((store) => store.currentSongTime);
+  const currentSongMetadata = useMainStore(
+    (store) => store.currentSongMetadata,
+  );
   const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
@@ -247,12 +251,29 @@ export default function Main() {
       setPaused(true);
       document.querySelector('audio')?.pause();
     });
-    navigator.mediaSession.setPositionState({
-      duration: 0,
-      playbackRate: 1,
-      position: 0,
+    navigator.mediaSession.setActionHandler('seekto', (seekDetails) => {
+      setCurrentSongTime(seekDetails.seekTime || 0);
+      player.setPosition((seekDetails.seekTime || 0) * 1000);
     });
-  }, [paused, skipToNextSong, playPreviousSong, setPaused]);
+
+    // Get the current song's duration from metadata
+    const duration = currentSongMetadata?.format?.duration || 0;
+
+    navigator.mediaSession.setPositionState({
+      duration,
+      playbackRate: 1,
+      position: currentSongTime,
+    });
+  }, [
+    paused,
+    skipToNextSong,
+    playPreviousSong,
+    setPaused,
+    currentSongTime,
+    currentSongMetadata,
+    player,
+    setCurrentSongTime,
+  ]);
 
   /**
    * @important this handles requesting the play count to be incremented.
