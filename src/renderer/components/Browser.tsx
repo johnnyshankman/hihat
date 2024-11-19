@@ -104,16 +104,14 @@ export default function Browser({ onClose }: BrowserProps) {
   useEffect(() => {
     if (!storeLibrary) return;
 
-    const filteredSongs = { ...storeLibrary };
-    Object.keys(filteredSongs).forEach((key) => {
-      const song = filteredSongs[key];
-      if (
-        (selection.artist && song.common.artist !== selection.artist) ||
-        (selection.album && song.common.album !== selection.album)
-      ) {
-        delete filteredSongs[key];
-      }
-    });
+    const filteredSongs = Object.fromEntries(
+      Object.entries(storeLibrary).filter(([_, song]) => {
+        return (
+          (!selection.artist || song.common.artist === selection.artist) &&
+          (!selection.album || song.common.album === selection.album)
+        );
+      }),
+    );
 
     setFilteredLibrary(filteredSongs);
   }, [selection, storeLibrary, setFilteredLibrary]);
