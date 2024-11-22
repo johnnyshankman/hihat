@@ -64,12 +64,13 @@ All wrapped up in a minimalist dark-mode design that's easy on the eyes during l
 
 *hihat* core features:
 * 100% offline
-* freeware
-* always dark mode
+* free
+* dark mode
 * audiophile fidelity (supports all codecs)
 * mix 'n match file types in one library
 * limitless library size
 * responsive design
+* true gapless playback
 * iTunes-like Browser and Library Explorer
 * smart sorting by song, artist, and album
 * fast library import (faster than Cog, Evermusic, etc)
