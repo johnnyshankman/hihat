@@ -49,7 +49,7 @@
 
 *hihat* was born out of frustration with the lackluster offline music players available for OSX today.
 
-Ever tried Evermusic, Cog, Pine, Swinsian, Plexamp, DeaDeeF or VLC? They're okay but they just don't have the sleek & lagless vibes of iTunes back in 2002. Plus most aren't freeware anymore!
+Ever tried Evermusic, Cog, Pine, Swinsian, Plexamp, DeaDeeF or VLC? They're okay but they just don't have the sleek & lagless vibes of iTunes back in 2002. Plus most aren't free, or forget key features!
 
 That's why I decided to create *hihat* - a free, open-source music player that ditches ads, respects your privacy, and works perfectly without an internet connection.
 
