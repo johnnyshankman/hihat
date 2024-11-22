@@ -72,12 +72,13 @@ All wrapped up in a minimalist dark-mode design that's easy on the eyes during l
 * responsive design
 * true gapless playback
 * iTunes-like Browser and Library Explorer
-* smart sorting by song, artist, and album
-* fast library import (faster than Cog, Evermusic, etc)
+* smart sort by song, artist, and album
+* fast imports
 * song shuffle
 * song repeat
-* media key/keyboard support
+* media key/keyboard integration
 * OSX menu bar integration
+* bluetooth headphone integration
 * playcount tracking
 * quick library search
 * library stats
@@ -85,8 +86,8 @@ All wrapped up in a minimalist dark-mode design that's easy on the eyes during l
 * smart library deduplicator
 * nested folder support (finds all music files)
 * legacy iTunes library importing
-* Apple Music and Spotify song lookup in one click
-* sync your library to a backup drive or device running [Rockbox](https://www.rockbox.org/) in one click
+* find on Apple Music and Spotify in one click
+* backup your library to anywhere
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
