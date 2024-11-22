@@ -3,7 +3,6 @@ import Box from '@mui/material/Box';
 import SearchIcon from '@mui/icons-material/Search';
 import { StoreStructure } from '../../common/common';
 import useMainStore from '../store/main';
-import usePlayerStore from '../store/player';
 import {
   Search,
   SearchIconWrapper,
@@ -17,9 +16,7 @@ type SearchBarProps = {
 
 export default function SearchBar({ className }: SearchBarProps) {
   const storeLibrary = useMainStore((store) => store.library);
-  const setFilteredLibrary = usePlayerStore(
-    (store) => store.setFilteredLibrary,
-  );
+  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;

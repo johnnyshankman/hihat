@@ -10,41 +10,27 @@ import ShuffleOnIcon from '@mui/icons-material/ShuffleOn';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import Stack from '@mui/material/Stack';
 import RepeatOnIcon from '@mui/icons-material/RepeatOn';
-import SpatialAudioIcon from '@mui/icons-material/SpatialAudio';
 import VolumeSliderStack from './VolumeSliderStack';
-import SongProgressBar from './SongProgressBar';
-import usePlayerStore from '../store/player';
+import SongProgressAndSongDisplay from './SongProgressAndSongDisplay';
+import useMainStore from '../store/main';
 
-type StaticPlayerProps = {
-  audioTagRef: React.RefObject<HTMLAudioElement>;
-  playNextSong: () => void;
-  playPreviousSong: () => void;
-};
-
-export default function StaticPlayer({
-  audioTagRef,
-  playNextSong,
-  playPreviousSong,
-}: StaticPlayerProps) {
+export default function StaticPlayer() {
   /**
    * @dev store
    */
-  const repeating = usePlayerStore((state) => state.repeating);
-  const setRepeating = usePlayerStore((state) => state.setRepeating);
-  const shuffle = usePlayerStore((state) => state.shuffle);
-  const setShuffle = usePlayerStore((state) => state.setShuffle);
-  const paused = usePlayerStore((state) => state.paused);
-  const setPaused = usePlayerStore((state) => state.setPaused);
-  // @note this is used as state to know when the song's info is done loading
-  const currentSongMetadata = usePlayerStore(
+  const repeating = useMainStore((state) => state.repeating);
+  const setRepeating = useMainStore((state) => state.setRepeating);
+  const shuffle = useMainStore((state) => state.shuffle);
+  const setShuffle = useMainStore((state) => state.setShuffle);
+  const paused = useMainStore((state) => state.paused);
+  const setPaused = useMainStore((state) => state.setPaused);
+  const volume = useMainStore((state) => state.volume);
+  const setVolume = useMainStore((state) => state.setVolume);
+  const currentSongMetadata = useMainStore(
     (state) => state.currentSongMetadata,
   );
-  const volume = usePlayerStore((state) => state.volume);
-  const setVolume = usePlayerStore((state) => state.setVolume);
-  const currentSongTime = usePlayerStore((state) => state.currentSongTime);
-  const setCurrentSongTime = usePlayerStore(
-    (state) => state.setCurrentSongTime,
-  );
+  const playPreviousSong = useMainStore((store) => store.playPreviousSong);
+  const skipToNextSong = useMainStore((store) => store.skipToNextSong);
 
   return (
     <div
@@ -103,20 +89,6 @@ export default function StaticPlayer({
               )}
             </IconButton>
           </Tooltip>
-          <Tooltip title="Quiet Mode">
-            <IconButton
-              onClick={() => {
-                // set the volume to 0.02 so you can listen to a podcast or hear the person next to you
-                setVolume(2);
-              }}
-              sx={{
-                fontSize: '1rem',
-                color: 'rgb(133,133,133)',
-              }}
-            >
-              <SpatialAudioIcon fontSize="inherit" />
-            </IconButton>
-          </Tooltip>
         </div>
 
         {/**
@@ -143,19 +115,6 @@ export default function StaticPlayer({
             disabled={!currentSongMetadata}
             onClick={() => {
               setPaused(!paused);
-              if (audioTagRef.current) {
-                /**
-                 * @important we manually trigger play/pause via the <autio> tag
-                 * because the player store's state will automatically sync
-                 * itself to the <audio> tag's state
-                 * @todo should i be using the store for this?
-                 */
-                if (audioTagRef.current.paused) {
-                  audioTagRef.current.play();
-                } else {
-                  audioTagRef.current.pause();
-                }
-              }
             }}
           >
             {paused ? (
@@ -168,7 +127,7 @@ export default function StaticPlayer({
             aria-label="next song"
             color="inherit"
             disabled={!currentSongMetadata}
-            onClick={playNextSong}
+            onClick={skipToNextSong}
           >
             <FastForwardRounded fontSize="medium" />
           </IconButton>
@@ -190,16 +149,7 @@ export default function StaticPlayer({
       {/**
        * @dev this is song progress bar on mobile and desktop
        */}
-      <SongProgressBar
-        max={currentSongMetadata?.format?.duration || 0}
-        onManualChange={(e: number) => {
-          setCurrentSongTime(e);
-          if (audioTagRef?.current) {
-            audioTagRef.current.currentTime = e;
-          }
-        }}
-        value={currentSongTime}
-      />
+      <SongProgressAndSongDisplay />
 
       {/**
        * @dev this is the desktop version of the shuffle, repeat, play button
@@ -240,19 +190,6 @@ export default function StaticPlayer({
               ) : (
                 <ShuffleIcon fontSize="inherit" />
               )}
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Quiet Mode">
-            <IconButton
-              onClick={() => {
-                setVolume(2.5);
-              }}
-              sx={{
-                fontSize: '1rem',
-                color: 'rgb(133,133,133)',
-              }}
-            >
-              <SpatialAudioIcon fontSize="inherit" />
             </IconButton>
           </Tooltip>
         </div>

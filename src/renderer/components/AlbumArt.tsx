@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Draggable from 'react-draggable';
 import { TinyText } from './SimpleStyledMaterialUIComponents';
 import AlbumArtRightClickMenu from './AlbumArtRightClickMenu';
-import usePlayerStore from '../store/player';
+import useMainStore from '../store/main';
 import { useWindowDimensions } from '../hooks/useWindowDimensions';
 
 interface AlbumArtProps {
@@ -14,20 +14,23 @@ export default function AlbumArt({
   setShowAlbumArtMenu,
   showAlbumArtMenu,
 }: AlbumArtProps) {
+  /**
+   * @dev window provider hook
+   */
   const { width, height } = useWindowDimensions();
 
   /**
-   * @dev global store hooks
+   * @dev store hooks
    */
-  const currentSong = usePlayerStore((store) => store.currentSong);
-  const currentSongMetadata = usePlayerStore(
+  const currentSong = useMainStore((store) => store.currentSong);
+  const currentSongMetadata = useMainStore(
     (store) => store.currentSongMetadata,
   );
-  const currentSongDataURL = usePlayerStore(
+  const currentSongDataURL = useMainStore(
     (store) => store.currentSongArtworkDataURL,
   );
-  const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
-  const setOverrideScrollToIndex = usePlayerStore(
+  const filteredLibrary = useMainStore((store) => store.filteredLibrary);
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
 
@@ -60,7 +63,7 @@ export default function AlbumArt({
   if (!currentSongDataURL) {
     return (
       <div
-        className="relative aspect-square w-[40%] bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg transition-all duration-200"
+        className="relative aspect-square w-full bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg"
         style={{
           maxWidth: `${albumArtMaxWidth}px`,
         }}
@@ -84,6 +87,33 @@ export default function AlbumArt({
           </svg>
           <TinyText className="absolute bottom-3 left-3">hihat</TinyText>
         </div>
+        <Draggable
+          axis="y"
+          onDrag={(e, data) => {
+            if (!width || !height) return;
+            const newMaxWidth = albumArtMaxWidth + data.deltaY;
+            const maxWidthBasedOnWidth = Math.min(320, width * 0.4);
+            const maxWidthBasedOnHeight = Math.min(320, height * 0.6);
+            const clampedMaxWidth = Math.max(
+              120,
+              Math.min(
+                newMaxWidth,
+                maxWidthBasedOnWidth,
+                maxWidthBasedOnHeight,
+              ),
+            );
+            setAlbumArtMaxWidth(clampedMaxWidth);
+
+            /**
+             * @important dispatch an event to let all components know the width has changed
+             * @see LibraryList.tsx
+             */
+            window.dispatchEvent(new Event('album-art-width-changed'));
+          }}
+          position={{ x: 0, y: 0 }}
+        >
+          <div className="w-full absolute bottom-0 h-[20px] bg-transparent cursor-ns-resize hover:cursor-ns-resize" />
+        </Draggable>
       </div>
     );
   }

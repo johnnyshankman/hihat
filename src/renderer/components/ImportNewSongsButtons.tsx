@@ -1,6 +1,5 @@
 import Tooltip from '@mui/material/Tooltip';
 import { LibraryAdd } from '@mui/icons-material';
-import usePlayerStore from '../store/player';
 import useMainStore from '../store/main';
 
 interface ImportNewSongsButtonProps {
@@ -11,6 +10,8 @@ interface ImportNewSongsButtonProps {
 }
 
 export default function ImportNewSongsButton({
+  // @TODO: I dislike this pattern of having to pass all these functions as props
+  // but it's the only way to get the async import working atm.
   setShowImportingProgress,
   setSongsImported,
   setTotalSongs,
@@ -19,15 +20,16 @@ export default function ImportNewSongsButton({
   /**
    * @dev global store hooks
    */
-  const setFilteredLibrary = usePlayerStore(
-    (store) => store.setFilteredLibrary,
-  );
+  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
-  const setOverrideScrollToIndex = usePlayerStore(
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
 
   const importNewSongs = async () => {
+    setSongsImported(0);
+    setTotalSongs(1);
+
     window.electron.ipcRenderer.on('song-imported', (args) => {
       setShowImportingProgress(true);
       setSongsImported(args.songsImported);
@@ -62,8 +64,8 @@ export default function ImportNewSongsButton({
 
       window.setTimeout(() => {
         setSongsImported(0);
-        setTotalSongs(0);
-      }, 100);
+        setTotalSongs(1);
+      }, 1000);
     });
 
     window.electron.ipcRenderer.sendMessage('add-to-library');

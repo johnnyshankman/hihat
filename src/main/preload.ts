@@ -21,11 +21,15 @@ export type Channels =
   | 'menu-reset-library'
   | 'menu-hide-dupes'
   | 'menu-delete-dupes'
+  | 'menu-max-volume'
+  | 'menu-quiet-mode'
+  | 'menu-mute-volume'
   | 'song-imported'
   | 'hide-song'
   | 'delete-song'
   | 'delete-album'
   | 'menu-toggle-browser'
+  | 'increment-play-count'
   | 'update-store';
 
 export type ArgsBase = Record<Channels, unknown>;
@@ -64,6 +68,9 @@ export interface SendMessageArgs extends ArgsBase {
   'show-in-finder': {
     path: string;
   };
+  'increment-play-count': {
+    song: string;
+  };
 }
 
 export interface ResponseArgs extends ArgsBase {
@@ -84,6 +91,9 @@ export interface ResponseArgs extends ArgsBase {
     scrollToIndex?: number;
   };
   'backup-library-success': undefined;
+  'menu-quiet-mode': undefined;
+  'menu-max-volume': undefined;
+  'menu-mute-volume': undefined;
 }
 
 const electronHandler = {

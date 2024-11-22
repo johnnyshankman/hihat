@@ -459,7 +459,6 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
   Object.keys(userConfig.library).forEach((key) => {
     if (key === songFilePath) {
       userConfig.library[key].additionalInfo.lastPlayed = Date.now();
-      userConfig.library[key].additionalInfo.playCount += 1;
     }
   });
 
@@ -469,6 +468,16 @@ ipcMain.on('set-last-played-song', async (event, arg: string) => {
     song: songFilePath,
     songData: userConfig.library[songFilePath],
   });
+});
+
+/**
+ * @dev increments the play count of the requested song
+ * @note expected the store will manually add 1 to the internal play count until reboot
+ */
+ipcMain.on('increment-play-count', async (event, arg: { song: string }) => {
+  const userConfig = getUserConfig();
+  userConfig.library[arg.song].additionalInfo.playCount += 1;
+  writeFileSyncToUserConfig(userConfig);
 });
 
 /**
@@ -947,7 +956,7 @@ const createWindow = async () => {
   });
 
   /**
-   * @importnat Set the global asset path to /assets
+   * @important Set the global asset path to /assets
    */
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')

@@ -101,7 +101,7 @@ export default class MenuBuilder {
   }
 
   buildDarwinTemplate(): MenuItemConstructorOptions[] {
-    const subMenuAbout: DarwinMenuItemConstructorOptions = {
+    const subMenuHihat: DarwinMenuItemConstructorOptions = {
       label: 'hihat',
       submenu: [
         {
@@ -121,38 +121,30 @@ export default class MenuBuilder {
             this.mainWindow.webContents.send('menu-rescan-library');
           },
         },
-        {
-          label: 'select library folder',
-          click: () => {
-            this.mainWindow.webContents.send('menu-select-library');
-          },
-        },
-        {
-          label: 'hide duplicate songs',
-          click: () => {
-            this.mainWindow.webContents.send('menu-hide-dupes');
-          },
-        },
-        {
-          label: 'delete duplicate songs',
-          click: () => {
-            this.mainWindow.webContents.send('menu-delete-dupes');
-          },
-        },
-        {
-          label: 'backup / sync library',
-          click: () => {
-            this.mainWindow.webContents.send('menu-backup-library');
-          },
-        },
-        // {
-        //   label: 'reset all hihat data',
-        //   click: () => {
-        //     this.mainWindow.webContents.send('menu-reset-library');
-        //   },
-        // },
         { type: 'separator' },
+        {
+          label: 'max volume',
+          accelerator: 'Command+Up',
+          click: () => {
+            this.mainWindow.webContents.send('menu-max-volume');
+          },
+        },
+        {
+          label: 'mute volume',
+          accelerator: 'Command+Down',
+          click: () => {
+            this.mainWindow.webContents.send('menu-mute-volume');
+          },
+        },
+        {
+          label: 'quiet',
+          accelerator: 'Option+Command+Down',
+          click: () => {
+            this.mainWindow.webContents.send('menu-quiet-mode');
+          },
+        },
 
+        { type: 'separator' },
         {
           label: 'see library stats',
           click: () => {
@@ -166,9 +158,7 @@ export default class MenuBuilder {
             });
           },
         },
-
         { type: 'separator' },
-
         {
           label: 'hide hihat',
           accelerator: 'Command+H',
@@ -238,6 +228,42 @@ export default class MenuBuilder {
             this.mainWindow.webContents.send('menu-toggle-browser');
           },
         },
+        {
+          label: 'reset all hihat data',
+          click: () => {
+            this.mainWindow.webContents.send('menu-reset-library');
+          },
+        },
+      ],
+    };
+    const subMenuAdvanced: DarwinMenuItemConstructorOptions = {
+      label: 'Advanced',
+      submenu: [
+        {
+          label: 'change library folder',
+          click: () => {
+            this.mainWindow.webContents.send('menu-select-library');
+          },
+        },
+        {
+          label: 'backup / sync library',
+          click: () => {
+            this.mainWindow.webContents.send('menu-backup-library');
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'hide duplicate songs',
+          click: () => {
+            this.mainWindow.webContents.send('menu-hide-dupes');
+          },
+        },
+        {
+          label: 'delete duplicate songs',
+          click: () => {
+            this.mainWindow.webContents.send('menu-delete-dupes');
+          },
+        },
       ],
     };
     const subMenuViewProd: MenuItemConstructorOptions = {
@@ -299,7 +325,14 @@ export default class MenuBuilder {
         ? subMenuViewDev
         : subMenuViewProd;
 
-    return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
+    return [
+      subMenuHihat,
+      subMenuEdit,
+      subMenuView,
+      subMenuAdvanced,
+      subMenuWindow,
+      subMenuHelp,
+    ];
   }
 
   buildDefaultTemplate() {

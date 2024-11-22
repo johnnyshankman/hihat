@@ -4,7 +4,6 @@ import Draggable from 'react-draggable';
 import { IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import usePlayerStore from '../store/player';
 import useMainStore from '../store/main';
 import { LightweightAudioMetadata } from '../../common/common';
 import { useWindowDimensions } from '../hooks/useWindowDimensions';
@@ -22,16 +21,24 @@ const ROW_HEIGHT = 25.5; // Fixed row height
 const BROWSER_WIDTH = 800; // Fixed browser width
 
 export default function Browser({ onClose }: BrowserProps) {
+  /**
+   * @dev window provider hook
+   */
   const { width, height } = useWindowDimensions();
-  const setFilteredLibrary = usePlayerStore(
-    (store) => store.setFilteredLibrary,
-  );
-  const setOverrideScrollToIndex = usePlayerStore(
+
+  /**
+   * @dev store hooks
+   */
+  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
-  const currentSong = usePlayerStore((store) => store.currentSong);
+  const currentSong = useMainStore((store) => store.currentSong);
   const storeLibrary = useMainStore((store) => store.library);
 
+  /**
+   * @dev component state
+   */
   const [selection, setSelection] = useState<BrowserSelection>({
     artist: null,
     album: null,
@@ -45,6 +52,9 @@ export default function Browser({ onClose }: BrowserProps) {
     height: height ? height * 0.25 : 400,
   });
 
+  /**
+   * @dev component refs
+   */
   const browserRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -94,16 +104,14 @@ export default function Browser({ onClose }: BrowserProps) {
   useEffect(() => {
     if (!storeLibrary) return;
 
-    const filteredSongs = { ...storeLibrary };
-    Object.keys(filteredSongs).forEach((key) => {
-      const song = filteredSongs[key];
-      if (
-        (selection.artist && song.common.artist !== selection.artist) ||
-        (selection.album && song.common.album !== selection.album)
-      ) {
-        delete filteredSongs[key];
-      }
-    });
+    const filteredSongs = Object.fromEntries(
+      Object.entries(storeLibrary).filter(([_, song]) => {
+        return (
+          (!selection.artist || song.common.artist === selection.artist) &&
+          (!selection.album || song.common.album === selection.album)
+        );
+      }),
+    );
 
     setFilteredLibrary(filteredSongs);
   }, [selection, storeLibrary, setFilteredLibrary]);

@@ -1,9 +1,7 @@
 /* eslint-disable jsx-a11y/media-has-caption */
 import React, { useState, useRef, useEffect } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
-import { LightweightAudioMetadata } from '../../common/common';
 import useMainStore from '../store/main';
-import usePlayerStore from '../store/player';
 import LibraryList from './LibraryList';
 import StaticPlayer from './StaticPlayer';
 import BackupConfirmationDialog from './Dialog/BackupConfirmationDialog';
@@ -18,44 +16,48 @@ import Browser from './Browser';
 import { WindowDimensionsProvider } from '../hooks/useWindowDimensions';
 import { Channels, ResponseArgs } from '../../main/preload';
 
-type AlbumArtMenuState = { mouseX: number; mouseY: number } | undefined;
-
 export default function Main() {
+  /**
+   * @dev external hooks
+   */
   const { width, height, ref } = useResizeDetector();
-  const audioTagRef = useRef<HTMLAudioElement>(null);
-  const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
-  // Main store hooks
-  const storeLibrary = useMainStore((store) => store.library);
+  /**
+   * @dev main store hooks
+   */
   const setLibraryInStore = useMainStore((store) => store.setLibrary);
-  const setLastPlayedSong = useMainStore((store) => store.setLastPlayedSong);
   const setInitialized = useMainStore((store) => store.setInitialized);
-
-  // Player store hooks
-  const paused = usePlayerStore((store) => store.paused);
-  const setPaused = usePlayerStore((store) => store.setPaused);
-  const shuffle = usePlayerStore((store) => store.shuffle);
-  const repeating = usePlayerStore((store) => store.repeating);
-  const currentSong = usePlayerStore((store) => store.currentSong);
-  const shuffleHistory = usePlayerStore((store) => store.shuffleHistory);
-  const setShuffleHistory = usePlayerStore((store) => store.setShuffleHistory);
-  const currentSongMetadata = usePlayerStore(
+  const currentSong = useMainStore((store) => store.currentSong);
+  const player = useMainStore((store) => store.player);
+  const setPaused = useMainStore((store) => store.setPaused);
+  const paused = useMainStore((store) => store.paused);
+  const autoPlayNextSong = useMainStore((store) => store.autoPlayNextSong);
+  const playPreviousSong = useMainStore((store) => store.playPreviousSong);
+  const skipToNextSong = useMainStore((store) => store.skipToNextSong);
+  const setVolume = useMainStore((store) => store.setVolume);
+  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
+  const selectSpecificSong = useMainStore((store) => store.selectSpecificSong);
+  const setCurrentSongTime = useMainStore((store) => store.setCurrentSongTime);
+  const currentSongTime = useMainStore((store) => store.currentSongTime);
+  const currentSongMetadata = useMainStore(
     (store) => store.currentSongMetadata,
   );
-  const setCurrentSong = usePlayerStore((store) => store.setCurrentSong);
-  const filteredLibrary = usePlayerStore((store) => store.filteredLibrary);
-  const setFilteredLibrary = usePlayerStore(
-    (store) => store.setFilteredLibrary,
-  );
-  const currentSongTime = usePlayerStore((store) => store.currentSongTime);
-  const setCurrentSongTime = usePlayerStore(
-    (store) => store.setCurrentSongTime,
-  );
-  const setOverrideScrollToIndex = usePlayerStore(
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
+  const increasePlayCountOfSong = useMainStore(
+    (store) => store.increasePlayCountOfSong,
+  );
+  const setHasIncreasedPlayCount = useMainStore(
+    (store) => store.setHasIncreasedPlayCount,
+  );
+  const hasIncreasedPlayCount = useMainStore(
+    (store) => store.hasIncreasedPlayCount,
+  );
 
-  // Component state
+  /**
+   * @dev component state
+   */
   const [dialogState, setDialogState] = useState({
     showImportingProgress: false,
     showDedupingProgress: false,
@@ -66,105 +68,26 @@ export default function Main() {
   });
   const [importState, setImportState] = useState({
     songsImported: 0,
-    totalSongs: 0,
+    totalSongs: 1,
     estimatedTimeRemainingString: '',
   });
-  const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<AlbumArtMenuState>();
+  const [showAlbumArtMenu, setShowAlbumArtMenu] = useState<
+    { mouseX: number; mouseY: number } | undefined
+  >();
 
-  const playSong = async (song: string, meta: LightweightAudioMetadata) => {
-    const mediaData = {
-      title: meta.common.title,
-      artist: meta.common.artist,
-      album: meta.common.album,
-    };
-
-    if (navigator.mediaSession.metadata) {
-      Object.assign(navigator.mediaSession.metadata, mediaData);
-    } else {
-      navigator.mediaSession.metadata = new MediaMetadata(mediaData);
-    }
-
-    setCurrentSong(song, storeLibrary);
-    setLastPlayedSong(song);
-
-    window.electron.ipcRenderer.once('set-last-played-song', (args) => {
-      const newLibrary = { ...storeLibrary, [args.song]: args.songData };
-      setLibraryInStore(newLibrary);
-      setFilteredLibrary({ ...filteredLibrary, [args.song]: args.songData });
-    });
-
-    window.electron.ipcRenderer.sendMessage('set-last-played-song', song);
-    setPaused(false);
-  };
-
-  const startCurrentSongOver = () =>
-    // eslint-disable-next-line consistent-return
-    new Promise((resolve, reject) => {
-      // eslint-disable-next-line no-promise-executor-return
-      if (!currentSong || !currentSongMetadata) return reject();
-      setCurrentSong('', filteredLibrary);
-      setTimeout(() => {
-        playSong(currentSong, currentSongMetadata);
-        resolve(null);
-      }, 10);
-    });
-
-  const playNextSong = async () => {
-    if (!filteredLibrary) return;
-
-    const keys = Object.keys(filteredLibrary);
-    const currentIndex = keys.indexOf(currentSong || '');
-
-    if (repeating && currentSong && currentSongMetadata) {
-      await startCurrentSongOver();
-      return;
-    }
-
-    if (shuffle) {
-      const randomIndex = Math.floor(Math.random() * keys.length);
-      const randomSong = keys[randomIndex];
-      await playSong(randomSong, filteredLibrary[randomSong]);
-      setOverrideScrollToIndex(randomIndex);
-      setShuffleHistory([...shuffleHistory, currentSong]);
-      return;
-    }
-
-    const nextIndex = currentIndex + 1 >= keys.length ? 0 : currentIndex + 1;
-    const nextSong = keys[nextIndex];
-    await playSong(nextSong, filteredLibrary[nextSong]);
-  };
-
-  const playPreviousSong = async () => {
-    if (!filteredLibrary) return;
-
-    if (!paused && currentSong && currentSongMetadata && currentSongTime > 2) {
-      await startCurrentSongOver();
-      return;
-    }
-
-    const keys = Object.keys(filteredLibrary);
-    const currentIndex = keys.indexOf(currentSong || '');
-
-    if (repeating && currentSong && currentSongMetadata) {
-      await startCurrentSongOver();
-      return;
-    }
-
-    if (shuffle && shuffleHistory.length > 0) {
-      const previousSong = shuffleHistory[shuffleHistory.length - 1];
-      await playSong(previousSong, filteredLibrary[previousSong]);
-      setOverrideScrollToIndex(keys.indexOf(previousSong));
-      setShuffleHistory(shuffleHistory.slice(0, -1));
-      return;
-    }
-
-    const prevIndex = currentIndex - 1 < 0 ? keys.length - 1 : currentIndex - 1;
-    const prevSong = keys[prevIndex];
-    await playSong(prevSong, filteredLibrary[prevSong]);
-  };
+  /**
+   * @dev components refs
+   */
+  const importNewSongsButtonRef = useRef<HTMLDivElement>(null);
 
   const importNewLibrary = async (rescan = false) => {
     setDialogState((prev) => ({ ...prev, showImportingProgress: true }));
+
+    setImportState((prev) => ({
+      ...prev,
+      songsImported: 0,
+      totalSongs: 1,
+    }));
 
     window.electron.ipcRenderer.sendMessage('select-library', {
       rescan,
@@ -177,23 +100,33 @@ export default function Main() {
         totalSongs: args.totalSongs,
       }));
 
-      // Calculate estimated time remaining
-      const timePerSong = 0.1; // seconds per song (approximate)
-      const remainingSongs = args.totalSongs - args.songsImported;
-      const estimatedSeconds = remainingSongs * timePerSong;
-      const minutes = Math.floor(estimatedSeconds / 60);
-      const seconds = Math.floor(estimatedSeconds % 60);
+      // Average time per song based on testing:
+      // - ~3ms for metadata parsing
+      // - ~6ms for file copy (if needed)
+      // - ~1ms overhead
+      const avgTimePerSong = 10; // milliseconds
+      const estimatedTimeRemaining = Math.floor(
+        (args.totalSongs - args.songsImported) * avgTimePerSong,
+      );
+
+      const minutes = Math.floor(estimatedTimeRemaining / 60000);
+      const seconds = Math.floor((estimatedTimeRemaining % 60000) / 1000);
+
+      const timeRemainingString =
+        // eslint-disable-next-line no-nested-ternary
+        minutes < 1
+          ? seconds === 0
+            ? 'Processing Metadata...'
+            : `${seconds}s left`
+          : `${minutes}m ${seconds}s left`;
 
       setImportState((prev) => ({
         ...prev,
-        estimatedTimeRemainingString: `${minutes}:${seconds
-          .toString()
-          .padStart(2, '0')}`,
+        estimatedTimeRemainingString: timeRemainingString,
       }));
     });
 
     window.electron.ipcRenderer.once('select-library', (store) => {
-      setInitialized(true);
       if (store) {
         setLibraryInStore(store.library);
         setFilteredLibrary(store.library);
@@ -202,6 +135,11 @@ export default function Main() {
     });
   };
 
+  /**
+   * Set up event listeners for the main process to communicate with the renderer
+   * process. Also set up window event listeners for custom events from the
+   * renderer process.
+   */
   useEffect(() => {
     const handlers = {
       initialize: (arg: ResponseArgs['initialize']) => {
@@ -209,12 +147,16 @@ export default function Main() {
         setLibraryInStore(arg.library);
         setFilteredLibrary(arg.library);
         if (arg.lastPlayedSong) {
-          setCurrentSong(arg.lastPlayedSong, arg.library);
           const songIndex = Object.keys(arg.library).findIndex(
             (song) => song === arg.lastPlayedSong,
           );
+          selectSpecificSong(arg.lastPlayedSong, arg.library);
           setOverrideScrollToIndex(songIndex);
         }
+
+        player.onfinishedtrack = autoPlayNextSong;
+
+        setPaused(true);
       },
       'update-store': (arg: ResponseArgs['update-store']) => {
         setInitialized(true);
@@ -266,6 +208,15 @@ export default function Main() {
       'menu-reset-library': () => {
         window.electron.ipcRenderer.sendMessage('menu-reset-library');
       },
+      'menu-max-volume': () => {
+        setVolume(100);
+      },
+      'menu-mute-volume': () => {
+        setVolume(0);
+      },
+      'menu-quiet-mode': () => {
+        setVolume(2);
+      },
     };
 
     Object.entries(handlers).forEach(([event, handler]) => {
@@ -276,31 +227,132 @@ export default function Main() {
       setDialogState((prev) => ({ ...prev, showBrowser: true }));
     });
 
-    navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
-    navigator.mediaSession.setActionHandler('nexttrack', playNextSong);
-
     return () => {
       // Cleanup handlers if needed in the future here
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * @dev Since we are using Gapless5, we must handle the media session's
+   * position state and actions manually.
+   *
+   * We loop a blank audio file in a hidden audio tag to keep the media
+   * session alive indefinitely. We keep the hidden audio tag in sync with
+   * the gapless5 player so that the media session's state always matches
+   * the actual audio player's state.
+   */
+  useEffect(() => {
+    if (!navigator.mediaSession) {
+      console.error('Media session not supported');
+      return () => {};
+    }
+
+    navigator.mediaSession.setActionHandler('previoustrack', playPreviousSong);
+    navigator.mediaSession.setActionHandler('nexttrack', skipToNextSong);
+    navigator.mediaSession.setActionHandler('play', () => {
+      setPaused(false);
+      document.querySelector('audio')?.play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      setPaused(true);
+      document.querySelector('audio')?.pause();
+    });
+    navigator.mediaSession.setActionHandler('seekto', (seekDetails) => {
+      setCurrentSongTime(seekDetails.seekTime || 0);
+      player.setPosition((seekDetails.seekTime || 0) * 1000);
+    });
+
+    try {
+      const duration = currentSongMetadata?.format?.duration || 0;
+      const safePosition = Math.min(currentSongTime, duration);
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: 1,
+        position: safePosition,
+      });
+    } catch (error) {
+      console.error('Failed to update media session position state:', error);
+    }
+    /**
+     * @important text and album artwork metadata for the media session
+     * are handled by the main store when songs change etc. NOT HERE.
+     * @see updateMediaSessionMetadata
+     * @see store/main.ts
+     */
+    return () => {
+      navigator.mediaSession.setActionHandler('previoustrack', null);
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('seekto', null);
+    };
+  }, [
+    paused,
+    skipToNextSong,
+    playPreviousSong,
+    setPaused,
+    currentSongTime,
+    currentSongMetadata,
+    player,
+    setCurrentSongTime,
+  ]);
+
+  /**
+   * @important this handles requesting the play count to be incremented.
+   * if the song has ever actively played passed the 10 second mark,
+   * we increment the play count both internally and in the user config.
+   * @important we manually unset the hasIncreasedPlayCount flag
+   * from the store when the user hits next, selects a new song, etc.
+   * so that we don't increment the play count multiple times for the same song.
+   * @caveat this means that if the user skips to the 20s mark and then
+   * plays the song for 1s, it will increment the play count.
+   * @note this is based on an avg of spotiy vs apple music vs itunes.
+   * itunes did it instantly on start, spotify requires 30 seconds of play,
+   * and apple music is like my algorithm but with a 20s threshold not 10s
+   */
+  useEffect(() => {
+    let lastUpdate = 0;
+
+    player.ontimeupdate = (
+      currentTrackTime: number,
+      _currentTrackIndex: number,
+    ) => {
+      const now = Date.now();
+      // throttle updates to once every 500ms instead of every 1-10ms
+      if (now - lastUpdate >= 500) {
+        setCurrentSongTime(currentTrackTime / 1000);
+        if (
+          !hasIncreasedPlayCount &&
+          currentTrackTime >= 10000 &&
+          currentSong &&
+          !paused
+        ) {
+          increasePlayCountOfSong(currentSong);
+          setHasIncreasedPlayCount(true);
+        }
+
+        lastUpdate = now;
+      }
+    };
+  }, [
+    currentSong,
+    increasePlayCountOfSong,
+    player,
+    setCurrentSongTime,
+    setHasIncreasedPlayCount,
+    hasIncreasedPlayCount,
+    paused,
+  ]);
+
   return (
     <div ref={ref} className="h-full flex flex-col dark">
+      <audio
+        autoPlay={!paused && !!currentSong}
+        loop
+        src="https://github.com/anars/blank-audio/raw/refs/heads/master/2-minutes-and-30-seconds-of-silence.mp3"
+      />
       {width && height && (
         <WindowDimensionsProvider height={height} width={width}>
-          <audio
-            ref={audioTagRef}
-            autoPlay={!paused}
-            className="hidden"
-            onEnded={playNextSong}
-            onPause={() => setPaused(true)}
-            onPlay={() => setPaused(false)}
-            onTimeUpdate={(e) =>
-              setCurrentSongTime(e.currentTarget.currentTime)
-            }
-            src={`my-magic-protocol://getMediaFile/${currentSong}`}
-          />
-
           {/* Dialogs */}
           <ImportProgressDialog
             estimatedTimeRemainingString={
@@ -386,22 +438,9 @@ export default function Main() {
             />
           )}
 
-          {width && (
-            <LibraryList
-              onImportLibrary={importNewLibrary}
-              playSong={async (song, meta) => {
-                await (currentSong === song
-                  ? startCurrentSongOver()
-                  : playSong(song, meta));
-              }}
-            />
-          )}
+          {width && <LibraryList onImportLibrary={importNewLibrary} />}
 
-          <StaticPlayer
-            audioTagRef={audioTagRef}
-            playNextSong={playNextSong}
-            playPreviousSong={playPreviousSong}
-          />
+          <StaticPlayer />
         </WindowDimensionsProvider>
       )}
     </div>

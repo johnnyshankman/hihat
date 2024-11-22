@@ -1,52 +1,79 @@
-import * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import { Tooltip } from '@mui/material';
 import Marquee from 'react-fast-marquee';
 import { LessOpaqueTinyText } from './SimpleStyledMaterialUIComponents';
-import usePlayerStore from '../store/player';
+import useMainStore from '../store/main';
 import { useWindowDimensions } from '../hooks/useWindowDimensions';
 
-export default function SongProgressBar({
-  value,
-  onManualChange,
-  max,
-}: {
-  value: number;
-  onManualChange: (value: number) => void;
-  max: number;
-}) {
-  const [position, setPosition] = React.useState(32);
-  const [isScrolling, setIsScrolling] = React.useState(false);
-  const [isArtistScrolling, setIsArtistScrolling] = React.useState(false);
+export default function SongProgressAndSongDisplay() {
+  /**
+   * @dev component state
+   */
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [isArtistScrolling, setIsArtistScrolling] = useState(false);
+
+  /**
+   * @dev window provider hook
+   */
   const { width, height } = useWindowDimensions();
 
-  const filteredLibrary = usePlayerStore((state) => state.filteredLibrary);
-  const currentSongMetadata = usePlayerStore(
+  /**
+   * @dev main store hooks
+   */
+  const filteredLibrary = useMainStore((state) => state.filteredLibrary);
+  const setCurrentSongTime = useMainStore((store) => store.setCurrentSongTime);
+  const currentSongTime = useMainStore((store) => store.currentSongTime);
+  const player = useMainStore((store) => store.player);
+  const currentSongMetadata = useMainStore(
     (state) => state.currentSongMetadata,
   );
-  const setOverrideScrollToIndex = usePlayerStore(
+  const setOverrideScrollToIndex = useMainStore(
     (store) => store.setOverrideScrollToIndex,
   );
-  const titleRef = React.useRef<HTMLDivElement>(null);
-  const titleRef2 = React.useRef<HTMLDivElement>(null);
-  const artistRef = React.useRef<HTMLDivElement>(null);
-  const artistRef2 = React.useRef<HTMLDivElement>(null);
 
-  function convertToMMSS(timeInSeconds: number) {
+  const max = currentSongMetadata?.format?.duration || 0;
+
+  /**
+   * @dev component refs
+   */
+  const titleRef = useRef<HTMLDivElement>(null);
+  const titleRef2 = useRef<HTMLDivElement>(null);
+  const artistRef = useRef<HTMLDivElement>(null);
+  const artistRef2 = useRef<HTMLDivElement>(null);
+
+  const convertToMMSS = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
     // Ensuring the format is two-digits both for minutes and seconds
     return `${minutes.toString().padStart(2, '0')}:${seconds
       .toString()
       .padStart(2, '0')}`;
-  }
+  };
 
-  React.useEffect(() => {
-    setPosition(value);
-  }, [value]);
+  /**
+   * on click, scroll to the song in the library if possible,
+   * then try to scroll to the artist if the song is not found
+   */
+  const scrollToSong = () => {
+    const libraryArray = Object.values(filteredLibrary);
+    let index = libraryArray.findIndex(
+      (song) =>
+        song.common.title === currentSongMetadata.common?.title &&
+        song.common.artist === currentSongMetadata.common?.artist &&
+        song.common.album === currentSongMetadata.common?.album,
+    );
 
-  React.useEffect(() => {
+    if (index === -1) {
+      index = libraryArray.findIndex(
+        (song) => song.common.artist === currentSongMetadata.common?.artist,
+      );
+    }
+    setOverrideScrollToIndex(index);
+  };
+
+  useEffect(() => {
     const checkOverflow1 = () => {
       if (titleRef.current) {
         // requires going up three parent elements to get out of the marquee
@@ -75,7 +102,7 @@ export default function SongProgressBar({
     };
   }, [currentSongMetadata.common?.title, width, height]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkOverflow2 = () => {
       if (titleRef2.current) {
         // requires going up three parent elements to get out of the marquee
@@ -104,7 +131,7 @@ export default function SongProgressBar({
     };
   }, [currentSongMetadata.common?.title, width, height]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkOverflow3 = () => {
       if (artistRef.current) {
         // requires going up three parent elements to get out of the marquee
@@ -130,7 +157,7 @@ export default function SongProgressBar({
     };
   }, [currentSongMetadata.common?.artist, width, height]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkOverflow4 = () => {
       if (artistRef2.current) {
         // requires going up three parent elements to get out of the marquee
@@ -174,18 +201,7 @@ export default function SongProgressBar({
           <LessOpaqueTinyText
             aria-label="current-title"
             onClick={() => {
-              /**
-               * on click, scroll to the song title in the library
-               */
-              const libraryArray = Object.values(filteredLibrary);
-              const index = libraryArray.findIndex(
-                (song) =>
-                  song.common.title === currentSongMetadata.common?.title &&
-                  song.common.artist === currentSongMetadata.common?.artist &&
-                  song.common.album === currentSongMetadata.common?.album,
-              );
-
-              setOverrideScrollToIndex(index);
+              scrollToSong();
             }}
             sx={{
               margin: 0,
@@ -227,8 +243,11 @@ export default function SongProgressBar({
           max={max}
           min={0}
           onChange={(_, val) => {
-            setPosition(val as number);
-            onManualChange(val as number);
+            // manually update the player's time BUT ALSO the internal state
+            // to ensure that the UX feels snappy. otherwise the UX wouldn't update
+            // until the next ontimeupdate event fired.
+            setCurrentSongTime(val as number);
+            player.setPosition((val as number) * 1000);
           }}
           size="small"
           step={1}
@@ -240,7 +259,7 @@ export default function SongProgressBar({
               width: 8,
             },
           }}
-          value={position}
+          value={currentSongTime}
         />
       </Box>
       <Box
@@ -252,20 +271,12 @@ export default function SongProgressBar({
         }}
       >
         <LessOpaqueTinyText aria-label="current-time">
-          {convertToMMSS(position)}
+          {convertToMMSS(currentSongTime)}
         </LessOpaqueTinyText>
         <LessOpaqueTinyText
           aria-label="current-title"
           onClick={() => {
-            /**
-             * on click, scroll to the artist in the library
-             */
-            const libraryArray = Object.values(filteredLibrary);
-            const index = libraryArray.findIndex(
-              (song) =>
-                song.common.artist === currentSongMetadata.common?.artist,
-            );
-            setOverrideScrollToIndex(index);
+            scrollToSong();
           }}
           sx={{
             margin: 0,
@@ -293,7 +304,7 @@ export default function SongProgressBar({
           )}
         </LessOpaqueTinyText>
         <LessOpaqueTinyText aria-label="current-max-time">
-          -{convertToMMSS(max - position)}
+          -{convertToMMSS(max - currentSongTime)}
         </LessOpaqueTinyText>
       </Box>
     </Box>

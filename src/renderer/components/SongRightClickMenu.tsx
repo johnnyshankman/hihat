@@ -14,8 +14,14 @@ type SongRightClickMenuProps = {
   mouseY: number;
 };
 
-export default function SongRightClickMenu(props: SongRightClickMenuProps) {
-  const { anchorEl, onClose, song, songInfo, mouseX, mouseY } = props;
+export default function SongRightClickMenu({
+  anchorEl,
+  onClose,
+  song,
+  songInfo,
+  mouseX,
+  mouseY,
+}: SongRightClickMenuProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showHideDialog, setShowHideDialog] = useState(false);
   const [showDeleteAlbumDialog, setShowDeleteAlbumDialog] = useState(false);

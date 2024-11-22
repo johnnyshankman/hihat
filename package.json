@@ -69,6 +69,7 @@
     }
   },
   "dependencies": {
+    "@regosen/gapless-5": "git+https://github.com/johnnyshankman/Gapless-5.git",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
     "electron-updater": "^6.1.4",

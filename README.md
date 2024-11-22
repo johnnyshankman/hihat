@@ -237,6 +237,7 @@ This project was built with the following technologies:
 * [![zustand][zustand.js]][zustand-url]
 * [![Tailwind][Tailwind.js]][Tailwind-url]
 * [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
+* [![Gapless 5][Gapless5.js]][Gapless5-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -278,7 +279,7 @@ This project was built with the following technologies:
 - [x] Show stats about your library somewhere, like GB and # of songs
 - [x] iTunes-like browser with list of artist and album filters
 - [x] Quiet mode creating bg music to a video/audiobook/podcast in another app
-- [ ] True gapless playback
+- [x] True gapless playback
 - [ ] Edit song metadata
 - [ ] Hide/show columns in the Library List
 - [ ] Queue a next-up song
@@ -399,6 +400,8 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [Typescript-url]: https://typescriptlang.org
 [zustand.js]: https://img.shields.io/badge/Zustand-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
 [zustand-url]: [https://typescriptlang.org](https://github.com/pmndrs/zustand)https://github.com/pmndrs/zustand
+[Gapless5.js]: https://img.shields.io/badge/Gapless5-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
+[Gapless5-url]: https://github.com/regosen/Gapless-5
 
 
 

@@ -7,7 +7,7 @@ type WindowDimensionsContextType = {
 
 const WindowDimensionsContext = createContext<WindowDimensionsContextType>({
   /**
-   * @note these default dimensions come from the window main.ts
+   * @note these default dimensions come from the window in main/main.ts
    */
   width: 1024,
   height: 1024,
