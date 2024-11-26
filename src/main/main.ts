@@ -577,7 +577,7 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
     }
 
     if (metadata && metadata.format.duration && metadata.common.title) {
-      filesToTags[files[i]] = {
+      const newSongData = {
         common: {
           artist: metadata.common.artist,
           album: metadata.common.album,
@@ -599,16 +599,28 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
           dateAdded: Date.now(),
         },
       } as LightweightAudioMetadata;
-    }
 
-    /**
-     * @IMPORTANT if the song already exists in the user's library
-     * we must port over its `additionalInfo` to keep playcounts in tact
-     */
-    if (userConfig?.library?.[files[i]]) {
-      filesToTags[files[i]].additionalInfo = {
-        ...userConfig.library[files[i]].additionalInfo,
-      };
+      const existingSongKey = Object.keys(filesToTags).find((key) => {
+        const existingSong = filesToTags[key];
+        return (
+          existingSong.common.title?.toLowerCase().trim() ===
+            newSongData.common.title?.toLowerCase().trim() &&
+          existingSong.common.artist?.toLowerCase().trim() ===
+            newSongData.common.artist?.toLowerCase().trim() &&
+          existingSong.common.album?.toLowerCase().trim() ===
+            newSongData.common.album?.toLowerCase().trim()
+        );
+      });
+
+      if (existingSongKey) {
+        const sorted = await sortFilesByQuality([existingSongKey, files[i]]);
+        if (sorted[0] === files[i]) {
+          delete filesToTags[existingSongKey];
+          filesToTags[files[i]] = newSongData;
+        }
+      } else {
+        filesToTags[files[i]] = newSongData;
+      }
     }
 
     event.reply('song-imported', {
@@ -643,10 +655,6 @@ ipcMain.on('add-to-library', async (event): Promise<any> => {
     updatedStore.scrollToIndex = scrollToIndex;
   }
 
-  /**
-   * @note write the json file to the user data directory as userConfig.json
-   * for caching purposes. We re-use this during future boots of the app.
-   */
   writeFileSyncToUserConfig(updatedStore);
   event.reply('add-to-library', updatedStore);
 });
