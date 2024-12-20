@@ -38,6 +38,13 @@ export default function AlbumArt({
    * @dev component state
    */
   const [albumArtMaxWidth, setAlbumArtMaxWidth] = useState(320);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    if (currentSongDataURL) {
+      setLoadError(false);
+    }
+  }, [currentSongDataURL]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -60,7 +67,7 @@ export default function AlbumArt({
     };
   }, [width, height]);
 
-  if (!currentSongDataURL) {
+  if (!currentSongDataURL || loadError) {
     return (
       <div
         className="relative aspect-square w-full bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-600 border-2 border-neutral-700 shadow-2xl rounded-lg"
@@ -145,6 +152,10 @@ export default function AlbumArt({
             mouseX: e.clientX - 2,
             mouseY: e.clientY - 4,
           });
+        }}
+        onError={() => {
+          // @note: this is reset back to false when the image url is updated
+          setLoadError(true);
         }}
         src={currentSongDataURL}
         style={{
