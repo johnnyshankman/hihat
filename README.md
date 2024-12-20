@@ -24,6 +24,10 @@
   </p>
 </div>
 
+<a href="https://whitelights.rip" target="_blank">
+<img width="1608" alt="hihat-preview" src="https://github.com/user-attachments/assets/39784fc5-ce3e-4b9a-8e45-dc35b0dcce38">
+</a>
+
 ## Table of Contents
 
 1. [About The Project](#about-the-project)
@@ -55,9 +59,6 @@ That's why created **hihat** - a free & open-source music player that ditches ad
 
 Wrapped up in a responsive dark-mode design made for late night listening sessions on any screen size.
 
-<a href="https://whitelights.rip" target="_blank">
-<img width="1608" alt="hihat-preview" src="https://github.com/user-attachments/assets/39784fc5-ce3e-4b9a-8e45-dc35b0dcce38">
-</a>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Core Features
