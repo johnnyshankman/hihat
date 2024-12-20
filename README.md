@@ -116,8 +116,8 @@ If you'd like to see more detailed information, check out:
 * **hihat** does not play protected content (M4P, AAX)
 * **hihat** does not display album art for formats which do not have album art data (WAV)
 
-#### Getting Tracks
-Don't know where to download files of your favorite albums and tracks? I suggest:
+#### Getting Music
+The best open-source tools for downloading high quality music files:
 * [tidal-media-downloader](https://github.com/yaronzz/Tidal-Media-Downloader) (Works with Tidal)
 * [spotify-downloader](https://github.com/spotDL/spotify-downloader) (Works with Spotify and Youtube Music)
 
