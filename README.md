@@ -49,11 +49,11 @@
 
 *hihat* was born out of frustration with the lackluster offline music players available for OSX today.
 
-Ever tried Cog, Swinsian, Plexamp, DeaDBeeF VLC, etc? They're okay... but they're all missing key features & don't nail the sleek feel of iTunes circa 2002.
+Ever tried Cog, Swinsian, Plexamp, DeaDBeeF, or VLC? They're all okay... but they're missing key features and do not nail that sleek feel of iTunes circa 2002.
 
-That's why I decided to create *hihat* - a free, open-source music player that ditches ads, respects your privacy, and works perfectly without an internet connection.
+That's why created *hihat* - a free & open-source music player that ditches ads, respects your privacy, and works offline.
 
-All wrapped up in a minimalist dark-mode design that's easy on the eyes during late night listening sessions.
+Wrapped up in a responsive dark-mode design made for late night listening sessions on any screen size.
 
 <a href="https://whitelights.rip" target="_blank">
 <img width="1608" alt="hihat-preview" src="https://github.com/user-attachments/assets/39784fc5-ce3e-4b9a-8e45-dc35b0dcce38">
