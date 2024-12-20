@@ -47,11 +47,11 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-*hihat* was born out of frustration with the lackluster offline music players available for OSX today.
+**hihat** was born out of frustration with the lackluster offline music players available for OSX today.
 
 Ever tried Cog, Swinsian, Plexamp, DeaDBeeF, or VLC? They're all okay... but they're missing key features and do not nail that sleek feel of iTunes circa 2002.
 
-That's why created *hihat* - a free & open-source music player that ditches ads, respects your privacy, and works offline.
+That's why created **hihat** - a free & open-source music player that ditches ads, respects your privacy, and works offline.
 
 Wrapped up in a responsive dark-mode design made for late night listening sessions on any screen size.
 
@@ -62,7 +62,7 @@ Wrapped up in a responsive dark-mode design made for late night listening sessio
 
 ### Core Features
 
-*hihat* core features:
+**hihat** core features:
 * 100% offline
 * free
 * dark mode
@@ -106,12 +106,16 @@ Just to name a few:
 * Ogg Vorbis
 * PCM
 
-Audio files which cannot contain album art metadata will not display album art (such as WAV). Video files and AAX audiobooks are not supported.
-
 If you'd like to see more detailed information, check out:
 * [The Chromium Project](https://www.chromium.org/audio-video/) for info on supported audio formats.
 * [Music Metadata](https://github.com/borewit/music-metadata#features) library for supported metadata formats.
 
+#### Limitations
+* **hihat** does not play online streams
+* **hihat** does not play protected content (M4P, AAX)
+* **hihat** does not display album art for formats which do not have album art data (WAV)
+
+#### Getting Tracks
 Don't know where to download files of your favorite albums and tracks? I suggest:
 * [tidal-media-downloader](https://github.com/yaronzz/Tidal-Media-Downloader) (Works with Tidal)
 * [spotify-downloader](https://github.com/spotDL/spotify-downloader) (Works with Spotify and Youtube Music)
@@ -126,11 +130,11 @@ Don't know where to download files of your favorite albums and tracks? I suggest
 ### Installing hihat
 
 1. Download the `.dmg` file of your choosing from our [Latest Release](https://github.com/johnnyshankman/hihat/releases/tag/latest)
-2. Double click it to open the contents, then drag the *hihat* application into your Apps folder
+2. Double click it to open the contents, then drag the **hihat** application into your Apps folder
 
 You are now all set.
 
-**Warning: The first time you open hihat OSX will warn you that it's from an unidentified developer and ask you to confirm you want to open *hihat*. Confirm. This warning is why the application is free, I do not pay for a BS Apple Developer License just to remove this dialog.**
+**Warning: The first time you open hihat OSX will warn you that it's from an unidentified developer and ask you to confirm you want to open **hihat**. Confirm. This warning is why the application is free, I do not pay for a BS Apple Developer License just to remove this dialog.**
 
 ### First Time Setup
 
@@ -193,7 +197,7 @@ OSX has a built in player for quickly accessing the play, pause, skip, and previ
 <img width="320" alt="okay" src="https://github.com/user-attachments/assets/2e847aa4-9818-48b5-9c96-62e8613609c1">
 <img width="320" alt="okay" src="https://github.com/user-attachments/assets/29995fd8-b27d-4e4f-a6b7-a2e0fed55aeb">
 
-Alternatively, you can use any keyboard or bluetooth headphones to access these controls. *hihat* should respond to media commands just like any other native OSX application does!
+Alternatively, you can use any keyboard or bluetooth headphones to access these controls. **hihat** should respond to media commands just like any other native OSX application does!
 
 ### Tips
 
@@ -208,19 +212,19 @@ Alternatively, you can use any keyboard or bluetooth headphones to access these 
 
 ## Updating hihat to latest version
 
-Updating *hihat* is simple and ensures that you keep your library and all your settings intact. Follow these steps to update *hihat*:
+Updating **hihat** is simple and ensures that you keep your library and all your settings intact. Follow these steps to update **hihat**:
 
 1. **Download the Latest Version:**
-   - Visit our [Releases](https://github.com/johnnyshankman/hihat/releases/latest) page and download the latest version of the `.dmg` file for *hihat*.
+   - Visit our [Releases](https://github.com/johnnyshankman/hihat/releases/latest) page and download the latest version of the `.dmg` file for **hihat**.
 
 2. **Mount the DMG File:**
    - Double-click the downloaded `.dmg` file to open it. This will mount the disk image on your Mac.
 
 3. **Replace the Existing App:**
-   - In the opened window, drag and drop the *hihat* icon into the `/Applications` folder. If prompted, confirm to replace the existing application.
+   - In the opened window, drag and drop the **hihat** icon into the `/Applications` folder. If prompted, confirm to replace the existing application.
 
 4. **Launch the Updated App:**
-   - Go to your `/Applications` folder and run *hihat*. Your settings and configurations from previous versions will remain intact.
+   - Go to your `/Applications` folder and run **hihat**. Your settings and configurations from previous versions will remain intact.
 
 ### Important Note
 - **Preserved Settings:** Your library and all your settings are stored in a separate directory from the application itself, and therefore will not be affected by the update process!
