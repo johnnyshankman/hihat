@@ -10,7 +10,7 @@
   <h3 align="center">hihat</h3>
 
   <p align="center">
-    The minimalist offline music player for audiophiles on OSX
+    The minimalist offline music library player for audiophiles on OSX
     <br />
     <br />
     <a href="https://github.com/johnnyshankman/hihat/issues">Report Bug</a>
