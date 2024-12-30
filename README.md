@@ -51,7 +51,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-**hihat** was born out of frustration with the lackluster offline music players available for OSX today.
+**hihat** was born out of frustration with the lackluster offline music players available for OSX users with large music libraries today.
 
 Ever tried Cog, Swinsian, Plexamp, DeaDBeeF, or VLC? None nail the key features and sleek feel of iTunes circa 2002.
 
