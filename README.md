@@ -53,7 +53,7 @@
 
 **hihat** was born out of frustration with the lackluster offline music players available for OSX today.
 
-Ever tried Cog, Swinsian, Plexamp, DeaDBeeF, or VLC? They're all okay... but they're missing key features and do not nail that sleek feel of iTunes circa 2002.
+Ever tried Cog, Swinsian, Plexamp, DeaDBeeF, or VLC? None nail the key features and sleek feel of iTunes circa 2002.
 
 That's why created **hihat** - a free & open-source music player that ditches ads, respects your privacy, and works offline.
 
@@ -298,7 +298,9 @@ See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Looking For Something Like WinAmp?
 
+I highly suggest [Aural](https://github.com/kartik-venugopal/aural-player) for that experience!
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -354,8 +356,6 @@ _Follow the steps below to install the local development environment and serve t
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- LICENSE -->
 ## License
