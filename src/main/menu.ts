@@ -200,21 +200,14 @@ export default class MenuBuilder {
       label: 'View',
       submenu: [
         {
-          label: 'Reload',
+          label: 'reload',
           accelerator: 'Command+R',
           click: () => {
             this.mainWindow.webContents.reload();
           },
         },
         {
-          label: 'Toggle Full Screen',
-          accelerator: 'Ctrl+Command+F',
-          click: () => {
-            this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
-          },
-        },
-        {
-          label: 'Toggle Developer Tools',
+          label: 'toggle dev tools',
           accelerator: 'Alt+Command+I',
           click: () => {
             this.mainWindow.webContents.toggleDevTools();
@@ -222,7 +215,7 @@ export default class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'Toggle Browser View',
+          label: 'toggle browser view',
           accelerator: 'Command+B',
           click: () => {
             this.mainWindow.webContents.send('menu-toggle-browser');
@@ -232,6 +225,84 @@ export default class MenuBuilder {
           label: 'reset all hihat data',
           click: () => {
             this.mainWindow.webContents.send('menu-reset-library');
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'zoom in',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              const currentZoom = focusedWindow.webContents.getZoomFactor();
+              focusedWindow.webContents.setZoomFactor(currentZoom + 0.1);
+            }
+          },
+        },
+        {
+          label: 'zoom out',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              const currentZoom = focusedWindow.webContents.getZoomFactor();
+              focusedWindow.webContents.setZoomFactor(currentZoom - 0.1);
+            }
+          },
+        },
+        {
+          label: 'reset zoom',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.setZoomFactor(1);
+            }
+          },
+        },
+      ],
+    };
+    const subMenuViewProd: MenuItemConstructorOptions = {
+      label: 'View',
+      submenu: [
+        {
+          label: 'toggle browser view',
+          accelerator: 'Command+B',
+          click: () => {
+            this.mainWindow.webContents.send('menu-toggle-browser');
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'zoom in',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              const currentZoom = focusedWindow.webContents.getZoomFactor();
+              focusedWindow.webContents.setZoomFactor(currentZoom + 0.1);
+            }
+          },
+        },
+        {
+          label: 'zoom out',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              const currentZoom = focusedWindow.webContents.getZoomFactor();
+              focusedWindow.webContents.setZoomFactor(currentZoom - 0.1);
+            }
+          },
+        },
+        {
+          label: 'reset zoom',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.setZoomFactor(1);
+            }
           },
         },
       ],
@@ -266,26 +337,7 @@ export default class MenuBuilder {
         },
       ],
     };
-    const subMenuViewProd: MenuItemConstructorOptions = {
-      label: 'View',
-      submenu: [
-        {
-          label: 'Toggle Full Screen',
-          accelerator: 'Ctrl+Command+F',
-          click: () => {
-            this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
-          },
-        },
-        { type: 'separator' },
-        {
-          label: 'Toggle Browser View',
-          accelerator: 'Command+B',
-          click: () => {
-            this.mainWindow.webContents.send('menu-toggle-browser');
-          },
-        },
-      ],
-    };
+
     const subMenuWindow: DarwinMenuItemConstructorOptions = {
       label: 'Window',
       submenu: [
