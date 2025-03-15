@@ -436,13 +436,13 @@ export default function Playlists({
           playbackSource === 'playlist' && {
             backgroundColor: (theme) =>
               theme.palette.mode === 'dark'
-                ? 'rgba(144, 202, 249, 0.16)'
-                : 'rgba(33, 150, 243, 0.08)',
+                ? theme.palette.grey[800]
+                : theme.palette.grey[400],
             '&:hover': {
               backgroundColor: (theme) =>
                 theme.palette.mode === 'dark'
-                  ? 'rgba(144, 202, 249, 0.24)'
-                  : 'rgba(33, 150, 243, 0.16)',
+                  ? theme.palette.grey[700]
+                  : theme.palette.grey[300],
             },
           }),
       },
