@@ -4,59 +4,11 @@ import {
   shell,
   BrowserWindow,
   MenuItemConstructorOptions,
-  dialog,
 } from 'electron';
-import fs from 'fs';
-import path from 'path';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
   submenu?: DarwinMenuItemConstructorOptions[] | Menu;
-}
-
-/**
- * Get JSON data from a file at some filepath
- *
- * @param fp filepath
- * @returns the parsed data from the file at the filepath
- */
-function parseData(fp: string): any {
-  try {
-    return JSON.parse(fs.readFileSync(fp, 'utf8')) as any;
-  } catch (error) {
-    return {};
-  }
-}
-
-/**
- * Get the user's configuration data from the userConfig.json file
- *
- * @returns the user's configuration data as a StoreStructure
- */
-function getUserConfig(): any {
-  return parseData(path.join(app.getPath('userData'), 'userConfig.json'));
-}
-
-function getLibraryStats(): { songCount: number; sizeInGB: number } {
-  const userConfig = getUserConfig();
-  const { library } = userConfig;
-  const songCount = Object.keys(library).length;
-
-  let totalSize = 0;
-  // eslint-disable-next-line no-restricted-syntax
-  for (const filePath of Object.keys(library)) {
-    try {
-      const stats = fs.statSync(filePath);
-      totalSize += stats.size;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(`Error reading file size for ${filePath}:`, error);
-    }
-  }
-
-  const sizeInGB = totalSize / (1024 * 1024 * 1024);
-
-  return { songCount, sizeInGB };
 }
 
 export default class MenuBuilder {
@@ -101,78 +53,30 @@ export default class MenuBuilder {
   }
 
   buildDarwinTemplate(): MenuItemConstructorOptions[] {
-    const subMenuHihat: DarwinMenuItemConstructorOptions = {
-      label: 'hihat',
+    const subMenuAbout: DarwinMenuItemConstructorOptions = {
+      label: 'Electron',
       submenu: [
         {
-          label: 'about hihat',
+          label: 'About ElectronReact',
           selector: 'orderFrontStandardAboutPanel:',
         },
         { type: 'separator' },
-        {
-          label: 'import new songs',
-          click: () => {
-            this.mainWindow.webContents.send('menu-add-songs');
-          },
-        },
-        {
-          label: 'rescan library folder',
-          click: () => {
-            this.mainWindow.webContents.send('menu-rescan-library');
-          },
-        },
+        { label: 'Services', submenu: [] },
         { type: 'separator' },
         {
-          label: 'max volume',
-          accelerator: 'Command+Up',
-          click: () => {
-            this.mainWindow.webContents.send('menu-max-volume');
-          },
-        },
-        {
-          label: 'mute volume',
-          accelerator: 'Command+Down',
-          click: () => {
-            this.mainWindow.webContents.send('menu-mute-volume');
-          },
-        },
-        {
-          label: 'quiet',
-          accelerator: 'Option+Command+Down',
-          click: () => {
-            this.mainWindow.webContents.send('menu-quiet-mode');
-          },
-        },
-
-        { type: 'separator' },
-        {
-          label: 'see library stats',
-          click: () => {
-            const stats = getLibraryStats();
-            dialog.showMessageBox(this.mainWindow, {
-              type: 'info',
-              title: 'Library Stats',
-              message: `Songs: ${
-                stats.songCount
-              }\nSize: ${stats.sizeInGB.toFixed(2)} GB`,
-            });
-          },
-        },
-        { type: 'separator' },
-        {
-          label: 'hide hihat',
+          label: 'Hide ElectronReact',
           accelerator: 'Command+H',
           selector: 'hide:',
         },
         {
-          label: 'hide others',
+          label: 'Hide Others',
           accelerator: 'Command+Shift+H',
           selector: 'hideOtherApplications:',
         },
-        { label: 'show all', selector: 'unhideAllApplications:' },
+        { label: 'Show All', selector: 'unhideAllApplications:' },
         { type: 'separator' },
         {
-          label: 'close hihat',
+          label: 'Quit',
           accelerator: 'Command+Q',
           click: () => {
             app.quit();
@@ -200,14 +104,21 @@ export default class MenuBuilder {
       label: 'View',
       submenu: [
         {
-          label: 'reload',
+          label: 'Reload',
           accelerator: 'Command+R',
           click: () => {
             this.mainWindow.webContents.reload();
           },
         },
         {
-          label: 'toggle dev tools',
+          label: 'Toggle Full Screen',
+          accelerator: 'Ctrl+Command+F',
+          click: () => {
+            this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
+          },
+        },
+        {
+          label: 'Toggle Developer Tools',
           accelerator: 'Alt+Command+I',
           click: () => {
             this.mainWindow.webContents.toggleDevTools();
@@ -215,49 +126,10 @@ export default class MenuBuilder {
         },
         { type: 'separator' },
         {
-          label: 'toggle browser view',
-          accelerator: 'Command+B',
+          label: 'Toggle Sidebar',
+          accelerator: 'Command+S',
           click: () => {
-            this.mainWindow.webContents.send('menu-toggle-browser');
-          },
-        },
-        {
-          label: 'reset all hihat data',
-          click: () => {
-            this.mainWindow.webContents.send('menu-reset-library');
-          },
-        },
-        { type: 'separator' },
-        {
-          label: 'zoom in',
-          accelerator: 'CmdOrCtrl+Plus',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              const currentZoom = focusedWindow.webContents.getZoomFactor();
-              focusedWindow.webContents.setZoomFactor(currentZoom + 0.1);
-            }
-          },
-        },
-        {
-          label: 'zoom out',
-          accelerator: 'CmdOrCtrl+-',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              const currentZoom = focusedWindow.webContents.getZoomFactor();
-              focusedWindow.webContents.setZoomFactor(currentZoom - 0.1);
-            }
-          },
-        },
-        {
-          label: 'reset zoom',
-          accelerator: 'CmdOrCtrl+0',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              focusedWindow.webContents.setZoomFactor(1);
-            }
+            this.mainWindow.webContents.send('ui:toggleSidebar');
           },
         },
       ],
@@ -266,78 +138,22 @@ export default class MenuBuilder {
       label: 'View',
       submenu: [
         {
-          label: 'toggle browser view',
-          accelerator: 'Command+B',
+          label: 'Toggle Full Screen',
+          accelerator: 'Ctrl+Command+F',
           click: () => {
-            this.mainWindow.webContents.send('menu-toggle-browser');
+            this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
           },
         },
         { type: 'separator' },
         {
-          label: 'zoom in',
-          accelerator: 'CmdOrCtrl+Plus',
+          label: 'Toggle Sidebar',
+          accelerator: 'Command+S',
           click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              const currentZoom = focusedWindow.webContents.getZoomFactor();
-              focusedWindow.webContents.setZoomFactor(currentZoom + 0.1);
-            }
-          },
-        },
-        {
-          label: 'zoom out',
-          accelerator: 'CmdOrCtrl+-',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              const currentZoom = focusedWindow.webContents.getZoomFactor();
-              focusedWindow.webContents.setZoomFactor(currentZoom - 0.1);
-            }
-          },
-        },
-        {
-          label: 'reset zoom',
-          accelerator: 'CmdOrCtrl+0',
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              focusedWindow.webContents.setZoomFactor(1);
-            }
+            this.mainWindow.webContents.send('ui:toggleSidebar');
           },
         },
       ],
     };
-    const subMenuAdvanced: DarwinMenuItemConstructorOptions = {
-      label: 'Advanced',
-      submenu: [
-        {
-          label: 'change library folder',
-          click: () => {
-            this.mainWindow.webContents.send('menu-select-library');
-          },
-        },
-        {
-          label: 'backup / sync library',
-          click: () => {
-            this.mainWindow.webContents.send('menu-backup-library');
-          },
-        },
-        { type: 'separator' },
-        {
-          label: 'hide duplicate songs',
-          click: () => {
-            this.mainWindow.webContents.send('menu-hide-dupes');
-          },
-        },
-        {
-          label: 'delete duplicate songs',
-          click: () => {
-            this.mainWindow.webContents.send('menu-delete-dupes');
-          },
-        },
-      ],
-    };
-
     const subMenuWindow: DarwinMenuItemConstructorOptions = {
       label: 'Window',
       submenu: [
@@ -355,17 +171,29 @@ export default class MenuBuilder {
       label: 'Help',
       submenu: [
         {
+          label: 'Learn More',
+          click() {
+            shell.openExternal('https://electronjs.org');
+          },
+        },
+        {
           label: 'Documentation',
           click() {
-            shell.openExternal('https://github.com/johnnyshankman/hihat');
+            shell.openExternal(
+              'https://github.com/electron/electron/tree/main/docs#readme',
+            );
+          },
+        },
+        {
+          label: 'Community Discussions',
+          click() {
+            shell.openExternal('https://www.electronjs.org/community');
           },
         },
         {
           label: 'Search Issues',
           click() {
-            shell.openExternal(
-              'https://github.com/johnnyshankman/hihat/issues',
-            );
+            shell.openExternal('https://github.com/electron/electron/issues');
           },
         },
       ],
@@ -377,18 +205,27 @@ export default class MenuBuilder {
         ? subMenuViewDev
         : subMenuViewProd;
 
-    return [
-      subMenuHihat,
-      subMenuEdit,
-      subMenuView,
-      subMenuAdvanced,
-      subMenuWindow,
-      subMenuHelp,
-    ];
+    return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
   }
 
-  buildDefaultTemplate() {
+  buildDefaultTemplate(): MenuItemConstructorOptions[] {
     const templateDefault = [
+      {
+        label: '&File',
+        submenu: [
+          {
+            label: '&Open',
+            accelerator: 'Ctrl+O',
+          },
+          {
+            label: '&Close',
+            accelerator: 'Ctrl+W',
+            click: () => {
+              this.mainWindow.close();
+            },
+          },
+        ],
+      },
       {
         label: '&View',
         submenu:
@@ -418,6 +255,14 @@ export default class MenuBuilder {
                     this.mainWindow.webContents.toggleDevTools();
                   },
                 },
+                { type: 'separator' } as any,
+                {
+                  label: 'Toggle &Sidebar',
+                  accelerator: 'Ctrl+S',
+                  click: () => {
+                    this.mainWindow.webContents.send('ui:toggleSidebar');
+                  },
+                },
               ]
             : [
                 {
@@ -429,23 +274,43 @@ export default class MenuBuilder {
                     );
                   },
                 },
+                { type: 'separator' } as any,
+                {
+                  label: 'Toggle &Sidebar',
+                  accelerator: 'Ctrl+S',
+                  click: () => {
+                    this.mainWindow.webContents.send('ui:toggleSidebar');
+                  },
+                },
               ],
       },
       {
         label: 'Help',
         submenu: [
           {
+            label: 'Learn More',
+            click() {
+              shell.openExternal('https://electronjs.org');
+            },
+          },
+          {
             label: 'Documentation',
             click() {
-              shell.openExternal('https://github.com/johnnyshankman/hihat');
+              shell.openExternal(
+                'https://github.com/electron/electron/tree/main/docs#readme',
+              );
+            },
+          },
+          {
+            label: 'Community Discussions',
+            click() {
+              shell.openExternal('https://www.electronjs.org/community');
             },
           },
           {
             label: 'Search Issues',
             click() {
-              shell.openExternal(
-                'https://github.com/johnnyshankman/hihat/issues',
-              );
+              shell.openExternal('https://github.com/electron/electron/issues');
             },
           },
         ],

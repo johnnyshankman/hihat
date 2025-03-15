@@ -1,12 +1,12 @@
 {
-  "name": "hihat",
-  "version": "1.2.0",
-  "description": "A minimalist offline music player for OSX audiophiles :: Based on iTunes circa 2002 :: by White Lights",
+  "name": "electron-react-boilerplate",
+  "version": "4.6.0",
+  "description": "A foundation for scalable desktop apps",
   "license": "MIT",
   "author": {
-    "name": "Johnny Shankman aka White Lights",
-    "email": "johnny@white-lights.net",
-    "url": "https://github.com/johnnyshankman/hihat"
+    "name": "Electron React Boilerplate Maintainers",
+    "email": "electronreactboilerplate@gmail.com",
+    "url": "https://github.com/electron-react-boilerplate"
   },
   "main": "./dist/main/main.js",
   "scripts": {
@@ -14,5 +14,7 @@
     "postinstall": "npm run rebuild && npm run link-modules",
     "link-modules": "node -r ts-node/register ../../.erb/scripts/link-modules.ts"
   },
-  "dependencies": {}
+  "dependencies": {
+    "sql.js": "^1.8.0"
+  }
 }

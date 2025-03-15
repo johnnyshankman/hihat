@@ -1,0 +1,162 @@
+/*
+ * @NOTE: Prepend a `~` to css file paths that are in your node_modules
+ *        See https://github.com/webpack-contrib/sass-loader#imports
+ */
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  font-family: 'Lucida Grande', 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Ensure mini player takes up full space */
+body[data-mini-player="true"] {
+  overflow: hidden;
+  background-color: #0A0A0A; /* Darker background for mini player */
+}
+
+body[data-mini-player="true"] #root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+
+button {
+  background-color: white;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  appearance: none;
+  font-size: 1.3rem;
+  box-shadow: 0px 8px 28px -6px rgba(24, 39, 75, 0.12),
+    0px 18px 88px -4px rgba(24, 39, 75, 0.14);
+  transition: all ease-in 0.1s;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+button:hover {
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+li {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  height: fit-content;
+  width: fit-content;
+  margin: 10px;
+}
+
+a:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.Hello {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 16px;
+}
+
+.play-button {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+tr:hover .play-button {
+  opacity: 1;
+}
+
+/* Highlight effect for track rows */
+.highlight-row {
+  animation: highlight-pulse 2s ease-in-out;
+  position: relative;
+  z-index: 1;
+  outline: 2px solid rgba(52, 120, 218, 0.7) !important; /* Updated to match our primary color */
+  outline-offset: -2px;
+}
+
+/* Special highlight for virtualized tables */
+.MuiTableBody-root tr.highlight-row td {
+  background-color: rgba(52, 120, 218, 0.2) !important; /* Updated to match our primary color */
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes highlight-pulse {
+  0% {
+    background-color: rgba(52, 120, 218, 0.3); /* Updated to match our primary color */
+    box-shadow: 0 0 10px rgba(52, 120, 218, 0.5);
+  }
+  50% {
+    background-color: rgba(52, 120, 218, 0.1);
+    box-shadow: 0 0 5px rgba(52, 120, 218, 0.2);
+  }
+  100% {
+    background-color: rgba(52, 120, 218, 0.3);
+    box-shadow: 0 0 10px rgba(52, 120, 218, 0.5);
+  }
+}
+
+/* Navigation feedback effect */
+.navigating {
+  animation: navigate-pulse 0.3s ease-in-out;
+}
+
+@keyframes navigate-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.99);
+  }
+}
+
+/* Window dragging styles */
+.draggable {
+  -webkit-app-region: drag;
+}
+
+.non-draggable {
+  -webkit-app-region: no-drag;
+}
+
+/* Make sure all interactive elements are not draggable */
+button, input, a, [role="button"],
+.MuiSlider-root, .MuiIconButton-root, .MuiButton-root,
+.MuiListItemButton-root, .MuiTableContainer-root, .MuiDataGrid-root,
+.MuiSelect-root, .MuiMenuItem-root, .MuiCheckbox-root, .MuiRadio-root,
+.MuiSwitch-root, .MuiTabs-root, .MuiTab-root, .MuiAccordion-root,
+.MuiAccordionSummary-root, .MuiAccordionDetails-root {
+  -webkit-app-region: no-drag !important;
+}
+
+/* Ensure scrollable areas are not draggable */
+.MuiTableContainer-root, .MuiDataGrid-root,
+[role="grid"], [role="listbox"], [role="list"],
+.MuiList-root, .MuiMenu-root, .MuiPopover-root {
+  -webkit-app-region: no-drag !important;
+}
