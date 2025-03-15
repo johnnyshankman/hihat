@@ -251,6 +251,7 @@ This project was built with the following technologies:
 <!-- ROADMAP -->
 ## Feature Roadmap
 
+### hihat 1 features
 - [x] Autoplay Next Song
 - [x] Virtualized Lists for opitmal rendering
 - [x] Cache imported songs from previous session
@@ -287,12 +288,14 @@ This project was built with the following technologies:
 - [x] iTunes-like browser with list of artist and album filters
 - [x] Quiet mode creating bg music to a video/audiobook/podcast in another app
 - [x] True gapless playback
-- [ ] Edit song metadata
-- [ ] Hide/show columns in the Library List
-- [ ] Queue a next-up song
-- [ ] Smart playlists (Top 50, Recently Played, Recently Added)
-- [ ] User defined playlists
 
+### hihat 2 features
+- [ ] Edit song metadata
+- [ ] Hide/show columns in the song list
+- [ ] Better resizable columns in song list
+- [ ] Smart playlists (Top 50, Recently Played, Recently Added)
+- [ ] Custom playlists
+- [ ] Miniplayer
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
 
