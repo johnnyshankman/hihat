@@ -58,9 +58,7 @@ export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#757575', // Medium gray (replacing green)
-      light: '#9E9E9E', // Lighter gray
-      dark: '#616161', // Darker gray
+      main: '#FF0000', // Vibrant red
     },
     secondary: {
       main: '#666666', // Muted text

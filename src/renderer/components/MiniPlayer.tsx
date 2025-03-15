@@ -68,13 +68,13 @@ function AlbumArtPlaceholder() {
         }}
       />
       <Typography
-        variant="caption"
         sx={{
           position: 'absolute',
           bottom: '16px',
           left: '16px',
           color: 'rgba(255, 255, 255, 0.5)',
         }}
+        variant="caption"
       >
         hihat
       </Typography>
@@ -85,7 +85,7 @@ function AlbumArtPlaceholder() {
 export default function MiniPlayer() {
   // State for playback - only used for UI display
   const [currentTrack, setCurrentTrack] = useState<any>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [repeatMode, setRepeatMode] = useState<'off' | 'track' | 'all'>('off');
@@ -110,7 +110,7 @@ export default function MiniPlayer() {
 
     const unsubscribeState = window.electron.miniPlayer.onStateChange(
       (state: any) => {
-        setIsPlaying(state.isPlaying);
+        setPaused(state.paused);
         setDuration(state.duration);
         setVolume(state.volume);
         setRepeatMode(state.repeatMode);
@@ -296,6 +296,7 @@ export default function MiniPlayer() {
     >
       {/* Full-size Album Art as background - draggable area */}
       <Box
+        onDoubleClick={handleDoubleClick}
         sx={{
           position: 'absolute',
           top: 0,
@@ -305,17 +306,16 @@ export default function MiniPlayer() {
           zIndex: 0,
           WebkitAppRegion: 'drag', // Make this area draggable
         }}
-        onDoubleClick={handleDoubleClick}
       >
         {albumArt ? (
           <Tooltip
-            title="Double-click to return to main window"
             placement="top"
+            title="Double-click to return to main window"
           >
             <Box
+              alt={currentTrack?.album || 'No album'}
               component="img"
               src={albumArt}
-              alt={currentTrack?.album || 'No album'}
               sx={{
                 width: '100%',
                 height: '100%',
@@ -327,8 +327,8 @@ export default function MiniPlayer() {
           </Tooltip>
         ) : (
           <Tooltip
-            title="Double-click to return to main window"
             placement="top"
+            title="Double-click to return to main window"
           >
             <Box sx={{ width: '100%', height: '100%' }}>
               <AlbumArtPlaceholder />
@@ -349,7 +349,7 @@ export default function MiniPlayer() {
           padding: '2px',
         }}
       >
-        <Tooltip title="Adjust volume" placement="bottom">
+        <Tooltip placement="bottom" title="Adjust volume">
           <IconButton
             onClick={toggleVolumeControls}
             size="small"
@@ -362,7 +362,7 @@ export default function MiniPlayer() {
             {renderVolumeIcon()}
           </IconButton>
         </Tooltip>
-        <Tooltip title="Drag to move window" placement="bottom">
+        <Tooltip placement="bottom" title="Drag to move window">
           <Box
             sx={{
               color: 'rgba(255, 255, 255, 0.5)',
@@ -381,6 +381,7 @@ export default function MiniPlayer() {
 
       {/* Semi-transparent overlay for better text readability - draggable area */}
       <Box
+        onDoubleClick={handleDoubleClick}
         sx={{
           position: 'absolute',
           bottom: 0,
@@ -392,7 +393,6 @@ export default function MiniPlayer() {
           zIndex: 1,
           WebkitAppRegion: 'drag', // Make this area draggable
         }}
-        onDoubleClick={handleDoubleClick}
       />
 
       {/* Content container - positioned above the album art */}
@@ -409,26 +409,26 @@ export default function MiniPlayer() {
       >
         {/* Track Info - at the bottom of the image - draggable area */}
         <Box
+          onDoubleClick={handleDoubleClick}
           sx={{
             mb: 2,
             WebkitAppRegion: 'drag', // Make this area draggable
           }}
-          onDoubleClick={handleDoubleClick}
         >
           <Typography
-            variant="h6"
             noWrap
             sx={{ color: 'white', textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }}
+            variant="h6"
           >
             {currentTrack?.title || 'No track playing'}
           </Typography>
           <Typography
-            variant="body2"
             noWrap
             sx={{
               color: 'rgba(255,255,255,0.8)',
               textShadow: '0px 1px 2px rgba(0,0,0,0.6)',
             }}
+            variant="body2"
           >
             {currentTrack
               ? `${currentTrack.artist} • ${currentTrack.album}`
@@ -449,22 +449,21 @@ export default function MiniPlayer() {
             }}
           >
             <Typography
-              variant="caption"
               sx={{
                 mr: 1,
                 minWidth: '40px',
                 textAlign: 'right',
                 color: 'white',
               }}
+              variant="caption"
             >
               {formattedSeekPosition}
             </Typography>
             <Slider
-              size="small"
-              value={seekPosition}
+              disabled={!currentTrack}
               max={duration}
               onChange={handleSeekChange}
-              disabled={!currentTrack}
+              size="small"
               sx={{
                 mx: 0.5,
                 color: (theme) => theme.palette.grey[500],
@@ -473,10 +472,11 @@ export default function MiniPlayer() {
                   width: 8,
                 },
               }}
+              value={seekPosition}
             />
             <Typography
-              variant="caption"
               sx={{ ml: 1, minWidth: '40px', color: 'white' }}
+              variant="caption"
             >
               {formattedTimeLeft}
             </Typography>
@@ -484,10 +484,10 @@ export default function MiniPlayer() {
 
           {/* Control buttons */}
           <Stack
-            direction="row"
-            spacing={1}
             alignItems="center"
+            direction="row"
             justifyContent="center"
+            spacing={1}
             sx={{ mb: 0 }}
           >
             <Tooltip title={getRepeatTooltipText()}>
@@ -500,31 +500,31 @@ export default function MiniPlayer() {
               </IconButton>
             </Tooltip>
             <IconButton
-              onClick={handlePreviousTrack}
               disabled={!currentTrack}
+              onClick={handlePreviousTrack}
               size="medium"
               sx={{ color: 'white' }}
             >
               <SkipPrevious fontSize="medium" />
             </IconButton>
             <IconButton
-              onClick={handlePlayPause}
               disabled={!currentTrack}
+              onClick={handlePlayPause}
+              size="large"
               sx={{
                 mx: 1,
                 color: 'white',
               }}
-              size="large"
             >
-              {isPlaying ? (
+              {!paused ? (
                 <Pause fontSize="large" />
               ) : (
                 <PlayArrow fontSize="large" />
               )}
             </IconButton>
             <IconButton
-              onClick={handleNextTrack}
               disabled={!currentTrack}
+              onClick={handleNextTrack}
               size="medium"
               sx={{ color: 'white' }}
             >
@@ -543,18 +543,18 @@ export default function MiniPlayer() {
 
           {/* Volume Popover */}
           <Popover
-            open={volumeOpen}
             anchorEl={volumeAnchorEl}
-            onClose={handleVolumeClose}
             anchorOrigin={{
               vertical: 'bottom',
               horizontal: 'center',
             }}
+            disableRestoreFocus
+            onClose={handleVolumeClose}
+            open={volumeOpen}
             transformOrigin={{
               vertical: 'top',
               horizontal: 'center',
             }}
-            disableRestoreFocus
           >
             <Box
               sx={{
@@ -568,16 +568,16 @@ export default function MiniPlayer() {
               }}
             >
               <Slider
+                max={1}
+                onChange={handleVolumeChange}
                 orientation="vertical"
                 size="small"
-                value={volume}
-                max={1}
                 step={0.01}
-                onChange={handleVolumeChange}
                 sx={{
                   height: '100%',
                   color: (theme) => theme.palette.primary.main,
                 }}
+                value={volume}
               />
             </Box>
           </Popover>

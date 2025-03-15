@@ -59,13 +59,13 @@ function AlbumArtPlaceholder() {
         }}
       />
       <Typography
-        variant="caption"
         sx={{
           position: 'absolute',
           bottom: '8px',
           left: '8px',
           color: 'rgba(255, 255, 255, 0.5)',
         }}
+        variant="caption"
       >
         hihat
       </Typography>
@@ -186,20 +186,6 @@ export default function Player() {
       },
     );
 
-    const unsubscribePausePlayback = window.electron.ipcRenderer.on(
-      'player:pausePlayback' as any,
-      () => {
-        setPaused(true);
-      },
-    );
-
-    const unsubscribeResumePlayback = window.electron.ipcRenderer.on(
-      'player:resumePlayback' as any,
-      () => {
-        setPaused(false);
-      },
-    );
-
     const unsubscribeNextTrack = window.electron.ipcRenderer.on(
       'player:nextTrack' as any,
       () => {
@@ -249,8 +235,6 @@ export default function Player() {
     // Clean up listeners on unmount
     return () => {
       unsubscribePlayPause();
-      unsubscribePausePlayback();
-      unsubscribeResumePlayback();
       unsubscribeNextTrack();
       unsubscribePreviousTrack();
       unsubscribeSeek();
@@ -350,6 +334,7 @@ export default function Player() {
       >
         {/* Album Art */}
         <Box
+          onClick={currentTrack ? openMiniPlayer : undefined}
           sx={{
             width: '80px',
             height: '80px',
@@ -362,13 +347,12 @@ export default function Player() {
               opacity: 1,
             },
           }}
-          onClick={currentTrack ? openMiniPlayer : undefined}
         >
           {albumArt ? (
             <Box
+              alt={currentTrack?.album || 'No album'}
               component="img"
               src={albumArt}
-              alt={currentTrack?.album || 'No album'}
               sx={{
                 width: '100%',
                 height: '100%',
@@ -405,16 +389,15 @@ export default function Player() {
           {currentTrack ? (
             <>
               <Tooltip
+                arrow
+                placement="top"
                 title={
                   playbackSource
                     ? `Click to view in ${playbackSource === 'library' ? 'Library' : 'Playlist'}`
                     : ''
                 }
-                placement="top"
-                arrow
               >
                 <Typography
-                  variant="body1"
                   noWrap
                   sx={{
                     cursor: playbackSource ? 'pointer' : 'default',
@@ -424,16 +407,17 @@ export default function Player() {
                     },
                     transition: 'color 0.2s',
                   }}
+                  variant="body1"
                 >
                   {currentTrack.title}
                 </Typography>
               </Tooltip>
-              <Typography variant="body2" color="textSecondary" noWrap>
+              <Typography color="textSecondary" noWrap variant="body2">
                 {currentTrack.artist} • {currentTrack.album}
               </Typography>
             </>
           ) : (
-            <Typography variant="body1" color="textSecondary">
+            <Typography color="textSecondary" variant="body1">
               No track playing
             </Typography>
           )}
@@ -452,10 +436,10 @@ export default function Player() {
           }}
         >
           <Stack
-            direction="row"
-            spacing={2}
             alignItems="center"
+            direction="row"
             justifyContent="center"
+            spacing={2}
             sx={{ mb: 0.0, width: '100%' }}
           >
             <Tooltip title={getRepeatTooltipText()}>
@@ -464,17 +448,17 @@ export default function Player() {
               </IconButton>
             </Tooltip>
             <IconButton
-              onClick={skipToPreviousTrack}
               disabled={!currentTrack}
+              onClick={skipToPreviousTrack}
               size="medium"
             >
               <SkipPrevious fontSize="medium" />
             </IconButton>
             <IconButton
-              onClick={() => setPaused(!paused)}
               disabled={!currentTrack}
-              sx={{ mx: 1 }}
+              onClick={() => setPaused(!paused)}
               size="large"
+              sx={{ mx: 1 }}
             >
               {!paused ? (
                 <Pause fontSize="large" />
@@ -483,17 +467,17 @@ export default function Player() {
               )}
             </IconButton>
             <IconButton
-              onClick={skipToNextTrack}
               disabled={!currentTrack}
+              onClick={skipToNextTrack}
               size="medium"
             >
               <SkipNext fontSize="medium" />
             </IconButton>
             <Tooltip title={getShuffleTooltipText()}>
               <IconButton
+                disabled={!currentTrack}
                 onClick={toggleShuffleMode}
                 size="small"
-                disabled={!currentTrack}
               >
                 {renderShuffleIcon()}
               </IconButton>
@@ -513,20 +497,19 @@ export default function Player() {
             }}
           >
             <Typography
-              variant="caption"
               color="textSecondary"
               sx={{ mr: 1, minWidth: '40px', textAlign: 'right' }}
+              variant="caption"
             >
               {formattedSeekPosition}
             </Typography>
             <Slider
-              size="small"
-              value={position}
+              disabled={!currentTrack}
               max={duration}
               onChange={(_, val) => {
                 seekToPosition(val as number);
               }}
-              disabled={!currentTrack}
+              size="small"
               sx={{
                 mx: 0.5,
                 color: (theme) => theme.palette.grey[500],
@@ -535,11 +518,12 @@ export default function Player() {
                   width: 8,
                 },
               }}
+              value={position}
             />
             <Typography
-              variant="caption"
               color="textSecondary"
               sx={{ ml: 1, minWidth: '40px' }}
+              variant="caption"
             >
               {formattedTimeLeft}
             </Typography>
@@ -560,18 +544,18 @@ export default function Player() {
             {renderVolumeIcon()}
           </IconButton>
           <Popover
-            open={volumeOpen}
             anchorEl={volumeAnchorEl}
-            onClose={handleVolumeClose}
             anchorOrigin={{
               vertical: 'top',
               horizontal: 'center',
             }}
+            disableRestoreFocus
+            onClose={handleVolumeClose}
+            open={volumeOpen}
             transformOrigin={{
               vertical: 'bottom',
               horizontal: 'center',
             }}
-            disableRestoreFocus
           >
             <Box
               sx={{
@@ -585,16 +569,16 @@ export default function Player() {
               }}
             >
               <Slider
+                max={1}
+                onChange={(_, value) => setVolume(value as number)}
                 orientation="vertical"
                 size="small"
-                value={volume}
-                max={1}
                 step={0.01}
-                onChange={(_, value) => setVolume(value as number)}
                 sx={{
                   height: '100%',
                   color: (theme) => theme.palette.primary.main,
                 }}
+                value={volume}
               />
             </Box>
           </Popover>

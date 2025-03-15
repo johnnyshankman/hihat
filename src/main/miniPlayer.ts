@@ -21,7 +21,7 @@ let mainWindow: BrowserWindow | null = null;
 // Current track and playback state - only used for syncing UI
 let currentTrack: any = null;
 let playbackState = {
-  isPlaying: false,
+  paused: false,
   position: 0,
   duration: 0,
   volume: 1,
@@ -394,11 +394,7 @@ export function setupMiniPlayerHandlers(): void {
 
   // Play/pause
   ipcMain.handle('miniPlayer:playPause', () => {
-    if (playbackState.isPlaying) {
-      forwardCommandToMainWindow('player:pausePlayback');
-    } else {
-      forwardCommandToMainWindow('player:resumePlayback');
-    }
+    forwardCommandToMainWindow('player:playPause');
   });
 
   // Next track
