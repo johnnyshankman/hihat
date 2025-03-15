@@ -289,13 +289,15 @@ This project was built with the following technologies:
 - [x] Quiet mode creating bg music to a video/audiobook/podcast in another app
 - [x] True gapless playback
 
-### hihat 2 features
-- [ ] Edit song metadata
-- [ ] Hide/show columns in the song list
-- [ ] Better resizable columns in song list
+### hihat 2 features (coming soon)
+
 - [ ] Smart playlists (Top 50, Recently Played, Recently Added)
 - [ ] Custom playlists
-- [ ] Miniplayer
+- [ ] Mini player
+- [ ] Hide/show columns in the song list
+- [ ] Better resizable columns in song list
+- [ ] Edit song basic metadata
+- [ ] Redesign to maximize song list space, mini player for seeing art as big as you want
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
 
