@@ -475,28 +475,28 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     enableFullScreenToggle: false,
     enableRowVirtualization: true, // Enable virtualization for better performance
     rowVirtualizerOptions: { overscan: 20 }, // Increase overscan for smoother scrolling
-    // muiTableContainerProps: {
-    //   sx: {
-    //     height: '100%',
-    //     width: '100%',
-    //     overflow: 'auto',
-    //     display: 'flex',
-    //     flexDirection: 'column',
-    //     padding: 0,
-    //     margin: 0,
-    //   },
-    // },
-    // muiTablePaperProps: {
-    //   sx: {
-    //     height: '100%',
-    //     width: '100%',
-    //     display: 'flex',
-    //     flexDirection: 'column',
-    //     boxShadow: 'none',
-    //     borderRadius: 0,
-    //     overflow: 'hidden',
-    //   },
-    // },
+    muiTableContainerProps: {
+      sx: {
+        height: '100%',
+        width: '100%',
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 0,
+        margin: 0,
+      },
+    },
+    muiTablePaperProps: {
+      sx: {
+        height: '100%',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: 'none',
+        borderRadius: 0,
+        overflow: 'hidden',
+      },
+    },
     muiTableProps: {
       sx: {
         width: '100%',

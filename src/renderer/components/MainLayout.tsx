@@ -303,6 +303,8 @@ export default function MainLayout() {
       >
         <CssBaseline />
         <Drawer
+          anchor="left"
+          open={open}
           sx={{
             width: drawerWidth,
             flexShrink: 0,
@@ -319,8 +321,6 @@ export default function MainLayout() {
             },
           }}
           variant="persistent"
-          anchor="left"
-          open={open}
         >
           {/* Window Controls */}
           <Box
@@ -338,8 +338,8 @@ export default function MainLayout() {
             >
               <Tooltip title="Close">
                 <IconButton
-                  size="small"
                   onClick={() => window.electron.window.close()}
+                  size="small"
                   sx={{
                     width: '12px',
                     height: '12px',
@@ -365,8 +365,8 @@ export default function MainLayout() {
               </Tooltip>
               <Tooltip title="Minimize">
                 <IconButton
-                  size="small"
                   onClick={() => window.electron.window.minimize()}
+                  size="small"
                   sx={{
                     width: '12px',
                     height: '12px',
@@ -392,8 +392,8 @@ export default function MainLayout() {
               </Tooltip>
               <Tooltip title={isMaximized ? 'Restore' : 'Maximize'}>
                 <IconButton
-                  size="small"
                   onClick={handleMaximize}
+                  size="small"
                   sx={{
                     width: '12px',
                     height: '12px',
@@ -451,12 +451,12 @@ export default function MainLayout() {
 
           <List sx={{ flexGrow: 1, paddingTop: 0 }}>
             <ListItemButton
-              selected={currentView === 'library'}
-              onClick={() => handleViewChange('library')}
               data-view="library"
+              onClick={() => handleViewChange('library')}
+              selected={currentView === 'library'}
               sx={{ WebkitAppRegion: 'no-drag' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: '38px' }}>
                 <LibraryMusicIcon />
               </ListItemIcon>
               <ListItemText primary="Library" />
@@ -464,17 +464,17 @@ export default function MainLayout() {
 
             {/* Playlists with nested list */}
             <ListItemButton
-              onClick={handlePlaylistsClick}
               data-view="playlists"
+              onClick={handlePlaylistsClick}
               sx={{ WebkitAppRegion: 'no-drag' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: '38px' }}>
                 <QueueMusicIcon />
               </ListItemIcon>
               <ListItemText primary="Playlists" />
               <IconButton
-                size="small"
                 onClick={handleAddPlaylistClick}
+                size="small"
                 sx={{ mr: 1, WebkitAppRegion: 'no-drag' }}
               >
                 <AddIcon fontSize="small" />
@@ -487,20 +487,17 @@ export default function MainLayout() {
                 {playlists.map((playlist) => (
                   <ListItemButton
                     key={playlist.id}
-                    sx={{ pl: 4, WebkitAppRegion: 'no-drag' }}
-                    selected={
-                      currentView === 'playlists' &&
-                      selectedPlaylistId === playlist.id
-                    }
+                    data-playlist-id={playlist.id}
                     onClick={() => handlePlaylistSelect(playlist.id)}
                     onContextMenu={(e) =>
                       handlePlaylistContextMenu(e, playlist.id)
                     }
-                    data-playlist-id={playlist.id}
+                    selected={
+                      currentView === 'playlists' &&
+                      selectedPlaylistId === playlist.id
+                    }
+                    sx={{ pl: 3, py: 0.5, WebkitAppRegion: 'no-drag' }}
                   >
-                    <ListItemIcon>
-                      <QueueMusicIcon fontSize="small" />
-                    </ListItemIcon>
                     <ListItemText
                       primary={playlist.name}
                       primaryTypographyProps={{
@@ -515,12 +512,12 @@ export default function MainLayout() {
             </Collapse>
 
             <ListItemButton
-              selected={currentView === 'settings'}
-              onClick={() => handleViewChange('settings')}
               data-view="settings"
+              onClick={() => handleViewChange('settings')}
+              selected={currentView === 'settings'}
               sx={{ WebkitAppRegion: 'no-drag' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: '38px' }}>
                 <SettingsIcon />
               </ListItemIcon>
               <ListItemText primary="Settings" />
@@ -563,14 +560,14 @@ export default function MainLayout() {
 
       {/* Context Menu for Playlist */}
       <Menu
-        open={contextMenu !== null}
-        onClose={handleContextMenuClose}
-        anchorReference="anchorPosition"
         anchorPosition={
           contextMenu !== null
             ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
             : undefined
         }
+        anchorReference="anchorPosition"
+        onClose={handleContextMenuClose}
+        open={contextMenu !== null}
       >
         <MenuItem onClick={handleDeletePlaylist}>
           <ListItemIcon>
@@ -581,22 +578,22 @@ export default function MainLayout() {
       </Menu>
 
       {/* Create Playlist Dialog */}
-      <Dialog open={createDialogOpen} onClose={closeCreateDialog}>
+      <Dialog onClose={closeCreateDialog} open={createDialogOpen}>
         <DialogTitle>Create New Playlist</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
-            margin="dense"
-            label="Playlist Name"
-            type="text"
             fullWidth
-            value={newPlaylistName}
+            label="Playlist Name"
+            margin="dense"
             onChange={(e) => setNewPlaylistName(e.target.value)}
+            type="text"
+            value={newPlaylistName}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={closeCreateDialog}>Cancel</Button>
-          <Button onClick={handleCreatePlaylist} color="primary">
+          <Button color="primary" onClick={handleCreatePlaylist}>
             Create
           </Button>
         </DialogActions>

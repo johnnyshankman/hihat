@@ -58,9 +58,9 @@ export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#00CC66', // Muted matrix green accent
-      light: '#33DD88', // Lighter muted green
-      dark: '#00AA55', // Darker muted green
+      main: '#757575', // Medium gray (replacing green)
+      light: '#9E9E9E', // Lighter gray
+      dark: '#616161', // Darker gray
     },
     secondary: {
       main: '#666666', // Muted text
@@ -105,23 +105,6 @@ export const darkTheme = createTheme({
       styleOverrides: {
         body: {
           scrollbarColor: '#2A2A2A #121212',
-          '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
-            backgroundColor: '#121212',
-            width: 8,
-          },
-          '&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb': {
-            borderRadius: 4,
-            backgroundColor: '#2A2A2A',
-            minHeight: 24,
-          },
-          '&::-webkit-scrollbar-thumb:focus, & *::-webkit-scrollbar-thumb:focus':
-            {
-              backgroundColor: '#3D3D3D',
-            },
-          '&::-webkit-scrollbar-thumb:hover, & *::-webkit-scrollbar-thumb:hover':
-            {
-              backgroundColor: '#3D3D3D',
-            },
         },
       },
     },
