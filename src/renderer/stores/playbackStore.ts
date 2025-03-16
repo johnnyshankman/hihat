@@ -284,8 +284,8 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         state.repeatMode === 'off'
           ? 'track'
           : state.repeatMode === 'track'
-          ? 'all'
-          : 'off';
+            ? 'all'
+            : 'off';
       return { repeatMode: newRepeatMode };
     });
   },

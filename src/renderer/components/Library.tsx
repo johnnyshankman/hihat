@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   Box,
   Typography,
@@ -16,6 +22,7 @@ import {
   MRT_ColumnDef as MrtColumnDef,
   MRT_SortingState as MrtSortingState,
   MRT_VisibilityState as MrtVisibilityState,
+  type MRT_RowVirtualizer as MrtRowVirtualizer,
 } from 'material-react-table';
 import { Updater } from '@tanstack/react-table';
 import AddIcon from '@mui/icons-material/Add';
@@ -24,6 +31,7 @@ import TrackContextMenu from './TrackContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import SidebarToggle from './SidebarToggle';
 import type { Channels } from '../../types/ipc';
+import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 
 // Custom formatter for duration in seconds
 const formatDurationFromSeconds = (seconds: number): string => {
@@ -111,6 +119,9 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   // Add a ref to track the last time we updated the UI for scan progress
   const lastUpdateTime = useRef(0);
+
+  // Add row virtualizer ref
+  const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
 
   const handlePlayTrack = (trackId: string) => {
     // Play the track with 'library' as the source
@@ -461,6 +472,42 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     </Box>
   );
 
+  // Function to scroll to a specific track by ID
+  const scrollToTrack = useCallback(
+    (trackId: string) => {
+      if (!rowVirtualizerRef.current) return;
+
+      // Get the filtered and sorted track IDs based on current view state
+      // @TODO: this is close but wrong
+      const trackIds = getFilteredAndSortedTrackIds('library');
+
+      // Find the index of the track in the filtered and sorted list
+      const trackIndex = trackIds.indexOf(trackId);
+
+      console.log('trackIndex', trackIndex);
+
+      if (trackIndex !== -1) {
+        // Scroll to the track
+        rowVirtualizerRef.current.scrollToIndex(trackIndex, {
+          align: 'center',
+        });
+      }
+    },
+    // The function doesn't depend on any props or state since it gets current state from the store
+    [],
+  );
+
+  // Expose the scrollToTrack function to the window object
+  useEffect(() => {
+    // @ts-ignore - Adding custom property to window
+    window.hihatScrollToLibraryTrack = scrollToTrack;
+
+    return () => {
+      // @ts-ignore - Cleanup
+      delete window.hihatScrollToLibraryTrack;
+    };
+  }, [scrollToTrack]);
+
   // Configure the table
   const table = useMaterialReactTable({
     columns,
@@ -474,7 +521,10 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     enableDensityToggle: false,
     enableFullScreenToggle: false,
     enableRowVirtualization: true, // Enable virtualization for better performance
-    rowVirtualizerOptions: { overscan: 20 }, // Increase overscan for smoother scrolling
+    rowVirtualizerOptions: {
+      overscan: 20,
+    }, // Increase overscan for smoother scrolling
+    rowVirtualizerInstanceRef: rowVirtualizerRef, // Use the correct prop name
     muiTableContainerProps: {
       sx: {
         height: '100%',

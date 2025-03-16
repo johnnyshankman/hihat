@@ -104,6 +104,7 @@ tr:hover .play-button {
   background-color: rgba(52, 120, 218, 0.2) !important; /* Updated to match our primary color */
   position: relative;
   z-index: 2;
+  animation: highlight-pulse 2s ease-in-out;
 }
 
 @keyframes highlight-pulse {

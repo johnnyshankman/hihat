@@ -24,7 +24,7 @@ import {
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import { formatDuration } from '../utils/formatters';
-import { usePlaybackStore } from '../stores';
+import { usePlaybackStore, useUIStore } from '../stores';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -103,6 +103,9 @@ export default function Player() {
     null,
   );
   const [albumArt, setAlbumArt] = useState<string | null>(null);
+
+  // Get the setCurrentView function from the UI store
+  const setCurrentView = useUIStore((state) => state.setCurrentView);
 
   // Fetch album art when current track changes
   useEffect(() => {
@@ -304,6 +307,36 @@ export default function Player() {
     return shuffleMode ? 'Shuffle: On' : 'Shuffle: Off';
   };
 
+  // Handle click on track title to scroll to it in the appropriate view
+  const handleTrackTitleClick = useCallback(() => {
+    if (!currentTrack || !playbackSource) return;
+
+    // First, navigate to the appropriate view if needed
+    if (playbackSource === 'library') {
+      setCurrentView('library');
+
+      // Wait a short time for the view to change before scrolling
+      setTimeout(() => {
+        // @ts-ignore - Custom property added to window
+        if (window.hihatScrollToLibraryTrack) {
+          // @ts-ignore
+          window.hihatScrollToLibraryTrack(currentTrack.id);
+        }
+      }, 100);
+    } else if (playbackSource === 'playlist') {
+      setCurrentView('playlists');
+
+      // Wait a short time for the view to change before scrolling
+      setTimeout(() => {
+        // @ts-ignore - Custom property added to window
+        if (window.hihatScrollToPlaylistTrack) {
+          // @ts-ignore
+          window.hihatScrollToPlaylistTrack(currentTrack.id);
+        }
+      }, 100);
+    }
+  }, [currentTrack, playbackSource, setCurrentView]);
+
   return (
     <Paper
       elevation={3}
@@ -399,6 +432,7 @@ export default function Player() {
               >
                 <Typography
                   noWrap
+                  onClick={handleTrackTitleClick}
                   sx={{
                     cursor: playbackSource ? 'pointer' : 'default',
                     '&:hover': {

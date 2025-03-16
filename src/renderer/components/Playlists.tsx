@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+} from 'react';
 import { Box, Typography } from '@mui/material';
 import {
   MaterialReactTable,
@@ -6,6 +12,7 @@ import {
   type MRT_ColumnDef as MrtColumnDef,
   type MRT_SortingState as MrtSortingState,
   type MRT_VisibilityState as MrtVisibilityState,
+  type MRT_RowVirtualizer as MrtRowVirtualizer,
 } from 'material-react-table';
 import type { Updater } from '@tanstack/react-table';
 import { useLibraryStore, usePlaybackStore, useSettingsStore } from '../stores';
@@ -95,6 +102,9 @@ export default function Playlists({
 
   // Playlist selection dialog state
   const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
+
+  // Add row virtualizer ref
+  const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
 
   // Define getPlaylistTracks as a useCallback to use it in dependencies
   const getPlaylistTracks = useCallback(() => {
@@ -187,6 +197,47 @@ export default function Playlists({
       }
     });
   };
+
+  // Function to scroll to a specific track by ID
+  const scrollToTrack = useCallback(
+    (trackId: string) => {
+      if (!rowVirtualizerRef.current || !playlistTracks) return;
+
+      const trackIndex = playlistTracks.findIndex(
+        (track) => track.id === trackId,
+      );
+      if (trackIndex !== -1) {
+        // Scroll to the track
+        rowVirtualizerRef.current.scrollToIndex(trackIndex);
+
+        // Add visual feedback by adding a class to the row
+        setTimeout(() => {
+          const row = document.querySelector(`[data-track-id="${trackId}"]`);
+          if (row) {
+            // Add a highlight class
+            row.classList.add('highlight-row');
+
+            // Remove the class after animation completes
+            setTimeout(() => {
+              row.classList.remove('highlight-row');
+            }, 2000);
+          }
+        }, 200); // Wait for the scroll to complete
+      }
+    },
+    [playlistTracks],
+  );
+
+  // Expose the scrollToTrack function to the window object
+  useEffect(() => {
+    // @ts-ignore - Adding custom property to window
+    window.hihatScrollToPlaylistTrack = scrollToTrack;
+
+    return () => {
+      // @ts-ignore - Cleanup
+      delete window.hihatScrollToPlaylistTrack;
+    };
+  }, [scrollToTrack]);
 
   // Define columns for Material React Table
   const columns = useMemo<MrtColumnDef<TableData>[]>(
@@ -330,6 +381,7 @@ export default function Playlists({
     enableFullScreenToggle: false,
     enableRowVirtualization: true, // Enable virtualization for better performance
     rowVirtualizerOptions: { overscan: 20 }, // Increase overscan for smoother scrolling
+    rowVirtualizerInstanceRef: rowVirtualizerRef, // Add the row virtualizer ref
     state: {
       sorting,
       globalFilter,
