@@ -360,9 +360,9 @@ export default function Playlists({
 
   // Create a renderTopToolbarCustomActions function for the main table
   const renderTopToolbarCustomActions = () => (
-    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '40px' }}>
       <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-      <Typography sx={{ mr: 2 }} variant="h1">
+      <Typography variant="h3">
         {selectedPlaylistId
           ? `${
               playlists.find((p) => p.id === selectedPlaylistId)?.name ||
@@ -410,6 +410,10 @@ export default function Playlists({
       updatePlaylistViewState(sorting, newFilter, selectedPlaylistId);
     },
     onColumnVisibilityChange: handleColumnVisibilityChange,
+    muiSearchTextFieldProps: {
+      placeholder: 'Search library',
+      variant: 'outlined',
+    },
     muiTableContainerProps: {
       sx: {
         height: '100%',
@@ -419,6 +423,7 @@ export default function Playlists({
         flexDirection: 'column',
         padding: 0,
         margin: 0,
+        backgroundColor: (theme) => theme.palette.background.default,
       },
     },
     muiTablePaperProps: {
@@ -430,6 +435,7 @@ export default function Playlists({
         boxShadow: 'none',
         borderRadius: 0,
         overflow: 'hidden',
+        backgroundColor: (theme) => theme.palette.background.paper,
       },
     },
     muiTableProps: {
@@ -437,6 +443,7 @@ export default function Playlists({
         width: '100%',
         tableLayout: 'fixed', // Force table to respect container width
         height: 'auto', // Don't expand to fill container
+        backgroundColor: (theme) => theme.palette.background.default,
       },
     },
     // Make sure the table header stays fixed when scrolling
@@ -445,7 +452,7 @@ export default function Playlists({
         position: 'sticky',
         top: 0,
         zIndex: 1,
-        backgroundColor: (theme) => theme.palette.background.paper, // Add solid background color
+        backgroundColor: (theme) => theme.palette.background.default,
         opacity: 1.0,
       },
     },
@@ -457,6 +464,7 @@ export default function Playlists({
         zIndex: 2,
         padding: '4px 8px', // Reduce padding in the toolbar
         width: '100%',
+        backgroundColor: (theme) => theme.palette.background.default,
       },
     },
     // Remove padding from the table body and ensure it aligns to the top
@@ -489,7 +497,10 @@ export default function Playlists({
       'data-track-id': row.original.id,
       sx: {
         cursor: 'pointer',
-        // Highlight the currently playing track if it's from this playlist
+        backgroundColor: (theme) => theme.palette.background.default,
+        borderBottom: '1px solid',
+        borderColor: (theme) => theme.palette.divider,
+        // Highlight the currently playing track if it's from the library
         ...(currentTrack?.id === row.original.id &&
           playbackSource === 'playlist' && {
             backgroundColor: (theme) =>
@@ -503,6 +514,9 @@ export default function Playlists({
                   : theme.palette.grey[300],
             },
           }),
+        '&:hover': {
+          backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle hover effect for non-selected rows
+        },
       },
     }),
     defaultDisplayColumn: { size: 150 },
@@ -562,6 +576,7 @@ export default function Playlists({
         overflow: 'hidden',
         padding: 0,
         margin: 0,
+        backgroundColor: (theme) => theme.palette.background.default,
       }}
     >
       {selectedPlaylistId ? (
@@ -575,12 +590,18 @@ export default function Playlists({
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
+            backgroundColor: (theme) => theme.palette.background.default,
           }}
         >
           <MaterialReactTable table={table} />
         </Box>
       ) : (
-        <Box sx={{ p: 2 }}>
+        <Box
+          sx={{
+            p: 2,
+            backgroundColor: (theme) => theme.palette.background.default,
+          }}
+        >
           <Typography sx={{ mt: 2 }} variant="body1">
             Select a playlist to view its tracks.
           </Typography>

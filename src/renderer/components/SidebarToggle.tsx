@@ -21,7 +21,6 @@ function SidebarToggle({ isOpen, onToggle }: SidebarToggleProps) {
           '&:hover': {
             color: 'text.primary',
           },
-          mr: 1, // Add margin to separate from the title
         }}
       >
         <ViewSidebarRoundedIcon sx={{ fontSize: 20 }} />

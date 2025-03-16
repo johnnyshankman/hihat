@@ -58,20 +58,20 @@ export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#FF0000', // Vibrant red
+      main: '#FFFFFF', // Vibrant red
     },
     secondary: {
       main: '#666666', // Muted text
     },
     background: {
-      default: '#121212', // Very dark background (almost black) from the screenshot
-      paper: '#1E1E1E', // Slightly lighter for cards/dialogs
+      default: '#0d0d0d', // Very dark background (almost black) from the screenshot
+      paper: '#1d1d1d', // Slightly lighter for cards/dialogs
     },
     text: {
       primary: '#FFFFFF',
       secondary: '#AAAAAA',
     },
-    divider: '#2A2A2A', // Subtle divider color
+    divider: '#1A1A1A', // Subtle divider color
     action: {
       active: '#FFFFFF',
       hover: 'rgba(255, 255, 255, 0.08)',
@@ -95,51 +95,6 @@ export const darkTheme = createTheme({
       A200: '#aaaaaa',
       A400: '#303030',
       A700: '#1E1E1E',
-    },
-  },
-  components: {
-    ...baseThemeOptions.components,
-    MuiCssBaseline: {
-      styleOverrides: {
-        body: {
-          scrollbarColor: '#2A2A2A #121212',
-        },
-      },
-    },
-    MuiTableRow: {
-      styleOverrides: {
-        root: {
-          '&:hover': {
-            backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle hover effect
-          },
-        },
-      },
-    },
-    MuiTableCell: {
-      styleOverrides: {
-        root: {
-          borderBottom: '1px solid #1A1A1A', // Very subtle table cell borders
-          padding: '8px 16px',
-        },
-        head: {
-          fontWeight: 600,
-          backgroundColor: '#1A1A1A', // Slightly lighter header background
-        },
-      },
-    },
-    MuiDrawer: {
-      styleOverrides: {
-        paper: {
-          backgroundColor: '#121212', // Match the main background color
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none', // Remove default paper background image
-        },
-      },
     },
   },
 });

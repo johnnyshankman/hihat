@@ -15,6 +15,8 @@ import {
   DialogTitle,
   Paper,
   LinearProgress,
+  Tooltip,
+  IconButton,
 } from '@mui/material';
 import {
   MaterialReactTable,
@@ -463,19 +465,22 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   // Update the renderTopToolbarCustomActions function to include the SidebarToggle
   const renderTopToolbarCustomActions = () => (
-    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '40px' }}>
       <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-      <Typography sx={{ mr: 2 }} variant="h1">
-        Library
-      </Typography>
-      <Button
-        onClick={handleAddMusic}
-        size="small"
-        startIcon={<AddIcon />}
-        variant="outlined"
-      >
-        Add Music
-      </Button>
+      <Typography variant="h3">Library</Typography>
+      <Tooltip title="Add Music">
+        <IconButton
+          onClick={handleAddMusic}
+          size="small"
+          sx={{
+            height: '20px',
+            width: '22px',
+            minWidth: '20px',
+          }}
+        >
+          <AddIcon />
+        </IconButton>
+      </Tooltip>
     </Box>
   );
 
@@ -485,7 +490,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       if (!rowVirtualizerRef.current) return;
 
       // Get the filtered and sorted track IDs based on current view state
-      // @TODO: this is close but wrong
       const trackIds = getFilteredAndSortedTrackIds('library');
 
       // Find the index of the track in the filtered and sorted list
@@ -530,6 +534,10 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       overscan: 20,
     }, // Increase overscan for smoother scrolling
     rowVirtualizerInstanceRef: rowVirtualizerRef, // Use the correct prop name
+    muiSearchTextFieldProps: {
+      placeholder: 'Search library',
+      variant: 'outlined',
+    },
     muiTableContainerProps: {
       sx: {
         height: '100%',
@@ -539,6 +547,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         flexDirection: 'column',
         padding: 0,
         margin: 0,
+        backgroundColor: (theme) => theme.palette.background.default,
       },
     },
     muiTablePaperProps: {
@@ -550,6 +559,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         boxShadow: 'none',
         borderRadius: 0,
         overflow: 'hidden',
+        backgroundColor: (theme) => theme.palette.background.paper,
       },
     },
     muiTableProps: {
@@ -557,6 +567,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         width: '100%',
         tableLayout: 'fixed', // Force table to respect container width
         height: 'auto', // Don't expand to fill container
+        backgroundColor: (theme) => theme.palette.background.default,
       },
     },
     // Make sure the table header stays fixed when scrolling
@@ -565,7 +576,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         position: 'sticky',
         top: 0,
         zIndex: 1,
-        backgroundColor: (theme) => theme.palette.background.paper, // Add solid background color
+        backgroundColor: (theme) => theme.palette.background.default,
         opacity: 1.0,
       },
     },
@@ -577,6 +588,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         zIndex: 2,
         padding: '4px 8px', // Reduce padding in the toolbar
         width: '100%',
+        backgroundColor: (theme) => theme.palette.background.default,
       },
     },
     // Remove padding from the table body and ensure it aligns to the top
@@ -634,6 +646,9 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       'data-track-id': row.original.id,
       sx: {
         cursor: 'pointer',
+        backgroundColor: (theme) => theme.palette.background.default,
+        borderBottom: '1px solid',
+        borderColor: (theme) => theme.palette.divider,
         // Highlight the currently playing track if it's from the library
         ...(currentTrack?.id === row.original.id &&
           playbackSource === 'library' && {
@@ -648,6 +663,9 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
                   : theme.palette.grey[300],
             },
           }),
+        '&:hover': {
+          backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle hover effect for non-selected rows
+        },
       },
     }),
     defaultDisplayColumn: { size: 150 },
@@ -714,6 +732,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         overflow: 'hidden',
         padding: 0,
         margin: 0,
+        backgroundColor: (theme) => theme.palette.background.default,
       }}
     >
       <Box
@@ -726,6 +745,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
+          backgroundColor: (theme) => theme.palette.background.default,
         }}
       >
         <MaterialReactTable table={table} />

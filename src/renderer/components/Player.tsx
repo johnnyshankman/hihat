@@ -363,17 +363,19 @@ export default function Player() {
           width: '100%',
           height: '100%',
           py: 2,
+          backgroundColor: (theme) => theme.palette.background.default,
+          borderTop: '1px solid',
+          borderColor: (theme) => theme.palette.divider,
         }}
       >
         {/* Album Art */}
         <Box
           onClick={currentTrack ? openMiniPlayer : undefined}
           sx={{
-            width: '80px',
-            height: '80px',
+            height: '100%',
             mr: 2,
             borderRadius: '4px',
-            overflow: 'hidden',
+            aspectRatio: '1/1',
             cursor: currentTrack ? 'pointer' : 'default',
             position: 'relative',
             '&:hover .overlay': {
@@ -389,6 +391,7 @@ export default function Player() {
               sx={{
                 width: '100%',
                 height: '100%',
+                aspectRatio: '1/1',
                 objectFit: 'cover',
               }}
             />
