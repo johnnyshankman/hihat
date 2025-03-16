@@ -48,6 +48,8 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
       const library = useLibraryStore.getState().tracks;
 
       const selectedTrack = library.find((t) => t.id === trackId);
+
+      console.log('selectedTrack', selectedTrack);
       if (!selectedTrack) {
         throw new Error('No track found while selecting specific song');
       }

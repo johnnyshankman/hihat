@@ -32,6 +32,15 @@ import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import SidebarToggle from './SidebarToggle';
 import type { Channels } from '../../types/ipc';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
+import {
+  sortByTitle,
+  sortByArtist,
+  sortByAlbum,
+  sortByGenre,
+  sortByDuration,
+  sortByPlayCount,
+  sortByDateAdded,
+} from '../utils/sortingFunctions';
 
 // Custom formatter for duration in seconds
 const formatDurationFromSeconds = (seconds: number): string => {
@@ -303,70 +312,63 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         accessorKey: 'title',
         header: 'Title',
         size: 350,
+        sortingFn: (rowA, rowB, _columnId) => {
+          // Get the current sorting state for this column
+          const columnSorting = sorting.find((sort) => sort.id === 'title');
+          const isDescending = columnSorting ? columnSorting.desc : false;
+          return sortByTitle(rowA.original, rowB.original, isDescending);
+        },
       },
       {
         accessorKey: 'artist',
         header: 'Artist',
         size: 200,
-        sortingFn: (rowA, rowB) => {
-          // First sort by albumArtist
-          const albumArtistA = rowA.original.albumArtist || '';
-          const albumArtistB = rowB.original.albumArtist || '';
-
-          if (albumArtistA !== albumArtistB) {
-            return albumArtistA.localeCompare(albumArtistB);
-          }
-
-          // Then sort by album
-          const albumA = rowA.original.album || '';
-          const albumB = rowB.original.album || '';
-
-          if (albumA !== albumB) {
-            return albumA.localeCompare(albumB);
-          }
-
-          // Finally sort by track number
-          const trackNumberA = rowA.original.trackNumber || 0;
-          const trackNumberB = rowB.original.trackNumber || 0;
-
-          return trackNumberA - trackNumberB;
+        sortingFn: (rowA, rowB, _columnId) => {
+          const columnSorting = sorting.find((sort) => sort.id === 'artist');
+          const isDescending = columnSorting ? columnSorting.desc : false;
+          return sortByArtist(rowA.original, rowB.original, isDescending);
         },
       },
       {
         accessorKey: 'album',
         header: 'Album',
         size: 200,
-        sortingFn: (rowA, rowB) => {
-          // First sort by album alphabetically
-          const albumA = rowA.original.album || '';
-          const albumB = rowB.original.album || '';
-
-          if (albumA !== albumB) {
-            return albumA.localeCompare(albumB);
-          }
-
-          // Then sort by track number within the same album
-          const trackNumberA = rowA.original.trackNumber || 0;
-          const trackNumberB = rowB.original.trackNumber || 0;
-
-          return trackNumberA - trackNumberB;
+        sortingFn: (rowA, rowB, _columnId) => {
+          const columnSorting = sorting.find((sort) => sort.id === 'album');
+          const isDescending = columnSorting ? columnSorting.desc : false;
+          return sortByAlbum(rowA.original, rowB.original, isDescending);
         },
       },
       {
         accessorKey: 'genre',
         header: 'Genre',
         size: 120,
+        sortingFn: (rowA, rowB, _columnId) => {
+          const columnSorting = sorting.find((sort) => sort.id === 'genre');
+          const isDescending = columnSorting ? columnSorting.desc : false;
+          return sortByGenre(rowA.original, rowB.original, isDescending);
+        },
       },
       {
         accessorKey: 'duration',
         header: 'Duration',
         size: 80,
         Cell: ({ cell }) => formatDurationFromSeconds(cell.getValue<number>()),
+        sortingFn: (rowA, rowB, _columnId) => {
+          const columnSorting = sorting.find((sort) => sort.id === 'duration');
+          const isDescending = columnSorting ? columnSorting.desc : false;
+          return sortByDuration(rowA.original, rowB.original, isDescending);
+        },
       },
       {
         accessorKey: 'playCount',
         header: 'Play Count',
         size: 80,
+        sortingFn: (rowA, rowB, _columnId) => {
+          const columnSorting = sorting.find((sort) => sort.id === 'playCount');
+          const isDescending = columnSorting ? columnSorting.desc : false;
+          return sortByPlayCount(rowA.original, rowB.original, isDescending);
+        },
       },
       {
         accessorKey: 'dateAdded',
@@ -375,6 +377,11 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         Cell: ({ cell }) => {
           const date = cell.getValue<string>();
           return date ? new Date(date).toLocaleDateString() : '';
+        },
+        sortingFn: (rowA, rowB, _columnId) => {
+          const columnSorting = sorting.find((sort) => sort.id === 'dateAdded');
+          const isDescending = columnSorting ? columnSorting.desc : false;
+          return sortByDateAdded(rowA.original, rowB.original, isDescending);
         },
       },
       {
@@ -387,7 +394,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         defaultHidden: true,
       },
     ],
-    [],
+    [sorting], // Add sorting as a dependency
   );
 
   // Prepare data for Material React Table
@@ -483,8 +490,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
       // Find the index of the track in the filtered and sorted list
       const trackIndex = trackIds.indexOf(trackId);
-
-      console.log('trackIndex', trackIndex);
 
       if (trackIndex !== -1) {
         // Scroll to the track
