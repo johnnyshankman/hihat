@@ -28,7 +28,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     let allTracks: Track[] = [];
     try {
       const tracks = await window.electron.tracks.getAll();
-      console.log(
+      console.warn(
         'Loaded tracks from database:',
         tracks.length,
         'tracks found',

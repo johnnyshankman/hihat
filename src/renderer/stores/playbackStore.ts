@@ -49,7 +49,6 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
       const selectedTrack = library.find((t) => t.id === trackId);
 
-      console.log('selectedTrack', selectedTrack);
       if (!selectedTrack) {
         throw new Error('No track found while selecting specific song');
       }
@@ -460,7 +459,6 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 // @TODO: unclear why this is needed
 if (typeof window !== 'undefined') {
   window.electron.ipcRenderer.on('playback:trackChanged', (data: any) => {
-    console.log('playback:trackChanged', data);
     usePlaybackStore.setState({ currentTrack: data.track });
   });
 
