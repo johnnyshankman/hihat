@@ -8,6 +8,8 @@ import {
   Stack,
   Popover,
   Tooltip,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -18,8 +20,10 @@ import {
   VolumeDown,
   VolumeMute,
   Repeat,
+  RepeatOn,
   RepeatOne,
   Shuffle,
+  ShuffleOn,
 } from '@mui/icons-material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
@@ -106,6 +110,10 @@ export default function Player() {
 
   // Get the setCurrentView function from the UI store
   const setCurrentView = useUIStore((state) => state.setCurrentView);
+
+  // Use Material UI's theme breakpoints
+  const theme = useTheme();
+  const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Fetch album art when current track changes
   useEffect(() => {
@@ -269,14 +277,16 @@ export default function Player() {
 
   // Render repeat icon based on repeat mode
   const renderRepeatIcon = () => {
+    const iconSize = 'small';
+
     switch (repeatMode) {
       case 'track':
-        return <RepeatOne color="primary" fontSize="small" />;
+        return <RepeatOne color="primary" fontSize={iconSize} />;
       case 'all':
-        return <Repeat color="primary" fontSize="small" />;
+        return <RepeatOn color="primary" fontSize={iconSize} />;
       case 'off':
       default:
-        return <Repeat fontSize="small" />;
+        return <Repeat fontSize={iconSize} />;
     }
   };
 
@@ -296,10 +306,12 @@ export default function Player() {
 
   // Render shuffle icon based on shuffle mode
   const renderShuffleIcon = () => {
+    const iconSize = 'small';
+
     if (shuffleMode) {
-      return <Shuffle color="primary" fontSize="small" />;
+      return <ShuffleOn color="primary" fontSize={iconSize} />;
     }
-    return <Shuffle fontSize="small" />;
+    return <Shuffle fontSize={iconSize} />;
   };
 
   // Get tooltip text based on shuffle mode
@@ -359,13 +371,13 @@ export default function Player() {
         sx={{
           display: 'flex',
           alignItems: 'center',
-          px: 2,
+          px: { xs: 1, sm: 2 },
           width: '100%',
           height: '100%',
-          py: 2,
-          backgroundColor: (theme) => theme.palette.background.default,
+          py: { xs: 1, sm: 2 },
+          backgroundColor: (t) => t.palette.background.default,
           borderTop: '1px solid',
-          borderColor: (theme) => theme.palette.divider,
+          borderColor: (t) => t.palette.divider,
         }}
       >
         {/* Album Art */}
@@ -373,7 +385,7 @@ export default function Player() {
           onClick={currentTrack ? openMiniPlayer : undefined}
           sx={{
             height: '100%',
-            mr: 2,
+            mr: { xs: 1, sm: 2 },
             borderRadius: '4px',
             aspectRatio: '1/1',
             cursor: currentTrack ? 'pointer' : 'default',
@@ -421,7 +433,13 @@ export default function Player() {
         </Box>
 
         {/* Track info */}
-        <Box sx={{ width: '20%', overflow: 'hidden' }}>
+        <Box
+          sx={{
+            width: { xs: '15%', sm: '20%' },
+            overflow: 'hidden',
+            display: { xs: 'none', sm: 'block' },
+          }}
+        >
           {currentTrack ? (
             <>
               <Tooltip
@@ -463,24 +481,32 @@ export default function Player() {
         {/* Playback controls */}
         <Box
           sx={{
-            width: '50%',
+            width: { xs: '85%', sm: '50%' },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            px: 2,
+            px: { xs: 1, sm: 2 },
             py: 1,
+            flexGrow: 1,
           }}
         >
           <Stack
             alignItems="center"
             direction="row"
             justifyContent="center"
-            spacing={2}
+            spacing={{ xs: 0.25, sm: 1 }}
             sx={{ mb: 0.0, width: '100%' }}
           >
             <Tooltip title={getRepeatTooltipText()}>
-              <IconButton onClick={toggleRepeatMode} size="small">
+              <IconButton
+                disabled={!currentTrack}
+                onClick={toggleRepeatMode}
+                size="small"
+                sx={{
+                  padding: { xs: '4px', sm: '8px' },
+                }}
+              >
                 {renderRepeatIcon()}
               </IconButton>
             </Tooltip>
@@ -488,33 +514,45 @@ export default function Player() {
               disabled={!currentTrack}
               onClick={skipToPreviousTrack}
               size="medium"
+              sx={{
+                padding: { xs: '4px', sm: '8px' },
+              }}
             >
-              <SkipPrevious fontSize="medium" />
+              <SkipPrevious fontSize={isXsScreen ? 'small' : 'medium'} />
             </IconButton>
             <IconButton
               disabled={!currentTrack}
               onClick={() => setPaused(!paused)}
               size="large"
-              sx={{ mx: 1 }}
+              sx={{
+                mx: { xs: 0.25, sm: 1 },
+                padding: { xs: '8px', sm: '12px' },
+              }}
             >
               {!paused ? (
-                <Pause fontSize="large" />
+                <Pause fontSize={isXsScreen ? 'medium' : 'large'} />
               ) : (
-                <PlayArrow fontSize="large" />
+                <PlayArrow fontSize={isXsScreen ? 'medium' : 'large'} />
               )}
             </IconButton>
             <IconButton
               disabled={!currentTrack}
               onClick={skipToNextTrack}
               size="medium"
+              sx={{
+                padding: { xs: '4px', sm: '8px' },
+              }}
             >
-              <SkipNext fontSize="medium" />
+              <SkipNext fontSize={isXsScreen ? 'small' : 'medium'} />
             </IconButton>
             <Tooltip title={getShuffleTooltipText()}>
               <IconButton
                 disabled={!currentTrack}
                 onClick={toggleShuffleMode}
                 size="small"
+                sx={{
+                  padding: { xs: '4px', sm: '8px' },
+                }}
               >
                 {renderShuffleIcon()}
               </IconButton>
@@ -535,7 +573,12 @@ export default function Player() {
           >
             <Typography
               color="textSecondary"
-              sx={{ mr: 1, minWidth: '40px', textAlign: 'right' }}
+              sx={{
+                mr: 1,
+                minWidth: { xs: '30px', sm: '40px' },
+                textAlign: 'right',
+                fontSize: { xs: '0.65rem', sm: '0.75rem' },
+              }}
               variant="caption"
             >
               {formattedSeekPosition}
@@ -549,7 +592,7 @@ export default function Player() {
               size="small"
               sx={{
                 mx: 0.5,
-                color: (theme) => theme.palette.grey[500],
+                color: (t) => t.palette.grey[500],
                 '& .MuiSlider-thumb': {
                   height: 8,
                   width: 8,
@@ -559,7 +602,11 @@ export default function Player() {
             />
             <Typography
               color="textSecondary"
-              sx={{ ml: 1, minWidth: '40px' }}
+              sx={{
+                ml: 1,
+                minWidth: { xs: '30px', sm: '40px' },
+                fontSize: { xs: '0.65rem', sm: '0.75rem' },
+              }}
               variant="caption"
             >
               {formattedTimeLeft}
@@ -570,11 +617,11 @@ export default function Player() {
         {/* Volume control */}
         <Box
           sx={{
-            width: '25%',
+            width: { xs: '25%', sm: '25%' },
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
-            pr: 1,
+            pr: { xs: 0, sm: 1 },
           }}
         >
           <IconButton onClick={toggleVolumeControls} size="medium">
@@ -613,7 +660,7 @@ export default function Player() {
                 step={0.01}
                 sx={{
                   height: '100%',
-                  color: (theme) => theme.palette.primary.main,
+                  color: (t) => t.palette.primary.main,
                 }}
                 value={volume}
               />

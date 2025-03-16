@@ -58,7 +58,7 @@ export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#FFFFFF', // Vibrant red
+      main: '#FFFFFF', // White
     },
     secondary: {
       main: '#666666', // Muted text
