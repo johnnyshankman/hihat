@@ -90,23 +90,6 @@ tr:hover .play-button {
   opacity: 1;
 }
 
-/* Highlight effect for track rows */
-.highlight-row {
-  animation: highlight-pulse 2s ease-in-out;
-  position: relative;
-  z-index: 1;
-  outline: 2px solid rgba(52, 120, 218, 0.7) !important; /* Updated to match our primary color */
-  outline-offset: -2px;
-}
-
-/* Special highlight for virtualized tables */
-.MuiTableBody-root tr.highlight-row td {
-  background-color: rgba(52, 120, 218, 0.2) !important; /* Updated to match our primary color */
-  position: relative;
-  z-index: 2;
-  animation: highlight-pulse 2s ease-in-out;
-}
-
 @keyframes highlight-pulse {
   0% {
     background-color: rgba(52, 120, 218, 0.3); /* Updated to match our primary color */
