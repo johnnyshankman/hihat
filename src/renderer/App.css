@@ -2,11 +2,13 @@
  * @NOTE: Prepend a `~` to css file paths that are in your node_modules
  *        See https://github.com/webpack-contrib/sass-loader#imports
  */
-body {
+ @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
+
+ body {
   margin: 0;
   padding: 0;
   height: 100vh;
-  font-family: 'Lucida Grande', 'Segoe UI', Roboto, sans-serif;
   overflow: hidden;
 }
 

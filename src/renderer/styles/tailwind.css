@@ -6,7 +6,6 @@
 @layer base {
   body {
     @apply bg-background-dark text-text-dark dark:bg-background-dark dark:text-text-dark;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 }
 
