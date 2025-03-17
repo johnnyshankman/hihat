@@ -62,10 +62,10 @@ function ThemedApp() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
+      <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <Routes>
-          <Route path="/" element={<MainLayout />} />
-          <Route path="/mini-player" element={<MiniPlayer />} />
+          <Route element={<MainLayout />} path="/" />
+          <Route element={<MiniPlayer />} path="/mini-player" />
         </Routes>
       </Router>
     </ThemeProvider>

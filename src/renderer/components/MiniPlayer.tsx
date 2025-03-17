@@ -350,17 +350,19 @@ export default function MiniPlayer() {
         }}
       >
         <Tooltip placement="bottom" title="Adjust volume">
-          <IconButton
-            onClick={toggleVolumeControls}
-            size="small"
-            sx={{
-              color: 'rgba(255, 255, 255, 0.7)',
-              WebkitAppRegion: 'no-drag',
-              padding: '4px',
-            }}
-          >
-            {renderVolumeIcon()}
-          </IconButton>
+          <span>
+            <IconButton
+              onClick={toggleVolumeControls}
+              size="small"
+              sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                WebkitAppRegion: 'no-drag',
+                padding: '4px',
+              }}
+            >
+              {renderVolumeIcon()}
+            </IconButton>
+          </span>
         </Tooltip>
         <Tooltip placement="bottom" title="Drag to move window">
           <Box
@@ -491,13 +493,15 @@ export default function MiniPlayer() {
             sx={{ mb: 0 }}
           >
             <Tooltip title={getRepeatTooltipText()}>
-              <IconButton
-                onClick={toggleRepeatMode}
-                size="small"
-                sx={{ color: 'white' }}
-              >
-                {renderRepeatIcon()}
-              </IconButton>
+              <span>
+                <IconButton
+                  onClick={toggleRepeatMode}
+                  size="small"
+                  sx={{ color: 'white' }}
+                >
+                  {renderRepeatIcon()}
+                </IconButton>
+              </span>
             </Tooltip>
             <IconButton
               disabled={!currentTrack}
@@ -531,13 +535,15 @@ export default function MiniPlayer() {
               <SkipNext fontSize="medium" />
             </IconButton>
             <Tooltip title={getShuffleTooltipText()}>
-              <IconButton
-                onClick={toggleShuffleMode}
-                size="small"
-                sx={{ color: 'white' }}
-              >
-                {renderShuffleIcon()}
-              </IconButton>
+              <span>
+                <IconButton
+                  onClick={toggleShuffleMode}
+                  size="small"
+                  sx={{ color: 'white' }}
+                >
+                  {renderShuffleIcon()}
+                </IconButton>
+              </span>
             </Tooltip>
           </Stack>
 

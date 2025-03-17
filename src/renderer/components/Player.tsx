@@ -499,16 +499,18 @@ export default function Player() {
             sx={{ mb: 0.0, width: '100%' }}
           >
             <Tooltip title={getRepeatTooltipText()}>
-              <IconButton
-                disabled={!currentTrack}
-                onClick={toggleRepeatMode}
-                size="small"
-                sx={{
-                  padding: { xs: '4px', sm: '8px' },
-                }}
-              >
-                {renderRepeatIcon()}
-              </IconButton>
+              <span>
+                <IconButton
+                  disabled={!currentTrack}
+                  onClick={toggleRepeatMode}
+                  size="small"
+                  sx={{
+                    padding: { xs: '4px', sm: '8px' },
+                  }}
+                >
+                  {renderRepeatIcon()}
+                </IconButton>
+              </span>
             </Tooltip>
             <IconButton
               disabled={!currentTrack}
@@ -546,16 +548,18 @@ export default function Player() {
               <SkipNext fontSize={isXsScreen ? 'small' : 'medium'} />
             </IconButton>
             <Tooltip title={getShuffleTooltipText()}>
-              <IconButton
-                disabled={!currentTrack}
-                onClick={toggleShuffleMode}
-                size="small"
-                sx={{
-                  padding: { xs: '4px', sm: '8px' },
-                }}
-              >
-                {renderShuffleIcon()}
-              </IconButton>
+              <span>
+                <IconButton
+                  disabled={!currentTrack}
+                  onClick={toggleShuffleMode}
+                  size="small"
+                  sx={{
+                    padding: { xs: '4px', sm: '8px' },
+                  }}
+                >
+                  {renderShuffleIcon()}
+                </IconButton>
+              </span>
             </Tooltip>
           </Stack>
 
