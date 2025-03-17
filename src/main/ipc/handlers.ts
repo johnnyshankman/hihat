@@ -242,7 +242,7 @@ export const libraryHandlers = {
 
   'library:resetDatabase': (async () => {
     try {
-      const success = db.resetDatabase();
+      const success = await db.resetDatabase();
       return {
         success,
         message: success

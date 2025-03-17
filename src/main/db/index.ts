@@ -105,44 +105,92 @@ function createTables(): void {
  * Initialize default settings if they don't exist
  */
 function initDefaultSettings(): void {
-  const settingsCount = db
-    .prepare('SELECT COUNT(*) as count FROM settings')
-    .get() as { count: number };
+  try {
+    // Check if the settings table exists
+    try {
+      const settingsCount = db
+        .prepare('SELECT COUNT(*) as count FROM settings')
+        .get() as { count: number };
 
-  if (settingsCount.count === 0) {
-    // Default column visibility
-    const defaultColumns: ColumnVisibility = {
-      title: true,
-      artist: true,
-      album: true,
-      albumArtist: true,
-      genre: true,
-      duration: true,
-      playCount: true,
-      dateAdded: true,
-      lastPlayed: true,
-    };
+      if (settingsCount && settingsCount.count === 0) {
+        // Default column visibility
+        const defaultColumns: ColumnVisibility = {
+          title: true,
+          artist: true,
+          album: true,
+          albumArtist: true,
+          genre: true,
+          duration: true,
+          playCount: true,
+          dateAdded: true,
+          lastPlayed: true,
+        };
 
-    // Default settings
-    const defaultSettings: Settings = {
-      id: 'app-settings',
-      libraryPath: '',
-      theme: 'dark',
-      columns: defaultColumns,
-    };
+        // Default settings
+        const defaultSettings: Settings = {
+          id: 'app-settings',
+          libraryPath: '',
+          theme: 'dark',
+          columns: defaultColumns,
+        };
 
-    // Insert default settings
-    db.prepare(
-      `
-      INSERT INTO settings (id, libraryPath, theme, columns)
-      VALUES (?, ?, ?, ?)
-    `,
-    ).run(
-      defaultSettings.id,
-      defaultSettings.libraryPath,
-      defaultSettings.theme,
-      JSON.stringify(defaultSettings.columns),
-    );
+        // Insert default settings
+        db.prepare(
+          `
+          INSERT INTO settings (id, libraryPath, theme, columns)
+          VALUES (?, ?, ?, ?)
+        `,
+        ).run(
+          defaultSettings.id,
+          defaultSettings.libraryPath,
+          defaultSettings.theme,
+          JSON.stringify(defaultSettings.columns),
+        );
+      }
+    } catch (error) {
+      console.error(
+        'Error checking settings count, table may not exist yet:',
+        error,
+      );
+      // Ensure the table exists
+      createTables();
+
+      // Try again with the table created
+      const defaultColumns: ColumnVisibility = {
+        title: true,
+        artist: true,
+        album: true,
+        albumArtist: true,
+        genre: true,
+        duration: true,
+        playCount: true,
+        dateAdded: true,
+        lastPlayed: true,
+      };
+
+      // Default settings
+      const defaultSettings: Settings = {
+        id: 'app-settings',
+        libraryPath: '',
+        theme: 'dark',
+        columns: defaultColumns,
+      };
+
+      // Insert default settings
+      db.prepare(
+        `
+        INSERT INTO settings (id, libraryPath, theme, columns)
+        VALUES (?, ?, ?, ?)
+      `,
+      ).run(
+        defaultSettings.id,
+        defaultSettings.libraryPath,
+        defaultSettings.theme,
+        JSON.stringify(defaultSettings.columns),
+      );
+    }
+  } catch (outerError) {
+    console.error('Failed to initialize default settings:', outerError);
   }
 }
 
@@ -150,57 +198,123 @@ function initDefaultSettings(): void {
  * Initialize default playlists if they don't exist
  */
 function initDefaultPlaylists(): void {
-  const playlistCount = db
-    .prepare('SELECT COUNT(*) as count FROM playlists')
-    .get() as { count: number };
+  try {
+    // Check if the playlists table exists
+    try {
+      const playlistCount = db
+        .prepare('SELECT COUNT(*) as count FROM playlists')
+        .get() as { count: number };
 
-  if (playlistCount.count === 0) {
-    // Default smart playlists
-    const smartPlaylists: Omit<Playlist, 'id'>[] = [
-      {
-        name: '50 Recently Played Songs',
-        isSmart: true,
-        ruleSet: {
-          type: 'recentlyPlayed',
-          limit: 50,
-        },
-        trackIds: [],
-      },
-      {
-        name: '50 Most Played Songs',
-        isSmart: true,
-        ruleSet: {
-          type: 'mostPlayed',
-          limit: 50,
-        },
-        trackIds: [],
-      },
-      {
-        name: '50 Recently Added Songs',
-        isSmart: true,
-        ruleSet: {
-          type: 'recentlyAdded',
-          limit: 50,
-        },
-        trackIds: [],
-      },
-    ];
+      if (playlistCount && playlistCount.count === 0) {
+        // Default smart playlists
+        const smartPlaylists: Omit<Playlist, 'id'>[] = [
+          {
+            name: '50 Recently Played Songs',
+            isSmart: true,
+            ruleSet: {
+              type: 'recentlyPlayed',
+              limit: 50,
+            },
+            trackIds: [],
+          },
+          {
+            name: '50 Most Played Songs',
+            isSmart: true,
+            ruleSet: {
+              type: 'mostPlayed',
+              limit: 50,
+            },
+            trackIds: [],
+          },
+          {
+            name: '50 Recently Added Songs',
+            isSmart: true,
+            ruleSet: {
+              type: 'recentlyAdded',
+              limit: 50,
+            },
+            trackIds: [],
+          },
+        ];
 
-    // Insert default playlists
-    const insertPlaylist = db.prepare(`
-      INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
-      VALUES (?, ?, ?, ?, ?)
-    `);
+        // Insert default playlists
+        const insertPlaylist = db.prepare(`
+          INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
+          VALUES (?, ?, ?, ?, ?)
+        `);
 
-    smartPlaylists.forEach((playlist) => {
-      insertPlaylist.run(
-        uuidv4(),
-        playlist.name,
-        playlist.isSmart ? 1 : 0,
-        playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
-        playlist.trackIds.length > 0 ? JSON.stringify(playlist.trackIds) : '[]',
+        smartPlaylists.forEach((playlist) => {
+          insertPlaylist.run(
+            uuidv4(),
+            playlist.name,
+            playlist.isSmart ? 1 : 0,
+            playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
+            playlist.trackIds.length > 0
+              ? JSON.stringify(playlist.trackIds)
+              : '[]',
+          );
+        });
+      }
+    } catch (error) {
+      console.error(
+        'Error checking playlist count, table may not exist yet:',
+        error,
       );
-    });
+      // Ensure the table exists
+      createTables();
+
+      // Try again with the table created
+      // Default smart playlists
+      const smartPlaylists: Omit<Playlist, 'id'>[] = [
+        {
+          name: '50 Recently Played Songs',
+          isSmart: true,
+          ruleSet: {
+            type: 'recentlyPlayed',
+            limit: 50,
+          },
+          trackIds: [],
+        },
+        {
+          name: '50 Most Played Songs',
+          isSmart: true,
+          ruleSet: {
+            type: 'mostPlayed',
+            limit: 50,
+          },
+          trackIds: [],
+        },
+        {
+          name: '50 Recently Added Songs',
+          isSmart: true,
+          ruleSet: {
+            type: 'recentlyAdded',
+            limit: 50,
+          },
+          trackIds: [],
+        },
+      ];
+
+      // Insert default playlists
+      const insertPlaylist = db.prepare(`
+        INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+
+      smartPlaylists.forEach((playlist) => {
+        insertPlaylist.run(
+          uuidv4(),
+          playlist.name,
+          playlist.isSmart ? 1 : 0,
+          playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
+          playlist.trackIds.length > 0
+            ? JSON.stringify(playlist.trackIds)
+            : '[]',
+        );
+      });
+    }
+  } catch (outerError) {
+    console.error('Failed to initialize default playlists:', outerError);
   }
 }
 
@@ -1086,34 +1200,80 @@ export function getSmartPlaylistTracks(rule: PlaylistRule): Track[] {
 
 /**
  * Reset the database by deleting it and reinitializing
- * @returns boolean indicating success
+ * @returns Promise<boolean> indicating success
  */
-export function resetDatabase(): boolean {
-  try {
-    console.log('Resetting database...');
+export function resetDatabase(): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      console.log('Resetting database...');
 
-    // Close the database connection
-    closeDatabase();
+      // Close the database connection
+      closeDatabase();
 
-    // Delete the database file
-    if (fs.existsSync(DB_PATH)) {
-      fs.unlinkSync(DB_PATH);
-      console.log('Database file deleted');
+      // Delete the database file
+      if (fs.existsSync(DB_PATH)) {
+        fs.unlinkSync(DB_PATH);
+        console.log('Database file deleted');
+      }
+
+      // Start database initialization
+      initDatabase();
+
+      // Set a flag to initialize settings and playlists after database is ready
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds max wait time
+
+      const checkDbReady = setInterval(() => {
+        attempts++;
+
+        // Check if db is defined and not the mock db
+        if (db && !useMockDb) {
+          try {
+            // Try a simple query to verify the database is working
+            const testQuery = db.prepare('SELECT 1 as test').get();
+
+            if (testQuery && testQuery.test === 1) {
+              clearInterval(checkDbReady);
+
+              try {
+                // Create tables explicitly to ensure they exist
+                createTables();
+
+                // Initialize default settings
+                initDefaultSettings();
+
+                // Initialize default playlists
+                initDefaultPlaylists();
+
+                console.log('Database reset complete');
+                resolve(true);
+                return;
+              } catch (initError) {
+                console.error(
+                  'Error during database initialization:',
+                  initError,
+                );
+                resolve(false);
+                return;
+              }
+            }
+          } catch (queryError) {
+            console.log('Database not ready yet, waiting...');
+          }
+        }
+
+        // Check if we've exceeded the maximum number of attempts
+        if (attempts >= maxAttempts) {
+          clearInterval(checkDbReady);
+          console.error(
+            'Database initialization timed out after multiple attempts',
+          );
+          resolve(false);
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error resetting database:', error);
+      resolve(false);
     }
-
-    // Reinitialize the database
-    initDatabase();
-
-    // Explicitly initialize default settings to ensure they exist
-    initDefaultSettings();
-
-    // Explicitly initialize default playlists
-    initDefaultPlaylists();
-
-    console.log('Database reset complete');
-    return true;
-  } catch (error) {
-    console.error('Error resetting database:', error);
-    return false;
-  }
+  });
 }
