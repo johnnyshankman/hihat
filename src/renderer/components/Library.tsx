@@ -521,6 +521,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const table = useMaterialReactTable({
     columns,
     data,
+    globalFilterFn: 'contains', // turn off fuzzy matching and use simple contains filter function which matches with what we have in @src/renderer/utils/trackSelectionUtils.ts
     enablePagination: false, // Disable pagination for infinite scrolling
     enableBottomToolbar: false, // Hide bottom toolbar (pagination controls)
     enableColumnResizing: true,

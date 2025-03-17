@@ -77,12 +77,12 @@ export default function PlaylistSelectionDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullWidth maxWidth="sm" onClose={onClose} open={open}>
       <DialogTitle>Add to Playlist</DialogTitle>
       <DialogContent>
         {playlists.length > 0 ? (
           <>
-            <Typography variant="subtitle1" gutterBottom>
+            <Typography gutterBottom variant="subtitle1">
               Select a playlist:
             </Typography>
             <List sx={{ maxHeight: 300, overflow: 'auto' }}>
@@ -102,7 +102,7 @@ export default function PlaylistSelectionDialog({
             </List>
           </>
         ) : (
-          <Typography variant="body1" sx={{ mb: 2 }}>
+          <Typography sx={{ mb: 2 }} variant="body1">
             You don&apos;t have any playlists yet. Create one below.
           </Typography>
         )}
@@ -115,7 +115,6 @@ export default function PlaylistSelectionDialog({
               autoFocus
               fullWidth
               label="New Playlist Name"
-              value={newPlaylistName}
               onChange={(e) => setNewPlaylistName(e.target.value)}
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
@@ -123,16 +122,17 @@ export default function PlaylistSelectionDialog({
                 }
               }}
               sx={{ mb: 1 }}
+              value={newPlaylistName}
             />
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
               <Button onClick={toggleNewPlaylistInput} sx={{ mr: 1 }}>
                 Cancel
               </Button>
               <Button
-                variant="contained"
                 color="primary"
-                onClick={handleCreatePlaylist}
                 disabled={!newPlaylistName.trim()}
+                onClick={handleCreatePlaylist}
+                variant="contained"
               >
                 Create & Add
               </Button>
@@ -140,10 +140,10 @@ export default function PlaylistSelectionDialog({
           </Box>
         ) : (
           <Button
-            variant="outlined"
             color="primary"
-            onClick={toggleNewPlaylistInput}
             fullWidth
+            onClick={toggleNewPlaylistInput}
+            variant="outlined"
           >
             Create New Playlist
           </Button>

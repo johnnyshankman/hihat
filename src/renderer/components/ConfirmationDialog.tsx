@@ -38,13 +38,13 @@ function ConfirmationDialog({
 }: ConfirmationDialogProps) {
   return (
     <Dialog
-      open={open}
-      onClose={onCancel}
-      aria-labelledby="confirmation-dialog-title"
       aria-describedby="confirmation-dialog-description"
+      aria-labelledby="confirmation-dialog-title"
+      onClose={onCancel}
+      open={open}
     >
       <DialogTitle id="confirmation-dialog-title">
-        <Typography variant="h6" component="span">
+        <Typography component="span" variant="h6">
           {title}
         </Typography>
       </DialogTitle>
@@ -54,14 +54,14 @@ function ConfirmationDialog({
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCancel} color="primary">
+        <Button color="primary" onClick={onCancel}>
           {cancelText}
         </Button>
         <Button
-          onClick={onConfirm}
-          color={confirmButtonColor}
-          variant="contained"
           autoFocus
+          color={confirmButtonColor}
+          onClick={onConfirm}
+          variant="contained"
         >
           {confirmText}
         </Button>

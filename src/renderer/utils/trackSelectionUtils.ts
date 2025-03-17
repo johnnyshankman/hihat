@@ -34,6 +34,7 @@ export const getFilteredAndSortedTrackIds = (
     let filteredTracks = [...tracks];
 
     // Apply filtering from library view
+    // which matches the 'contains' globalFilterFn in the Material React Table
     if (libraryViewState.filtering) {
       const searchTerm = libraryViewState.filtering.toLowerCase();
       filteredTracks = filteredTracks.filter(
@@ -67,12 +68,13 @@ export const getFilteredAndSortedTrackIds = (
       throw new Error('Playlist not found');
     }
 
-    const filteredTrackIds = [...currentPlaylist.trackIds];
-    let filteredTracks = filteredTrackIds
+    const playlistTrackIds = [...currentPlaylist.trackIds];
+    let filteredTracks = playlistTrackIds
       .map((id) => tracks.find((t) => t.id === id))
       .filter((track): track is Track => !!track);
 
     // Apply filtering from playlist view
+    // which matches the 'contains' globalFilterFn in the Material React Table
     if (playlistViewState.filtering) {
       const searchTerm = playlistViewState.filtering.toLowerCase();
       filteredTracks = filteredTracks.filter(
@@ -187,19 +189,19 @@ export const findPreviousSong = (
   // find the current index of the current track
   const currentIndex = trackIds.indexOf(currentTrackId);
 
-  // if the current index is the last index, return null
-  if (currentIndex === trackIds.length - 1) {
-    // if repeat mode is all, return the first track
+  // if the current index is the first index
+  if (currentIndex === 0) {
+    // if repeat mode is all, return the last track
     if (repeatMode === 'all') {
-      return tracks[0];
+      const lastTrackId = trackIds[trackIds.length - 1];
+      return tracks.find((t) => t.id === lastTrackId);
     }
 
     // otherwise, return undefined
-    // @TODO: should i just return the current song?
     return undefined;
   }
 
-  // return the next track
+  // return the previous track
   const previousTrackId = trackIds[currentIndex - 1];
   return tracks.find((t) => t.id === previousTrackId);
 };

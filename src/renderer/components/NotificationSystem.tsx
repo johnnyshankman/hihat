@@ -14,13 +14,13 @@ const CustomSnackbar = forwardRef<HTMLDivElement, SnackbarProps>(
 
     return (
       <Snackbar
+        key={key}
         ref={ref}
-        open={open}
+        anchorOrigin={anchorOrigin}
         autoHideDuration={autoHideDuration}
         onClose={onClose}
-        anchorOrigin={anchorOrigin}
+        open={open}
         sx={sx}
-        key={key}
       >
         {children}
       </Snackbar>
@@ -68,17 +68,17 @@ export default function NotificationSystem() {
       {visibleNotifications.map((notification) => (
         <CustomSnackbar
           key={notification.id}
-          open
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           autoHideDuration={notification.autoHideDuration}
           onClose={() => removeNotification(notification.id)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          open
           sx={{ position: 'static', mb: 1 }}
         >
           <Alert
             onClose={() => removeNotification(notification.id)}
             severity={notification.type}
-            variant="filled"
             sx={{ width: '100%' }}
+            variant="filled"
           >
             {notification.message}
           </Alert>
