@@ -9,6 +9,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   tracks: [],
   playlists: [],
   isLoading: true,
+  isScanning: false,
   selectedPlaylistId: null,
   selectedTrackId: null,
   libraryViewState: {
@@ -208,29 +209,32 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
 
   scanLibrary: async (libraryPath: string) => {
     try {
-      set({ isLoading: true });
+      set({ isScanning: true });
+      // this will trigger UX stuff (i hope)
       await window.electron.library.scan(libraryPath);
       // The scan complete event will trigger a library reload
+      set({ isScanning: false });
     } catch (error) {
+      set({ isScanning: false });
       console.error('Error scanning library:', error);
       useUIStore.getState().showNotification('Failed to scan library', 'error');
-      set({ isLoading: false });
       throw error;
     }
   },
 
   importFiles: async (files: string[]) => {
     try {
-      set({ isLoading: true });
+      set({ isScanning: true });
       await window.electron.library.import(files);
       await get().loadLibrary();
+      set({ isScanning: false });
       useUIStore
         .getState()
         .showNotification(`Imported ${files.length} files`, 'success');
     } catch (error) {
       console.error('Error importing files:', error);
       useUIStore.getState().showNotification('Failed to import files', 'error');
-      set({ isLoading: false });
+      set({ isScanning: false });
       throw error;
     }
   },

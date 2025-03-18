@@ -14,6 +14,7 @@ export interface LibraryStore {
   tracks: Track[];
   playlists: Playlist[];
   isLoading: boolean;
+  isScanning: boolean;
   selectedPlaylistId: string | null;
   selectedTrackId: string | null;
   libraryViewState: {

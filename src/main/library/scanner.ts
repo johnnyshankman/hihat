@@ -256,8 +256,8 @@ async function parseFileMetadata(filePath: string): Promise<Omit<Track, 'id'>> {
  * Process a single file for the library
  * @param filePath - Path to the file
  * @param existingFilePaths - Set of existing file paths
- * @param totalFiles - Total number of files to process
- * @param currentProcessed - Number of files processed so far
+ * @param totalFiles - Total number of files to process in the scan
+ * @param currentProcessed - Number of files processed so far in the scan
  * @param libraryPath - Path to the library directory
  * @returns Object with processed and added status
  */

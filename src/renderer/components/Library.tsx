@@ -13,8 +13,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Paper,
-  LinearProgress,
   Tooltip,
   IconButton,
 } from '@mui/material';
@@ -32,7 +30,6 @@ import { useLibraryStore, usePlaybackStore, useSettingsStore } from '../stores';
 import TrackContextMenu from './TrackContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import SidebarToggle from './SidebarToggle';
-import type { Channels } from '../../types/ipc';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import {
   sortByTitle,
@@ -93,8 +90,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const updateLibraryViewState = useLibraryStore(
     (state) => state.updateLibraryViewState,
   );
-  const scanLibrary = useLibraryStore((state) => state.scanLibrary);
-
   // Get state from settings store
   const settings = useSettingsStore((state) => state.settings);
   const updateColumnVisibility = useSettingsStore(
@@ -107,9 +102,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const playTrack = usePlaybackStore((state) => state.selectSpecificSong);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [scanningDialogOpen, setScanningDialogOpen] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [scanStatus, setScanStatus] = useState('');
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
@@ -127,9 +119,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       desc: false,
     },
   ]);
-
-  // Add a ref to track the last time we updated the UI for scan progress
-  const lastUpdateTime = useRef(0);
 
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
@@ -169,18 +158,8 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       );
 
       if (shouldScan) {
-        // Reset scan state
-        setScanProgress(0);
-        setScanStatus('');
-        setScanningDialogOpen(true);
-
-        // Start the scan
-        try {
-          await scanLibrary(libraryPath);
-        } catch (error) {
-          console.error('Error scanning library:', error);
-          setScanStatus('Failed');
-        }
+        // Redirect user to Settings page for scanning
+        window.alert('Please go to Settings page to start the scan.');
       }
     } catch (error) {
       console.error('Error selecting folder:', error);
@@ -208,76 +187,18 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         return;
       }
 
-      // Reset scan state
-      setScanProgress(0);
-      setScanStatus('');
-      setScanningDialogOpen(true);
-
       // Import the selected files
       try {
         await window.electron.library.import(result.filePaths);
+        window.alert(
+          'Files have been added to import queue. Please go to Settings page to see the import progress.',
+        );
       } catch (error) {
         console.error('Error importing files:', error);
-        setScanStatus('Failed');
+        window.alert('Error importing files. Please try again.');
       }
     } catch (error) {
       console.error('Error adding music:', error);
-    }
-  };
-
-  // Listen for scan progress events
-  useEffect(() => {
-    // Throttle updates to once every 1000ms (1 second)
-    const updateThreshold = 1000; // milliseconds
-
-    const handleScanProgress = (...args: unknown[]) => {
-      const data = args[0] as {
-        total: number;
-        processed: number;
-        current: string;
-      };
-
-      const now = Date.now();
-      // Only update the UI if enough time has passed since the last update
-      // or if this is the first file, every 50th file, or the last file
-      if (
-        now - lastUpdateTime.current > updateThreshold ||
-        data.processed === 1 ||
-        data.processed % 50 === 0 ||
-        data.processed === data.total
-      ) {
-        setScanProgress(data.processed / data.total);
-        setScanStatus(data.current);
-        lastUpdateTime.current = now;
-      }
-    };
-
-    const handleScanComplete = () => {
-      setScanStatus('Complete');
-    };
-
-    // Register event listeners
-    const unsubScanProgress = window.electron.ipcRenderer.on(
-      'library:scanProgress' as Channels,
-      handleScanProgress,
-    );
-
-    const unsubScanComplete = window.electron.ipcRenderer.on(
-      'library:scanComplete' as Channels,
-      handleScanComplete,
-    );
-
-    // Clean up event listeners
-    return () => {
-      unsubScanProgress();
-      unsubScanComplete();
-    };
-  }, []);
-
-  const handleCloseScanningDialog = () => {
-    // Only allow closing if scan is complete or there was an error
-    if (scanStatus === 'Complete' || scanStatus === 'Failed') {
-      setScanningDialogOpen(false);
     }
   };
 
@@ -717,12 +638,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     ),
   });
 
-  const getScanStatusText = () => {
-    if (scanStatus === 'Failed') return 'Scan Failed';
-    if (scanStatus === 'Complete') return 'Scan Complete';
-    return 'Scanning Library...';
-  };
-
   return (
     <Box
       sx={{
@@ -752,9 +667,9 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         <MaterialReactTable table={table} />
       </Box>
 
-      {/* Library scan dialog */}
+      {/* Library path selection dialog */}
       <Dialog onClose={handleCloseDialog} open={dialogOpen}>
-        <DialogTitle>Scan Library</DialogTitle>
+        <DialogTitle>Set Library Path</DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
             Please select your music library folder:
@@ -765,61 +680,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Scanning progress dialog */}
-      <Dialog
-        fullWidth
-        maxWidth="sm"
-        onClose={handleCloseScanningDialog}
-        open={scanningDialogOpen}
-      >
-        <DialogTitle>Scanning Library</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2 }}>
-            <Typography gutterBottom variant="body1">
-              {getScanStatusText()}
-            </Typography>
-            <LinearProgress
-              sx={{ mt: 2 }}
-              value={scanProgress}
-              variant="determinate"
-            />
-            <Typography sx={{ mt: 1 }} variant="body2">
-              {scanStatus}
-            </Typography>
-          </Box>
-          {scanStatus === 'Complete' && (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                bgcolor: 'background.default',
-                maxHeight: '150px',
-                overflow: 'auto',
-                mb: 2,
-              }}
-            >
-              <Typography
-                component="div"
-                sx={{ fontFamily: 'monospace' }}
-                variant="body2"
-              >
-                {scanStatus}
-              </Typography>
-            </Paper>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            disabled={scanStatus !== 'Complete' && scanStatus !== 'Failed'}
-            onClick={handleCloseScanningDialog}
-          >
-            {scanStatus === 'Complete' || scanStatus === 'Failed'
-              ? 'Close'
-              : 'Scanning...'}
-          </Button>
         </DialogActions>
       </Dialog>
 

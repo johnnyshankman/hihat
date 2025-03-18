@@ -10,27 +10,34 @@ import { createTheme, ThemeOptions } from '@mui/material/styles';
 // Base theme options shared between light and dark modes
 const baseThemeOptions: ThemeOptions = {
   typography: {
-    fontFamily: ['DM Sans'].join(','),
+    // use apple ux font aka san francisco
+    fontFamily: [
+      '-apple-system',
+      'DM Sans',
+      'Roboto',
+      'Helvetica Neue',
+      'sans-serif',
+    ].join(','),
     h1: {
       fontSize: '1.5rem',
-      fontWeight: 700,
+      fontWeight: 600,
     },
     h2: {
       fontSize: '1.25rem',
-      fontWeight: 700,
+      fontWeight: 600,
     },
     h3: {
       fontSize: '1.125rem',
-      fontWeight: 600,
+      fontWeight: 500,
     },
     body1: {
       fontSize: '16px',
-      fontWeight: 600,
+      fontWeight: 500,
     },
     body2: {
       fontSize: '13px',
+      fontWeight: 400,
       letterSpacing: '-0.1px',
-      fontWeight: 500,
     },
   },
   shape: {

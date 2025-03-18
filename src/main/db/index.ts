@@ -749,10 +749,6 @@ export function addTrack(track: Omit<Track, 'id'>): Track {
     );
 
     console.log('Track added successfully:', newTrack.id);
-
-    // Notify the renderer process that a track was added
-    sendEventToRenderer('library:scanComplete', { tracksAdded: 1 });
-
     return newTrack;
   } catch (error) {
     console.error('Failed to add track:', error);

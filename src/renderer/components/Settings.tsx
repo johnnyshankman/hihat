@@ -15,6 +15,10 @@ import {
   Alert,
   AppBar,
   Toolbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  LinearProgress,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -23,6 +27,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import { useSettingsStore, useUIStore, useLibraryStore } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
+import type { Channels } from '../../types/ipc';
 
 // Define the type for the dialog result
 interface DirectorySelectionResult {
@@ -52,6 +57,7 @@ export default function Settings({
 
   // Get actions from library store
   const scanLibrary = useLibraryStore((state) => state.scanLibrary);
+  const isScanning = useLibraryStore((state) => state.isScanning);
 
   const [libraryPath, setLibraryPath] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -69,7 +75,13 @@ export default function Settings({
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
+
+  // Scanning state
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanStatus, setScanStatus] = useState('');
+
+  // Add a ref to track the last time we updated the UI for scan progress
+  const lastUpdateTime = useRef(0);
 
   // Reference to track if settings have been loaded
   const settingsLoaded = useRef(false);
@@ -90,6 +102,58 @@ export default function Settings({
       setPreviewTheme(null);
     };
   }, [settings, setPreviewTheme]);
+
+  // Listen for scan progress events
+  useEffect(() => {
+    // Throttle updates to once every 1000ms (1 second)
+    const updateThreshold = 1000; // milliseconds
+
+    const handleScanProgress = (...args: unknown[]) => {
+      const data = args[0] as {
+        total: number;
+        processed: number;
+        current: string;
+      };
+
+      const now = Date.now();
+      // Only update the UI if enough time has passed since the last update
+      // or if this is the first file, every 50th file, or the last file
+      if (
+        now - lastUpdateTime.current > updateThreshold ||
+        data.processed === 1 ||
+        data.processed % 50 === 0 ||
+        data.processed === data.total
+      ) {
+        setScanProgress((data.processed / data.total) * 100); // Convert to percentage
+        setScanStatus(data.current);
+        lastUpdateTime.current = now;
+      }
+    };
+
+    const handleScanComplete = () => {
+      setScanStatus('Complete');
+      setScanProgress(100);
+      setSnackbarMessage('Library scan completed successfully');
+      setSnackbarOpen(true);
+    };
+
+    // Register event listeners
+    const unsubScanProgress = window.electron.ipcRenderer.on(
+      'library:scanProgress' as Channels,
+      handleScanProgress,
+    );
+
+    const unsubScanComplete = window.electron.ipcRenderer.on(
+      'library:scanComplete' as Channels,
+      handleScanComplete,
+    );
+
+    // Clean up event listeners
+    return () => {
+      unsubScanProgress();
+      unsubScanComplete();
+    };
+  }, []);
 
   const handleLibraryPathChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -141,16 +205,18 @@ export default function Settings({
     }
 
     try {
-      setIsScanning(true);
+      // Reset scan state
+      setScanProgress(0);
+      setScanStatus('');
+
+      // Start the scan
       await scanLibrary(libraryPath);
-      setSnackbarMessage('Library scan completed successfully');
     } catch (error) {
       console.error('Error scanning library:', error);
+      setScanStatus('Failed');
       setSnackbarMessage(
         error instanceof Error ? error.message : 'Error scanning library',
       );
-    } finally {
-      setIsScanning(false);
       setSnackbarOpen(true);
     }
   };
@@ -233,6 +299,12 @@ export default function Settings({
 
   const handleCancelReset = () => {
     setResetDialogOpen(false);
+  };
+
+  const getScanStatusText = () => {
+    if (scanStatus === 'Failed') return 'Scan Failed';
+    if (scanStatus === 'Complete') return 'Scan Complete';
+    return 'Scanning Library...';
   };
 
   if (!settings) {
@@ -439,6 +511,46 @@ export default function Settings({
           </Box>
         </Paper>
       </Box>
+
+      {/* Scanning progress dialog */}
+      <Dialog fullWidth maxWidth="sm" open={isScanning}>
+        <DialogTitle>Scanning Library</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Typography gutterBottom variant="body1">
+              {getScanStatusText()}
+            </Typography>
+            <LinearProgress
+              sx={{ mt: 2 }}
+              value={scanProgress}
+              variant="determinate"
+            />
+            <Typography sx={{ mt: 1 }} variant="body2">
+              {scanStatus}
+            </Typography>
+          </Box>
+          {scanStatus === 'Complete' && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                bgcolor: 'background.default',
+                maxHeight: '150px',
+                overflow: 'auto',
+                mb: 2,
+              }}
+            >
+              <Typography
+                component="div"
+                sx={{ fontFamily: 'monospace' }}
+                variant="body2"
+              >
+                Scan completed successfully
+              </Typography>
+            </Paper>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Snackbar
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
