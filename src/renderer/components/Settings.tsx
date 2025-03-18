@@ -329,14 +329,6 @@ export default function Settings({
             <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
             <Typography variant="h6">Settings</Typography>
           </Box>
-          <Button
-            color="primary"
-            onClick={handleSaveLibraryPath}
-            startIcon={<SaveIcon />}
-            variant="contained"
-          >
-            Save Library Path
-          </Button>
         </Toolbar>
       </AppBar>
 
@@ -362,16 +354,25 @@ export default function Settings({
               value={libraryPath}
             />
           </FormControl>
-          <Button
-            color="primary"
-            disabled={!libraryPath || isScanning}
-            onClick={handleRescanLibrary}
-            startIcon={<RefreshIcon />}
-            sx={{ mt: 1 }}
-            variant="contained"
-          >
-            {isScanning ? 'Scanning...' : 'Rescan Library Folder For Songs'}
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+            <Button
+              color="primary"
+              onClick={handleSaveLibraryPath}
+              startIcon={<SaveIcon />}
+              variant="contained"
+            >
+              Update Library Path
+            </Button>
+            <Button
+              color="primary"
+              disabled={!libraryPath || isScanning}
+              onClick={handleRescanLibrary}
+              startIcon={<RefreshIcon />}
+              variant="contained"
+            >
+              {isScanning ? 'Scanning...' : 'Scan For Songs'}
+            </Button>
+          </Box>
         </Paper>
 
         <Paper sx={{ p: 3, mb: 3 }}>
