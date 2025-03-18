@@ -304,7 +304,7 @@ export default function Settings({
   const getScanStatusText = () => {
     if (scanStatus === 'Failed') return 'Scan Failed';
     if (scanStatus === 'Complete') return 'Scan Complete';
-    return 'Scanning Library...';
+    return 'Scanning...';
   };
 
   if (!settings) {
@@ -514,11 +514,11 @@ export default function Settings({
 
       {/* Scanning progress dialog */}
       <Dialog fullWidth maxWidth="sm" open={isScanning}>
-        <DialogTitle>Scanning Library</DialogTitle>
+        <DialogTitle>Library Scanner</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <Typography gutterBottom variant="body1">
-              {getScanStatusText()}
+              Status: {getScanStatusText()}
             </Typography>
             <LinearProgress
               sx={{ mt: 2 }}
