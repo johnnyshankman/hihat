@@ -339,7 +339,7 @@ export default function Settings({
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
             <TextField
-              helperText="Click 'Save Library Path' after changing this field"
+              helperText="Click 'Update Folder' after changing this field, then 'Scan Folder'"
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -349,19 +349,19 @@ export default function Settings({
                   </InputAdornment>
                 ),
               }}
-              label="Library Path"
+              label="Folder"
               onChange={handleLibraryPathChange}
               value={libraryPath}
             />
           </FormControl>
           <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
             <Button
-              color="primary"
+              color="error"
               onClick={handleSaveLibraryPath}
               startIcon={<SaveIcon />}
               variant="contained"
             >
-              Update Library Path
+              Update Folder
             </Button>
             <Button
               color="primary"
@@ -370,7 +370,7 @@ export default function Settings({
               startIcon={<RefreshIcon />}
               variant="contained"
             >
-              {isScanning ? 'Scanning...' : 'Scan For Songs'}
+              {isScanning ? 'Scanning...' : 'Scan Folder'}
             </Button>
           </Box>
         </Paper>
