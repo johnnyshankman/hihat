@@ -19,6 +19,7 @@ export type Channels =
   | 'library:scanProgress'
   | 'library:scanComplete'
   | 'library:resetDatabase'
+  | 'library:resetTracks'
 
   // Track operations
   | 'tracks:getAll'
@@ -113,6 +114,7 @@ export interface IPCRequests {
   };
   'library:scanComplete': { tracksAdded: number };
   'library:resetDatabase': void;
+  'library:resetTracks': void;
 
   // Track operations
   'tracks:getAll': void;
@@ -220,6 +222,7 @@ export interface IPCResponses {
   };
   'library:scanComplete': { tracksAdded: number };
   'library:resetDatabase': { success: boolean; message: string };
+  'library:resetTracks': { success: boolean; message: string };
 
   // Track operations
   'tracks:getAll': Track[];

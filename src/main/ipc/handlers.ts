@@ -257,6 +257,24 @@ export const libraryHandlers = {
       };
     }
   }) as IPCHandler<'library:resetDatabase'>,
+
+  'library:resetTracks': (async () => {
+    try {
+      const success = await db.resetTracks();
+      return {
+        success,
+        message: success
+          ? 'Tracks reset successfully'
+          : 'Failed to reset tracks',
+      };
+    } catch (error: unknown) {
+      console.error('Error resetting tracks:', error);
+      return {
+        success: false,
+        message: `Failed to reset tracks: ${(error as Error).message || 'Unknown error'}`,
+      };
+    }
+  }) as IPCHandler<'library:resetTracks'>,
 };
 
 /**

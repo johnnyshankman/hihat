@@ -1332,3 +1332,30 @@ export function resetDatabase(): Promise<boolean> {
     }
   });
 }
+
+/**
+ * Reset just the tracks table by deleting all records
+ * @returns Promise<boolean> indicating success
+ */
+export function resetTracks(): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      console.log('Resetting tracks table...');
+
+      if (!db || useMockDb) {
+        console.error('Database not initialized');
+        resolve(false);
+        return;
+      }
+
+      // Delete all tracks from the database
+      db.exec('DELETE FROM tracks');
+      console.log('All tracks deleted from the database');
+
+      resolve(true);
+    } catch (error) {
+      console.error('Error resetting tracks table:', error);
+      resolve(false);
+    }
+  });
+}

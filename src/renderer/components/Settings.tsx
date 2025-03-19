@@ -24,10 +24,11 @@ import FolderIcon from '@mui/icons-material/Folder';
 import WarningIcon from '@mui/icons-material/Warning';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
-import { useSettingsStore, useUIStore, useLibraryStore } from '../stores';
+import { useSettingsStore, useUIStore } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
 import type { Channels } from '../../types/ipc';
+import useLibraryStore from '../stores/libraryStore';
 
 // Define the type for the dialog result
 interface DirectorySelectionResult {
@@ -51,13 +52,14 @@ export default function Settings({
     (state) => state.updateColumnVisibility,
   );
   const updateTheme = useSettingsStore((state) => state.updateTheme);
+  const libraryStore = useLibraryStore();
 
   // Get state and actions from UI store
   const setPreviewTheme = useUIStore((state) => state.setTheme);
 
   // Get actions from library store
-  const scanLibrary = useLibraryStore((state) => state.scanLibrary);
-  const isScanning = useLibraryStore((state) => state.isScanning);
+  const { scanLibrary } = libraryStore;
+  const { isScanning } = libraryStore;
 
   const [libraryPath, setLibraryPath] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -277,16 +279,32 @@ export default function Settings({
       const result = await window.electron.settings.update(updatedSettings);
 
       if (result) {
+        // Update the store and ensure our local state is in sync
+        originalPathRef.current = libraryPath;
+
         setSnackbarMessage('Library path saved successfully');
         setSnackbarOpen(true);
 
-        // Automatically start scanning the library
         try {
           // Reset scan state
           setScanProgress(0);
           setScanStatus('');
 
-          // Start the scan
+          // First, reset tracks in the database
+          const resetResult = await window.electron.library.resetTracks();
+          if (!resetResult.success) {
+            console.error('Failed to reset tracks:', resetResult.message);
+            setSnackbarMessage(
+              `Failed to reset tracks: ${resetResult.message}`,
+            );
+            setSnackbarOpen(true);
+            return;
+          }
+
+          // Reload the library to clear the tracks in the UI
+          await libraryStore.loadLibrary();
+
+          // Now start the scan with the new library path
           await scanLibrary(libraryPath);
         } catch (error) {
           console.error('Error scanning library:', error);
@@ -623,7 +641,7 @@ export default function Settings({
         cancelText="Cancel"
         confirmButtonColor="primary"
         confirmText="Save and Scan"
-        message="Updating your library folder will automatically start a scan to add new songs to your library. This may take some time depending on the size of your library. Do you want to continue?"
+        message="Changing your library folder will reset your current music library. All existing songs will be removed from your library before scanning the new location. This action cannot be undone and may take some time depending on the size of your new library. Do you want to continue?"
         onCancel={handleCancelPathChange}
         onConfirm={handleConfirmPathChange}
         open={pathDialogOpen}

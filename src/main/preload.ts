@@ -106,6 +106,13 @@ const electronHandler = {
     resetDatabase() {
       return ipcRenderer.invoke('library:resetDatabase');
     },
+
+    /**
+     * Reset only the tracks table, keeping playlists and settings intact
+     */
+    resetTracks() {
+      return ipcRenderer.invoke('library:resetTracks');
+    },
   },
 
   // File system operations
