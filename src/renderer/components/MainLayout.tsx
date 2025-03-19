@@ -102,8 +102,8 @@ export default function MainLayout() {
     (state) => state.selectedPlaylistId,
   );
   const selectPlaylist = useLibraryStore((state) => state.selectPlaylist);
-  const createPlaylist = useLibraryStore((state) => state.createPlaylist);
   const deletePlaylist = useLibraryStore((state) => state.deletePlaylist);
+  const createPlaylist = useLibraryStore((state) => state.createPlaylist);
   const [open, setOpen] = useState(true);
   const currentView = useUIStore((state) => state.currentView);
   const setCurrentView = useUIStore((state) => state.setCurrentView);

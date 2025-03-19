@@ -167,6 +167,10 @@ export async function updatePlayCount(trackId: string): Promise<void> {
         // Update the state in the LibraryStore
         useLibraryStore.setState({ tracks: updatedTracks });
 
+        // Refresh playlists to update smart playlists
+        // This will cause smart playlists to be refreshed with the new play count data
+        useLibraryStore.getState().loadPlaylists();
+
         // eslint-disable-next-line no-console
         console.log(
           `PlaybackTracker: Updated track in LibraryStore - new play count: ${updatedTracks[trackIndex].playCount}`,

@@ -226,7 +226,10 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     try {
       set({ isScanning: true });
       await window.electron.library.import(files);
+      // Load library first to update the tracks list
       await get().loadLibrary();
+      // Then load playlists to update smart playlists
+      await get().loadPlaylists();
       set({ isScanning: false });
       useUIStore
         .getState()
@@ -276,6 +279,8 @@ if (typeof window !== 'undefined') {
 
     // Reload the library to get the updated tracks
     useLibraryStore.getState().loadLibrary();
+    // Reload the playlists to update the smart playlists
+    useLibraryStore.getState().loadPlaylists();
   });
 
   // Initialize library on app start

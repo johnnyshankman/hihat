@@ -41,9 +41,11 @@ const mockDb = {
 
 /**
  * Send an event to the renderer process
+ * This function is currently not used but kept for potential future use.
  * @param event - Event name
  * @param data - Event data
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function sendEventToRenderer(event: string, data: any): void {
   try {
     const mainWindow = BrowserWindow.getAllWindows()[0];
@@ -745,6 +747,7 @@ export function addTrack(track: Omit<Track, 'id'>): Track {
     );
 
     console.log('Track added successfully:', newTrack.id);
+
     return newTrack;
   } catch (error) {
     console.error('Failed to add track:', error);
