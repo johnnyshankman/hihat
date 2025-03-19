@@ -75,6 +75,10 @@ export default function Settings({
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  // New state for path confirmation dialog
+  const [pathDialogOpen, setPathDialogOpen] = useState(false);
+  // Reference to store the original path for restoration if canceled
+  const originalPathRef = useRef('');
 
   // Scanning state
   const [scanProgress, setScanProgress] = useState(0);
@@ -90,6 +94,7 @@ export default function Settings({
   useEffect(() => {
     if (settings) {
       setLibraryPath(settings.libraryPath || '');
+      originalPathRef.current = settings.libraryPath || '';
       setTheme(settings.theme || 'light');
       if (settings.columns) {
         setColumnVisibility(settings.columns);
@@ -221,6 +226,7 @@ export default function Settings({
     }
   };
 
+  // Modified to show the confirmation dialog first
   const handleSaveLibraryPath = async () => {
     try {
       if (!settings) return;
@@ -241,6 +247,25 @@ export default function Settings({
         return;
       }
 
+      // Store the original path in case the user cancels
+      originalPathRef.current = settings.libraryPath || '';
+
+      // Open the confirmation dialog
+      setPathDialogOpen(true);
+    } catch (error) {
+      console.error('Error validating library path:', error);
+      setSnackbarMessage('Error validating library path');
+      setSnackbarOpen(true);
+    }
+  };
+
+  // New function to handle confirmation of library path change
+  const handleConfirmPathChange = async () => {
+    try {
+      setPathDialogOpen(false);
+
+      if (!settings) return;
+
       // Make sure we're using the correct ID
       const updatedSettings = {
         ...settings,
@@ -254,6 +279,23 @@ export default function Settings({
       if (result) {
         setSnackbarMessage('Library path saved successfully');
         setSnackbarOpen(true);
+
+        // Automatically start scanning the library
+        try {
+          // Reset scan state
+          setScanProgress(0);
+          setScanStatus('');
+
+          // Start the scan
+          await scanLibrary(libraryPath);
+        } catch (error) {
+          console.error('Error scanning library:', error);
+          setScanStatus('Failed');
+          setSnackbarMessage(
+            error instanceof Error ? error.message : 'Error scanning library',
+          );
+          setSnackbarOpen(true);
+        }
       } else {
         setSnackbarMessage('Failed to save library path');
         setSnackbarOpen(true);
@@ -263,6 +305,13 @@ export default function Settings({
       setSnackbarMessage('Error saving library path');
       setSnackbarOpen(true);
     }
+  };
+
+  // New function to handle cancellation of library path change
+  const handleCancelPathChange = () => {
+    setPathDialogOpen(false);
+    // Revert to the original path
+    setLibraryPath(originalPathRef.current);
   };
 
   const handleCloseSnackbar = () => {
@@ -339,7 +388,7 @@ export default function Settings({
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
             <TextField
-              helperText="Click 'Update Folder' after changing this field, then 'Scan Folder'"
+              helperText="Click 'Save' after changing this field"
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -361,7 +410,7 @@ export default function Settings({
               startIcon={<SaveIcon />}
               variant="contained"
             >
-              Update Folder
+              Save
             </Button>
             <Button
               color="primary"
@@ -569,6 +618,19 @@ export default function Settings({
         </Alert>
       </Snackbar>
 
+      {/* Library path confirmation dialog */}
+      <ConfirmationDialog
+        cancelText="Cancel"
+        confirmButtonColor="primary"
+        confirmText="Save and Scan"
+        message="Updating your library folder will automatically start a scan to add new songs to your library. This may take some time depending on the size of your library. Do you want to continue?"
+        onCancel={handleCancelPathChange}
+        onConfirm={handleConfirmPathChange}
+        open={pathDialogOpen}
+        title="Update Library Folder"
+      />
+
+      {/* Reset database confirmation dialog */}
       <ConfirmationDialog
         cancelText="Cancel"
         confirmButtonColor="error"

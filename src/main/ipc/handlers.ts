@@ -276,6 +276,18 @@ export const dialogHandlers = {
         return { error: (error as Error).message || 'Unknown error' };
       }
     }) as IPCHandler<'dialog:select-directory'>,
+
+  'dialog:select-files': (async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openFile', 'multiSelections'],
+      });
+      return result;
+    } catch (error: unknown) {
+      console.error('Error showing file selection dialog:', error);
+      return { error: (error as Error).message || 'Unknown error' };
+    }
+  }) as IPCHandler<'dialog:select-files'>,
 };
 
 /**

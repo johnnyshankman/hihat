@@ -32,7 +32,7 @@ const baseThemeOptions: ThemeOptions = {
     },
     body1: {
       fontSize: '16px',
-      fontWeight: 500,
+      fontWeight: 400,
     },
     body2: {
       fontSize: '13px',

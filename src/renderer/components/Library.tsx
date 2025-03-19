@@ -166,41 +166,41 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     }
   };
 
-  const handleAddMusic = async () => {
-    try {
-      // First, check if a library path is set
-      const localSettings = await window.electron.settings.get();
-      if (!localSettings || !localSettings.libraryPath) {
-        // No library path set, show the dialog to set one
-        window.alert('Please set a library path first before adding music.');
-        setDialogOpen(true);
-        return;
-      }
+  // const handleAddMusic = async () => {
+  //   try {
+  //     // First, check if a library path is set
+  //     const localSettings = await window.electron.settings.get();
+  //     if (!localSettings || !localSettings.libraryPath) {
+  //       // No library path set, show the dialog to set one
+  //       window.alert('Please set a library path first before adding music.');
+  //       setDialogOpen(true);
+  //       return;
+  //     }
 
-      // Open a file selection dialog to select music files
-      const result = await window.electron.dialog.selectFiles();
-      if (
-        result.canceled ||
-        !result.filePaths ||
-        result.filePaths.length === 0
-      ) {
-        return;
-      }
+  //     // Open a file selection dialog to select music files
+  //     const result = await window.electron.dialog.selectFiles();
+  //     if (
+  //       result.canceled ||
+  //       !result.filePaths ||
+  //       result.filePaths.length === 0
+  //     ) {
+  //       return;
+  //     }
 
-      // Import the selected files
-      try {
-        await window.electron.library.import(result.filePaths);
-        window.alert(
-          'Files have been added to import queue. Please go to Settings page to see the import progress.',
-        );
-      } catch (error) {
-        console.error('Error importing files:', error);
-        window.alert('Error importing files. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error adding music:', error);
-    }
-  };
+  //     // Import the selected files
+  //     try {
+  //       await window.electron.library.import(result.filePaths);
+  //       window.alert(
+  //         'Files have been added to import queue. Please go to Settings page to see the import progress.',
+  //       );
+  //     } catch (error) {
+  //       console.error('Error importing files:', error);
+  //       window.alert('Error importing files. Please try again.');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error adding music:', error);
+  //   }
+  // };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
@@ -389,19 +389,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '40px' }}>
       <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
       <Typography variant="h3">Library</Typography>
-      <Tooltip title="Add Music">
-        <IconButton
-          onClick={handleAddMusic}
-          size="small"
-          sx={{
-            height: '20px',
-            width: '22px',
-            minWidth: '20px',
-          }}
-        >
-          <AddIcon />
-        </IconButton>
-      </Tooltip>
     </Box>
   );
 
