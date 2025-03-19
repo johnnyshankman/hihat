@@ -133,11 +133,45 @@ export async function updatePlayCount(trackId: string): Promise<void> {
     console.log(
       `PlaybackTracker: 30-second threshold reached - updating play count for track ${trackId}`,
     );
+
     if (typeof window !== 'undefined' && window.electron) {
+      // Update the database via IPC
       await window.electron.tracks.updatePlayCount(
         trackId,
         new Date().toISOString(),
       );
+
+      // Now update the track in the LibraryStore to reflect the change in the UI
+      // Import the LibraryStore (dynamic import to avoid circular dependency)
+      const { default: useLibraryStore } = await import(
+        '../stores/libraryStore'
+      );
+
+      // Get the current tracks array
+      const { tracks } = useLibraryStore.getState();
+
+      // Find the track and create an updated version with incremented play count
+      const trackIndex = tracks.findIndex((track) => track.id === trackId);
+
+      if (trackIndex !== -1) {
+        const updatedTracks = [...tracks];
+        const track = updatedTracks[trackIndex];
+
+        // Create a new track object with incremented play count and updated lastPlayed
+        updatedTracks[trackIndex] = {
+          ...track,
+          playCount: (track.playCount || 0) + 1,
+          lastPlayed: new Date().toISOString(),
+        };
+
+        // Update the state in the LibraryStore
+        useLibraryStore.setState({ tracks: updatedTracks });
+
+        // eslint-disable-next-line no-console
+        console.log(
+          `PlaybackTracker: Updated track in LibraryStore - new play count: ${updatedTracks[trackIndex].playCount}`,
+        );
+      }
     }
   } catch (error) {
     console.error(`Failed to update play count for track ${trackId}:`, error);
