@@ -93,6 +93,9 @@ export default function Playlists({
   const currentTrack = usePlaybackStore((state) => state.currentTrack);
   const playbackSource = usePlaybackStore((state) => state.playbackSource);
   const playTrack = usePlaybackStore((state) => state.selectSpecificSong);
+  const playbackSourcePlaylistId = usePlaybackStore(
+    (state) => state.playbackSourcePlaylistId,
+  );
 
   const [sorting, setSorting] = useState<MrtSortingState>([
     {
@@ -147,8 +150,8 @@ export default function Playlists({
       updatePlaylistViewState(sorting, globalFilter, selectedPlaylistId);
     }
 
-    // Play the track with 'playlist' as the source
-    playTrack(trackId, 'playlist');
+    // Play the track with 'playlist' as the source and pass the selectedPlaylistId
+    playTrack(trackId, 'playlist', selectedPlaylistId);
   };
 
   // Context menu handlers
@@ -520,9 +523,10 @@ export default function Playlists({
         backgroundColor: (theme) => theme.palette.background.default,
         borderBottom: '1px solid',
         borderColor: (theme) => theme.palette.divider,
-        // Highlight the currently playing track if it's from the library
+        // Highlight the currently playing track if it's from THE CURRENT playlist
         ...(currentTrack?.id === row.original.id &&
-          playbackSource === 'playlist' && {
+          playbackSource === 'playlist' &&
+          playbackSourcePlaylistId === selectedPlaylistId && {
             backgroundColor: (theme) =>
               theme.palette.mode === 'dark'
                 ? theme.palette.grey[800]

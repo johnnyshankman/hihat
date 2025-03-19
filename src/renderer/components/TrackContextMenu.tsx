@@ -3,7 +3,7 @@ import { Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import InfoIcon from '@mui/icons-material/Info';
-import { usePlaybackStore, useUIStore } from '../stores';
+import { usePlaybackStore, useUIStore, useLibraryStore } from '../stores';
 
 interface TrackContextMenuProps {
   open: boolean;
@@ -27,6 +27,9 @@ export default function TrackContextMenu({
     (state) => state.selectSpecificSong,
   );
   const currentView = useUIStore((state) => state.currentView);
+  const selectedPlaylistId = useLibraryStore(
+    (state) => state.selectedPlaylistId,
+  );
 
   if (!trackId) return null;
 
@@ -35,7 +38,12 @@ export default function TrackContextMenu({
       throw new Error('Cannot play track in settings view');
     }
 
-    selectSpecificSong(trackId, currentView as 'library' | 'playlist');
+    if (currentView === 'playlists' && selectedPlaylistId) {
+      selectSpecificSong(trackId, 'playlist', selectedPlaylistId);
+    } else {
+      const source = currentView === 'library' ? 'library' : 'playlist';
+      selectSpecificSong(trackId, source);
+    }
     onClose();
   };
 

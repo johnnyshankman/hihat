@@ -56,6 +56,7 @@ export interface PlaybackStore {
   duration: number; // duration of the track
   volume: number; // volume of the global player
   playbackSource: 'library' | 'playlist'; // the source of the playback (library or playlist)
+  playbackSourcePlaylistId: string | null; // the ID of the specific playlist if playbackSource is 'playlist'
   repeatMode: 'off' | 'track' | 'all'; // off, track, all
   shuffleMode: boolean; // shuffle mode
   shuffleHistory: Track[]; // history of shuffled tracks
@@ -70,7 +71,11 @@ export interface PlaybackStore {
 
   // // Actions
   // // table actions
-  selectSpecificSong: (trackId: string, source: 'library' | 'playlist') => void;
+  selectSpecificSong: (
+    trackId: string,
+    source: 'library' | 'playlist',
+    playlistId?: string | null,
+  ) => void;
   // // player actions
   setPaused: (paused: boolean) => void;
   skipToNextTrack: () => void;

@@ -27,6 +27,7 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   duration: 0, // duration of the playing track in seconds
   volume: 1.0, // volume of the global player from 0-1
   playbackSource: 'library', // the source of the playback (library or playlist)
+  playbackSourcePlaylistId: null, // the ID of the specific playlist if playbackSource is 'playlist'
   repeatMode: 'off', // off, track, all
   shuffleMode: false, // shuffle mode
   shuffleHistory: [], // history of shuffled tracks
@@ -42,7 +43,7 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
     });
   },
 
-  selectSpecificSong: (trackId, playbackSource) => {
+  selectSpecificSong: (trackId, playbackSource, playlistId = null) => {
     return set((state) => {
       if (!state.player) {
         throw new Error('No player found while selecting specific song');
@@ -98,6 +99,8 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         duration: selectedTrack.duration,
         shuffleHistory,
         playbackSource,
+        playbackSourcePlaylistId:
+          playbackSource === 'playlist' ? playlistId : null,
       };
     });
   },
