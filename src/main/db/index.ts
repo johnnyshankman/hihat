@@ -215,7 +215,7 @@ function initDefaultPlaylists(): void {
               type: 'recentlyPlayed',
               limit: 50,
             },
-            trackIds: [],
+            trackIds: [], // Smart playlists should always have empty trackIds
           },
           {
             name: '50 Most Played Songs',
@@ -224,7 +224,7 @@ function initDefaultPlaylists(): void {
               type: 'mostPlayed',
               limit: 50,
             },
-            trackIds: [],
+            trackIds: [], // Smart playlists should always have empty trackIds
           },
           {
             name: '50 Recently Added Songs',
@@ -233,7 +233,7 @@ function initDefaultPlaylists(): void {
               type: 'recentlyAdded',
               limit: 50,
             },
-            trackIds: [],
+            trackIds: [], // Smart playlists should always have empty trackIds
           },
         ];
 
@@ -249,9 +249,7 @@ function initDefaultPlaylists(): void {
             playlist.name,
             playlist.isSmart ? 1 : 0,
             playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
-            playlist.trackIds.length > 0
-              ? JSON.stringify(playlist.trackIds)
-              : '[]',
+            JSON.stringify([]), // Explicitly use empty array for smart playlists
           );
         });
       }
@@ -273,7 +271,7 @@ function initDefaultPlaylists(): void {
             type: 'recentlyPlayed',
             limit: 50,
           },
-          trackIds: [],
+          trackIds: [], // Smart playlists should always have empty trackIds
         },
         {
           name: '50 Most Played Songs',
@@ -282,7 +280,7 @@ function initDefaultPlaylists(): void {
             type: 'mostPlayed',
             limit: 50,
           },
-          trackIds: [],
+          trackIds: [], // Smart playlists should always have empty trackIds
         },
         {
           name: '50 Recently Added Songs',
@@ -291,7 +289,7 @@ function initDefaultPlaylists(): void {
             type: 'recentlyAdded',
             limit: 50,
           },
-          trackIds: [],
+          trackIds: [], // Smart playlists should always have empty trackIds
         },
       ];
 
@@ -307,9 +305,7 @@ function initDefaultPlaylists(): void {
           playlist.name,
           playlist.isSmart ? 1 : 0,
           playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
-          playlist.trackIds.length > 0
-            ? JSON.stringify(playlist.trackIds)
-            : '[]',
+          JSON.stringify([]), // Explicitly use empty array for smart playlists
         );
       });
     }
@@ -852,14 +848,36 @@ export function getAllPlaylists(): Playlist[] {
     }
     const playlists = db.prepare('SELECT * FROM playlists').all();
 
-    return playlists.map((playlist: any) => ({
-      ...playlist,
-      isSmart: Boolean(playlist.isSmart),
-      ruleSet: playlist.ruleSet ? JSON.parse(playlist.ruleSet as string) : null,
-      trackIds: playlist.trackIds
-        ? JSON.parse(playlist.trackIds as string)
-        : [],
-    }));
+    return playlists.map((playlist: any) => {
+      const parsedPlaylist = {
+        ...playlist,
+        isSmart: Boolean(playlist.isSmart),
+        ruleSet: playlist.ruleSet
+          ? JSON.parse(playlist.ruleSet as string)
+          : null,
+        trackIds: playlist.trackIds
+          ? JSON.parse(playlist.trackIds as string)
+          : [],
+      };
+
+      // For smart playlists, dynamically populate the trackIds
+      if (parsedPlaylist.isSmart && parsedPlaylist.ruleSet) {
+        try {
+          // Get the tracks for this smart playlist based on its rule
+          const smartTracks = getSmartPlaylistTracks(parsedPlaylist.ruleSet);
+          // Update the trackIds with the IDs from the smart tracks
+          parsedPlaylist.trackIds = smartTracks.map((track) => track.id);
+        } catch (smartError) {
+          console.error(
+            `Failed to get smart playlist tracks for ${parsedPlaylist.name}:`,
+            smartError,
+          );
+          // Keep the empty trackIds array in case of error
+        }
+      }
+
+      return parsedPlaylist;
+    });
   } catch (error) {
     console.error('Failed to get playlists:', error);
     return [];
@@ -881,7 +899,7 @@ export function getPlaylistById(id: string): Playlist | null {
       return null;
     }
 
-    return {
+    const parsedPlaylist = {
       id: playlist.id,
       name: playlist.name,
       isSmart: Boolean(playlist.isSmart),
@@ -892,6 +910,24 @@ export function getPlaylistById(id: string): Playlist | null {
         ? (JSON.parse(playlist.trackIds as string) as string[])
         : [],
     };
+
+    // For smart playlists, dynamically populate the trackIds
+    if (parsedPlaylist.isSmart && parsedPlaylist.ruleSet) {
+      try {
+        // Get the tracks for this smart playlist based on its rule
+        const smartTracks = getSmartPlaylistTracks(parsedPlaylist.ruleSet);
+        // Update the trackIds with the IDs from the smart tracks
+        parsedPlaylist.trackIds = smartTracks.map((track) => track.id);
+      } catch (smartError) {
+        console.error(
+          `Failed to get smart playlist tracks for ${parsedPlaylist.name}:`,
+          smartError,
+        );
+        // Keep the empty trackIds array in case of error
+      }
+    }
+
+    return parsedPlaylist;
   } catch (error) {
     console.error(`Failed to get playlist with ID ${id}:`, error);
     throw error;
@@ -911,6 +947,9 @@ export function createPlaylist(playlist: Omit<Playlist, 'id'>): Playlist {
       ...playlist,
     };
 
+    // For smart playlists, we shouldn't store track IDs as they're dynamically generated
+    const trackIdsToStore = newPlaylist.isSmart ? [] : newPlaylist.trackIds;
+
     db.prepare(
       `
       INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
@@ -921,7 +960,7 @@ export function createPlaylist(playlist: Omit<Playlist, 'id'>): Playlist {
       newPlaylist.name,
       newPlaylist.isSmart ? 1 : 0,
       newPlaylist.ruleSet ? JSON.stringify(newPlaylist.ruleSet) : null,
-      JSON.stringify(newPlaylist.trackIds),
+      JSON.stringify(trackIdsToStore),
     );
 
     return newPlaylist;
@@ -938,6 +977,9 @@ export function createPlaylist(playlist: Omit<Playlist, 'id'>): Playlist {
  */
 export function updatePlaylist(playlist: Playlist): boolean {
   try {
+    // For smart playlists, we shouldn't store track IDs as they're dynamically generated
+    const trackIdsToStore = playlist.isSmart ? [] : playlist.trackIds;
+
     const result = db
       .prepare(
         `
@@ -954,7 +996,7 @@ export function updatePlaylist(playlist: Playlist): boolean {
         playlist.name,
         playlist.isSmart ? 1 : 0,
         playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
-        JSON.stringify(playlist.trackIds),
+        JSON.stringify(trackIdsToStore),
         playlist.id,
       );
 
@@ -1148,6 +1190,11 @@ export function restoreDatabase(restorePath: string): boolean {
  */
 export function getSmartPlaylistTracks(rule: PlaylistRule): Track[] {
   try {
+    // Return empty array for mock database
+    if (useMockDb) {
+      return [];
+    }
+
     let query = '';
 
     switch (rule.type) {
