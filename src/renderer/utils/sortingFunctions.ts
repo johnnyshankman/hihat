@@ -13,6 +13,7 @@ interface TrackWithOptionalFields {
   duration?: number;
   playCount?: number;
   dateAdded?: string;
+  lastPlayed?: string;
   albumArtist?: string;
   trackNumber?: number | null;
 }
@@ -170,6 +171,22 @@ export function sortByDateAdded(
 }
 
 /**
+ * Sort tracks by last played date
+ */
+export function sortByLastPlayed(
+  trackA: TrackWithOptionalFields,
+  trackB: TrackWithOptionalFields,
+  isDescending: boolean,
+): number {
+  const dateA = trackA.lastPlayed ? new Date(trackA.lastPlayed).getTime() : 0;
+  const dateB = trackB.lastPlayed ? new Date(trackB.lastPlayed).getTime() : 0;
+
+  if (dateA < dateB) return isDescending ? 1 : -1;
+  if (dateA > dateB) return isDescending ? -1 : 1;
+  return 0;
+}
+
+/**
  * Get the appropriate sorting function based on the field
  */
 export function getSortingFunction(
@@ -194,6 +211,8 @@ export function getSortingFunction(
       return sortByPlayCount;
     case 'dateAdded':
       return sortByDateAdded;
+    case 'lastPlayed':
+      return sortByLastPlayed;
     default:
       return sortByTitle;
   }

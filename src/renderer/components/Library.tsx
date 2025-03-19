@@ -13,8 +13,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Tooltip,
-  IconButton,
 } from '@mui/material';
 import {
   MaterialReactTable,
@@ -25,7 +23,6 @@ import {
   type MRT_RowVirtualizer as MrtRowVirtualizer,
 } from 'material-react-table';
 import { Updater } from '@tanstack/react-table';
-import AddIcon from '@mui/icons-material/Add';
 import { useLibraryStore, usePlaybackStore, useSettingsStore } from '../stores';
 import TrackContextMenu from './TrackContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
@@ -39,6 +36,7 @@ import {
   sortByDuration,
   sortByPlayCount,
   sortByDateAdded,
+  sortByLastPlayed,
 } from '../utils/sortingFunctions';
 
 // Custom formatter for duration in seconds
@@ -68,6 +66,7 @@ interface TableData {
   duration: number;
   playCount: number;
   dateAdded?: string;
+  lastPlayed?: string;
   albumArtist: string;
   trackNumber: number | null;
 }
@@ -294,6 +293,22 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         },
       },
       {
+        accessorKey: 'lastPlayed',
+        header: 'Last Played',
+        size: 120,
+        Cell: ({ cell }) => {
+          const date = cell.getValue<string>();
+          return date ? new Date(date).toLocaleDateString() : 'Never';
+        },
+        sortingFn: (rowA, rowB, _columnId) => {
+          const columnSorting = sorting.find(
+            (sort) => sort.id === 'lastPlayed',
+          );
+          const isDescending = columnSorting ? columnSorting.desc : false;
+          return sortByLastPlayed(rowA.original, rowB.original, isDescending);
+        },
+      },
+      {
         accessorKey: 'dateAdded',
         header: 'Date Added',
         size: 120,
@@ -332,8 +347,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         duration = Number(track.duration);
       }
 
-      console.log(track.playCount);
-
       return {
         id: track.id || '',
         title: track.title || 'Unknown Title',
@@ -344,6 +357,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         duration,
         playCount: typeof track.playCount === 'number' ? track.playCount : 0,
         dateAdded: track.dateAdded,
+        lastPlayed: track.lastPlayed || undefined,
         albumArtist: track.albumArtist || 'Unknown Album Artist',
         trackNumber: track.trackNumber || null,
       };
@@ -583,10 +597,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     initialState: {
       density: 'compact',
       columnVisibility: {
-        // Hide less important columns on smaller screens
-        genre: window.innerWidth > 1200,
-        playCount: window.innerWidth > 1000,
-        dateAdded: window.innerWidth > 1400,
         trackNumber: false, // Always hide track number column
       },
     },

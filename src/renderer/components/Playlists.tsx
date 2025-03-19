@@ -28,6 +28,7 @@ import {
   sortByDuration,
   sortByPlayCount,
   sortByDateAdded,
+  sortByLastPlayed,
 } from '../utils/sortingFunctions';
 
 // Custom formatter for duration in seconds
@@ -57,6 +58,7 @@ interface TableData {
   duration: number;
   playCount: number;
   dateAdded?: string;
+  lastPlayed?: string;
   albumArtist: string;
   trackNumber: number | null;
 }
@@ -313,6 +315,22 @@ export default function Playlists({
         },
       },
       {
+        accessorKey: 'lastPlayed',
+        header: 'Last Played',
+        size: 120,
+        Cell: ({ cell }) => {
+          const date = cell.getValue<string>();
+          return date ? new Date(date).toLocaleDateString() : 'Never';
+        },
+        sortingFn: (rowA, rowB, _columnId) => {
+          const columnSorting = sorting.find(
+            (sort) => sort.id === 'lastPlayed',
+          );
+          const isDescending = columnSorting ? columnSorting.desc : false;
+          return sortByLastPlayed(rowA.original, rowB.original, isDescending);
+        },
+      },
+      {
         accessorKey: 'dateAdded',
         header: 'Date Added',
         size: 120,
@@ -352,6 +370,7 @@ export default function Playlists({
         duration,
         playCount: typeof track.playCount === 'number' ? track.playCount : 0,
         dateAdded: track.dateAdded,
+        lastPlayed: track.lastPlayed || undefined,
         albumArtist: track.albumArtist || 'Unknown Album Artist',
         trackNumber: track.trackNumber || null,
       };
@@ -524,10 +543,7 @@ export default function Playlists({
     initialState: {
       density: 'compact',
       columnVisibility: {
-        // Hide less important columns on smaller screens
-        genre: window.innerWidth > 1200,
-        playCount: window.innerWidth > 1000,
-        dateAdded: window.innerWidth > 1400,
+        trackNumber: false, // Always hide track number column
       },
     },
     renderEmptyRowsFallback: () => (
