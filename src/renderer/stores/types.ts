@@ -63,7 +63,10 @@ export interface PlaybackStore {
   // Internal state (not exposed in the context API)
   player: Gapless5 | null;
   lastPositionUpdateRef: number;
-  initPlayer: () => void;
+  // New properties for play count tracking
+  lastPlaybackTimeUpdateRef: number; // timestamp of last update for playback time tracking
+  lastPosition: number; // last position for calculating actual playback time
+  initPlayer: () => void; // initialize the player instance
 
   // // Actions
   // // table actions

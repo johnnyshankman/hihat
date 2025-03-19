@@ -174,10 +174,17 @@ export const updateMediaSession = (track: Track) => {
 
 export const findPreviousSong = (
   currentTrackId: string,
+  shuffleMode: boolean,
   playbackSource: 'library' | 'playlist',
   repeatMode: 'off' | 'track' | 'all',
+  shuffleHistory: Track[] = [],
 ): Track | undefined => {
   if (!currentTrackId) return undefined;
+
+  // If in shuffle mode and we have history, return the last track from history
+  if (shuffleMode && shuffleHistory.length > 0) {
+    return shuffleHistory[shuffleHistory.length - 1];
+  }
 
   // Get library state for tracks
   const libraryState = useLibraryStore.getState();

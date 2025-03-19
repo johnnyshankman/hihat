@@ -10,12 +10,15 @@ import {
   getTrackUrl,
   updateMediaSession,
 } from '../utils/trackSelectionUtils';
+import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
 
 // Create the playback store
 const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   // Internal state (not exposed in the context API)
   player: null, // the gapless 5 player instance
   lastPositionUpdateRef: 0, // helps us throttle position updates to once per second
+  lastPlaybackTimeUpdateRef: 0, // helps us track actual playback time for play count
+  lastPosition: 0, // track the last position to calculate playback time
 
   // State
   currentTrack: null, // the current track playing
@@ -83,10 +86,15 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
       updateMediaSession(selectedTrack);
 
+      // Start tracking play count for the new track
+      playbackTracker.startTrackingTrack(trackId);
+
       return {
         currentTrack: selectedTrack,
         paused: false,
         position: 0,
+        lastPosition: 0,
+        lastPlaybackTimeUpdateRef: Date.now(),
         duration: selectedTrack.duration,
         shuffleHistory,
         playbackSource,
@@ -105,10 +113,18 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
       }
 
       if (state.repeatMode === 'track') {
+        // For repeat track mode, start from the beginning
         state.player.setPosition(0);
+
+        // When restarting the same track, reset our tracking for it
+        if (state.currentTrack) {
+          playbackTracker.resetTrack(state.currentTrack.id);
+        }
+
         return {
           position: 0,
-          hasIncreasedPlayCount: false,
+          lastPosition: 0,
+          lastPlaybackTimeUpdateRef: Date.now(),
         };
       }
 
@@ -165,129 +181,125 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
       updateMediaSession(nextSong);
 
+      // Start tracking play count for the new track
+      playbackTracker.startTrackingTrack(nextSong.id);
+
       return {
         currentTrack: nextSong,
         position: 0,
+        lastPosition: 0,
+        lastPlaybackTimeUpdateRef: Date.now(),
         duration: nextSong.duration,
         shuffleHistory,
-        paused: false,
       };
     });
   },
 
-  skipToPreviousTrack: async () => {
+  skipToPreviousTrack: () => {
     return set((state) => {
       if (!state.player) {
         throw new Error('No player found while skipping to previous song');
       }
 
-      if (!state.currentTrack) {
-        throw new Error(
-          'No current track found while skipping to previous song',
+      // If we're less than 3 seconds into the song, go to previous track
+      // Otherwise, restart the current track
+      if (state.position <= 3) {
+        if (!state.currentTrack) {
+          throw new Error(
+            'No current track found while skipping to previous song',
+          );
+        }
+
+        // Find the previous song
+        const previousSong = findPreviousSong(
+          state.currentTrack.id,
+          state.shuffleMode,
+          state.playbackSource,
+          state.repeatMode,
+          state.shuffleHistory,
         );
-      }
 
-      // repeating case, start the song over and over and over
-      if (state.repeatMode === 'track') {
-        state.player.setPosition(0);
+        if (!previousSong) {
+          // If no previous song, restart the current one
+          state.player.setPosition(0);
+          // Reset tracking for current track
+          if (state.currentTrack) {
+            playbackTracker.resetTrack(state.currentTrack.id);
+          }
+
+          return {
+            position: 0,
+            lastPosition: 0,
+            lastPlaybackTimeUpdateRef: Date.now(),
+          };
+        }
+
+        // We found a previous song, so play it
+        // Calculate the song to play after this one (which is the current track)
+        const futureNextSong = state.currentTrack;
+
+        // First pause current playback
+        state.player.pause();
+        state.player.removeAllTracks();
+
+        // Add the previous song and the current song (as the next track)
+        state.player.addTrack(getTrackUrl(previousSong.filePath));
+        state.player.addTrack(getTrackUrl(futureNextSong.filePath));
+
+        if (!state.paused) {
+          state.player.play();
+          const audioElement = document.querySelector('audio');
+          if (audioElement) {
+            audioElement.play();
+          }
+        }
+
+        updateMediaSession(previousSong);
+
+        // Start tracking play count for the previous track
+        playbackTracker.startTrackingTrack(previousSong.id);
+
         return {
+          currentTrack: previousSong,
           position: 0,
+          lastPosition: 0,
+          lastPlaybackTimeUpdateRef: Date.now(),
+          duration: previousSong.duration,
+          // Remove this track from shuffle history if it's there
+          shuffleHistory: state.shuffleHistory.filter(
+            (t) => t.id !== previousSong.id,
+          ),
         };
       }
+      // Restart the current track
+      state.player.setPosition(0);
 
-      /**
-       * @note if the song is past the 3 second mark, restart it.
-       * this emulates the behavior of most music players / cd players
-       */
-      if (state.position > 3) {
-        state.player.setPosition(0);
-
-        return {
-          position: 0,
-          hasIncreasedPlayCount: false,
-        };
+      // Reset tracking for current track
+      if (state.currentTrack) {
+        playbackTracker.resetTrack(state.currentTrack.id);
       }
 
-      // shuffle case
-      if (state.shuffleMode && state.shuffleHistory.length > 0) {
-        const previousSong =
-          state.shuffleHistory[state.shuffleHistory.length - 1];
-        state.selectSpecificSong(previousSong.id, state.playbackSource);
-
-        return {
-          shuffleHistory: state.shuffleHistory.slice(0, -1),
-          hasIncreasedPlayCount: false,
-        };
-      }
-
-      // find the previous song in the library
-      const prevSong = findPreviousSong(
-        state.currentTrack?.id,
-        state.playbackSource,
-        state.repeatMode,
-      );
-
-      if (!prevSong) {
-        return {};
-      }
-
-      state.selectSpecificSong(prevSong.id, state.playbackSource);
-      // @note: selectSpecificSong does all the heavy lifting for us
-      // so we don't need to return anything here
-      return {};
-    });
-  },
-
-  toggleShuffleMode: () => {
-    return set((state) => {
-      if (!state.currentTrack) {
-        throw new Error('No current track found while toggling shuffle mode');
-      }
-      if (!state.playbackSource) {
-        throw new Error('No playback source found while toggling shuffle mode');
-      }
-      if (!state.player) {
-        throw new Error('No player found while toggling shuffle mode');
-      }
-
-      const newShuffleMode = !state.shuffleMode;
-
-      const nextSong = findNextSong(
-        state.currentTrack?.id,
-        newShuffleMode,
-        state.playbackSource,
-        state.repeatMode,
-      );
-
-      // Get the current track index
-      const currentIndex = state.player.getIndex();
-
-      if (!nextSong) {
-        throw new Error('No next song found while toggling shuffle mode');
-      }
-
-      // Replace the last track with the new next song
-      state.player.replaceTrack(
-        currentIndex + 1,
-        getTrackUrl(nextSong.filePath),
-      );
-
-      // cleare the shuffle history
-      return { shuffleMode: newShuffleMode, shuffleHistory: [] };
+      return {
+        position: 0,
+        lastPosition: 0,
+        lastPlaybackTimeUpdateRef: Date.now(),
+      };
     });
   },
 
   toggleRepeatMode: () => {
     return set((state) => {
-      // cycle between off, track, all
-      const newRepeatMode =
-        // eslint-disable-next-line no-nested-ternary
-        state.repeatMode === 'off'
-          ? 'track'
-          : state.repeatMode === 'track'
-            ? 'all'
-            : 'off';
-      return { repeatMode: newRepeatMode };
+      // Cycle through repeat modes: off -> track -> all -> off
+      const modes: ('off' | 'track' | 'all')[] = ['off', 'track', 'all'];
+      const currentIndex = modes.indexOf(state.repeatMode);
+      const nextIndex = (currentIndex + 1) % modes.length;
+      return { repeatMode: modes[nextIndex] };
+    });
+  },
+
+  toggleShuffleMode: () => {
+    return set((state) => {
+      return { shuffleMode: !state.shuffleMode, shuffleHistory: [] };
     });
   },
 
@@ -295,6 +307,26 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
     return set((state) => {
       if (!state.player) {
         throw new Error('No player found while setting paused');
+      }
+
+      // If we're pausing, update play count tracking first
+      if (paused && !state.paused && state.currentTrack) {
+        const now = Date.now();
+        const lastUpdate = state.lastPlaybackTimeUpdateRef;
+        const secondsPlayed = Math.floor((now - lastUpdate) / 1000);
+
+        if (secondsPlayed > 0) {
+          // Update tracking with the actual playback time since last update
+          const shouldCountPlay = playbackTracker.updateListenTime(
+            state.currentTrack.id,
+            secondsPlayed,
+          );
+
+          // If we crossed the 30-second threshold, update the play count
+          if (shouldCountPlay) {
+            updatePlayCount(state.currentTrack.id);
+          }
+        }
       }
 
       if (paused) {
@@ -309,6 +341,13 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         if (audioElement) {
           audioElement.play();
         }
+
+        // Reset the playback time tracker when resuming
+        return {
+          paused,
+          lastPlaybackTimeUpdateRef: Date.now(),
+          lastPosition: state.position,
+        };
       }
       return { paused };
     });
@@ -333,14 +372,48 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
       // Set up event handlers
       player.onfinishedtrack = () => {
+        // Track is finished naturally - update play count tracking
+        const currentState = get();
+        if (
+          currentState.currentTrack &&
+          !playbackTracker.isCurrentTrackCounted()
+        ) {
+          updatePlayCount(currentState.currentTrack.id);
+        }
+
         get().autoPlayNextTrack();
       };
 
       player.onplay = () => {
-        set({ paused: false });
+        set({
+          paused: false,
+          lastPlaybackTimeUpdateRef: Date.now(),
+          lastPosition: get().position,
+        });
       };
 
       player.onpause = () => {
+        // When pausing, update playback tracking
+        const currentState = get();
+        if (!currentState.paused && currentState.currentTrack) {
+          const now = Date.now();
+          const lastUpdate = currentState.lastPlaybackTimeUpdateRef;
+          const secondsPlayed = Math.floor((now - lastUpdate) / 1000);
+
+          if (secondsPlayed > 0) {
+            // Update tracking with the actual playback time
+            const shouldCountPlay = playbackTracker.updateListenTime(
+              currentState.currentTrack.id,
+              secondsPlayed,
+            );
+
+            // If we crossed the 30-second threshold, update the play count
+            if (shouldCountPlay) {
+              updatePlayCount(currentState.currentTrack.id);
+            }
+          }
+        }
+
         set({ paused: true });
       };
 
@@ -348,12 +421,48 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         // Throttle position updates to once per second
         const now = Date.now();
         const lastUpdate = get().lastPositionUpdateRef;
+        const currentPosition = Math.floor(time / 1000);
+
         if (now - lastUpdate >= 1000) {
+          // Update position
           set({
             lastPositionUpdateRef: now,
             // Convert from milliseconds to seconds
-            position: Math.floor(time / 1000),
+            position: currentPosition,
           });
+
+          // Handle tracking actual playback time for play count
+          const currentState = get();
+          if (!currentState.paused && currentState.currentTrack) {
+            const lastPlaybackUpdate = currentState.lastPlaybackTimeUpdateRef;
+            const { lastPosition } = currentState;
+
+            // Check if at least a second has passed since the last update
+            if (now - lastPlaybackUpdate >= 1000) {
+              // Calculate actual time played - handle seeking by checking position changes
+              // Only count if position has actually increased (real playback, not seeking)
+              if (currentPosition > lastPosition) {
+                const secondsPlayed = currentPosition - lastPosition;
+
+                // Update tracking with the actual playback time
+                const shouldCountPlay = playbackTracker.updateListenTime(
+                  currentState.currentTrack.id,
+                  secondsPlayed,
+                );
+
+                // If we crossed the 30-second threshold, update the play count
+                if (shouldCountPlay) {
+                  updatePlayCount(currentState.currentTrack.id);
+                }
+              }
+
+              // Update our tracking state
+              set({
+                lastPlaybackTimeUpdateRef: now,
+                lastPosition: currentPosition,
+              });
+            }
+          }
         }
       };
 
@@ -368,8 +477,35 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         throw new Error('No player found while seeking to position');
       }
 
+      // Before seeking, update play count tracking with time played so far
+      if (!state.paused && state.currentTrack) {
+        const now = Date.now();
+        const lastUpdate = state.lastPlaybackTimeUpdateRef;
+        const secondsPlayed = Math.floor((now - lastUpdate) / 1000);
+
+        if (secondsPlayed > 0) {
+          // Only count if position has actually increased (real playback, not seeking)
+          if (state.position > state.lastPosition) {
+            // Update tracking with the actual playback time
+            const shouldCountPlay = playbackTracker.updateListenTime(
+              state.currentTrack.id,
+              secondsPlayed,
+            );
+
+            // If we crossed the 30-second threshold, update the play count
+            if (shouldCountPlay) {
+              updatePlayCount(state.currentTrack.id);
+            }
+          }
+        }
+      }
+
       state.player.setPosition(position * 1000);
-      return { position };
+      return {
+        position,
+        lastPosition: position,
+        lastPlaybackTimeUpdateRef: Date.now(),
+      };
     });
   },
 
@@ -393,8 +529,16 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         if (audioElement) {
           audioElement.play();
         }
+
+        // For repeat track mode, reset tracking for the current track
+        if (state.currentTrack) {
+          playbackTracker.resetTrack(state.currentTrack.id);
+        }
+
         return {
           position: 0,
+          lastPosition: 0,
+          lastPlaybackTimeUpdateRef: Date.now(),
         };
       }
 
@@ -445,10 +589,16 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
       // Update media session
       updateMediaSession(currentTrackThatIsAudiblyPlaying);
 
+      // Start tracking play count for the new track
+      playbackTracker.startTrackingTrack(currentTrackThatIsAudiblyPlaying.id);
+
       return {
         currentTrack: currentTrackThatIsAudiblyPlaying,
         duration: currentTrackThatIsAudiblyPlaying.duration,
         paused: false,
+        position: 0,
+        lastPosition: 0,
+        lastPlaybackTimeUpdateRef: Date.now(),
         shuffleHistory,
       };
     });

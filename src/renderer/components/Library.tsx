@@ -332,6 +332,8 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         duration = Number(track.duration);
       }
 
+      console.log(track.playCount);
+
       return {
         id: track.id || '',
         title: track.title || 'Unknown Title',
