@@ -372,14 +372,10 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
       // Set up event handlers
       player.onfinishedtrack = () => {
-        // Track is finished naturally - update play count tracking
-        const currentState = get();
-        if (
-          currentState.currentTrack &&
-          !playbackTracker.isCurrentTrackCounted()
-        ) {
-          updatePlayCount(currentState.currentTrack.id);
-        }
+        // Track is finished naturally
+        // NOTE: We should NOT unconditionally update play count here
+        // We only count plays when the 30-second threshold is met
+        // Which is handled by the playbackTracker's updateListenTime method
 
         get().autoPlayNextTrack();
       };
@@ -592,13 +588,18 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
       // Start tracking play count for the new track
       playbackTracker.startTrackingTrack(currentTrackThatIsAudiblyPlaying.id);
 
+      // We need to create a small delay between track changes to avoid the 2-second offset issue
+      // The player is already playing the next track at this point
+      // This ensures we start tracking from the proper position
+      const timeUpdateDelay = Date.now() - 1000; // Small delay of 100ms
+
       return {
         currentTrack: currentTrackThatIsAudiblyPlaying,
         duration: currentTrackThatIsAudiblyPlaying.duration,
         paused: false,
         position: 0,
         lastPosition: 0,
-        lastPlaybackTimeUpdateRef: Date.now(),
+        lastPlaybackTimeUpdateRef: timeUpdateDelay,
         shuffleHistory,
       };
     });
