@@ -117,6 +117,7 @@ export default function MainLayout() {
     mouseX: number;
     mouseY: number;
     playlistId: string;
+    isSmart?: boolean;
   } | null>(null);
 
   // Check if window is maximized
@@ -155,10 +156,15 @@ export default function MainLayout() {
   ) => {
     event.preventDefault();
     event.stopPropagation();
+
+    // Find the playlist to check if it's a smart playlist
+    const playlist = playlists.find((p) => p.id === playlistId);
+
     setContextMenu({
       mouseX: event.clientX,
       mouseY: event.clientY,
       playlistId,
+      isSmart: playlist?.isSmart || false, // Store whether this is a smart playlist
     });
   };
 
@@ -168,6 +174,15 @@ export default function MainLayout() {
 
   const handleDeletePlaylist = async () => {
     if (contextMenu) {
+      // Don't allow deletion of smart playlists
+      if (contextMenu.isSmart) {
+        useUIStore
+          .getState()
+          .showNotification('Smart playlists cannot be deleted', 'warning');
+        setContextMenu(null);
+        return;
+      }
+
       await deletePlaylist(contextMenu.playlistId);
       if (selectedPlaylistId === contextMenu.playlistId) {
         selectPlaylist(null);
@@ -569,12 +584,15 @@ export default function MainLayout() {
         onClose={handleContextMenuClose}
         open={contextMenu !== null}
       >
-        <MenuItem onClick={handleDeletePlaylist}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Delete Playlist</ListItemText>
-        </MenuItem>
+        {/* Only show delete option for non-smart playlists */}
+        {contextMenu && !contextMenu.isSmart && (
+          <MenuItem onClick={handleDeletePlaylist}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Delete Playlist</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
       {/* Create Playlist Dialog */}

@@ -135,6 +135,14 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
       const { playlists } = get();
       const deletedPlaylist = playlists.find((p) => p.id === playlistId);
 
+      // Prevent deletion of smart playlists
+      if (deletedPlaylist?.isSmart) {
+        useUIStore
+          .getState()
+          .showNotification('Smart playlists cannot be deleted', 'warning');
+        return;
+      }
+
       await window.electron.playlists.delete(playlistId);
 
       set((state) => ({

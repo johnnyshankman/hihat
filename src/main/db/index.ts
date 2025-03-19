@@ -1017,6 +1017,15 @@ export function updatePlaylist(playlist: Playlist): boolean {
  */
 export function deletePlaylist(id: string): boolean {
   try {
+    // First check if this is a smart playlist
+    const playlist = getPlaylistById(id);
+
+    // Don't allow deletion of smart playlists
+    if (playlist?.isSmart) {
+      // Deletion of smart playlist with ID ${id} was prevented
+      return false;
+    }
+
     const result = db.prepare('DELETE FROM playlists WHERE id = ?').run(id);
     return result.changes > 0;
   } catch (error) {
