@@ -86,7 +86,7 @@ export default function Playlists({
   // Get state from settings store
   const settings = useSettingsStore((state) => state.settings);
   const updateColumnVisibility = useSettingsStore(
-    (state) => state.updateColumnVisibility,
+    (state) => state.setColumnVisibility,
   );
 
   // Get state and actions from playback store

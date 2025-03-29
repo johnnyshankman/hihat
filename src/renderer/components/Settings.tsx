@@ -46,38 +46,25 @@ export default function Settings({
   drawerOpen,
   onDrawerToggle,
 }: SettingsProps) {
-  // Get state and actions from settings store
-  const settings = useSettingsStore((state) => state.settings);
+  // settings store stuff
+  const libraryPath = useSettingsStore((state) => state.libraryPath);
+  const theme = useSettingsStore((state) => state.theme);
+  const columns = useSettingsStore((state) => state.columns);
   const updateColumnVisibility = useSettingsStore(
-    (state) => state.updateColumnVisibility,
+    (state) => state.setColumnVisibility,
   );
-  const updateTheme = useSettingsStore((state) => state.updateTheme);
-  const libraryStore = useLibraryStore();
-
-  // Get state and actions from UI store
+  const loadLibrary = useLibraryStore((state) => state.loadLibrary);
+  const setLibraryPath = useSettingsStore((state) => state.setLibraryPath);
+  const updateTheme = useSettingsStore((state) => state.setTheme);
+  // library store stuff
+  const scanLibrary = useLibraryStore((state) => state.scanLibrary);
+  const isScanning = useLibraryStore((state) => state.isScanning);
+  // ui store stuff
   const setPreviewTheme = useUIStore((state) => state.setTheme);
 
-  // Get actions from library store
-  const { scanLibrary } = libraryStore;
-  const { isScanning } = libraryStore;
-
-  const [libraryPath, setLibraryPath] = useState('');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [columnVisibility, setColumnVisibility] = useState({
-    title: true,
-    artist: true,
-    album: true,
-    albumArtist: false,
-    genre: true,
-    duration: true,
-    playCount: true,
-    dateAdded: true,
-    lastPlayed: false,
-  });
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  // New state for path confirmation dialog
   const [pathDialogOpen, setPathDialogOpen] = useState(false);
   // Reference to store the original path for restoration if canceled
   const originalPathRef = useRef('');
@@ -88,27 +75,6 @@ export default function Settings({
 
   // Add a ref to track the last time we updated the UI for scan progress
   const lastUpdateTime = useRef(0);
-
-  // Reference to track if settings have been loaded
-  const settingsLoaded = useRef(false);
-
-  // Load settings when component mounts
-  useEffect(() => {
-    if (settings) {
-      setLibraryPath(settings.libraryPath || '');
-      originalPathRef.current = settings.libraryPath || '';
-      setTheme(settings.theme || 'light');
-      if (settings.columns) {
-        setColumnVisibility(settings.columns);
-      }
-      settingsLoaded.current = true;
-    }
-
-    // Clear any preview theme when component unmounts
-    return () => {
-      setPreviewTheme(null);
-    };
-  }, [settings, setPreviewTheme]);
 
   // Listen for scan progress events
   useEffect(() => {
@@ -172,7 +138,7 @@ export default function Settings({
     const newTheme = theme === 'light' ? 'dark' : 'light';
 
     // Update local state
-    setTheme(newTheme);
+    updateTheme(newTheme);
 
     // Set the preview theme to immediately see the change
     setPreviewTheme(newTheme);
@@ -181,16 +147,8 @@ export default function Settings({
     updateTheme(newTheme);
   };
 
-  const handleColumnVisibilityChange = (
-    column: keyof typeof columnVisibility,
-  ) => {
-    const newValue = !columnVisibility[column];
-
-    // Update local state
-    setColumnVisibility({
-      ...columnVisibility,
-      [column]: newValue,
-    });
+  const handleColumnVisibilityChange = (column: keyof typeof columns) => {
+    const newValue = !columns[column];
 
     // Update in context and save to database immediately
     updateColumnVisibility(column, newValue);
@@ -230,9 +188,10 @@ export default function Settings({
 
   // Modified to show the confirmation dialog first
   const handleSaveLibraryPath = async () => {
-    try {
-      if (!settings) return;
+    // Store the original path in case the user cancels
+    originalPathRef.current = libraryPath || '';
 
+    try {
       // Validate library path
       if (!libraryPath) {
         setSnackbarMessage('Please set a library path');
@@ -249,9 +208,6 @@ export default function Settings({
         return;
       }
 
-      // Store the original path in case the user cancels
-      originalPathRef.current = settings.libraryPath || '';
-
       // Open the confirmation dialog
       setPathDialogOpen(true);
     } catch (error) {
@@ -266,56 +222,34 @@ export default function Settings({
     try {
       setPathDialogOpen(false);
 
-      if (!settings) return;
+      setSnackbarMessage('Library path saved successfully');
+      setSnackbarOpen(true);
 
-      // Make sure we're using the correct ID
-      const updatedSettings = {
-        ...settings,
-        id: 'app-settings', // Ensure we're using the correct ID
-        libraryPath,
-        // We don't update theme here as it's saved automatically
-      };
+      try {
+        // Reset scan state
+        setScanProgress(0);
+        setScanStatus('');
 
-      const result = await window.electron.settings.update(updatedSettings);
-
-      if (result) {
-        // Update the store and ensure our local state is in sync
-        originalPathRef.current = libraryPath;
-
-        setSnackbarMessage('Library path saved successfully');
-        setSnackbarOpen(true);
-
-        try {
-          // Reset scan state
-          setScanProgress(0);
-          setScanStatus('');
-
-          // First, reset tracks in the database
-          const resetResult = await window.electron.library.resetTracks();
-          if (!resetResult.success) {
-            console.error('Failed to reset tracks:', resetResult.message);
-            setSnackbarMessage(
-              `Failed to reset tracks: ${resetResult.message}`,
-            );
-            setSnackbarOpen(true);
-            return;
-          }
-
-          // Reload the library to clear the tracks in the UI
-          await libraryStore.loadLibrary();
-
-          // Now start the scan with the new library path
-          await scanLibrary(libraryPath);
-        } catch (error) {
-          console.error('Error scanning library:', error);
-          setScanStatus('Failed');
-          setSnackbarMessage(
-            error instanceof Error ? error.message : 'Error scanning library',
-          );
+        // First, reset tracks in the database
+        const resetResult = await window.electron.library.resetTracks();
+        if (!resetResult.success) {
+          console.error('Failed to reset tracks:', resetResult.message);
+          setSnackbarMessage(`Failed to reset tracks: ${resetResult.message}`);
           setSnackbarOpen(true);
+          return;
         }
-      } else {
-        setSnackbarMessage('Failed to save library path');
+
+        // Reload the library to clear the tracks in the UI
+        await loadLibrary();
+
+        // Now start the scan with the new library path
+        await scanLibrary(libraryPath);
+      } catch (error) {
+        console.error('Error scanning library:', error);
+        setScanStatus('Failed');
+        setSnackbarMessage(
+          error instanceof Error ? error.message : 'Error scanning library',
+        );
         setSnackbarOpen(true);
       }
     } catch (error) {
@@ -373,14 +307,6 @@ export default function Settings({
     if (scanStatus === 'Complete') return 'Scan Complete';
     return 'Scanning...';
   };
-
-  if (!settings) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Typography>Loading settings...</Typography>
-      </Box>
-    );
-  }
 
   return (
     <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
@@ -477,7 +403,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  checked={columnVisibility.title}
+                  checked={columns.title}
                   onChange={() => handleColumnVisibilityChange('title')}
                 />
               }
@@ -486,7 +412,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  checked={columnVisibility.artist}
+                  checked={columns.artist}
                   onChange={() => handleColumnVisibilityChange('artist')}
                 />
               }
@@ -495,7 +421,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  checked={columnVisibility.album}
+                  checked={columns.album}
                   onChange={() => handleColumnVisibilityChange('album')}
                 />
               }
@@ -504,7 +430,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  checked={columnVisibility.albumArtist}
+                  checked={columns.albumArtist}
                   onChange={() => handleColumnVisibilityChange('albumArtist')}
                 />
               }
@@ -513,7 +439,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  checked={columnVisibility.genre}
+                  checked={columns.genre}
                   onChange={() => handleColumnVisibilityChange('genre')}
                 />
               }
@@ -522,7 +448,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  checked={columnVisibility.duration}
+                  checked={columns.duration}
                   onChange={() => handleColumnVisibilityChange('duration')}
                 />
               }
@@ -531,7 +457,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  checked={columnVisibility.playCount}
+                  checked={columns.playCount}
                   onChange={() => handleColumnVisibilityChange('playCount')}
                 />
               }
@@ -540,7 +466,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  checked={columnVisibility.dateAdded}
+                  checked={columns.dateAdded}
                   onChange={() => handleColumnVisibilityChange('dateAdded')}
                 />
               }
@@ -549,7 +475,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  checked={columnVisibility.lastPlayed}
+                  checked={columns.lastPlayed}
                   onChange={() => handleColumnVisibilityChange('lastPlayed')}
                 />
               }

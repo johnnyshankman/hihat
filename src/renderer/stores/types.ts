@@ -90,12 +90,16 @@ export interface PlaybackStore {
 
 // Settings Store Types
 export interface SettingsStore {
-  settings: Settings | null;
+  libraryPath: Settings['libraryPath'];
+  theme: Settings['theme'];
+  columns: Settings['columns'];
+  id: Settings['id'];
 
   // Actions
   loadSettings: () => Promise<void>;
-  updateColumnVisibility: (column: string, isVisible: boolean) => Promise<void>;
-  updateTheme: (theme: 'light' | 'dark') => Promise<void>;
+  setColumnVisibility: (column: string, isVisible: boolean) => Promise<void>;
+  setTheme: (theme: 'light' | 'dark') => Promise<void>;
+  setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
 }
 
 // UI Store Types

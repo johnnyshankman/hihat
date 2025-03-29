@@ -90,9 +90,9 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     (state) => state.updateLibraryViewState,
   );
   // Get state from settings store
-  const settings = useSettingsStore((state) => state.settings);
+  const columnVisibility = useSettingsStore((state) => state.columns);
   const updateColumnVisibility = useSettingsStore(
-    (state) => state.updateColumnVisibility,
+    (state) => state.setColumnVisibility,
   );
 
   // Get state from playback store
@@ -369,7 +369,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     updaterOrValue: Updater<MrtVisibilityState>,
   ) => {
     // Find which column changed by comparing with settings
-    if (!settings || !settings.columns) return;
+    if (!columnVisibility) return;
 
     // Get the updated visibility state
     let updatedColumnVisibility: MrtVisibilityState;
@@ -377,14 +377,14 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     if (typeof updaterOrValue === 'function') {
       // If it's a function, call it with the current visibility
       const currentMrtVisibility =
-        settings.columns as unknown as MrtVisibilityState;
+        columnVisibility as unknown as MrtVisibilityState;
       updatedColumnVisibility = updaterOrValue(currentMrtVisibility);
     } else {
       // If it's a value, use it directly
       updatedColumnVisibility = updaterOrValue;
     }
 
-    const currentVisibility = settings.columns;
+    const currentVisibility = columnVisibility;
 
     // Find the column that changed
     Object.keys(updatedColumnVisibility).forEach((column) => {
@@ -541,7 +541,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       globalFilter,
       sorting,
       columnVisibility: {
-        ...((settings?.columns as unknown as MrtVisibilityState) || {}),
+        ...((columnVisibility as unknown as MrtVisibilityState) || {}),
         trackNumber: false, // Always hide track number column
       },
     },

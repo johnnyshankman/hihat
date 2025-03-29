@@ -11,13 +11,7 @@ import { createTheme, ThemeOptions } from '@mui/material/styles';
 const baseThemeOptions: ThemeOptions = {
   typography: {
     // use apple ux font aka san francisco
-    fontFamily: [
-      '-apple-system',
-      'DM Sans',
-      'Roboto',
-      'Helvetica Neue',
-      'sans-serif',
-    ].join(','),
+    fontFamily: ['-apple-system', 'Helvetica Neue', 'sans-serif'].join(','),
     h1: {
       fontSize: '1.5rem',
       fontWeight: 600,
