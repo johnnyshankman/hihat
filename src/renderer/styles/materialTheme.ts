@@ -11,27 +11,33 @@ import { createTheme, ThemeOptions } from '@mui/material/styles';
 const baseThemeOptions: ThemeOptions = {
   typography: {
     // use apple ux font aka san francisco
-    fontFamily: ['-apple-system', 'Helvetica Neue', 'sans-serif'].join(','),
+    fontFamily: [
+      '-apple-system',
+      'BlinkMacSystemFont',
+      'Helvetica Neue',
+      'sans-serif',
+    ].join(','),
+    // @todo: audit usage of hX
     h1: {
-      fontSize: '1.5rem',
+      fontSize: '24px',
       fontWeight: 600,
     },
     h2: {
-      fontSize: '1.25rem',
+      fontSize: '20px',
       fontWeight: 600,
     },
     h3: {
-      fontSize: '1.125rem',
+      fontSize: '18px',
       fontWeight: 500,
     },
     body1: {
-      fontSize: '16px',
+      fontSize: '15px',
       fontWeight: 400,
     },
     body2: {
       fontSize: '13px',
       fontWeight: 400,
-      letterSpacing: '-0.1px',
+      letterSpacing: '-0.35px',
     },
   },
   shape: {

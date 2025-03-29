@@ -384,7 +384,7 @@ export default function Playlists({
   const renderTopToolbarCustomActions = () => (
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '40px' }}>
       <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-      <Typography variant="h3">
+      <Typography variant="h1">
         {selectedPlaylistId
           ? `${
               playlists.find((p) => p.id === selectedPlaylistId)?.name ||

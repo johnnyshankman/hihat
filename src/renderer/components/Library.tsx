@@ -370,7 +370,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const renderTopToolbarCustomActions = () => (
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '40px' }}>
       <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-      <Typography variant="h3">Library</Typography>
+      <Typography variant="h1">Library</Typography>
     </Box>
   );
 

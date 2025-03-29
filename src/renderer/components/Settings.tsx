@@ -23,7 +23,6 @@ import {
 import FolderIcon from '@mui/icons-material/Folder';
 import WarningIcon from '@mui/icons-material/Warning';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import SaveIcon from '@mui/icons-material/Save';
 import { useSettingsStore, useUIStore } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
@@ -128,12 +127,6 @@ export default function Settings({
     };
   }, []);
 
-  const handleLibraryPathChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setLibraryPath(event.target.value);
-  };
-
   const handleThemeChange = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
 
@@ -152,14 +145,6 @@ export default function Settings({
 
     // Update in context and save to database immediately
     updateColumnVisibility(column, newValue);
-  };
-
-  const handleSelectLibraryPath = async () => {
-    const result =
-      (await window.electron.dialog.selectDirectory()) as DirectorySelectionResult;
-    if (!result.canceled && result.filePaths.length > 0) {
-      setLibraryPath(result.filePaths[0]);
-    }
   };
 
   const handleRescanLibrary = async () => {
@@ -188,23 +173,15 @@ export default function Settings({
 
   // Modified to show the confirmation dialog first
   const handleSaveLibraryPath = async () => {
-    // Store the original path in case the user cancels
-    originalPathRef.current = libraryPath || '';
-
     try {
-      // Validate library path
-      if (!libraryPath) {
-        setSnackbarMessage('Please set a library path');
-        setSnackbarOpen(true);
-        return;
-      }
-
       // Check if the library path exists
       const pathExists =
         await window.electron.fileSystem.fileExists(libraryPath);
+
       if (!pathExists) {
         setSnackbarMessage('The specified library path does not exist');
         setSnackbarOpen(true);
+        setLibraryPath(originalPathRef.current);
         return;
       }
 
@@ -215,6 +192,19 @@ export default function Settings({
       setSnackbarMessage('Error validating library path');
       setSnackbarOpen(true);
     }
+  };
+
+  const handleSelectLibraryPath = async () => {
+    originalPathRef.current = libraryPath;
+    const result =
+      (await window.electron.dialog.selectDirectory()) as DirectorySelectionResult;
+    if (!result.canceled && result.filePaths.length > 0) {
+      setLibraryPath(result.filePaths[0]);
+    } else {
+      setLibraryPath(originalPathRef.current);
+    }
+
+    handleSaveLibraryPath();
   };
 
   // New function to handle confirmation of library path change
@@ -318,21 +308,27 @@ export default function Settings({
         sx={{ mb: 2, height: '62px' }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-            <Typography variant="h6">Settings</Typography>
+            <Typography variant="h1">Settings</Typography>
           </Box>
         </Toolbar>
       </AppBar>
 
       <Box sx={{ p: 2, WebkitAppRegion: 'no-drag' }}>
         <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography gutterBottom variant="h6">
+          <Typography gutterBottom variant="h2">
             Library
           </Typography>
-          <FormControl fullWidth sx={{ mb: 2 }}>
+          <Typography
+            color="text.secondary"
+            sx={{ display: 'block', mb: 2 }}
+            variant="caption"
+          >
+            Where hihat looks for your music library.
+          </Typography>
+          <FormControl fullWidth sx={{ mb: 2, mt: 1 }}>
             <TextField
-              helperText="Click 'Save' after changing this field"
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -343,19 +339,11 @@ export default function Settings({
                 ),
               }}
               label="Folder"
-              onChange={handleLibraryPathChange}
+              onChange={handleSaveLibraryPath}
               value={libraryPath}
             />
           </FormControl>
-          <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-            <Button
-              color="error"
-              onClick={handleSaveLibraryPath}
-              startIcon={<SaveIcon />}
-              variant="contained"
-            >
-              Save
-            </Button>
+          <Box sx={{ mt: 0 }}>
             <Button
               color="primary"
               disabled={!libraryPath || isScanning}
@@ -363,15 +351,23 @@ export default function Settings({
               startIcon={<RefreshIcon />}
               variant="contained"
             >
-              {isScanning ? 'Scanning...' : 'Scan Folder'}
+              {isScanning ? 'Scanning...' : 'Rescan For Songs'}
             </Button>
           </Box>
         </Paper>
 
         <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography gutterBottom variant="h6">
+          <Typography gutterBottom variant="h2">
             Appearance
           </Typography>
+          <Typography
+            color="text.secondary"
+            sx={{ display: 'block', mb: 2 }}
+            variant="caption"
+          >
+            The default appearance of hihat.
+          </Typography>
+
           <FormGroup>
             <FormControlLabel
               control={
@@ -382,14 +378,11 @@ export default function Settings({
               }
               label="Dark Theme"
             />
-            <Typography color="text.secondary" variant="caption">
-              Settings are saved automatically
-            </Typography>
           </FormGroup>
         </Paper>
 
         <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography gutterBottom variant="h6">
+          <Typography gutterBottom variant="h2">
             Column Visibility
           </Typography>
           <Typography
@@ -397,7 +390,8 @@ export default function Settings({
             sx={{ display: 'block', mb: 2 }}
             variant="caption"
           >
-            Settings are saved automatically
+            The default visibility of columns in the library and playlists
+            views.
           </Typography>
           <FormGroup>
             <FormControlLabel
@@ -484,26 +478,33 @@ export default function Settings({
           </FormGroup>
         </Paper>
 
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography gutterBottom variant="h6">
-            Development
-          </Typography>
-          <Box sx={{ mt: 2 }}>
-            <Button
-              color="error"
-              onClick={handleResetDatabase}
-              startIcon={<WarningIcon />}
-              sx={{ mb: 2 }}
-              variant="contained"
-            >
-              Reset Database
-            </Button>
-            <Typography color="text.secondary" variant="body2">
-              This will delete all data and reset the application to its initial
-              state. Use this for development and testing purposes only.
+        {/*
+          Development section containing helpful tools for developers
+          that should not be exposed in production
+        */}
+        {process.env.NODE_ENV === 'development' && (
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography gutterBottom variant="h2">
+              Development
             </Typography>
-          </Box>
-        </Paper>
+            <Box sx={{ mt: 2 }}>
+              <Button
+                color="error"
+                onClick={handleResetDatabase}
+                startIcon={<WarningIcon />}
+                sx={{ mb: 2 }}
+                variant="contained"
+              >
+                Reset Database
+              </Button>
+              <Typography color="text.secondary" variant="body2">
+                This will delete all data and reset the application to its
+                initial state. Use this for development and testing purposes
+                only.
+              </Typography>
+            </Box>
+          </Paper>
+        )}
       </Box>
 
       {/* Scanning progress dialog */}

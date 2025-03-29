@@ -27,7 +27,9 @@ import {
   VolumeMute,
   Repeat,
   RepeatOne,
+  RepeatOn,
   Shuffle,
+  ShuffleOn,
   DragIndicator,
   MusicNote,
 } from '@mui/icons-material';
@@ -242,7 +244,7 @@ export default function MiniPlayer() {
       case 'track':
         return <RepeatOne color="primary" fontSize="small" />;
       case 'all':
-        return <Repeat color="primary" fontSize="small" />;
+        return <RepeatOn color="primary" fontSize="small" />;
       case 'off':
       default:
         return <Repeat fontSize="small" />;
@@ -266,7 +268,7 @@ export default function MiniPlayer() {
   // Render shuffle icon based on shuffle mode
   const renderShuffleIcon = () => {
     if (shuffleMode) {
-      return <Shuffle color="primary" fontSize="small" />;
+      return <ShuffleOn color="primary" fontSize="small" />;
     }
     return <Shuffle fontSize="small" />;
   };

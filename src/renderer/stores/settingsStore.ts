@@ -31,10 +31,11 @@ const useSettingsStore = create<SettingsStore>((set) => ({
 
       // Update the settings in the database
       const updatedSettings = {
-        ...state,
+        id: state.id,
         libraryPath,
+        theme: state.theme,
+        columns: state.columns,
       };
-
       await window.electron.settings.update(updatedSettings);
 
       // Update the settings state
@@ -101,7 +102,6 @@ const useSettingsStore = create<SettingsStore>((set) => ({
         theme: state.theme,
         columns: updatedColumns,
       };
-
       await window.electron.settings.update(updatedSettings);
 
       // Update the settings state
@@ -129,7 +129,6 @@ const useSettingsStore = create<SettingsStore>((set) => ({
         theme,
         columns: store.columns,
       };
-
       await window.electron.settings.update(updatedSettings);
 
       // Update the settings state

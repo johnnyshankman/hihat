@@ -277,11 +277,11 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
 // Set up event listener for library scan completion
 if (typeof window !== 'undefined') {
   window.electron.ipcRenderer.on('library:scanComplete', (data: any) => {
-    console.log(`Library scan complete: ${data.tracksAdded} tracks added`);
+    console.warn(`Library scan complete: ${data.tracksAdded} new tracks added`);
     useUIStore
       .getState()
       .showNotification(
-        `Library scan complete: ${data.tracksAdded} tracks added`,
+        `Library scan complete: ${data.tracksAdded} new tracks added`,
         'success',
       );
 
