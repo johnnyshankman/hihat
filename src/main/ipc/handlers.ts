@@ -5,7 +5,7 @@
  * It handles requests from the renderer process and returns responses.
  */
 
-import { dialog, app, BrowserWindow } from 'electron';
+import { dialog, app, BrowserWindow, shell } from 'electron';
 import fs from 'fs';
 import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
@@ -340,6 +340,22 @@ export const fileSystemHandlers = {
       return false;
     }
   }) as IPCHandler<'fileSystem:fileExists'>,
+
+  'fileSystem:showInFinder': (async ({ filePath }) => {
+    try {
+      if (!fs.existsSync(filePath)) {
+        return { success: false, message: 'File does not exist' };
+      }
+      shell.showItemInFolder(filePath);
+      return { success: true };
+    } catch (error) {
+      console.error(`Error showing file in finder: ${filePath}`, error);
+      return {
+        success: false,
+        message: (error as Error).message || 'Unknown error',
+      };
+    }
+  }) as IPCHandler<'fileSystem:showInFinder'>,
 };
 
 /**

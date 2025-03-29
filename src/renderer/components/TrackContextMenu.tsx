@@ -30,6 +30,7 @@ export default function TrackContextMenu({
   const selectedPlaylistId = useLibraryStore(
     (state) => state.selectedPlaylistId,
   );
+  const tracks = useLibraryStore((state) => state.tracks);
 
   if (!trackId) return null;
 
@@ -52,6 +53,24 @@ export default function TrackContextMenu({
     onClose();
   };
 
+  const handleShowInFinder = async () => {
+    try {
+      // Find the track to get its file path
+      const track = tracks.find((t) => t.id === trackId);
+
+      if (track && track.filePath) {
+        // Use the electron API to show the file in Finder/Explorer
+        await window.electron.fileSystem.showInFinder(track.filePath);
+      } else {
+        console.error('Track or file path not found');
+      }
+
+      onClose();
+    } catch (error) {
+      console.error('Error showing file in Finder:', error);
+    }
+  };
+
   return (
     <Menu
       anchorPosition={anchorPosition || undefined}
@@ -71,11 +90,11 @@ export default function TrackContextMenu({
         </ListItemIcon>
         <ListItemText>Add to Playlist</ListItemText>
       </MenuItem>
-      <MenuItem onClick={() => {}}>
+      <MenuItem onClick={handleShowInFinder}>
         <ListItemIcon>
           <InfoIcon fontSize="small" />
         </ListItemIcon>
-        <ListItemText>Track Info</ListItemText>
+        <ListItemText>Show in Finder</ListItemText>
       </MenuItem>
     </Menu>
   );

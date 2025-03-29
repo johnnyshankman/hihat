@@ -53,6 +53,7 @@ export type Channels =
 
   // File system operations
   | 'fileSystem:fileExists'
+  | 'fileSystem:showInFinder'
 
   // Playback operations
   | 'playback:play'
@@ -148,6 +149,7 @@ export interface IPCRequests {
 
   // File system operations
   'fileSystem:fileExists': { filePath: string };
+  'fileSystem:showInFinder': { filePath: string };
 
   // Playback operations
   'playback:play': { trackId: string };
@@ -260,6 +262,7 @@ export interface IPCResponses {
 
   // File system operations
   'fileSystem:fileExists': boolean;
+  'fileSystem:showInFinder': { success: boolean; message?: string };
 
   // Playback operations
   'playback:play': boolean;

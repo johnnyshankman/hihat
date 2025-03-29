@@ -120,10 +120,19 @@ const electronHandler = {
     /**
      * Check if a file exists
      * @param filePath - Path to the file
-     * @returns Promise that resolves to true if the file exists
+     * @returns Promise that resolves to a boolean indicating if the file exists
      */
     fileExists(filePath: string) {
       return ipcRenderer.invoke('fileSystem:fileExists', { filePath });
+    },
+
+    /**
+     * Show a file in Finder (macOS) or Explorer (Windows)
+     * @param filePath - Path to the file
+     * @returns Promise that resolves to an object with success status
+     */
+    showInFinder(filePath: string) {
+      return ipcRenderer.invoke('fileSystem:showInFinder', { filePath });
     },
   },
 
