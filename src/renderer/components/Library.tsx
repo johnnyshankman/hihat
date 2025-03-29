@@ -152,54 +152,20 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       setDialogOpen(false);
 
       // Ask the user if they want to scan the library now
+      // eslint-disable-next-line no-alert
       const shouldScan = window.confirm(
         'Library path has been set. Would you like to scan the library now?',
       );
 
       if (shouldScan) {
         // Redirect user to Settings page for scanning
+        // eslint-disable-next-line no-alert
         window.alert('Please go to Settings page to start the scan.');
       }
     } catch (error) {
       console.error('Error selecting folder:', error);
     }
   };
-
-  // const handleAddMusic = async () => {
-  //   try {
-  //     // First, check if a library path is set
-  //     const localSettings = await window.electron.settings.get();
-  //     if (!localSettings || !localSettings.libraryPath) {
-  //       // No library path set, show the dialog to set one
-  //       window.alert('Please set a library path first before adding music.');
-  //       setDialogOpen(true);
-  //       return;
-  //     }
-
-  //     // Open a file selection dialog to select music files
-  //     const result = await window.electron.dialog.selectFiles();
-  //     if (
-  //       result.canceled ||
-  //       !result.filePaths ||
-  //       result.filePaths.length === 0
-  //     ) {
-  //       return;
-  //     }
-
-  //     // Import the selected files
-  //     try {
-  //       await window.electron.library.import(result.filePaths);
-  //       window.alert(
-  //         'Files have been added to import queue. Please go to Settings page to see the import progress.',
-  //       );
-  //     } catch (error) {
-  //       console.error('Error importing files:', error);
-  //       window.alert('Error importing files. Please try again.');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error adding music:', error);
-  //   }
-  // };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
