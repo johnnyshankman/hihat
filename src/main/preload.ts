@@ -284,6 +284,14 @@ const electronHandler = {
     restart() {
       return ipcRenderer.invoke('app:restart');
     },
+
+    /**
+     * Open a link in the default browser
+     * @param link - The link to open
+     */
+    openInBrowser(link: string) {
+      return ipcRenderer.invoke('app:open-in-browser', { link });
+    },
   },
 
   // UI functions

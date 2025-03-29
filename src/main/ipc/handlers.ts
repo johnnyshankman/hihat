@@ -314,7 +314,7 @@ export const dialogHandlers = {
 export const appHandlers = {
   'app:restart': (async () => {
     try {
-      console.log('Restarting application...');
+      console.error('Restarting application...');
       // Schedule app restart after a short delay to allow the response to be sent
       setTimeout(() => {
         app.relaunch();
@@ -326,6 +326,18 @@ export const appHandlers = {
       return false;
     }
   }) as IPCHandler<'app:restart'>,
+
+  'app:open-in-browser': (async ({ link }) => {
+    try {
+      await shell.openExternal(link);
+      return { success: true };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        message: (error as Error).message || 'Unknown error',
+      };
+    }
+  }) as IPCHandler<'app:open-in-browser'>,
 };
 
 /**

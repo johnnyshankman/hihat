@@ -3,6 +3,8 @@ import { Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import InfoIcon from '@mui/icons-material/Info';
+import { Apple, Search } from '@mui/icons-material';
+import SpotifyIcon from '../assets/spotify.svg';
 import { usePlaybackStore, useUIStore, useLibraryStore } from '../stores';
 
 interface TrackContextMenuProps {
@@ -53,6 +55,30 @@ export default function TrackContextMenu({
     onClose();
   };
 
+  const handlerFindOnSpotify = () => {
+    const track = tracks.find((t) => t.id === trackId);
+
+    const urlEncodedTitle = encodeURIComponent(track?.title || '');
+    const urlEncodedArtist = encodeURIComponent(track?.albumArtist || '');
+
+    window.electron.app.openInBrowser(
+      `https://open.spotify.com/search/${urlEncodedTitle}%20artist:${urlEncodedArtist}`,
+    );
+    onClose();
+  };
+
+  const handlerFindOnAppleMusic = () => {
+    const track = tracks.find((t) => t.id === trackId);
+
+    const urlEncodedTitle = encodeURIComponent(track?.title || '');
+    const urlEncodedArtist = encodeURIComponent(track?.albumArtist || '');
+
+    window.electron.app.openInBrowser(
+      `https://music.apple.com/search?term=${urlEncodedTitle}%20${urlEncodedArtist}`,
+    );
+    onClose();
+  };
+
   const handleShowInFinder = async () => {
     try {
       // Find the track to get its file path
@@ -92,9 +118,25 @@ export default function TrackContextMenu({
       </MenuItem>
       <MenuItem onClick={handleShowInFinder}>
         <ListItemIcon>
-          <InfoIcon fontSize="small" />
+          <Search fontSize="small" />
         </ListItemIcon>
         <ListItemText>Show in Finder</ListItemText>
+      </MenuItem>
+      <MenuItem onClick={handlerFindOnSpotify}>
+        <ListItemIcon>
+          <img
+            alt="Spotify"
+            src={SpotifyIcon}
+            style={{ filter: 'invert(1)' }}
+          />
+        </ListItemIcon>
+        <ListItemText>Find on Spotify</ListItemText>
+      </MenuItem>
+      <MenuItem onClick={handlerFindOnAppleMusic}>
+        <ListItemIcon>
+          <Apple fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Find on Apple Music</ListItemText>
       </MenuItem>
     </Menu>
   );
