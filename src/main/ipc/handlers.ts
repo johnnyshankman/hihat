@@ -7,6 +7,8 @@
 
 import { dialog, app, BrowserWindow, shell } from 'electron';
 import fs from 'fs';
+import path from 'path';
+import * as mm from 'music-metadata';
 import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
 import { scanLibrary, importFiles } from '../library/scanner';
@@ -368,6 +370,72 @@ export const fileSystemHandlers = {
       };
     }
   }) as IPCHandler<'fileSystem:showInFinder'>,
+
+  'fileSystem:downloadAlbumArt': (async ({ track }) => {
+    try {
+      if (!track || !track.filePath || !fs.existsSync(track.filePath)) {
+        return {
+          success: false,
+          message: 'Track or file path does not exist',
+        };
+      }
+
+      // Get the metadata from the file
+      const metadata = await mm.parseFile(track.filePath, {
+        skipCovers: false, // Explicitly load album art
+      });
+
+      // Check if there's any picture data
+      if (!metadata.common.picture || metadata.common.picture.length === 0) {
+        return {
+          success: false,
+          message: 'No album art found in the file',
+        };
+      }
+
+      // Get the first picture
+      const picture = metadata.common.picture[0];
+
+      // Determine the file extension based on format
+      let extension = 'jpg'; // Default extension
+      if (picture.format) {
+        const format = picture.format.toLowerCase();
+        if (format.includes('png')) extension = 'png';
+        else if (format.includes('gif')) extension = 'gif';
+        else if (format.includes('jpeg') || format.includes('jpg'))
+          extension = 'jpg';
+      }
+
+      // Create a sanitized filename from track info
+      const artist = track.albumArtist || track.artist || 'Unknown';
+      const album = track.album || 'Unknown';
+      const sanitizedArtist = artist.replace(/[\\/:*?"<>|]/g, '_');
+      const sanitizedAlbum = album.replace(/[\\/:*?"<>|]/g, '_');
+      const fileName = `${sanitizedArtist} - ${sanitizedAlbum}.${extension}`;
+
+      // Get the downloads directory
+      const downloadsDir = app.getPath('downloads');
+      const outputPath = path.join(downloadsDir, fileName);
+
+      // Write the image data to a file
+      fs.writeFileSync(outputPath, picture.data);
+
+      // Show the file in the finder/explorer
+      shell.showItemInFolder(outputPath);
+
+      return {
+        success: true,
+        message: `Album art saved to ${outputPath}`,
+        filePath: outputPath,
+      };
+    } catch (error) {
+      console.error(`Error downloading album art:`, error);
+      return {
+        success: false,
+        message: (error as Error).message || 'Unknown error',
+      };
+    }
+  }) as IPCHandler<'fileSystem:downloadAlbumArt'>,
 };
 
 /**

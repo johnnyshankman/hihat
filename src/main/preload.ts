@@ -134,6 +134,15 @@ const electronHandler = {
     showInFinder(filePath: string) {
       return ipcRenderer.invoke('fileSystem:showInFinder', { filePath });
     },
+
+    /**
+     * Download album art for a track to the user's Downloads folder
+     * @param track - The track to download album art for
+     * @returns Promise that resolves to an object with success status
+     */
+    downloadAlbumArt(track: any) {
+      return ipcRenderer.invoke('fileSystem:downloadAlbumArt', { track });
+    },
   },
 
   // Track management functions

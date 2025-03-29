@@ -55,6 +55,7 @@ export type Channels =
   // File system operations
   | 'fileSystem:fileExists'
   | 'fileSystem:showInFinder'
+  | 'fileSystem:downloadAlbumArt'
 
   // Playback operations
   | 'playback:play'
@@ -152,6 +153,7 @@ export interface IPCRequests {
   // File system operations
   'fileSystem:fileExists': { filePath: string };
   'fileSystem:showInFinder': { filePath: string };
+  'fileSystem:downloadAlbumArt': { track: Track };
 
   // Playback operations
   'playback:play': { trackId: string };
@@ -266,6 +268,11 @@ export interface IPCResponses {
   // File system operations
   'fileSystem:fileExists': boolean;
   'fileSystem:showInFinder': { success: boolean; message?: string };
+  'fileSystem:downloadAlbumArt': {
+    success: boolean;
+    message?: string;
+    filePath?: string;
+  };
 
   // Playback operations
   'playback:play': boolean;

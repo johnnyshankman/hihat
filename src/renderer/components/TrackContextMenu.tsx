@@ -2,8 +2,7 @@ import React from 'react';
 import { Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import InfoIcon from '@mui/icons-material/Info';
-import { Apple, Search } from '@mui/icons-material';
+import { Apple, Search, Download } from '@mui/icons-material';
 import SpotifyIcon from '../assets/spotify.svg';
 import { usePlaybackStore, useUIStore, useLibraryStore } from '../stores';
 
@@ -79,6 +78,21 @@ export default function TrackContextMenu({
     onClose();
   };
 
+  const handlerDownloadAlbumArt = async () => {
+    const track = tracks.find((t) => t.id === trackId);
+    if (track) {
+      try {
+        const result = await window.electron.fileSystem.downloadAlbumArt(track);
+        if (!result.success) {
+          console.error('Failed to download album art:', result.message);
+        }
+      } catch (error) {
+        console.error('Error downloading album art:', error);
+      }
+    }
+    onClose();
+  };
+
   const handleShowInFinder = async () => {
     try {
       // Find the track to get its file path
@@ -137,6 +151,12 @@ export default function TrackContextMenu({
           <Apple fontSize="small" />
         </ListItemIcon>
         <ListItemText>Find on Apple Music</ListItemText>
+      </MenuItem>
+      <MenuItem onClick={handlerDownloadAlbumArt}>
+        <ListItemIcon>
+          <Download fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Download Album Art</ListItemText>
       </MenuItem>
     </Menu>
   );
