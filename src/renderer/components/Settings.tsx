@@ -23,6 +23,7 @@ import {
 import FolderIcon from '@mui/icons-material/Folder';
 import WarningIcon from '@mui/icons-material/Warning';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import AddIcon from '@mui/icons-material/Add';
 import { useSettingsStore, useUIStore } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
@@ -57,6 +58,7 @@ export default function Settings({
   const updateTheme = useSettingsStore((state) => state.setTheme);
   // library store stuff
   const scanLibrary = useLibraryStore((state) => state.scanLibrary);
+  const importFiles = useLibraryStore((state) => state.importFiles);
   const isScanning = useLibraryStore((state) => state.isScanning);
   // ui store stuff
   const setPreviewTheme = useUIStore((state) => state.setTheme);
@@ -166,6 +168,39 @@ export default function Settings({
       setScanStatus('Failed');
       setSnackbarMessage(
         error instanceof Error ? error.message : 'Error scanning library',
+      );
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleAddSongs = async () => {
+    if (!libraryPath) {
+      setSnackbarMessage('Please set a library path first');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    try {
+      const result = await window.electron.dialog.selectFiles();
+      if (
+        result.canceled ||
+        !result.filePaths ||
+        result.filePaths.length === 0
+      ) {
+        return;
+      }
+
+      // Reset scan state
+      setScanProgress(0);
+      setScanStatus('');
+
+      // Import the selected files
+      await importFiles(result.filePaths);
+    } catch (error) {
+      console.error('Error importing files:', error);
+      setScanStatus('Failed');
+      setSnackbarMessage(
+        error instanceof Error ? error.message : 'Error importing files',
       );
       setSnackbarOpen(true);
     }
@@ -343,7 +378,7 @@ export default function Settings({
               value={libraryPath}
             />
           </FormControl>
-          <Box sx={{ mt: 0 }}>
+          <Box sx={{ mt: 0, display: 'flex', gap: 2 }}>
             <Button
               color="primary"
               disabled={!libraryPath || isScanning}
@@ -353,7 +388,25 @@ export default function Settings({
             >
               {isScanning ? 'Scanning...' : 'Rescan For Songs'}
             </Button>
+            <Button
+              color="primary"
+              disabled={!libraryPath || isScanning}
+              onClick={handleAddSongs}
+              startIcon={<AddIcon />}
+              variant="outlined"
+            >
+              Add Songs
+            </Button>
           </Box>
+          <Typography
+            color="text.secondary"
+            sx={{ display: 'block', mt: 2, fontSize: '0.75rem' }}
+          >
+            Add Songs lets you select music files to import directly into your
+            library without having to manually copy them to your library folder
+            and rescan. hihat will automatically deduplicate songs and keep only
+            the highest quality version when identical songs are detected.
+          </Typography>
         </Paper>
 
         <Paper sx={{ p: 3, mb: 3 }}>

@@ -28,12 +28,12 @@ export function setMainWindow(window: BrowserWindow): void {
 
 /**
  * Send a progress event to the renderer process
- * @param event - Event name
- * @param data - Event data
+ * @param channel - Channel to send the event on
+ * @param data - Data to send
  */
-function sendProgressEvent(event: string, data: any): void {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(event, data);
+function sendProgressEvent(channel: string, data: any): void {
+  if (mainWindow) {
+    mainWindow.webContents.send(channel, data);
   }
 }
 
@@ -54,6 +54,113 @@ function isSupportedFile(filePath: string): boolean {
 function ensureDirectoryExists(dirPath: string): void {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
+
+/**
+ * Calculate audio quality score based on format, bitrate, and sample rate
+ * Higher score indicates better quality
+ * @param format - Music metadata format info
+ * @param extension - File extension
+ * @returns Quality score (higher is better)
+ */
+function calculateAudioQuality(format: mm.IFormat, extension: string): number {
+  // Base score based on file format (lossless formats get higher scores)
+  let score = 0;
+
+  const losslessFormats = ['.flac', '.wav', '.alac'];
+  const highQualityLossyFormats = ['.m4a', '.aac', '.ogg', '.opus'];
+  const standardLossyFormats = ['.mp3'];
+
+  if (losslessFormats.includes(extension)) {
+    score += 1000; // Lossless formats are preferred
+  } else if (highQualityLossyFormats.includes(extension)) {
+    score += 500;
+  } else if (standardLossyFormats.includes(extension)) {
+    score += 250;
+  }
+
+  // Add points for bitrate (if available)
+  if (format.bitrate) {
+    // Normalize to kbps
+    const kbps = format.bitrate / 1000;
+
+    // Higher bitrate means better quality
+    if (kbps >= 320) {
+      score += 300;
+    } else if (kbps >= 256) {
+      score += 250;
+    } else if (kbps >= 192) {
+      score += 200;
+    } else if (kbps >= 128) {
+      score += 150;
+    } else {
+      score += 100;
+    }
+  }
+
+  // Add points for sample rate (if available)
+  if (format.sampleRate) {
+    if (format.sampleRate >= 96000) {
+      score += 300;
+    } else if (format.sampleRate >= 48000) {
+      score += 200;
+    } else if (format.sampleRate >= 44100) {
+      score += 150;
+    } else {
+      score += 100;
+    }
+  }
+
+  // Add points for bit depth (if available)
+  if (format.bitsPerSample) {
+    if (format.bitsPerSample >= 24) {
+      score += 300;
+    } else if (format.bitsPerSample >= 16) {
+      score += 200;
+    } else {
+      score += 100;
+    }
+  }
+
+  // Add points for number of channels
+  if (format.numberOfChannels) {
+    if (format.numberOfChannels > 2) {
+      score += 200; // Surround
+    } else if (format.numberOfChannels === 2) {
+      score += 150; // Stereo
+    } else {
+      score += 100; // Mono
+    }
+  }
+
+  return score;
+}
+
+/**
+ * Find duplicate tracks based on metadata
+ * @param trackData - New track metadata
+ * @returns Duplicate track if found, null otherwise
+ */
+function findDuplicateTrack(trackData: Omit<Track, 'id'>): Track | null {
+  try {
+    // Get all tracks in the database
+    const allTracks = db.getAllTracks();
+
+    // Find a track with the same title, artist, albumArtist, and album
+    const duplicate = allTracks.find(
+      (track) =>
+        track.title.toLowerCase() === trackData.title.toLowerCase() &&
+        track.artist.toLowerCase() === trackData.artist.toLowerCase() &&
+        track.albumArtist.toLowerCase() ===
+          trackData.albumArtist.toLowerCase() &&
+        track.album.toLowerCase() === trackData.album.toLowerCase(),
+    );
+
+    return duplicate || null;
+  } catch (error) {
+    console.error('Error finding duplicate track:', error);
+    return null;
   }
 }
 
@@ -281,13 +388,77 @@ async function processFile(
   }
 
   try {
-    // Always copy the file to the library path to ensure consistency
-    // This ensures all files in the database are within the library path
+    // Parse metadata using the original file path for the new file
+    let trackData = await parseFileMetadata(filePath);
+
+    // Check for duplicate track
+    const duplicate = findDuplicateTrack(trackData);
+
+    if (duplicate) {
+      // Compare quality of the files to determine which one to keep
+      const newFileExt = path.extname(filePath).toLowerCase();
+
+      // Get metadata for quality comparison
+      const newMetadata = await mm.parseFile(filePath);
+
+      // Get metadata for the existing file
+      let existingMetadata;
+      try {
+        existingMetadata = await mm.parseFile(duplicate.filePath);
+      } catch (error) {
+        console.error(
+          `Error reading existing file ${duplicate.filePath}:`,
+          error,
+        );
+        // If we can't read the existing file, prefer the new one
+        existingMetadata = { format: {} } as mm.IAudioMetadata;
+      }
+
+      const existingFileExt = path.extname(duplicate.filePath).toLowerCase();
+
+      // Calculate quality scores
+      const newQuality = calculateAudioQuality(newMetadata.format, newFileExt);
+      const existingQuality = calculateAudioQuality(
+        existingMetadata.format,
+        existingFileExt,
+      );
+
+      console.log(`Quality comparison for "${trackData.title}":
+        New file (${newFileExt}): ${newQuality}
+        Existing file (${existingFileExt}): ${existingQuality}`);
+
+      // If the existing file has equal or higher quality, skip the new one
+      if (existingQuality >= newQuality) {
+        console.log(
+          `Skipping new file as existing has equal or higher quality.`,
+        );
+        return { processed: true, added: false };
+      }
+
+      // If the new file has higher quality, delete the existing file and continue
+      console.log(`New file has higher quality. Replacing existing file.`);
+
+      try {
+        // Delete the existing file if it exists
+        if (fs.existsSync(duplicate.filePath)) {
+          fs.unlinkSync(duplicate.filePath);
+          console.log(`Deleted lower quality file: ${duplicate.filePath}`);
+        }
+
+        // Delete the existing track from the database
+        db.deleteTrack(duplicate.id);
+        console.log(
+          `Deleted lower quality track from database: ${duplicate.id}`,
+        );
+      } catch (error) {
+        console.error(`Error deleting existing file or track: ${error}`);
+        // Continue anyway to add the new higher quality file
+      }
+    }
+
+    // Copy the file to the library path
     console.log(`Copying file ${filePath} to library path...`);
     const targetFilePath = await copyFileToLibrary(filePath, libraryPath);
-
-    // Parse metadata using the original file path (more reliable for metadata extraction)
-    let trackData = await parseFileMetadata(filePath);
 
     // Update the file path to the target path in the library
     trackData = {
