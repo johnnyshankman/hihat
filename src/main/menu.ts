@@ -193,7 +193,7 @@ export default class MenuBuilder {
       submenu: [
         {
           label: 'reload',
-          accelerator: 'Command+R',
+          accelerator: 'Ctrl+R',
           click: () => {
             this.mainWindow.webContents.reload();
           },
@@ -215,7 +215,7 @@ export default class MenuBuilder {
         { type: 'separator' },
         {
           label: 'toggle sidebar',
-          accelerator: 'Command+S',
+          accelerator: 'CmdOrCtrl+S',
           click: () => {
             this.mainWindow.webContents.send('ui:toggleSidebar');
           },
@@ -319,6 +319,55 @@ export default class MenuBuilder {
         { label: 'bring all to front', selector: 'arrangeInFront:' },
       ],
     };
+    const subMenuPlayback: MenuItemConstructorOptions = {
+      label: 'Playback',
+      submenu: [
+        {
+          label: 'next',
+          accelerator: 'CmdOrCtrl+Right',
+          click: () => {
+            this.mainWindow.webContents.send('playback:next');
+          },
+        },
+        {
+          label: 'previous',
+          accelerator: 'CmdOrCtrl+Left',
+          click: () => {
+            this.mainWindow.webContents.send('playback:previous');
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'volume up',
+          accelerator: 'CmdOrCtrl+Up',
+          click: () => {
+            this.mainWindow.webContents.send('playback:volumeUp');
+          },
+        },
+        {
+          label: 'volume down',
+          accelerator: 'CmdOrCtrl+Down',
+          click: () => {
+            this.mainWindow.webContents.send('playback:volumeDown');
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'toggle shuffle',
+          accelerator: 'CmdOrCtrl+=',
+          click: () => {
+            this.mainWindow.webContents.send('playback:toggleShuffle');
+          },
+        },
+        {
+          label: 'toggle repeat modes',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            this.mainWindow.webContents.send('playback:toggleRepeat');
+          },
+        },
+      ],
+    };
     const subMenuHelp: MenuItemConstructorOptions = {
       label: 'Help',
       submenu: [
@@ -345,7 +394,14 @@ export default class MenuBuilder {
         ? subMenuViewDev
         : subMenuViewProd;
 
-    return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
+    return [
+      subMenuAbout,
+      subMenuEdit,
+      subMenuView,
+      subMenuPlayback,
+      subMenuWindow,
+      subMenuHelp,
+    ];
   }
 
   buildDefaultTemplate(): MenuItemConstructorOptions[] {
@@ -401,7 +457,7 @@ export default class MenuBuilder {
                 { type: 'separator' } as any,
                 {
                   label: 'toggle sidebar',
-                  accelerator: 'Ctrl+S',
+                  accelerator: 'CmdOrCtrl+S',
                   click: () => {
                     this.mainWindow.webContents.send('ui:toggleSidebar');
                   },
@@ -447,6 +503,55 @@ export default class MenuBuilder {
               ],
       },
       {
+        label: 'Playback',
+        submenu: [
+          {
+            label: 'next',
+            accelerator: 'Ctrl+Right',
+            click: () => {
+              this.mainWindow.webContents.send('playback:next');
+            },
+          },
+          {
+            label: 'previous',
+            accelerator: 'Ctrl+Left',
+            click: () => {
+              this.mainWindow.webContents.send('playback:previous');
+            },
+          },
+          { type: 'separator' },
+          {
+            label: 'volume up',
+            accelerator: 'Ctrl+Up',
+            click: () => {
+              this.mainWindow.webContents.send('playback:volumeUp');
+            },
+          },
+          {
+            label: 'volume down',
+            accelerator: 'Ctrl+Down',
+            click: () => {
+              this.mainWindow.webContents.send('playback:volumeDown');
+            },
+          },
+          { type: 'separator' },
+          {
+            label: 'toggle shuffle',
+            accelerator: 'CmdOrCtrl+=',
+            click: () => {
+              this.mainWindow.webContents.send('playback:toggleShuffle');
+            },
+          },
+          {
+            label: 'toggle repeat modes',
+            accelerator: 'Ctrl+R',
+            click: () => {
+              this.mainWindow.webContents.send('playback:toggleRepeat');
+            },
+          },
+        ],
+      },
+      {
         label: 'Help',
         submenu: [
           {
@@ -456,7 +561,7 @@ export default class MenuBuilder {
             },
           },
           {
-            label: 'Report Issues',
+            label: 'report issues',
             click() {
               shell.openExternal(
                 'https://github.com/johnnyshankman/hihat/issues',

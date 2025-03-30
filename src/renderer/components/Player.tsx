@@ -267,6 +267,51 @@ export default function Player() {
       },
     );
 
+    // Add listeners for menu keyboard shortcuts
+    const unsubscribeMenuNext = window.electron.ipcRenderer.on(
+      'playback:next' as any,
+      () => {
+        skipToNextTrack();
+      },
+    );
+
+    const unsubscribeMenuPrevious = window.electron.ipcRenderer.on(
+      'playback:previous' as any,
+      () => {
+        skipToPreviousTrack();
+      },
+    );
+
+    const unsubscribeVolumeUp = window.electron.ipcRenderer.on(
+      'playback:volumeUp' as any,
+      () => {
+        // Increase volume by 10%, capped at 1.0
+        setVolume(Math.min(volume + 0.1, 1.0));
+      },
+    );
+
+    const unsubscribeVolumeDown = window.electron.ipcRenderer.on(
+      'playback:volumeDown' as any,
+      () => {
+        // Decrease volume by 10%, with minimum of 0
+        setVolume(Math.max(volume - 0.1, 0));
+      },
+    );
+
+    const unsubscribeMenuToggleRepeat = window.electron.ipcRenderer.on(
+      'playback:toggleRepeat' as any,
+      () => {
+        toggleRepeatMode();
+      },
+    );
+
+    const unsubscribeMenuToggleShuffle = window.electron.ipcRenderer.on(
+      'playback:toggleShuffle' as any,
+      () => {
+        toggleShuffleMode();
+      },
+    );
+
     // Clean up listeners on unmount
     return () => {
       unsubscribePlayPause();
@@ -276,6 +321,12 @@ export default function Player() {
       unsubscribeSetVolume();
       unsubscribeToggleRepeat();
       unsubscribeToggleShuffle();
+      unsubscribeMenuNext();
+      unsubscribeMenuPrevious();
+      unsubscribeVolumeUp();
+      unsubscribeVolumeDown();
+      unsubscribeMenuToggleRepeat();
+      unsubscribeMenuToggleShuffle();
     };
   }, [
     skipToNextTrack,
@@ -286,6 +337,7 @@ export default function Player() {
     toggleShuffleMode,
     setPaused,
     paused,
+    volume,
   ]);
 
   // Setup MediaSession API
