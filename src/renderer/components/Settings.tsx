@@ -76,6 +76,18 @@ export default function Settings({
   // Scanning state
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStatus, setScanStatus] = useState('');
+  const [scanPhase, setScanPhase] = useState('preparing');
+  const [scanCurrentFile, setScanCurrentFile] = useState('');
+  const [scanTransferInfo, setScanTransferInfo] = useState<{
+    current: number;
+    total: number;
+    remaining: number;
+    estimatedTimeRemaining: string;
+  } | null>(null);
+  const [scanProcessedFiles, setScanProcessedFiles] = useState<string[]>([]);
+  const scanProcessedFilesRef = useRef<string[]>([]);
+  const scanStartTime = useRef<number>(0);
+
   const [backupStatus, setBackupStatus] = useState('');
   // Add backup progress state
   const [backupProgress, setBackupProgress] = useState(0);
@@ -107,6 +119,7 @@ export default function Settings({
       };
 
       const now = Date.now();
+
       // Only update the UI if enough time has passed since the last update
       // or if this is the first file, every 50th file, or the last file
       if (
@@ -115,8 +128,60 @@ export default function Settings({
         data.processed % 50 === 0 ||
         data.processed === data.total
       ) {
+        // Set scan phase to processing
+        if (scanPhase === 'preparing' && data.processed > 0) {
+          setScanPhase('processing');
+          scanStartTime.current = now;
+        }
+
+        // Update progress
         setScanProgress((data.processed / data.total) * 100); // Convert to percentage
-        setScanStatus(data.current);
+        setScanStatus(`Scanning: ${data.processed} of ${data.total} files`);
+
+        // Update current file
+        setScanCurrentFile(data.current);
+
+        // Add to processed files (but limit to last 20 for performance)
+        if (!scanProcessedFilesRef.current.includes(data.current)) {
+          const updatedFiles = [
+            data.current,
+            ...scanProcessedFilesRef.current,
+          ].slice(0, 20);
+          scanProcessedFilesRef.current = updatedFiles;
+          setScanProcessedFiles(updatedFiles);
+        }
+
+        // Calculate ETA
+        if (data.processed > 0 && scanStartTime.current > 0) {
+          const elapsedTime = now - scanStartTime.current;
+          const filesPerMs = data.processed / elapsedTime;
+          const remainingFiles = data.total - data.processed;
+          const estimatedRemainingMs = remainingFiles / filesPerMs;
+
+          // Format estimated time remaining
+          let estimatedTimeRemaining = '';
+          if (estimatedRemainingMs < 60000) {
+            // Less than a minute
+            estimatedTimeRemaining = `${Math.ceil(estimatedRemainingMs / 1000)} seconds`;
+          } else if (estimatedRemainingMs < 3600000) {
+            // Less than an hour
+            estimatedTimeRemaining = `${Math.ceil(estimatedRemainingMs / 60000)} minutes`;
+          } else {
+            // Hours or more
+            const hours = Math.floor(estimatedRemainingMs / 3600000);
+            const minutes = Math.ceil((estimatedRemainingMs % 3600000) / 60000);
+            estimatedTimeRemaining = `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+          }
+
+          // Update transfer info
+          setScanTransferInfo({
+            current: data.processed,
+            total: data.total,
+            remaining: remainingFiles,
+            estimatedTimeRemaining,
+          });
+        }
+
         lastUpdateTime.current = now;
       }
     };
@@ -124,8 +189,17 @@ export default function Settings({
     const handleScanComplete = () => {
       setScanStatus('Complete');
       setScanProgress(100);
+      setScanPhase('complete');
       setSnackbarMessage('Library scan completed successfully');
       setSnackbarOpen(true);
+
+      // Reset scan state after a delay
+      setTimeout(() => {
+        setScanProcessedFiles([]);
+        scanProcessedFilesRef.current = [];
+        setScanCurrentFile('');
+        setScanTransferInfo(null);
+      }, 3000);
     };
 
     // Register event listeners
@@ -239,7 +313,7 @@ export default function Settings({
       unsubBackupError();
       unsubBackupProgress();
     };
-  }, []);
+  }, [scanPhase]);
 
   const handleThemeChange = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -265,13 +339,20 @@ export default function Settings({
     try {
       // Reset scan state
       setScanProgress(0);
-      setScanStatus('');
+      setScanStatus('Preparing to scan...');
+      setScanPhase('preparing');
+      setScanCurrentFile('');
+      setScanTransferInfo(null);
+      setScanProcessedFiles([]);
+      scanProcessedFilesRef.current = [];
+      scanStartTime.current = 0;
 
       // Start the scan
       await scanLibrary(libraryPath);
     } catch (error) {
       console.error('Error scanning library:', error);
       setScanStatus('Failed');
+      setScanPhase('error');
       setSnackbarMessage(
         error instanceof Error ? error.message : 'Error scanning library',
       );
@@ -298,13 +379,20 @@ export default function Settings({
 
       // Reset scan state
       setScanProgress(0);
-      setScanStatus('');
+      setScanStatus('Preparing to import...');
+      setScanPhase('preparing');
+      setScanCurrentFile('');
+      setScanTransferInfo(null);
+      setScanProcessedFiles([]);
+      scanProcessedFilesRef.current = [];
+      scanStartTime.current = 0;
 
       // Import the selected files
       await importFiles(result.filePaths);
     } catch (error) {
       console.error('Error importing files:', error);
       setScanStatus('Failed');
+      setScanPhase('error');
       setSnackbarMessage(
         error instanceof Error ? error.message : 'Error importing files',
       );
@@ -358,12 +446,24 @@ export default function Settings({
     }
   };
 
-  // Modified to show the confirmation dialog first
-  const handleSaveLibraryPath = async () => {
+  const handleSelectLibraryPath = async () => {
+    originalPathRef.current = libraryPath;
+    const result =
+      (await window.electron.dialog.selectDirectory()) as DirectorySelectionResult;
+
+    let newLibraryPath = '';
+    if (!result.canceled && result.filePaths.length > 0) {
+      // eslint-disable-next-line prefer-destructuring
+      newLibraryPath = result.filePaths[0];
+    } else {
+      // reset back to original path
+      newLibraryPath = originalPathRef.current;
+    }
+
     try {
       // Check if the library path exists
       const pathExists =
-        await window.electron.fileSystem.fileExists(libraryPath);
+        await window.electron.fileSystem.fileExists(newLibraryPath);
 
       if (!pathExists) {
         setSnackbarMessage('The specified library path does not exist');
@@ -372,26 +472,13 @@ export default function Settings({
         return;
       }
 
-      // Open the confirmation dialog
+      setLibraryPath(newLibraryPath);
       setPathDialogOpen(true);
     } catch (error) {
       console.error('Error validating library path:', error);
       setSnackbarMessage('Error validating library path');
       setSnackbarOpen(true);
     }
-  };
-
-  const handleSelectLibraryPath = async () => {
-    originalPathRef.current = libraryPath;
-    const result =
-      (await window.electron.dialog.selectDirectory()) as DirectorySelectionResult;
-    if (!result.canceled && result.filePaths.length > 0) {
-      setLibraryPath(result.filePaths[0]);
-    } else {
-      setLibraryPath(originalPathRef.current);
-    }
-
-    handleSaveLibraryPath();
   };
 
   // New function to handle confirmation of library path change
@@ -416,11 +503,10 @@ export default function Settings({
           return;
         }
 
-        // Reload the library to clear the tracks in the UI
-        await loadLibrary();
-
-        // Now start the scan with the new library path
         await scanLibrary(libraryPath);
+
+        // Reload the library to clear out old tracks in the UI with new ones
+        await loadLibrary();
       } catch (error) {
         console.error('Error scanning library:', error);
         setScanStatus('Failed');
@@ -480,9 +566,17 @@ export default function Settings({
   };
 
   const getScanStatusText = () => {
-    if (scanStatus === 'Failed') return 'Scan Failed';
-    if (scanStatus === 'Complete') return 'Scan Complete';
-    return 'Scanning...';
+    if (scanPhase === 'error') return 'Scan Failed';
+    if (scanPhase === 'complete') return 'Scan Complete';
+
+    switch (scanPhase) {
+      case 'preparing':
+        return 'Preparing...';
+      case 'processing':
+        return 'Scanning...';
+      default:
+        return 'In Progress...';
+    }
   };
 
   // Function to generate the backup status text
@@ -515,7 +609,7 @@ export default function Settings({
     return filePath;
   };
 
-  // Add these helper functions to avoid nested ternary expressions
+  // Helper functions for backup progress
   const getProgressValue = () => {
     if (!isBackupInProgress) {
       return 100;
@@ -530,6 +624,22 @@ export default function Settings({
 
   const getProgressVariant = () => {
     if (isBackupInProgress && backupPhase !== 'transferring') {
+      return 'indeterminate';
+    }
+    return 'determinate';
+  };
+
+  // Helper functions for scan progress
+  const getScanProgressValue = () => {
+    if (scanPhase === 'complete' || scanPhase === 'error') {
+      return 100;
+    }
+
+    return scanProgress;
+  };
+
+  const getScanProgressVariant = () => {
+    if (scanPhase === 'preparing') {
       return 'indeterminate';
     }
     return 'determinate';
@@ -582,7 +692,7 @@ export default function Settings({
                     ),
                   }}
                   label="Folder"
-                  onChange={handleSaveLibraryPath}
+                  onChange={handleSelectLibraryPath}
                   value={libraryPath}
                 />
               </FormControl>
@@ -857,14 +967,32 @@ export default function Settings({
             </Typography>
             <LinearProgress
               sx={{ mt: 2 }}
-              value={scanProgress}
-              variant="determinate"
+              value={getScanProgressValue()}
+              variant={getScanProgressVariant()}
             />
-            <Typography sx={{ mt: 1 }} variant="body2">
+
+            {scanPhase === 'processing' && scanTransferInfo && (
+              <Typography sx={{ mt: 1 }} variant="body2">
+                Progress: {scanProgress.toFixed(1)}% ({scanTransferInfo.current}
+                /{scanTransferInfo.total} files)
+                {scanTransferInfo.estimatedTimeRemaining &&
+                  ` - ETA: ${scanTransferInfo.estimatedTimeRemaining}`}
+              </Typography>
+            )}
+
+            <Typography sx={{ mt: 1, mb: 1 }} variant="body2">
               {scanStatus}
             </Typography>
+
+            {scanPhase === 'processing' && scanCurrentFile && (
+              <Typography sx={{ mt: 1, fontStyle: 'italic' }} variant="body2">
+                Current file: {formatFilePath(scanCurrentFile)}
+              </Typography>
+            )}
           </Box>
-          {scanStatus === 'Complete' && (
+
+          {/* Show a list of recently processed files */}
+          {scanProcessedFiles.length > 0 && (
             <Paper
               elevation={0}
               sx={{
@@ -875,13 +1003,19 @@ export default function Settings({
                 mb: 2,
               }}
             >
-              <Typography
-                component="div"
-                sx={{ fontFamily: 'monospace' }}
-                variant="body2"
-              >
-                Scan completed successfully
+              <Typography sx={{ mb: 1 }} variant="subtitle2">
+                Recently processed files:
               </Typography>
+              {scanProcessedFiles.map((file) => (
+                <Typography
+                  key={`scan-file-${file}`}
+                  component="div"
+                  sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+                  variant="body2"
+                >
+                  {formatFilePath(file)}
+                </Typography>
+              ))}
             </Paper>
           )}
         </DialogContent>

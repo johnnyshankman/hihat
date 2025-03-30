@@ -9,11 +9,42 @@ import fs from 'fs';
 import path from 'path';
 import { BrowserWindow } from 'electron';
 import * as mm from 'music-metadata';
+import { cpus } from 'os';
+import { promisify } from 'util';
 import * as db from '../db';
 import { Track } from '../../types/dbTypes';
 
+function debugLog(message: string, data?: any): void {
+  const timestamp = new Date().toISOString();
+  const formattedMessage = `[DEBUG ${timestamp}] ${message}`;
+
+  if (data) {
+    // eslint-disable-next-line no-console
+    console.log(formattedMessage, data);
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(formattedMessage);
+  }
+}
+
+// Use promisified versions of filesystem functions for better async handling
+const copyFile = promisify(fs.copyFile);
+const exists = promisify(fs.exists);
+const stat = promisify(fs.stat);
+const mkdir = promisify(fs.mkdir);
+const unlink = promisify(fs.unlink);
+
 // Supported file extensions
 const SUPPORTED_EXTENSIONS = ['.mp3', '.m4a', '.flac', '.wav', '.ogg', '.aac'];
+
+// Number of parallel processes to use (75% of available CPUs)
+const PARALLEL_PROCESSES = Math.max(1, Math.floor(cpus().length * 0.75));
+
+// Batch size for database operations
+const DB_BATCH_SIZE = 100;
+
+// Cache for directory existence checks to avoid repeated fs.existsSync calls
+const directoryExistsCache = new Map<string, boolean>();
 
 // Main window reference for sending progress events
 let mainWindow: BrowserWindow | null = null;
@@ -49,12 +80,25 @@ function isSupportedFile(filePath: string): boolean {
 
 /**
  * Ensure a directory exists, creating it if necessary
+ * Uses a cache to avoid repeated filesystem checks
  * @param dirPath - Path to the directory
  */
-function ensureDirectoryExists(dirPath: string): void {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
+async function ensureDirectoryExists(dirPath: string): Promise<void> {
+  // Check cache first
+  if (directoryExistsCache.has(dirPath)) {
+    if (directoryExistsCache.get(dirPath)) {
+      return;
+    }
   }
+
+  // Check if directory exists
+  const dirExists = await exists(dirPath);
+  if (!dirExists) {
+    await mkdir(dirPath, { recursive: true });
+  }
+
+  // Update cache
+  directoryExistsCache.set(dirPath, true);
 }
 
 /**
@@ -139,25 +183,21 @@ function calculateAudioQuality(format: mm.IFormat, extension: string): number {
 
 /**
  * Find duplicate tracks based on metadata
+ * This is optimized to use a Map for O(1) lookups instead of O(n) search
  * @param trackData - New track metadata
+ * @param trackMap - Map of existing tracks for efficient lookup
  * @returns Duplicate track if found, null otherwise
  */
-function findDuplicateTrack(trackData: Omit<Track, 'id'>): Track | null {
+function findDuplicateTrack(
+  trackData: Omit<Track, 'id'>,
+  trackMap: Map<string, Track>,
+): Track | null {
   try {
-    // Get all tracks in the database
-    const allTracks = db.getAllTracks();
+    // Create a lookup key from metadata
+    const key = `${trackData.title.toLowerCase()}|${trackData.artist.toLowerCase()}|${trackData.albumArtist.toLowerCase()}|${trackData.album.toLowerCase()}`;
 
-    // Find a track with the same title, artist, albumArtist, and album
-    const duplicate = allTracks.find(
-      (track) =>
-        track.title.toLowerCase() === trackData.title.toLowerCase() &&
-        track.artist.toLowerCase() === trackData.artist.toLowerCase() &&
-        track.albumArtist.toLowerCase() ===
-          trackData.albumArtist.toLowerCase() &&
-        track.album.toLowerCase() === trackData.album.toLowerCase(),
-    );
-
-    return duplicate || null;
+    // Direct lookup in the map
+    return trackMap.get(key) || null;
   } catch (error) {
     console.error('Error finding duplicate track:', error);
     return null;
@@ -166,46 +206,34 @@ function findDuplicateTrack(trackData: Omit<Track, 'id'>): Track | null {
 
 /**
  * Copy a file to the library path, preserving the directory structure
+ * Optimized with caching and async file operations
  * @param sourcePath - Source file path
  * @param libraryPath - Target library path
+ * @param metadata - Already parsed metadata to avoid re-parsing
  * @returns New file path in the library
  */
 async function copyFileToLibrary(
   sourcePath: string,
   libraryPath: string,
+  metadata: mm.IAudioMetadata,
 ): Promise<string> {
   try {
-    // Ensure the library path exists
-    ensureDirectoryExists(libraryPath);
+    await ensureDirectoryExists(libraryPath);
 
     // Get file name and extension
     const fileName = path.basename(sourcePath);
 
-    // Create a relative path structure based on artist/album
-    let metadata;
-    try {
-      metadata = await mm.parseFile(sourcePath, {
-        duration: true,
-        skipCovers: true,
-      });
-    } catch (error) {
-      console.error(`Error parsing metadata for ${sourcePath}:`, error);
-      // If metadata parsing fails, use a fallback structure
-      metadata = {
-        common: { artist: 'Unknown Artist', album: 'Unknown Album' },
-      };
-    }
+    const { common } = metadata;
+    const artist = common.artist || 'Unknown Artist';
+    const album = common.album || 'Unknown Album';
 
-    const artist = metadata.common.artist || 'Unknown Artist';
-    const album = metadata.common.album || 'Unknown Album';
-
-    // Create sanitized folder names (remove characters that might cause issues in file paths)
+    // Create sanitized folder names
     const sanitizedArtist = artist.replace(/[\\/:*?"<>|]/g, '_');
     const sanitizedAlbum = album.replace(/[\\/:*?"<>|]/g, '_');
-
     // Create the target directory structure
     const targetDir = path.join(libraryPath, sanitizedArtist, sanitizedAlbum);
-    ensureDirectoryExists(targetDir);
+
+    await ensureDirectoryExists(targetDir);
 
     // Create the target file path
     const targetPath = path.join(targetDir, fileName);
@@ -215,23 +243,20 @@ async function copyFileToLibrary(
       // If the file is already in the library path and at the exact target path,
       // we don't need to copy it
       if (sourcePath === targetPath) {
-        console.log(
-          `File is already at the correct location in library: ${targetPath}`,
-        );
         return targetPath;
       }
     }
 
     // Check if the file already exists at the target location
-    if (fs.existsSync(targetPath)) {
+    const targetExists = await exists(targetPath);
+    if (targetExists) {
       // If the file exists and has the same size, assume it's the same file
-      const sourceStats = fs.statSync(sourcePath);
-      const targetStats = fs.statSync(targetPath);
+      const [sourceStats, targetStats] = await Promise.all([
+        stat(sourcePath),
+        stat(targetPath),
+      ]);
 
       if (sourceStats.size === targetStats.size) {
-        console.log(
-          `File already exists at ${targetPath} with the same size, skipping copy`,
-        );
         return targetPath;
       }
 
@@ -245,24 +270,22 @@ async function copyFileToLibrary(
       const newFileName = `${fileNameWithoutExt}_${timestamp}${fileExt}`;
       const newTargetPath = path.join(targetDir, newFileName);
 
-      // Copy the file to the new target path
-      fs.copyFileSync(sourcePath, newTargetPath);
-      console.log(`Copied file to ${newTargetPath}`);
+      await copyFile(sourcePath, newTargetPath);
       return newTargetPath;
     }
 
-    // Copy the file to the target path
-    fs.copyFileSync(sourcePath, targetPath);
-    console.log(`Copied file to ${targetPath}`);
+    await copyFile(sourcePath, targetPath);
     return targetPath;
   } catch (error) {
     console.error(`Error copying file ${sourcePath} to library:`, error);
+
     throw error;
   }
 }
 
 /**
  * Get all music files in a directory recursively
+ * Optimized for performance with iterative approach
  * @param dirPath - Path to the directory
  * @returns Array of file paths
  */
@@ -270,43 +293,51 @@ function getMusicFiles(dirPath: string): string[] {
   const files: string[] = [];
   const dirsToScan: string[] = [dirPath];
 
+  debugLog(`Starting to scan directory: ${dirPath}`);
+
   while (dirsToScan.length > 0) {
     const currentPath = dirsToScan.shift() as string;
-    const entries = fs.readdirSync(currentPath, { withFileTypes: true });
 
-    entries.forEach((entry) => {
-      const entryPath = path.join(currentPath, entry.name);
+    try {
+      const entries = fs.readdirSync(currentPath, { withFileTypes: true });
 
-      if (entry.isDirectory()) {
-        dirsToScan.push(entryPath);
-      } else if (entry.isFile() && isSupportedFile(entryPath)) {
-        files.push(entryPath);
-      }
-    });
+      entries.forEach((entry) => {
+        const entryPath = path.join(currentPath, entry.name);
+
+        if (entry.isDirectory()) {
+          dirsToScan.push(entryPath);
+        } else if (entry.isFile() && isSupportedFile(entryPath)) {
+          files.push(entryPath);
+        }
+      });
+    } catch (error) {
+      debugLog(`Error reading directory ${currentPath}:`, error);
+    }
   }
+
+  // Log summary of files found
+  debugLog(`Total music files found: ${files.length}`);
 
   return files;
 }
 
 /**
  * Parse metadata from a music file
+ * Simplified for performance
  * @param filePath - Path to the music file
+ * @param metadata - Already parsed metadata to avoid re-parsing
  * @returns Track object with metadata
  */
-async function parseFileMetadata(filePath: string): Promise<Omit<Track, 'id'>> {
+function parseFileMetadata(
+  filePath: string,
+  metadata: mm.IAudioMetadata,
+): Omit<Track, 'id'> {
   try {
-    const metadata = await mm.parseFile(filePath, {
-      duration: true,
-      skipCovers: true,
-    });
     const { common, format } = metadata;
 
     // Extract track number if available
     let trackNumber: number | null = null;
     if (common.track && common.track.no) {
-      console.log(
-        `Track number found for ${filePath}: ${common.track.no} (${typeof common.track.no})`,
-      );
       trackNumber =
         typeof common.track.no === 'number'
           ? common.track.no
@@ -316,9 +347,6 @@ async function parseFileMetadata(filePath: string): Promise<Omit<Track, 'id'>> {
       if (Number.isNaN(trackNumber)) {
         trackNumber = null;
       }
-      console.log(`Parsed track number: ${trackNumber}`);
-    } else {
-      console.log(`No track number found for ${filePath}`);
     }
 
     return {
@@ -363,102 +391,81 @@ async function parseFileMetadata(filePath: string): Promise<Omit<Track, 'id'>> {
  * Process a single file for the library
  * @param filePath - Path to the file
  * @param existingFilePaths - Set of existing file paths
- * @param totalFiles - Total number of files to process in the scan
- * @param currentProcessed - Number of files processed so far in the scan
+ * @param trackMap - Map of existing tracks for efficient lookup
  * @param libraryPath - Path to the library directory
- * @returns Object with processed and added status
+ * @returns Track data if added, null if skipped
  */
 async function processFile(
   filePath: string,
   existingFilePaths: Set<string>,
-  totalFiles: number,
-  currentProcessed: number,
+  trackMap: Map<string, Track>,
   libraryPath: string,
-): Promise<{ processed: boolean; added: boolean }> {
-  // Send progress event
-  sendProgressEvent('library:scanProgress', {
-    total: totalFiles,
-    processed: currentProcessed,
-    current: filePath,
-  });
-
+): Promise<Omit<Track, 'id'> | null> {
   // Skip if the file is already in the database
   if (existingFilePaths.has(filePath)) {
-    return { processed: true, added: false };
+    return null;
   }
 
   try {
-    // Parse metadata using the original file path for the new file
-    let trackData = await parseFileMetadata(filePath);
+    // Parse metadata only once and reuse
+    const metadata = await mm.parseFile(filePath, {
+      duration: true,
+      skipCovers: true,
+    });
+
+    // Create track data
+    let trackData = parseFileMetadata(filePath, metadata);
 
     // Check for duplicate track
-    const duplicate = findDuplicateTrack(trackData);
+    const duplicate = findDuplicateTrack(trackData, trackMap);
 
     if (duplicate) {
       // Compare quality of the files to determine which one to keep
       const newFileExt = path.extname(filePath).toLowerCase();
-
-      // Get metadata for quality comparison
-      const newMetadata = await mm.parseFile(filePath);
+      const existingFileExt = path.extname(duplicate.filePath).toLowerCase();
 
       // Get metadata for the existing file
       let existingMetadata;
       try {
-        existingMetadata = await mm.parseFile(duplicate.filePath);
+        const existingFileExists = await exists(duplicate.filePath);
+        if (!existingFileExists) {
+          // If the existing file doesn't exist, prefer the new one
+          existingMetadata = { format: {} } as mm.IAudioMetadata;
+        } else {
+          existingMetadata = await mm.parseFile(duplicate.filePath);
+        }
       } catch (error) {
-        console.error(
-          `Error reading existing file ${duplicate.filePath}:`,
-          error,
-        );
         // If we can't read the existing file, prefer the new one
         existingMetadata = { format: {} } as mm.IAudioMetadata;
       }
 
-      const existingFileExt = path.extname(duplicate.filePath).toLowerCase();
-
       // Calculate quality scores
-      const newQuality = calculateAudioQuality(newMetadata.format, newFileExt);
+      const newQuality = calculateAudioQuality(metadata.format, newFileExt);
       const existingQuality = calculateAudioQuality(
         existingMetadata.format,
         existingFileExt,
       );
 
-      console.log(`Quality comparison for "${trackData.title}":
-        New file (${newFileExt}): ${newQuality}
-        Existing file (${existingFileExt}): ${existingQuality}`);
-
       // If the existing file has equal or higher quality, skip the new one
       if (existingQuality >= newQuality) {
-        console.log(
-          `Skipping new file as existing has equal or higher quality.`,
-        );
-        return { processed: true, added: false };
+        return null;
       }
 
-      // If the new file has higher quality, delete the existing file and continue
-      console.log(`New file has higher quality. Replacing existing file.`);
+      // If the new file has higher quality, mark the existing one for deletion
 
-      try {
-        // Delete the existing file if it exists
-        if (fs.existsSync(duplicate.filePath)) {
-          fs.unlinkSync(duplicate.filePath);
-          console.log(`Deleted lower quality file: ${duplicate.filePath}`);
-        }
-
-        // Delete the existing track from the database
-        db.deleteTrack(duplicate.id);
-        console.log(
-          `Deleted lower quality track from database: ${duplicate.id}`,
-        );
-      } catch (error) {
-        console.error(`Error deleting existing file or track: ${error}`);
-        // Continue anyway to add the new higher quality file
-      }
+      return {
+        ...trackData,
+        replaceId: duplicate.id,
+        oldPath: duplicate.filePath,
+      } as Omit<Track, 'id'> & { replaceId: string; oldPath: string };
     }
 
     // Copy the file to the library path
-    console.log(`Copying file ${filePath} to library path...`);
-    const targetFilePath = await copyFileToLibrary(filePath, libraryPath);
+    const targetFilePath = await copyFileToLibrary(
+      filePath,
+      libraryPath,
+      metadata,
+    );
 
     // Update the file path to the target path in the library
     trackData = {
@@ -466,40 +473,78 @@ async function processFile(
       filePath: targetFilePath,
     };
 
-    // Debug log
-    console.log(
-      'Track data before adding to database:',
-      JSON.stringify({
-        filePath: trackData.filePath,
-        title: trackData.title,
-        artist: trackData.artist,
-        album: trackData.album,
-        // Log other fields as needed
-      }),
-    );
-
-    // Add track to database
-    db.addTrack(trackData);
-
-    return { processed: true, added: true };
+    return trackData;
   } catch (error) {
     console.error(`Error processing file ${filePath}:`, error);
-    return { processed: true, added: false };
+
+    return null;
   }
 }
 
 /**
+ * Process a batch of files in parallel
+ * @param fileBatch - Array of file paths to process
+ * @param existingFilePaths - Set of existing file paths
+ * @param trackMap - Map of existing tracks for efficient lookup
+ * @param libraryPath - Path to the library directory
+ * @returns Array of processed track data
+ */
+async function processBatch(
+  fileBatch: string[],
+  existingFilePaths: Set<string>,
+  trackMap: Map<string, Track>,
+  libraryPath: string,
+): Promise<(Omit<Track, 'id'> & { replaceId?: string; oldPath?: string })[]> {
+  // Process files in parallel
+  const results = await Promise.all(
+    fileBatch.map((filePath) =>
+      processFile(filePath, existingFilePaths, trackMap, libraryPath),
+    ),
+  );
+
+  // Filter out null results (skipped files)
+  return results.filter((result) => result !== null) as (Omit<Track, 'id'> & {
+    replaceId?: string;
+    oldPath?: string;
+  })[];
+}
+
+/**
+ * Create a Map of existing tracks for efficient duplicate lookup
+ * @param existingTracks - Array of existing tracks
+ * @returns Map of tracks with composite keys
+ */
+function createTrackMap(existingTracks: Track[]): Map<string, Track> {
+  const trackMap = new Map<string, Track>();
+
+  existingTracks.forEach((track) => {
+    const key = `${track.title.toLowerCase()}|${track.artist.toLowerCase()}|${track.albumArtist.toLowerCase()}|${track.album.toLowerCase()}`;
+    trackMap.set(key, track);
+  });
+
+  // Log summary of existing tracks
+  debugLog(`Total existing tracks: ${existingTracks.length}`);
+
+  return trackMap;
+}
+
+/**
  * Scan a directory for music files and import them into the database
+ * Optimized with parallel processing and batch operations
  * @param dirPath - Path to the directory
  * @returns Object with the number of tracks added
  */
 export async function scanLibrary(
   dirPath: string,
 ): Promise<{ tracksAdded: number }> {
+  debugLog(`Beginning library scan of directory: ${dirPath}`);
+
   try {
     // Get all music files in the directory
     const files = getMusicFiles(dirPath);
     const totalFiles = files.length;
+
+    debugLog(`Found ${totalFiles} total music files to process`);
 
     // Get existing tracks to avoid duplicates
     const existingTracks = db.getAllTracks();
@@ -507,52 +552,150 @@ export async function scanLibrary(
       existingTracks.map((track) => track.filePath),
     );
 
+    debugLog(
+      `Retrieved ${existingTracks.length} existing tracks from database`,
+    );
+
+    // Create an efficient lookup map for duplicate detection
+    const trackMap = createTrackMap(existingTracks);
+
     // Get the library path from settings
     const settings = db.getSettings();
     const { libraryPath } = settings;
 
     // If library path is not set, we can't proceed
     if (!libraryPath) {
+      debugLog('Library path not set in settings, cannot proceed');
       throw new Error('Library path is not set in settings');
     }
 
-    // Ensure the library path exists
-    ensureDirectoryExists(libraryPath);
+    debugLog(`Using library path: ${libraryPath}`);
 
-    // Process files sequentially to avoid overwhelming the system
+    // Ensure the library path exists
+    await ensureDirectoryExists(libraryPath);
+
+    // Divide files into batches for parallel processing
+    const batchSize = Math.ceil(files.length / PARALLEL_PROCESSES);
+    const batches: string[][] = [];
+
+    for (let i = 0; i < files.length; i += batchSize) {
+      batches.push(files.slice(i, i + batchSize));
+    }
+
+    debugLog(
+      `Created ${batches.length} batches with size ~${batchSize} for processing`,
+    );
+
+    // Progress tracking
     let processedCount = 0;
     let tracksAdded = 0;
 
-    // Process files one by one
-    await files.reduce(async (previousPromise, filePath) => {
-      await previousPromise;
-      processedCount += 1;
+    // Files to delete after processing (higher-quality replacements)
+    const filesToDelete: string[] = [];
+    const tracksToDelete: string[] = [];
 
-      const result = await processFile(
-        filePath,
-        existingFilePaths,
-        totalFiles,
-        processedCount,
-        libraryPath,
-      );
+    // Process batches in sequence to avoid overwhelming resources
+    const processBatches = async (): Promise<void> => {
+      for (let i = 0; i < batches.length; i += 1) {
+        const batch = batches[i];
 
-      if (result.added) {
-        tracksAdded += 1;
+        // Send progress event for the batch
+        sendProgressEvent('library:scanProgress', {
+          total: totalFiles,
+          processed: processedCount,
+          current: `Processing batch ${i + 1} of ${batches.length}`,
+        });
+
+        // Process the batch
+        // eslint-disable-next-line no-await-in-loop
+        const processedTracks = await processBatch(
+          batch,
+          existingFilePaths,
+          trackMap,
+          libraryPath,
+        );
+
+        // Collect files and tracks to delete
+        processedTracks.forEach((track) => {
+          if (track.replaceId && track.oldPath) {
+            tracksToDelete.push(track.replaceId);
+            filesToDelete.push(track.oldPath);
+
+            // Remove these properties before adding to database
+            delete track.replaceId;
+            delete track.oldPath;
+          }
+        });
+
+        // Add tracks to database in batches
+        if (processedTracks.length > 0) {
+          // Add tracks in smaller batches to avoid overwhelming the database
+          for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
+            const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
+
+            // Use addTrack for each track since addTracks doesn't exist
+            trackBatch.forEach((track) => {
+              try {
+                db.addTrack(track);
+              } catch (error) {
+                console.error(
+                  `Error adding track to database: ${track.title}`,
+                  error,
+                );
+              }
+            });
+          }
+
+          tracksAdded += processedTracks.length;
+        }
+
+        processedCount += batch.length;
+
+        // Send progress event
+        sendProgressEvent('library:scanProgress', {
+          total: totalFiles,
+          processed: processedCount,
+          current: `Processed ${processedCount} of ${totalFiles} files`,
+        });
       }
+    };
 
-      return Promise.resolve();
-    }, Promise.resolve());
+    // Process batches
+    await processBatches();
+
+    // Delete replaced tracks from database
+    if (tracksToDelete.length > 0) {
+      // Process deletions with Promise.all instead of a for loop
+      await Promise.all(tracksToDelete.map((id) => db.deleteTrack(id)));
+    }
+
+    // Delete replaced files - process file deletions in parallel
+    const fileDeletionPromises = filesToDelete.map(async (filePath) => {
+      try {
+        const fileExists = await exists(filePath);
+        if (fileExists) {
+          await unlink(filePath);
+        }
+      } catch (error) {
+        console.error(`Error deleting file ${filePath}:`, error);
+      }
+    });
+
+    await Promise.all(fileDeletionPromises);
+
+    // Count tracks in final database
+    const finalTracks = db.getAllTracks();
+
+    debugLog(`Final database contains ${finalTracks.length} total tracks`);
 
     // Send completion event
     sendProgressEvent('library:scanComplete', {
       tracksAdded,
     });
 
-    // We no longer update the settings with the library path here
-    // This was causing the bug where the library path would change when scanning
-
     return { tracksAdded };
   } catch (error) {
+    debugLog(`ERROR: Library scan failed:`, error);
     console.error(`Error scanning library at ${dirPath}:`, error);
     throw error;
   }
@@ -566,6 +709,8 @@ export async function scanLibrary(
 export async function importFiles(
   filePaths: string[],
 ): Promise<{ tracksAdded: number }> {
+  debugLog(`Beginning import of ${filePaths.length} files`);
+
   try {
     const totalFiles = filePaths.length;
 
@@ -575,45 +720,134 @@ export async function importFiles(
       existingTracks.map((track) => track.filePath),
     );
 
+    // Create an efficient lookup map for duplicate detection
+    const trackMap = createTrackMap(existingTracks);
+
     // Get the library path from settings
     const settings = db.getSettings();
     const { libraryPath } = settings;
 
     if (!libraryPath) {
+      debugLog('Library path not set in settings, cannot proceed');
       throw new Error('Library path is not set in settings');
     }
 
+    debugLog(`Using library path: ${libraryPath}`);
+
     // Ensure the library path exists
-    ensureDirectoryExists(libraryPath);
+    await ensureDirectoryExists(libraryPath);
 
     // Filter out unsupported files
     const supportedFiles = filePaths.filter((filePath) =>
       isSupportedFile(filePath),
     );
 
-    // Process files sequentially
+    // Divide files into batches for parallel processing
+    const batchSize = Math.ceil(supportedFiles.length / PARALLEL_PROCESSES);
+    const batches: string[][] = [];
+
+    for (let i = 0; i < supportedFiles.length; i += batchSize) {
+      batches.push(supportedFiles.slice(i, i + batchSize));
+    }
+
+    debugLog(
+      `Created ${batches.length} batches with size ~${batchSize} for processing`,
+    );
+
+    // Progress tracking
     let processedCount = 0;
     let tracksAdded = 0;
 
-    // Process files one by one
-    await supportedFiles.reduce(async (previousPromise, filePath) => {
-      await previousPromise;
-      processedCount += 1;
+    // Files to delete after processing (higher-quality replacements)
+    const filesToDelete: string[] = [];
+    const tracksToDelete: string[] = [];
 
-      const result = await processFile(
-        filePath,
-        existingFilePaths,
-        totalFiles,
-        processedCount,
-        libraryPath,
-      );
+    // Process batches in sequence to avoid overwhelming resources
+    const processBatches = async (): Promise<void> => {
+      for (let i = 0; i < batches.length; i += 1) {
+        const batch = batches[i];
 
-      if (result.added) {
-        tracksAdded += 1;
+        // Process the batch
+        // eslint-disable-next-line no-await-in-loop
+        const processedTracks = await processBatch(
+          batch,
+          existingFilePaths,
+          trackMap,
+          libraryPath,
+        );
+
+        // Collect files and tracks to delete
+        processedTracks.forEach((track) => {
+          if (track.replaceId && track.oldPath) {
+            tracksToDelete.push(track.replaceId);
+            filesToDelete.push(track.oldPath);
+
+            // Remove these properties before adding to database
+            delete track.replaceId;
+            delete track.oldPath;
+          }
+        });
+
+        // Add tracks to database in batches
+        if (processedTracks.length > 0) {
+          // Add tracks in smaller batches to avoid overwhelming the database
+          for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
+            const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
+
+            // Use addTrack for each track since addTracks doesn't exist
+            trackBatch.forEach((track) => {
+              try {
+                db.addTrack(track);
+              } catch (error) {
+                console.error(
+                  `Error adding track to database: ${track.title}`,
+                  error,
+                );
+              }
+            });
+          }
+
+          tracksAdded += processedTracks.length;
+        }
+
+        processedCount += batch.length;
+
+        // Send progress event
+        sendProgressEvent('library:scanProgress', {
+          total: totalFiles,
+          processed: processedCount,
+          current: `Processed ${processedCount} of ${totalFiles} files`,
+        });
       }
+    };
 
-      return Promise.resolve();
-    }, Promise.resolve());
+    // Process batches
+    await processBatches();
+
+    // Delete replaced tracks from database
+    if (tracksToDelete.length > 0) {
+      // Process deletions with Promise.all instead of a for loop
+      await Promise.all(tracksToDelete.map((id) => db.deleteTrack(id)));
+    }
+
+    // Delete replaced files - process file deletions in parallel
+    const fileDeletionPromises = filesToDelete.map(async (filePath) => {
+      try {
+        const fileExists = await exists(filePath);
+        if (fileExists) {
+          await unlink(filePath);
+        }
+      } catch (error) {
+        console.error(`Error deleting file ${filePath}:`, error);
+      }
+    });
+
+    await Promise.all(fileDeletionPromises);
+
+    // Count tracks in final database
+    const finalTracks = db.getAllTracks();
+
+    debugLog(`Final database contains ${finalTracks.length} total tracks`);
 
     // Send completion event
     sendProgressEvent('library:scanComplete', {
@@ -622,6 +856,7 @@ export async function importFiles(
 
     return { tracksAdded };
   } catch (error) {
+    debugLog(`ERROR: File import failed:`, error);
     console.error(`Error importing files:`, error);
     throw error;
   }
