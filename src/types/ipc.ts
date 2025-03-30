@@ -23,6 +23,7 @@ export type Channels =
   | 'menu-backup-library'
   | 'backup-library-success'
   | 'backup-library-error'
+  | 'backup-library-progress'
 
   // Track operations
   | 'tracks:getAll'
@@ -218,6 +219,18 @@ export interface IPCRequests {
   'menu-backup-library': string;
   'backup-library-success': void;
   'backup-library-error': string;
+  'backup-library-progress': {
+    phase: string;
+    status: string;
+    currentFile?: string;
+    progress?: number;
+    currentTransfer?: number;
+    remaining?: number;
+    total?: number;
+    transferSpeed?: string;
+    filesProcessed?: number;
+    totalFiles?: number;
+  };
 }
 
 /**
@@ -336,6 +349,7 @@ export interface IPCResponses {
   'menu-backup-library': void;
   'backup-library-success': void;
   'backup-library-error': void;
+  'backup-library-progress': void;
 }
 
 /**
@@ -361,6 +375,9 @@ export type IPCEvents =
   | 'playback:positionChanged'
   | 'library:scanProgress'
   | 'library:scanComplete'
+  | 'backup-library-success'
+  | 'backup-library-error'
+  | 'backup-library-progress'
   | 'ui:toggleSidebar'
   | 'player:playPause'
   | 'player:nextTrack'

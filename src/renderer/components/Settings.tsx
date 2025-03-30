@@ -77,6 +77,19 @@ export default function Settings({
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStatus, setScanStatus] = useState('');
   const [backupStatus, setBackupStatus] = useState('');
+  // Add backup progress state
+  const [backupProgress, setBackupProgress] = useState(0);
+  const [backupCurrentFile, setBackupCurrentFile] = useState('');
+  const [backupPhase, setBackupPhase] = useState('preparing');
+  const [backupTransferInfo, setBackupTransferInfo] = useState<{
+    current: number;
+    total: number;
+    remaining: number;
+    speed: string;
+  } | null>(null);
+  // Track the last processed file for display in the completed log
+  const [processedFiles, setProcessedFiles] = useState<string[]>([]);
+  const processedFilesRef = useRef<string[]>([]);
 
   // Add a ref to track the last time we updated the UI for scan progress
   const lastUpdateTime = useRef(0);
@@ -133,6 +146,9 @@ export default function Settings({
         setBackupDialogOpen(false);
         setIsBackupInProgress(false);
         setBackupStatus('');
+        setBackupProgress(100);
+        setProcessedFiles([]);
+        processedFilesRef.current = [];
         setSnackbarMessage('Library backup completed successfully');
         setSnackbarOpen(true);
       },
@@ -149,12 +165,79 @@ export default function Settings({
       },
     );
 
+    // Listen for backup progress updates
+    const unsubBackupProgress = window.electron.ipcRenderer.on(
+      'backup-library-progress' as Channels,
+      (...args: unknown[]) => {
+        const data = args[0] as {
+          phase: string;
+          status: string;
+          currentFile?: string;
+          progress?: number;
+          currentTransfer?: number;
+          remaining?: number;
+          total?: number;
+          transferSpeed?: string;
+          filesProcessed?: number;
+          totalFiles?: number;
+        };
+
+        // Update backup status
+        setBackupStatus(data.status);
+        setBackupPhase(data.phase);
+
+        // Handle different phases
+        if (data.phase === 'transferring') {
+          // Update current file if provided
+          if (data.currentFile) {
+            setBackupCurrentFile(data.currentFile);
+
+            // Add to processed files (but limit to last 20 for performance)
+            if (!processedFilesRef.current.includes(data.currentFile)) {
+              const updatedFiles = [
+                data.currentFile,
+                ...processedFilesRef.current,
+              ].slice(0, 20);
+              processedFilesRef.current = updatedFiles;
+              setProcessedFiles(updatedFiles);
+            }
+          }
+
+          // Update progress if provided
+          if (data.progress !== undefined) {
+            setBackupProgress(data.progress);
+          }
+
+          // Update transfer info if provided
+          if (
+            data.currentTransfer !== undefined &&
+            data.total !== undefined &&
+            data.remaining !== undefined
+          ) {
+            setBackupTransferInfo({
+              current: data.currentTransfer,
+              total: data.total,
+              remaining: data.remaining,
+              speed: data.transferSpeed || '',
+            });
+          }
+        } else if (data.phase === 'counting' && data.totalFiles) {
+          // Just update status for counting phase
+          setBackupStatus(`Found ${data.totalFiles} files to backup`);
+        } else if (data.phase === 'scanning' && data.filesProcessed) {
+          // Update status for scanning phase
+          setBackupStatus(`Scanning files: ${data.filesProcessed} processed`);
+        }
+      },
+    );
+
     // Clean up event listeners
     return () => {
       unsubScanProgress();
       unsubScanComplete();
       unsubBackupSuccess();
       unsubBackupError();
+      unsubBackupProgress();
     };
   }, []);
 
@@ -400,6 +483,56 @@ export default function Settings({
     if (scanStatus === 'Failed') return 'Scan Failed';
     if (scanStatus === 'Complete') return 'Scan Complete';
     return 'Scanning...';
+  };
+
+  // Function to generate the backup status text
+  const getBackupStatusText = () => {
+    if (!isBackupInProgress) return 'Complete';
+
+    switch (backupPhase) {
+      case 'preparing':
+        return 'Preparing...';
+      case 'counting':
+        return 'Counting files...';
+      case 'scanning':
+        return 'Scanning files...';
+      case 'transferring':
+        return 'Copying files...';
+      case 'error':
+        return 'Error';
+      default:
+        return 'In Progress...';
+    }
+  };
+
+  // Function to format file path for display
+  const formatFilePath = (filePath: string) => {
+    // Extract just the filename for cleaner display
+    const parts = filePath.split('/');
+    if (parts.length > 2) {
+      return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
+    }
+    return filePath;
+  };
+
+  // Add these helper functions to avoid nested ternary expressions
+  const getProgressValue = () => {
+    if (!isBackupInProgress) {
+      return 100;
+    }
+
+    if (backupPhase === 'transferring') {
+      return backupProgress;
+    }
+
+    return undefined;
+  };
+
+  const getProgressVariant = () => {
+    if (isBackupInProgress && backupPhase !== 'transferring') {
+      return 'indeterminate';
+    }
+    return 'determinate';
   };
 
   return (
@@ -760,18 +893,60 @@ export default function Settings({
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <Typography gutterBottom variant="body1">
-              Status:{' '}
-              {isBackupInProgress ? 'Backing up library...' : 'Complete'}
+              Status: {getBackupStatusText()}
             </Typography>
             <LinearProgress
               sx={{ mt: 2 }}
-              value={isBackupInProgress ? undefined : 100}
-              variant={isBackupInProgress ? 'indeterminate' : 'determinate'}
+              value={getProgressValue()}
+              variant={getProgressVariant()}
             />
-            <Typography sx={{ mt: 1 }} variant="body2">
+
+            {backupPhase === 'transferring' && backupTransferInfo && (
+              <Typography sx={{ mt: 1 }} variant="body2">
+                Progress: {backupProgress}% ({backupTransferInfo.current}/
+                {backupTransferInfo.total} files)
+                {backupTransferInfo.speed && ` - ${backupTransferInfo.speed}`}
+              </Typography>
+            )}
+
+            <Typography sx={{ mt: 1, mb: 1 }} variant="body2">
               {backupStatus}
             </Typography>
+
+            {backupPhase === 'transferring' && backupCurrentFile && (
+              <Typography sx={{ mt: 1, fontStyle: 'italic' }} variant="body2">
+                Current file: {formatFilePath(backupCurrentFile)}
+              </Typography>
+            )}
           </Box>
+
+          {/* Show a list of recently processed files */}
+          {processedFiles.length > 0 && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                bgcolor: 'background.default',
+                maxHeight: '150px',
+                overflow: 'auto',
+                mb: 2,
+              }}
+            >
+              <Typography sx={{ mb: 1 }} variant="subtitle2">
+                Recently processed files:
+              </Typography>
+              {processedFiles.map((file) => (
+                <Typography
+                  key={`file-${file}`}
+                  component="div"
+                  sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+                  variant="body2"
+                >
+                  {formatFilePath(file)}
+                </Typography>
+              ))}
+            </Paper>
+          )}
         </DialogContent>
       </Dialog>
 
