@@ -287,12 +287,112 @@ export default function MainLayout() {
       <Box
         sx={{
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
           height: '100vh',
+          width: '100vw',
+          background: 'linear-gradient(135deg, #121212, #0A0A0A)',
+          overflow: 'hidden',
         }}
       >
-        <Typography variant="h5">Loading...</Typography>
+        {/* Centered animated loading element */}
+        <Box
+          sx={{
+            position: 'relative',
+            width: '200px',
+            height: '200px',
+            background: 'linear-gradient(to right, #1A1A1A, #121212, #0A0A0A)',
+            borderRadius: '8px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {/* Music note icon with pulsing animation */}
+          <LibraryMusicIcon
+            sx={{
+              color: 'rgba(255, 255, 255, 0.2)',
+              width: '40%',
+              height: '40%',
+              animation: 'pulse 2s infinite ease-in-out',
+              '@keyframes pulse': {
+                '0%, 100%': {
+                  transform: 'scale(1)',
+                  opacity: 0.2,
+                },
+                '50%': {
+                  transform: 'scale(1.1)',
+                  opacity: 0.3,
+                },
+              },
+            }}
+          />
+          <Typography
+            sx={{
+              position: 'absolute',
+              bottom: '8px',
+              left: '8px',
+              color: 'rgba(255, 255, 255, 0.5)',
+            }}
+            variant="caption"
+          >
+            hihat
+          </Typography>
+        </Box>
+
+        {/* Loading text with fade animation */}
+        <Typography
+          sx={{
+            mt: 4,
+            color: 'white',
+            fontWeight: 300,
+            letterSpacing: '0.1em',
+            animation: 'fadeInOut 2s infinite ease-in-out',
+            '@keyframes fadeInOut': {
+              '0%, 100%': {
+                opacity: 0.5,
+              },
+              '50%': {
+                opacity: 1,
+              },
+            },
+          }}
+          variant="h5"
+        >
+          music awaits
+        </Typography>
+
+        {/* Loading dots with sequential animation */}
+        <Box
+          sx={{
+            display: 'flex',
+            mt: 2,
+            gap: 1,
+          }}
+        >
+          {[0, 1, 2].map((i) => (
+            <Box
+              key={i}
+              sx={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: 'primary.main',
+                animation: `bounce 1.4s infinite ease-in-out ${i * 0.2}s`,
+                '@keyframes bounce': {
+                  '0%, 100%': {
+                    transform: 'scale(0)',
+                  },
+                  '50%': {
+                    transform: 'scale(1)',
+                  },
+                },
+              }}
+            />
+          ))}
+        </Box>
       </Box>
     );
   }
