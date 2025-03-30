@@ -104,11 +104,8 @@ export interface SettingsStore {
 
 // UI Store Types
 export interface UIStore {
-  theme: 'light' | 'dark' | null;
   notifications: Notification[];
   currentView: 'library' | 'playlists' | 'settings';
-  // Actions
-  setTheme: (theme: 'light' | 'dark' | null) => void;
   showNotification: (
     message: string,
     type: 'info' | 'success' | 'warning' | 'error',

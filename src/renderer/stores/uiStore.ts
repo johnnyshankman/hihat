@@ -4,12 +4,10 @@ import { Notification, UIStore } from './types';
 // Define the UI store
 const useUIStore = create<UIStore>((set) => ({
   // State
-  theme: null,
   notifications: [],
   currentView: 'library',
 
   // Actions
-  setTheme: (theme: 'light' | 'dark' | null) => set({ theme }),
   setCurrentView: (view: 'library' | 'playlists' | 'settings') =>
     set({ currentView: view }),
   showNotification: (

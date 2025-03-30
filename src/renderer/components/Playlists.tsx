@@ -84,7 +84,7 @@ export default function Playlists({
   );
 
   // Get state from settings store
-  const settings = useSettingsStore((state) => state.settings);
+  const columnVisibility = useSettingsStore((state) => state.columns);
   const updateColumnVisibility = useSettingsStore(
     (state) => state.setColumnVisibility,
   );
@@ -181,7 +181,7 @@ export default function Playlists({
     updaterOrValue: Updater<MrtVisibilityState>,
   ) => {
     // Find which column changed by comparing with settings
-    if (!settings || !settings.columns) return;
+    if (!columnVisibility) return;
 
     // Get the updated visibility state
     let updatedColumnVisibility: MrtVisibilityState;
@@ -189,14 +189,14 @@ export default function Playlists({
     if (typeof updaterOrValue === 'function') {
       // If it's a function, call it with the current visibility
       const currentMrtVisibility =
-        settings.columns as unknown as MrtVisibilityState;
+        columnVisibility as unknown as MrtVisibilityState;
       updatedColumnVisibility = updaterOrValue(currentMrtVisibility);
     } else {
       // If it's a value, use it directly
       updatedColumnVisibility = updaterOrValue;
     }
 
-    const currentVisibility = settings.columns;
+    const currentVisibility = columnVisibility;
 
     // Find the column that changed
     Object.keys(updatedColumnVisibility).forEach((column) => {
@@ -415,7 +415,7 @@ export default function Playlists({
       sorting,
       globalFilter,
       columnVisibility: {
-        ...((settings?.columns as unknown as MrtVisibilityState) || {}),
+        ...((columnVisibility as unknown as MrtVisibilityState) || {}),
       },
     },
     onSortingChange: (updater) => {

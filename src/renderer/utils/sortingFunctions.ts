@@ -13,7 +13,7 @@ interface TrackWithOptionalFields {
   duration?: number;
   playCount?: number;
   dateAdded?: string;
-  lastPlayed?: string;
+  lastPlayed?: string | null;
   albumArtist?: string;
   trackNumber?: number | null;
 }

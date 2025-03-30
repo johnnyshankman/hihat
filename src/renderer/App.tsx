@@ -5,7 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import MainLayout from './components/MainLayout';
 import MiniPlayer from './components/MiniPlayer';
 import { lightTheme, darkTheme } from './styles/materialTheme';
-import { usePlaybackStore, useSettingsStore, useUIStore } from './stores';
+import { usePlaybackStore, useSettingsStore } from './stores';
 import './App.css';
 
 // Check if this is a mini player window
@@ -14,12 +14,8 @@ const isMiniPlayerWindow =
 
 // Mini player specific app that only renders the mini player
 function MiniPlayerApp() {
-  const settings = useSettingsStore((state) => state.settings);
-  const previewTheme = useUIStore((state) => state.theme);
-
-  // Use the preview theme if available, otherwise use the theme from settings
-  const themeToUse = previewTheme || settings?.theme || 'dark';
-  const theme = themeToUse === 'light' ? lightTheme : darkTheme;
+  const theme = useSettingsStore((state) => state.theme);
+  const themeToProvide = theme === 'light' ? lightTheme : darkTheme;
 
   // Set data attribute on body for mini player specific styling
   useEffect(() => {
@@ -33,7 +29,7 @@ function MiniPlayerApp() {
   }, []);
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={themeToProvide}>
       <CssBaseline />
       <MiniPlayer />
     </ThemeProvider>
@@ -42,8 +38,8 @@ function MiniPlayerApp() {
 
 // Main app component
 function ThemedApp() {
-  const settings = useSettingsStore((state) => state.settings);
-  const previewTheme = useUIStore((state) => state.theme);
+  const theme = useSettingsStore((state) => state.theme);
+  const themeToProvide = theme === 'light' ? lightTheme : darkTheme;
   const initPlayer = usePlaybackStore((state) => state.initPlayer);
 
   // Get the current track and playback state for cleanup
@@ -54,10 +50,6 @@ function ThemedApp() {
   );
   const position = usePlaybackStore((state) => state.position);
   const lastPosition = usePlaybackStore((state) => state.lastPosition);
-
-  // Use the preview theme if available, otherwise use the theme from settings
-  const themeToUse = previewTheme || settings?.theme || 'dark';
-  const theme = themeToUse === 'light' ? lightTheme : darkTheme;
 
   // Set the entire app as draggable by default, only ever run this once
   useEffect(() => {
@@ -117,7 +109,7 @@ function ThemedApp() {
   }, [currentTrack, paused, position, lastPosition, lastPlaybackTimeUpdateRef]);
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={themeToProvide}>
       <CssBaseline />
       <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <Routes>

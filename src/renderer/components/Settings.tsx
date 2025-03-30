@@ -60,8 +60,6 @@ export default function Settings({
   const scanLibrary = useLibraryStore((state) => state.scanLibrary);
   const importFiles = useLibraryStore((state) => state.importFiles);
   const isScanning = useLibraryStore((state) => state.isScanning);
-  // ui store stuff
-  const setPreviewTheme = useUIStore((state) => state.setTheme);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -132,20 +130,14 @@ export default function Settings({
   const handleThemeChange = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
 
-    // Update local state
-    updateTheme(newTheme);
-
-    // Set the preview theme to immediately see the change
-    setPreviewTheme(newTheme);
-
-    // Update in context and save to database immediately
+    // Update in store and save to database immediately
     updateTheme(newTheme);
   };
 
   const handleColumnVisibilityChange = (column: keyof typeof columns) => {
     const newValue = !columns[column];
 
-    // Update in context and save to database immediately
+    // Update in store and save to database immediately
     updateColumnVisibility(column, newValue);
   };
 
