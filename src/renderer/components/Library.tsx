@@ -576,7 +576,8 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           justifyContent: 'center',
           padding: 4,
           height: '50vh',
-          width: '100%',
+          // if the sidebar is open, subtract the width of the sidebar from the width of the window
+          width: drawerOpen ? `calc(100vw - 240px)` : '100vw',
         }}
       >
         <Typography
@@ -597,7 +598,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           }}
           variant="body2"
         >
-          Head to Settings and point hihat to your music library folder.
+          Head to Settings and give hihat access to your music library folder.
         </Typography>
       </Box>
     ),
