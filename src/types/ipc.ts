@@ -20,6 +20,9 @@ export type Channels =
   | 'library:scanComplete'
   | 'library:resetDatabase'
   | 'library:resetTracks'
+  | 'menu-backup-library'
+  | 'backup-library-success'
+  | 'backup-library-error'
 
   // Track operations
   | 'tracks:getAll'
@@ -210,6 +213,11 @@ export interface IPCRequests {
 
   // Album Art operations
   'albumArt:get': string;
+
+  // New channels
+  'menu-backup-library': string;
+  'backup-library-success': void;
+  'backup-library-error': string;
 }
 
 /**
@@ -323,6 +331,11 @@ export interface IPCResponses {
 
   // Album Art operations
   'albumArt:get': string | null;
+
+  // New channels
+  'menu-backup-library': void;
+  'backup-library-success': void;
+  'backup-library-error': void;
 }
 
 /**

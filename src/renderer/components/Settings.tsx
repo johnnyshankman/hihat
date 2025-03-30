@@ -19,12 +19,15 @@ import {
   DialogTitle,
   DialogContent,
   LinearProgress,
+  Grid,
+  Divider,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import WarningIcon from '@mui/icons-material/Warning';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
-import { useSettingsStore, useUIStore } from '../stores';
+import BackupIcon from '@mui/icons-material/Backup';
+import { useSettingsStore } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
 import type { Channels } from '../../types/ipc';
@@ -65,12 +68,15 @@ export default function Settings({
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [pathDialogOpen, setPathDialogOpen] = useState(false);
+  const [backupDialogOpen, setBackupDialogOpen] = useState(false);
+  const [isBackupInProgress, setIsBackupInProgress] = useState(false);
   // Reference to store the original path for restoration if canceled
   const originalPathRef = useRef('');
 
   // Scanning state
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStatus, setScanStatus] = useState('');
+  const [backupStatus, setBackupStatus] = useState('');
 
   // Add a ref to track the last time we updated the UI for scan progress
   const lastUpdateTime = useRef(0);
@@ -120,10 +126,34 @@ export default function Settings({
       handleScanComplete,
     );
 
+    // Listen for backup success or failure
+    const unsubBackupSuccess = window.electron.ipcRenderer.on(
+      'backup-library-success' as Channels,
+      () => {
+        setIsBackupInProgress(false);
+        setBackupStatus('');
+        setSnackbarMessage('Library backup completed successfully');
+        setSnackbarOpen(true);
+      },
+    );
+
+    const unsubBackupError = window.electron.ipcRenderer.on(
+      'backup-library-error' as Channels,
+      (...args: unknown[]) => {
+        const message = args[0] as string;
+        setIsBackupInProgress(false);
+        setBackupStatus('');
+        setSnackbarMessage(`Backup failed: ${message}`);
+        setSnackbarOpen(true);
+      },
+    );
+
     // Clean up event listeners
     return () => {
       unsubScanProgress();
       unsubScanComplete();
+      unsubBackupSuccess();
+      unsubBackupError();
     };
   }, []);
 
@@ -193,6 +223,52 @@ export default function Settings({
       setScanStatus('Failed');
       setSnackbarMessage(
         error instanceof Error ? error.message : 'Error importing files',
+      );
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleBackupLibrary = async () => {
+    if (!libraryPath) {
+      setSnackbarMessage('Please set a library path first');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    try {
+      const result = await window.electron.dialog.selectDirectory();
+      if (
+        result.canceled ||
+        !result.filePaths ||
+        result.filePaths.length === 0
+      ) {
+        return;
+      }
+
+      const backupPath = result.filePaths[0];
+
+      if (backupPath === libraryPath || backupPath.startsWith(libraryPath)) {
+        setSnackbarMessage('Cannot backup to the same folder or its subfolder');
+        setSnackbarOpen(true);
+        return;
+      }
+
+      // Show backup dialog
+      setBackupDialogOpen(true);
+      setIsBackupInProgress(true);
+      setBackupStatus('Backing up library...');
+
+      // Send IPC message to backup the library
+      window.electron.ipcRenderer.sendMessage(
+        'menu-backup-library',
+        backupPath,
+      );
+    } catch (error) {
+      console.error('Error backing up library:', error);
+      setIsBackupInProgress(false);
+      setBackupStatus('');
+      setSnackbarMessage(
+        error instanceof Error ? error.message : 'Error backing up library',
       );
       setSnackbarOpen(true);
     }
@@ -344,61 +420,146 @@ export default function Settings({
 
       <Box sx={{ p: 2, WebkitAppRegion: 'no-drag' }}>
         <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography gutterBottom variant="h2">
-            Library
-          </Typography>
-          <Typography
-            color="text.secondary"
-            sx={{ display: 'block', mb: 2 }}
-            variant="caption"
-          >
-            Where hihat looks for your music library.
-          </Typography>
-          <FormControl fullWidth sx={{ mb: 2, mt: 1 }}>
-            <TextField
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton edge="end" onClick={handleSelectLibraryPath}>
-                      <FolderIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-              label="Folder"
-              onChange={handleSaveLibraryPath}
-              value={libraryPath}
-            />
-          </FormControl>
-          <Box sx={{ mt: 0, display: 'flex', gap: 2 }}>
-            <Button
-              color="primary"
-              disabled={!libraryPath || isScanning}
-              onClick={handleRescanLibrary}
-              startIcon={<RefreshIcon />}
-              variant="contained"
-            >
-              {isScanning ? 'Scanning...' : 'Rescan For Songs'}
-            </Button>
-            <Button
-              color="primary"
-              disabled={!libraryPath || isScanning}
-              onClick={handleAddSongs}
-              startIcon={<AddIcon />}
-              variant="outlined"
-            >
-              Add Songs
-            </Button>
-          </Box>
-          <Typography
-            color="text.secondary"
-            sx={{ display: 'block', mt: 2, fontSize: '0.75rem' }}
-          >
-            Add Songs lets you select music files to import directly into your
-            library without having to manually copy them to your library folder
-            and rescan. hihat will automatically deduplicate songs and keep only
-            the highest quality version when identical songs are detected.
-          </Typography>
+          <Grid container spacing={3}>
+            {/* Library Path Section */}
+            <Grid item xs={12}>
+              <Typography gutterBottom variant="h2">
+                Library Location
+              </Typography>
+              <Typography
+                color="text.secondary"
+                sx={{ display: 'block', mb: 2 }}
+                variant="caption"
+              >
+                Where hihat looks for your music library.
+              </Typography>
+              <FormControl fullWidth sx={{ mb: 2, mt: 1 }}>
+                <TextField
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          edge="end"
+                          onClick={handleSelectLibraryPath}
+                        >
+                          <FolderIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  label="Folder"
+                  onChange={handleSaveLibraryPath}
+                  value={libraryPath}
+                />
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+
+            {/* Library Operations Section */}
+            <Grid item sm={6} xs={12}>
+              <Typography gutterBottom variant="h2">
+                Library Management
+              </Typography>
+              <Typography
+                color="text.secondary"
+                sx={{ display: 'block', mb: 2 }}
+                variant="caption"
+              >
+                Manage your music library.
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Button
+                  color="primary"
+                  disabled={!libraryPath || isScanning}
+                  fullWidth
+                  onClick={handleRescanLibrary}
+                  startIcon={<RefreshIcon />}
+                  variant="contained"
+                >
+                  {isScanning ? 'Scanning...' : 'Rescan Library'}
+                </Button>
+                <Typography
+                  color="text.secondary"
+                  sx={{ display: 'block', fontSize: '0.75rem' }}
+                >
+                  Scan your existing library directory for any new changes and
+                  update your hihat library.
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item sm={6} xs={12}>
+              <Typography gutterBottom variant="h2">
+                Import Music
+              </Typography>
+              <Typography
+                color="text.secondary"
+                sx={{ display: 'block', mb: 2 }}
+                variant="caption"
+              >
+                Add music to your library.
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Button
+                  color="primary"
+                  disabled={!libraryPath || isScanning}
+                  fullWidth
+                  onClick={handleAddSongs}
+                  startIcon={<AddIcon />}
+                  variant="outlined"
+                >
+                  Add Songs
+                </Button>
+                <Typography
+                  color="text.secondary"
+                  sx={{ display: 'block', fontSize: '0.75rem' }}
+                >
+                  Select music files to import directly into your hihat library.
+                  hihat will deduplicate songs automatically.
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+
+            {/* Backup Section */}
+            <Grid item xs={12}>
+              <Typography gutterBottom variant="h2">
+                Library Backup
+              </Typography>
+              <Typography
+                color="text.secondary"
+                sx={{ display: 'block', mb: 2 }}
+                variant="caption"
+              >
+                Create a backup of your music library to an external drive or
+                another location.
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Button
+                  color="secondary"
+                  disabled={!libraryPath || isScanning || isBackupInProgress}
+                  onClick={handleBackupLibrary}
+                  startIcon={<BackupIcon />}
+                  variant="contained"
+                >
+                  {isBackupInProgress ? 'Backing Up...' : 'Backup Library'}
+                </Button>
+                <Typography
+                  color="text.secondary"
+                  sx={{ display: 'block', fontSize: '0.75rem' }}
+                >
+                  Uses rsync to efficiently copy your music files to another
+                  location while preserving file structure and metadata.
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
         </Paper>
 
         <Paper sx={{ p: 3, mb: 3 }}>
@@ -589,6 +750,27 @@ export default function Settings({
               </Typography>
             </Paper>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Backup progress dialog */}
+      <Dialog fullWidth maxWidth="sm" open={backupDialogOpen}>
+        <DialogTitle>Library Backup</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Typography gutterBottom variant="body1">
+              Status:{' '}
+              {isBackupInProgress ? 'Backing up library...' : 'Complete'}
+            </Typography>
+            <LinearProgress
+              sx={{ mt: 2 }}
+              value={isBackupInProgress ? undefined : 100}
+              variant={isBackupInProgress ? 'indeterminate' : 'determinate'}
+            />
+            <Typography sx={{ mt: 1 }} variant="body2">
+              {backupStatus}
+            </Typography>
+          </Box>
         </DialogContent>
       </Dialog>
 

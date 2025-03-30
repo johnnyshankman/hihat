@@ -26,6 +26,7 @@ import {
   setMainWindow as setMiniPlayerMainWindow,
   setupMiniPlayerHandlers,
 } from './miniPlayer';
+import backupLibrary from './ipc/backupHandlers';
 
 class AppUpdater {
   constructor() {
@@ -105,6 +106,11 @@ const setupIpcHandlers = () => {
       return mainWindow.isMaximized();
     }
     return false;
+  });
+
+  // Library backup handlers
+  ipcMain.on('menu-backup-library', (event, backupPath) => {
+    backupLibrary(backupPath, event);
   });
 };
 
