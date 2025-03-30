@@ -34,7 +34,7 @@ import MinimizeIcon from '@mui/icons-material/Remove';
 import MaximizeIcon from '@mui/icons-material/CropSquare';
 import RestoreIcon from '@mui/icons-material/FilterNone';
 import ViewSidebarRoundedIcon from '@mui/icons-material/ViewSidebarRounded';
-import { useLibraryStore, useUIStore } from '../stores';
+import { useLibraryStore, useSettingsStore, useUIStore } from '../stores';
 import Library from './Library';
 import Playlists from './Playlists';
 import Settings from './Settings';
@@ -104,9 +104,13 @@ export default function MainLayout() {
   const selectPlaylist = useLibraryStore((state) => state.selectPlaylist);
   const deletePlaylist = useLibraryStore((state) => state.deletePlaylist);
   const createPlaylist = useLibraryStore((state) => state.createPlaylist);
-  const [open, setOpen] = useState(true);
+
+  const theme = useSettingsStore((state) => state.theme);
+
   const currentView = useUIStore((state) => state.currentView);
   const setCurrentView = useUIStore((state) => state.setCurrentView);
+
+  const [open, setOpen] = useState(true);
   const [playlistsOpen, setPlaylistsOpen] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -292,7 +296,10 @@ export default function MainLayout() {
           alignItems: 'center',
           height: '100vh',
           width: '100vw',
-          background: 'linear-gradient(135deg, #121212, #0A0A0A)',
+          background:
+            theme === 'dark'
+              ? 'linear-gradient(135deg, #121212, #0A0A0A)'
+              : 'linear-gradient(135deg, #f5f5f5, #e0e0e0)',
           overflow: 'hidden',
         }}
       >
@@ -302,9 +309,15 @@ export default function MainLayout() {
             position: 'relative',
             width: '200px',
             height: '200px',
-            background: 'linear-gradient(to right, #1A1A1A, #121212, #0A0A0A)',
+            background:
+              theme === 'dark'
+                ? 'linear-gradient(to right, #1A1A1A, #121212, #0A0A0A)'
+                : 'linear-gradient(to right, #ffffff, #f5f5f5, #e8e8e8)',
             borderRadius: '8px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+            boxShadow:
+              theme === 'dark'
+                ? '0 8px 24px rgba(0, 0, 0, 0.5)'
+                : '0 8px 24px rgba(0, 0, 0, 0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -313,7 +326,10 @@ export default function MainLayout() {
           {/* Music note icon with pulsing animation */}
           <LibraryMusicIcon
             sx={{
-              color: 'rgba(255, 255, 255, 0.2)',
+              color:
+                theme === 'dark'
+                  ? 'rgba(255, 255, 255, 0.2)'
+                  : 'rgba(0, 0, 0, 0.2)',
               width: '40%',
               height: '40%',
               animation: 'pulse 2s infinite ease-in-out',
@@ -334,7 +350,10 @@ export default function MainLayout() {
               position: 'absolute',
               bottom: '8px',
               left: '8px',
-              color: 'rgba(255, 255, 255, 0.5)',
+              color:
+                theme === 'dark'
+                  ? 'rgba(255, 255, 255, 0.5)'
+                  : 'rgba(0, 0, 0, 0.5)',
             }}
             variant="caption"
           >
@@ -346,7 +365,7 @@ export default function MainLayout() {
         <Typography
           sx={{
             mt: 4,
-            color: 'white',
+            color: theme === 'dark' ? 'white' : 'black',
             fontWeight: 300,
             letterSpacing: '0.1em',
             animation: 'fadeInOut 2s infinite ease-in-out',
