@@ -130,6 +130,7 @@ export default function Settings({
     const unsubBackupSuccess = window.electron.ipcRenderer.on(
       'backup-library-success' as Channels,
       () => {
+        setBackupDialogOpen(false);
         setIsBackupInProgress(false);
         setBackupStatus('');
         setSnackbarMessage('Library backup completed successfully');
