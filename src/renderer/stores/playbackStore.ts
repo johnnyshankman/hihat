@@ -19,6 +19,7 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   lastPositionUpdateRef: 0, // helps us throttle position updates to once per second
   lastPlaybackTimeUpdateRef: 0, // helps us track actual playback time for play count
   lastPosition: 0, // track the last position to calculate playback time
+  silentAudioRef: null, // reference to the silent audio element for MediaSession support
 
   // State
   currentTrack: null, // the current track playing
@@ -31,6 +32,11 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   repeatMode: 'off', // off, track, all
   shuffleMode: false, // shuffle mode
   shuffleHistory: [], // history of shuffled tracks
+
+  // Set the silent audio reference
+  setSilentAudioRef: (ref) => {
+    return set({ silentAudioRef: ref });
+  },
 
   // Player store actions
   setVolume: (volume) => {
@@ -80,9 +86,12 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         state.player.addTrack(getTrackUrl(nextSong.filePath));
       }
       state.player.play();
-      const audioElement = document.querySelector('audio');
-      if (audioElement) {
-        audioElement.play();
+
+      // Play the silent audio for MediaSession
+      if (state.silentAudioRef) {
+        state.silentAudioRef.play().catch((error) => {
+          console.error('Error playing silent audio:', error);
+        });
       }
 
       updateMediaSession(selectedTrack);
@@ -176,9 +185,11 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
       if (!state.paused) {
         state.player.play();
-        const audioElement = document.querySelector('audio');
-        if (audioElement) {
-          audioElement.play();
+        // Play the silent audio for MediaSession
+        if (state.silentAudioRef) {
+          state.silentAudioRef.play().catch((error) => {
+            console.error('Error playing silent audio:', error);
+          });
         }
       }
 
@@ -251,9 +262,11 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
         if (!state.paused) {
           state.player.play();
-          const audioElement = document.querySelector('audio');
-          if (audioElement) {
-            audioElement.play();
+          // Play the silent audio for MediaSession
+          if (state.silentAudioRef) {
+            state.silentAudioRef.play().catch((error) => {
+              console.error('Error playing silent audio:', error);
+            });
           }
         }
 
@@ -334,15 +347,17 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
       if (paused) {
         state.player.pause();
-        const audioElement = document.querySelector('audio');
-        if (audioElement) {
-          audioElement.pause();
+        // Pause the silent audio for MediaSession
+        if (state.silentAudioRef) {
+          state.silentAudioRef.pause();
         }
       } else {
         state.player.play();
-        const audioElement = document.querySelector('audio');
-        if (audioElement) {
-          audioElement.play();
+        // Play the silent audio for MediaSession
+        if (state.silentAudioRef) {
+          state.silentAudioRef.play().catch((error) => {
+            console.error('Error playing silent audio:', error);
+          });
         }
 
         // Reset the playback time tracker when resuming
@@ -524,9 +539,12 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
       if (state.repeatMode === 'track') {
         state.player.gotoTrack(0);
         state.player.play();
-        const audioElement = document.querySelector('audio');
-        if (audioElement) {
-          audioElement.play();
+
+        // Play the silent audio for MediaSession
+        if (state.silentAudioRef) {
+          state.silentAudioRef.play().catch((error) => {
+            console.error('Error playing silent audio:', error);
+          });
         }
 
         // For repeat track mode, reset tracking for the current track

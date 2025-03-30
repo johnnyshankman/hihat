@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import {
   Box,
   Typography,
@@ -100,6 +106,24 @@ export default function Player() {
   const toggleShuffleMode = usePlaybackStore(
     (state) => state.toggleShuffleMode,
   );
+  const setSilentAudioRef = usePlaybackStore(
+    (state) => state.setSilentAudioRef,
+  );
+
+  // Reference to the silent audio element
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Set up the silent audio ref in the playback store
+  useEffect(() => {
+    if (audioRef.current) {
+      setSilentAudioRef(audioRef.current);
+    }
+
+    return () => {
+      // Clean up the reference when the component unmounts
+      setSilentAudioRef(null);
+    };
+  }, [setSilentAudioRef]);
 
   // local state
   const [volumeOpen, setVolumeOpen] = useState(false);
@@ -264,6 +288,63 @@ export default function Player() {
     paused,
   ]);
 
+  // Setup MediaSession API
+  useEffect(() => {
+    if (!navigator.mediaSession) {
+      console.error('Media Session not supported');
+      return () => {};
+    }
+
+    // Set up action handlers
+    navigator.mediaSession.setActionHandler(
+      'previoustrack',
+      skipToPreviousTrack,
+    );
+    navigator.mediaSession.setActionHandler('nexttrack', skipToNextTrack);
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      setPaused(false);
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      setPaused(true);
+    });
+
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime !== undefined) {
+        seekToPosition(details.seekTime);
+      }
+    });
+
+    // Update position state
+    try {
+      const safePosition = Math.min(position, duration);
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: 1,
+        position: safePosition,
+      });
+    } catch (error) {
+      console.error('Failed to update media session position state:', error);
+    }
+
+    // Cleanup action handlers when component unmounts
+    return () => {
+      navigator.mediaSession.setActionHandler('previoustrack', null);
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('seekto', null);
+    };
+  }, [
+    position,
+    duration,
+    skipToNextTrack,
+    skipToPreviousTrack,
+    setPaused,
+    seekToPosition,
+  ]);
+
   // Render volume icon based on volume level
   const renderVolumeIcon = () => {
     if (volume === 0) {
@@ -360,12 +441,13 @@ export default function Player() {
         WebkitAppRegion: 'no-drag', // Make sure the player is not draggable
       }}
     >
+      {/* Silent audio element - used to keep media session alive */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio
-        autoPlay={!paused && !!currentTrack}
-        className="hidden"
+        ref={audioRef}
         loop
         src="https://github.com/anars/blank-audio/raw/refs/heads/master/2-minutes-and-30-seconds-of-silence.mp3"
+        style={{ display: 'none' }}
       />
       <Box
         sx={{

@@ -67,6 +67,7 @@ export interface PlaybackStore {
   // New properties for play count tracking
   lastPlaybackTimeUpdateRef: number; // timestamp of last update for playback time tracking
   lastPosition: number; // last position for calculating actual playback time
+  silentAudioRef: HTMLAudioElement | null; // reference to the silent audio element for MediaSession
   initPlayer: () => void; // initialize the player instance
 
   // // Actions
@@ -84,6 +85,7 @@ export interface PlaybackStore {
   setVolume: (volume: number) => void;
   toggleRepeatMode: () => void;
   toggleShuffleMode: () => void;
+  setSilentAudioRef: (ref: HTMLAudioElement | null) => void; // set the silent audio element reference
   // // automatic actions (onfinishedtrack)
   autoPlayNextTrack: () => Promise<void>;
 }

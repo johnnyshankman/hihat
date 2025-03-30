@@ -2,6 +2,13 @@ import { Track } from '../../types/dbTypes';
 import useLibraryStore from '../stores/libraryStore';
 import { getSortingFunction } from './sortingFunctions';
 
+// Define MediaImage interface for TypeScript
+interface MediaImage {
+  src: string;
+  sizes: string;
+  type: string;
+}
+
 // Helper function to convert a track path to a URL using our custom protocol
 export function getTrackUrl(filePath: string): string {
   return `hihat-audio://getfile/${encodeURIComponent(filePath)}`;
@@ -153,22 +160,41 @@ export const findNextSong = (
   return tracks.find((t) => t.id === nextTrackId);
 };
 
-export const updateMediaSession = (track: Track) => {
-  const mediaData = {
-    title: track.title,
-    artist: track.artist,
-    album: track.album,
-  };
-
+export const updateMediaSession = async (track: Track) => {
   if (!navigator.mediaSession) {
     console.error('Media session not supported');
     return;
   }
 
-  if (navigator.mediaSession.metadata) {
-    Object.assign(navigator.mediaSession.metadata, mediaData);
-  } else {
-    navigator.mediaSession.metadata = new MediaMetadata(mediaData);
+  try {
+    // Get album artwork if supported
+    let artwork: MediaImage[] = [];
+
+    try {
+      const albumArtData = await window.electron.albumArt.get(track.filePath);
+      if (albumArtData) {
+        artwork = [
+          {
+            src: albumArtData,
+            sizes: '512x512', // Default size
+            type: 'image/jpeg',
+          } as MediaImage,
+        ];
+      }
+    } catch (error) {
+      console.error('Error fetching album art for media session:', error);
+    }
+
+    // Create a new MediaMetadata object rather than updating the existing one
+    // This ensures all properties are properly refreshed
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title || 'Unknown Title',
+      artist: track.artist || 'Unknown Artist',
+      album: track.album || 'Unknown Album',
+      artwork,
+    });
+  } catch (error) {
+    console.error('Error updating media session metadata:', error);
   }
 };
 
