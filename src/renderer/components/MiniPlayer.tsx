@@ -93,6 +93,8 @@ export default function MiniPlayer() {
   const [repeatMode, setRepeatMode] = useState<'off' | 'track' | 'all'>('off');
   const [shuffleMode, setShuffleMode] = useState(false);
   const [albumArt, setAlbumArt] = useState<string | null>(null);
+  // Add error state for debugging
+  const [error, setError] = useState<string | null>(null);
 
   // UI state
   const [seekPosition, setSeekPosition] = useState(0);
@@ -103,52 +105,82 @@ export default function MiniPlayer() {
 
   // Sync with main player
   useEffect(() => {
-    // Listen for playback state updates from the main process
-    const unsubscribeTrack = window.electron.miniPlayer.onTrackChange(
-      (track: any) => {
-        setCurrentTrack(track);
-      },
-    );
+    try {
+      console.log('MiniPlayer: Setting up IPC listeners');
 
-    const unsubscribeState = window.electron.miniPlayer.onStateChange(
-      (state: any) => {
-        setPaused(state.paused);
-        setDuration(state.duration);
-        setVolume(state.volume);
-        setRepeatMode(state.repeatMode);
-        setShuffleMode(state.shuffleMode);
-      },
-    );
+      // Listen for playback state updates from the main process
+      const unsubscribeTrack = window.electron.miniPlayer.onTrackChange(
+        (track: any) => {
+          console.log(
+            'MiniPlayer: Track changed:',
+            track ? 'Track received' : 'null track',
+          );
+          setCurrentTrack(track);
+        },
+      );
 
-    const unsubscribePosition = window.electron.miniPlayer.onPositionChange(
-      (pos: number) => {
-        setSeekPosition(pos);
-      },
-    );
+      const unsubscribeState = window.electron.miniPlayer.onStateChange(
+        (state: any) => {
+          try {
+            console.log('MiniPlayer: State changed:', state);
+            setPaused(state.paused);
+            setDuration(state.duration);
+            setVolume(state.volume);
+            setRepeatMode(state.repeatMode);
+            setShuffleMode(state.shuffleMode);
+          } catch (err) {
+            console.error('Error updating state:', err);
+            setError(`State update error: ${err}`);
+          }
+        },
+      );
 
-    const unsubscribeAlbumArt = window.electron.miniPlayer.onAlbumArtChange(
-      (art: string | null) => {
-        setAlbumArt(art);
-      },
-    );
+      const unsubscribePosition = window.electron.miniPlayer.onPositionChange(
+        (pos: number) => {
+          setSeekPosition(pos);
+        },
+      );
 
-    // Request initial state immediately when component mounts
-    window.electron.miniPlayer.requestState();
+      const unsubscribeAlbumArt = window.electron.miniPlayer.onAlbumArtChange(
+        (art: string | null) => {
+          setAlbumArt(art);
+        },
+      );
 
-    // Set up a periodic state refresh to ensure sync
-    const refreshInterval = setInterval(() => {
+      // Request initial state immediately when component mounts
+      console.log('MiniPlayer: Requesting initial state');
       window.electron.miniPlayer.requestState();
-    }, 1000); // Refresh every 1 second
 
-    // Cleanup listeners
-    return () => {
-      unsubscribeTrack();
-      unsubscribeState();
-      unsubscribePosition();
-      unsubscribeAlbumArt();
-      clearInterval(refreshInterval);
-    };
+      // Set up a periodic state refresh to ensure sync
+      const refreshInterval = setInterval(() => {
+        try {
+          window.electron.miniPlayer.requestState();
+        } catch (err) {
+          console.error('Error requesting state:', err);
+          setError(`Refresh error: ${err}`);
+        }
+      }, 1000);
+
+      // Cleanup listeners
+      return () => {
+        console.log('MiniPlayer: Cleaning up IPC listeners');
+        unsubscribeTrack();
+        unsubscribeState();
+        unsubscribePosition();
+        unsubscribeAlbumArt();
+        clearInterval(refreshInterval);
+      };
+    } catch (err) {
+      console.error('Error in MiniPlayer useEffect:', err);
+      setError(`Setup error: ${err}`);
+      return () => {}; // Return empty cleanup function
+    }
   }, []);
+
+  // Display error if one occurred (only in development)
+  if (error) {
+    console.error('MiniPlayer error:', error);
+  }
 
   // Memoize formatted duration values
   const formattedSeekPosition = useMemo(

@@ -144,120 +144,222 @@ export function createMiniPlayerWindow(): void {
   // Load saved position
   const savedPosition = loadWindowPosition();
 
-  miniPlayerWindow = new BrowserWindow({
-    width: size,
-    height: size,
-    minWidth: size,
-    minHeight: size,
-    maxWidth: size * 2, // Allow some resizing but maintain square aspect ratio
-    maxHeight: size * 2,
-    frame: false,
-    show: false,
-    titleBarStyle: 'customButtonsOnHover',
-    backgroundColor: '#00000000', // Transparent background
-    useContentSize: true, // Use content size for more accurate sizing
-    x: savedPosition?.x, // Set x position if available
-    y: savedPosition?.y, // Set y position if available
-    alwaysOnTop: true, // Keep the mini player on top of other windows
-    minimizable: false, // Disable minimize button
-    maximizable: false, // Disable maximize button
-    closable: true,
-    webPreferences: {
-      preload:
-        process.env.NODE_ENV === 'development'
-          ? path.join(__dirname, '../../.erb/dll/preload.js')
-          : path.join(__dirname, '../preload.js'),
-    },
-  });
+  try {
+    console.log('Creating mini player window...');
+    miniPlayerWindow = new BrowserWindow({
+      width: size,
+      height: size,
+      minWidth: size,
+      minHeight: size,
+      maxWidth: size * 2, // Allow some resizing but maintain square aspect ratio
+      maxHeight: size * 2,
+      frame: false,
+      show: false,
+      titleBarStyle: 'customButtonsOnHover',
+      backgroundColor: '#00000000', // Transparent background
+      useContentSize: true, // Use content size for more accurate sizing
+      x: savedPosition?.x, // Set x position if available
+      y: savedPosition?.y, // Set y position if available
+      alwaysOnTop: true, // Keep the mini player on top of other windows
+      minimizable: false, // Disable minimize button
+      maximizable: false, // Disable maximize button
+      closable: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: (() => {
+          // Get the preload path based on whether we're packaged or not
+          const preloadPath = app.isPackaged
+            ? path.join(__dirname, 'preload.js')
+            : path.join(__dirname, '../../.erb/dll/preload.js');
 
-  // Load the mini player HTML with a specific query parameter to indicate it's a mini player
-  miniPlayerWindow.loadURL(
-    `${resolveHtmlPath('index.html')}?miniPlayer=true#/mini-player`,
-  );
-
-  // Maintain square aspect ratio when resizing
-  miniPlayerWindow.on('resize', () => {
-    if (miniPlayerWindow) {
-      const dimensions = miniPlayerWindow.getSize();
-      // Use the larger dimension to make it square
-      const maxDimension = Math.max(dimensions[0], dimensions[1]);
-      miniPlayerWindow.setSize(maxDimension, maxDimension, true);
-    }
-  });
-
-  // Save position when moved
-  miniPlayerWindow.on('moved', () => {
-    saveWindowPosition();
-  });
-
-  // Handle close event to prevent crashes
-  miniPlayerWindow.on('close', (event) => {
-    // Save position before closing
-    saveWindowPosition();
-
-    // Prevent the default close behavior which might be causing the crash
-    event.preventDefault();
-
-    // Safely destroy the window
-    if (miniPlayerWindow) {
-      // Remove all listeners to prevent memory leaks
-      miniPlayerWindow.removeAllListeners();
-
-      // Hide the window first
-      miniPlayerWindow.hide();
-
-      // Set to null before destroy to avoid any further access attempts
-      const windowToDestroy = miniPlayerWindow;
-      miniPlayerWindow = null;
-
-      // Destroy the window on next tick to avoid transaction issues
-      process.nextTick(() => {
-        if (!windowToDestroy.isDestroyed()) {
-          windowToDestroy.destroy();
-        }
-      });
-    }
-  });
-
-  // Show window when ready
-  miniPlayerWindow.once('ready-to-show', () => {
-    if (miniPlayerWindow) {
-      miniPlayerWindow.show();
-
-      // Immediately send current state to mini player when it's ready
-      if (currentTrack) {
-        miniPlayerWindow.webContents.send(
-          'miniPlayer:trackChanged',
-          currentTrack,
-        );
-        miniPlayerWindow.webContents.send(
-          'miniPlayer:stateChanged',
-          playbackState,
-        );
-        miniPlayerWindow.webContents.send(
-          'miniPlayer:positionChanged',
-          playbackState.position,
-        );
-
-        // Extract and send album art
-        if (currentTrack.filePath) {
-          extractAlbumArt(currentTrack.filePath)
-            .then((artData) => {
-              if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
-                miniPlayerWindow.webContents.send(
-                  'miniPlayer:albumArtChanged',
-                  artData,
+          // Check if the file exists in development mode
+          if (!app.isPackaged) {
+            try {
+              if (fs.existsSync(preloadPath)) {
+                console.log(
+                  `Development preload script exists at: ${preloadPath}`,
                 );
+              } else {
+                console.error(
+                  `Development preload script NOT found at: ${preloadPath}`,
+                );
+                // Try to find it
+                const erbPath = path.join(__dirname, '../../.erb');
+                console.log(`Looking for preload script in: ${erbPath}`);
+                if (fs.existsSync(erbPath)) {
+                  fs.readdirSync(erbPath).forEach((dir) => {
+                    const fullDir = path.join(erbPath, dir);
+                    if (fs.statSync(fullDir).isDirectory()) {
+                      const files = fs.readdirSync(fullDir);
+                      const preloadFile = files.find((f) =>
+                        f.includes('preload'),
+                      );
+                      if (preloadFile) {
+                        console.log(
+                          `Found possible preload file: ${path.join(fullDir, preloadFile)}`,
+                        );
+                      }
+                    }
+                  });
+                }
               }
-              return null;
-            })
-            .catch((error) => {
-              console.error('Error extracting album art:', error);
-            });
+            } catch (err) {
+              console.error('Error checking preload path:', err);
+            }
+          } else {
+            // In production, check in multiple possible locations
+            try {
+              const dirnamePreload = path.join(__dirname, 'preload.js');
+              const parentPreload = path.join(__dirname, '../preload.js');
+              const mainPreload = path.join(__dirname, '../main/preload.js');
+
+              console.log(`Packaged __dirname: ${__dirname}`);
+              console.log(`Checking preload paths in production:`);
+              console.log(
+                `1. ${dirnamePreload} - exists: ${fs.existsSync(dirnamePreload)}`,
+              );
+              console.log(
+                `2. ${parentPreload} - exists: ${fs.existsSync(parentPreload)}`,
+              );
+              console.log(
+                `3. ${mainPreload} - exists: ${fs.existsSync(mainPreload)}`,
+              );
+
+              // Use the one that exists
+              if (fs.existsSync(dirnamePreload)) return dirnamePreload;
+              if (fs.existsSync(parentPreload)) return parentPreload;
+              if (fs.existsSync(mainPreload)) return mainPreload;
+            } catch (err) {
+              console.error('Error checking production preload paths:', err);
+            }
+          }
+
+          return preloadPath;
+        })(),
+      },
+    });
+
+    console.log('Mini player window created, loading URL...');
+    // Log the URL we're going to load for debugging
+    const miniPlayerUrl = `${resolveHtmlPath('index.html')}?miniPlayer=true#/mini-player`;
+    console.log('Mini player URL:', miniPlayerUrl);
+
+    // Load the mini player HTML with a specific query parameter to indicate it's a mini player
+    miniPlayerWindow.loadURL(miniPlayerUrl);
+
+    // For debugging in production - easier to see errors
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Opening DevTools for mini player in production mode');
+      miniPlayerWindow.webContents.openDevTools({ mode: 'detach' });
+    }
+
+    // Log any webContents errors
+    miniPlayerWindow.webContents.on(
+      'did-fail-load',
+      (_, errorCode, errorDescription) => {
+        console.error(
+          `Mini player failed to load: ${errorCode} - ${errorDescription}`,
+        );
+      },
+    );
+
+    // Log when page has finished loading
+    miniPlayerWindow.webContents.on('did-finish-load', () => {
+      console.log('Mini player page finished loading');
+    });
+
+    // Log when DOM is ready
+    miniPlayerWindow.webContents.on('dom-ready', () => {
+      console.log('Mini player DOM ready');
+    });
+
+    // Maintain square aspect ratio when resizing
+    miniPlayerWindow.on('resize', () => {
+      if (miniPlayerWindow) {
+        const dimensions = miniPlayerWindow.getSize();
+        // Use the larger dimension to make it square
+        const maxDimension = Math.max(dimensions[0], dimensions[1]);
+        miniPlayerWindow.setSize(maxDimension, maxDimension, true);
+      }
+    });
+
+    // Save position when moved
+    miniPlayerWindow.on('moved', () => {
+      saveWindowPosition();
+    });
+
+    // Handle close event to prevent crashes
+    miniPlayerWindow.on('close', (event) => {
+      // Save position before closing
+      saveWindowPosition();
+
+      // Prevent the default close behavior which might be causing the crash
+      event.preventDefault();
+
+      // Safely destroy the window
+      if (miniPlayerWindow) {
+        // Remove all listeners to prevent memory leaks
+        miniPlayerWindow.removeAllListeners();
+
+        // Hide the window first
+        miniPlayerWindow.hide();
+
+        // Set to null before destroy to avoid any further access attempts
+        const windowToDestroy = miniPlayerWindow;
+        miniPlayerWindow = null;
+
+        // Destroy the window on next tick to avoid transaction issues
+        process.nextTick(() => {
+          if (!windowToDestroy.isDestroyed()) {
+            windowToDestroy.destroy();
+          }
+        });
+      }
+    });
+
+    // Show window when ready
+    miniPlayerWindow.once('ready-to-show', () => {
+      if (miniPlayerWindow) {
+        miniPlayerWindow.show();
+
+        // Immediately send current state to mini player when it's ready
+        if (currentTrack) {
+          miniPlayerWindow.webContents.send(
+            'miniPlayer:trackChanged',
+            currentTrack,
+          );
+          miniPlayerWindow.webContents.send(
+            'miniPlayer:stateChanged',
+            playbackState,
+          );
+          miniPlayerWindow.webContents.send(
+            'miniPlayer:positionChanged',
+            playbackState.position,
+          );
+
+          // Extract and send album art
+          if (currentTrack.filePath) {
+            extractAlbumArt(currentTrack.filePath)
+              .then((artData) => {
+                if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+                  miniPlayerWindow.webContents.send(
+                    'miniPlayer:albumArtChanged',
+                    artData,
+                  );
+                }
+                return null;
+              })
+              .catch((error) => {
+                console.error('Error extracting album art:', error);
+              });
+          }
         }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.error('Error creating mini player window:', error);
+  }
 }
 
 /**
@@ -359,34 +461,66 @@ function forwardCommandToMainWindow(command: string, args?: any): void {
 export function setupMiniPlayerHandlers(): void {
   // Open mini player
   ipcMain.handle('miniPlayer:open', () => {
-    createMiniPlayerWindow();
+    try {
+      createMiniPlayerWindow();
+    } catch (error) {
+      console.error('Error opening mini player:', error);
+    }
   });
 
   // Close mini player
   ipcMain.handle('miniPlayer:close', () => {
-    closeMiniPlayerWindow();
+    try {
+      closeMiniPlayerWindow();
+    } catch (error) {
+      console.error('Error closing mini player:', error);
+    }
   });
 
   // Request current state
   ipcMain.handle('miniPlayer:requestState', (event) => {
-    // Check if the request is coming from the mini player window
-    if (miniPlayerWindow && event.sender === miniPlayerWindow.webContents) {
-      // Send current track and state
-      event.sender.send('miniPlayer:trackChanged', currentTrack);
-      event.sender.send('miniPlayer:stateChanged', playbackState);
-      event.sender.send('miniPlayer:positionChanged', playbackState.position);
+    try {
+      // Check if the request is coming from the mini player window
+      if (miniPlayerWindow && event.sender === miniPlayerWindow.webContents) {
+        // Send current track and state
+        console.log(
+          'Sending track data to mini player:',
+          currentTrack ? `Track ID: ${currentTrack.id}` : 'No current track',
+        );
 
-      // Send album art if there's a current track
-      if (currentTrack && currentTrack.filePath) {
-        extractAlbumArt(currentTrack.filePath)
-          .then((artData) => {
-            event.sender.send('miniPlayer:albumArtChanged', artData);
-            return null;
-          })
-          .catch((error) => {
-            console.error('Error extracting album art:', error);
-          });
+        // Ensure we have a valid track object or send null explicitly
+        const trackToSend = currentTrack || null;
+        event.sender.send('miniPlayer:trackChanged', trackToSend);
+        event.sender.send('miniPlayer:stateChanged', playbackState);
+        event.sender.send('miniPlayer:positionChanged', playbackState.position);
+
+        // Send album art if there's a current track
+        if (currentTrack && currentTrack.filePath) {
+          extractAlbumArt(currentTrack.filePath)
+            .then((artData) => {
+              if (event.sender && !event.sender.isDestroyed()) {
+                event.sender.send('miniPlayer:albumArtChanged', artData);
+              }
+              return null;
+            })
+            .catch((error) => {
+              console.error('Error extracting album art:', error);
+              // Send null to prevent waiting for art indefinitely
+              if (event.sender && !event.sender.isDestroyed()) {
+                event.sender.send('miniPlayer:albumArtChanged', null);
+              }
+            });
+        } else {
+          // No track or no file path, send null for album art
+          event.sender.send('miniPlayer:albumArtChanged', null);
+        }
+      } else {
+        console.warn(
+          'Request state called from non-mini player window or mini player is null',
+        );
       }
+    } catch (error) {
+      console.error('Error handling mini player request state:', error);
     }
   });
 
