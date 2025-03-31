@@ -248,12 +248,6 @@ export function createMiniPlayerWindow(): void {
     // Load the mini player HTML with a specific query parameter to indicate it's a mini player
     miniPlayerWindow.loadURL(miniPlayerUrl);
 
-    // For debugging in production - easier to see errors
-    if (process.env.NODE_ENV === 'production') {
-      console.log('Opening DevTools for mini player in production mode');
-      miniPlayerWindow.webContents.openDevTools({ mode: 'detach' });
-    }
-
     // Log any webContents errors
     miniPlayerWindow.webContents.on(
       'did-fail-load',
