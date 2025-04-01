@@ -422,9 +422,20 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     enableFullScreenToggle: false,
     enableRowVirtualization: true, // Enable virtualization for better performance
     rowVirtualizerOptions: {
-      overscan: 20,
-    }, // Increase overscan for smoother scrolling
-    rowVirtualizerInstanceRef: rowVirtualizerRef, // Use the correct prop name
+      overscan: 20, // Increased from 5 to 20 for smoother scrolling
+      count: data.length,
+      estimateSize: () => 27,
+      paddingStart: 0,
+      paddingEnd: 0,
+      scrollToFn: (offset, _options) => {
+        // Custom scroll implementation for better performance
+        const tableBodyElem = document.querySelector('.MuiTableBody-root');
+        if (tableBodyElem) {
+          tableBodyElem.scrollTop = offset;
+        }
+      },
+    },
+    rowVirtualizerInstanceRef: rowVirtualizerRef,
     muiSearchTextFieldProps: {
       placeholder: 'Search library',
       variant: 'outlined',
@@ -482,27 +493,25 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         backgroundColor: (theme) => theme.palette.background.default,
       },
     },
-    // Remove padding from the table body and ensure it aligns to the top
+    // Optimize table body for performance
     muiTableBodyProps: {
       sx: {
-        '& td': { padding: '4px 0.5rem' }, // Reduce cell padding
+        '& td': {
+          padding: '4px 0.5rem', // Reduce cell padding
+          whiteSpace: 'nowrap', // Prevent text wrapping for better performance
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        },
         width: '100%',
         alignItems: 'flex-start', // Align content to the top
         display: 'table-row-group', // Use standard table row group display
-      },
-    },
-    // Ensure the table body container doesn't center content vertically
-    muiTableBodyCellProps: {
-      sx: {
-        verticalAlign: 'top', // Align cell content to the top
+        // Add will-change to optimize for animations and prevent layout thrashing
+        willChange: 'transform',
+        // Add CSS containment for better performance
+        contain: 'content',
       },
     },
     layoutMode: 'grid', // Use grid layout mode for better control
-    displayColumnDefOptions: {
-      'mrt-row-expand': {
-        size: 0, // Minimize any expansion space
-      },
-    },
     state: {
       globalFilter,
       sorting,
@@ -528,10 +537,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     onColumnVisibilityChange: handleColumnVisibilityChange,
     muiTableBodyRowProps: ({ row }) => ({
       onClick: () => {
-        const index = tracks.findIndex((track) => track.id === row.original.id);
-        if (index !== -1) {
-          handlePlayTrack(row.original.id);
-        }
+        handlePlayTrack(row.original.id);
       },
       onContextMenu: (e) => handleContextMenu(e, row.original.id),
       'data-track-id': row.original.id,
@@ -540,7 +546,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         backgroundColor: (theme) => theme.palette.background.default,
         borderBottom: '1px solid',
         borderColor: (theme) => theme.palette.divider,
-        // Highlight the currently playing track if it's from the library
+        // Use simplified conditional styling for better performance
         ...(currentTrack?.id === row.original.id &&
           playbackSource === 'library' && {
             backgroundColor: (theme) =>
@@ -557,6 +563,12 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         '&:hover': {
           backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle hover effect for non-selected rows
         },
+        // Simplify the rendering complexity
+        transition: 'none', // Disable transitions for better performance
+        // Add will-change to optimize for animations
+        willChange: 'background-color',
+        // Add CSS containment for better performance
+        contain: 'content',
       },
     }),
     defaultDisplayColumn: { size: 150 },
@@ -602,6 +614,8 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         </Typography>
       </Box>
     ),
+    // Reduce re-rendering by memoizing column definitions
+    memoMode: 'cells',
   });
 
   return (
