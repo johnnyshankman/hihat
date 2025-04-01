@@ -204,7 +204,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           // Get the current sorting state for this column
           const columnSorting = sorting.find((sort) => sort.id === 'title');
           const isDescending = columnSorting ? columnSorting.desc : false;
-          console.log('isDescending', isDescending);
           return sortByTitle(rowA.original, rowB.original, isDescending);
         },
       },
@@ -299,7 +298,8 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         defaultHidden: true,
       },
     ],
-    [sorting], // Add sorting as a dependency
+    //
+    [], // Add sorting as a dependency
   );
 
   // Prepare data for Material React Table
