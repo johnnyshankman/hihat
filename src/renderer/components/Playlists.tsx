@@ -349,29 +349,19 @@ export default function Playlists({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [], // Add sorting as a dependency
+    [],
   );
 
   // Prepare data for Material React Table
   const data = useMemo<TableData[]>(() => {
     return playlistTracks.map((track) => {
-      // Ensure duration is a number and not undefined/null
-      let duration = 0;
-      if (typeof track.duration === 'number') {
-        duration = track.duration;
-      } else if (track.duration) {
-        // Try to convert to number if it's a string or other type
-        duration = Number(track.duration);
-      }
-
       return {
         id: track.id || '',
         title: track.title || 'Unknown Title',
         artist: track.artist || 'Unknown Artist',
         album: track.album || 'Unknown Album',
         genre: track.genre || 'Unknown Genre',
-        // Set the duration value
-        duration,
+        duration: track.duration || 0,
         playCount: typeof track.playCount === 'number' ? track.playCount : 0,
         dateAdded: track.dateAdded,
         lastPlayed: track.lastPlayed || undefined,
