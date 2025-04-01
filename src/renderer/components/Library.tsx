@@ -505,6 +505,37 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         contain: 'content',
       },
     },
+    muiTableBodyRowProps: ({ row }) => ({
+      onClick: () => {
+        handlePlayTrack(row.original.id);
+      },
+      onContextMenu: (e) => handleContextMenu(e, row.original.id),
+      'data-track-id': row.original.id,
+      sx: {
+        cursor: 'pointer',
+        height: '29px', // @important: must be 29 so that the virtualized estimateSize is corretg
+        backgroundColor: (theme) => theme.palette.background.default,
+        borderBottom: '1px solid',
+        borderColor: (theme) => theme.palette.divider,
+        // Use simplified conditional styling for better performance
+        ...(currentTrack?.id === row.original.id &&
+          playbackSource === 'library' && {
+            backgroundColor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.grey[400],
+            '&:hover': {
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? theme.palette.grey[700]
+                  : theme.palette.grey[300],
+            },
+          }),
+        '&:hover': {
+          backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle hover effect for non-selected rows
+        },
+      },
+    }),
     layoutMode: 'grid', // Use grid layout mode for better control
     state: {
       globalFilter,
@@ -530,43 +561,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       updateLibraryViewState(sorting, newFilter);
     },
     onColumnVisibilityChange: handleColumnVisibilityChange,
-    muiTableBodyRowProps: ({ row }) => ({
-      onClick: () => {
-        handlePlayTrack(row.original.id);
-      },
-      onContextMenu: (e) => handleContextMenu(e, row.original.id),
-      'data-track-id': row.original.id,
-      sx: {
-        cursor: 'pointer',
-        height: '29px',
-        backgroundColor: (theme) => theme.palette.background.default,
-        borderBottom: '1px solid',
-        borderColor: (theme) => theme.palette.divider,
-        // Use simplified conditional styling for better performance
-        ...(currentTrack?.id === row.original.id &&
-          playbackSource === 'library' && {
-            backgroundColor: (theme) =>
-              theme.palette.mode === 'dark'
-                ? theme.palette.grey[800]
-                : theme.palette.grey[400],
-            '&:hover': {
-              backgroundColor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? theme.palette.grey[700]
-                  : theme.palette.grey[300],
-            },
-          }),
-        '&:hover': {
-          backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle hover effect for non-selected rows
-        },
-        // Simplify the rendering complexity
-        transition: 'none', // Disable transitions for better performance
-        // Add will-change to optimize for animations
-        willChange: 'background-color',
-        // Add CSS containment for better performance
-        contain: 'content',
-      },
-    }),
     defaultDisplayColumn: { size: 150 },
     initialState: {
       density: 'compact',
