@@ -477,7 +477,7 @@ export default function MainLayout() {
                   sx={{
                     width: '12px',
                     height: '12px',
-                    bgcolor: (theme) => theme.palette.grey[500],
+                    bgcolor: (t) => t.palette.grey[500],
                     '&:hover': {
                       bgcolor: '#ff5f57',
                       '& .MuiSvgIcon-root': {
@@ -504,7 +504,7 @@ export default function MainLayout() {
                   sx={{
                     width: '12px',
                     height: '12px',
-                    bgcolor: (theme) => theme.palette.grey[500],
+                    bgcolor: (t) => t.palette.grey[500],
                     '&:hover': {
                       bgcolor: '#ffbd2e',
                       '& .MuiSvgIcon-root': {
@@ -531,7 +531,7 @@ export default function MainLayout() {
                   sx={{
                     width: '12px',
                     height: '12px',
-                    bgcolor: (theme) => theme.palette.grey[500],
+                    bgcolor: (t) => t.palette.grey[500],
                     '&:hover': {
                       bgcolor: '#28c940',
                       '& .MuiSvgIcon-root': {

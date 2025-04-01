@@ -106,15 +106,9 @@ export default function MiniPlayer() {
   // Sync with main player
   useEffect(() => {
     try {
-      console.log('MiniPlayer: Setting up IPC listeners');
-
       // Listen for playback state updates from the main process
       const unsubscribeTrack = window.electron.miniPlayer.onTrackChange(
         (track: any) => {
-          console.log(
-            'MiniPlayer: Track changed:',
-            track ? 'Track received' : 'null track',
-          );
           setCurrentTrack(track);
         },
       );
@@ -122,7 +116,6 @@ export default function MiniPlayer() {
       const unsubscribeState = window.electron.miniPlayer.onStateChange(
         (state: any) => {
           try {
-            console.log('MiniPlayer: State changed:', state);
             setPaused(state.paused);
             setDuration(state.duration);
             setVolume(state.volume);
@@ -148,7 +141,6 @@ export default function MiniPlayer() {
       );
 
       // Request initial state immediately when component mounts
-      console.log('MiniPlayer: Requesting initial state');
       window.electron.miniPlayer.requestState();
 
       // Set up a periodic state refresh to ensure sync
@@ -163,7 +155,6 @@ export default function MiniPlayer() {
 
       // Cleanup listeners
       return () => {
-        console.log('MiniPlayer: Cleaning up IPC listeners');
         unsubscribeTrack();
         unsubscribeState();
         unsubscribePosition();

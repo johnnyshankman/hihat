@@ -145,7 +145,7 @@ export function createMiniPlayerWindow(): void {
   const savedPosition = loadWindowPosition();
 
   try {
-    console.log('Creating mini player window...');
+    console.warn('Creating mini player window...');
     miniPlayerWindow = new BrowserWindow({
       width: size,
       height: size,
@@ -177,7 +177,7 @@ export function createMiniPlayerWindow(): void {
           if (!app.isPackaged) {
             try {
               if (fs.existsSync(preloadPath)) {
-                console.log(
+                console.warn(
                   `Development preload script exists at: ${preloadPath}`,
                 );
               } else {
@@ -186,7 +186,6 @@ export function createMiniPlayerWindow(): void {
                 );
                 // Try to find it
                 const erbPath = path.join(__dirname, '../../.erb');
-                console.log(`Looking for preload script in: ${erbPath}`);
                 if (fs.existsSync(erbPath)) {
                   fs.readdirSync(erbPath).forEach((dir) => {
                     const fullDir = path.join(erbPath, dir);
@@ -196,7 +195,7 @@ export function createMiniPlayerWindow(): void {
                         f.includes('preload'),
                       );
                       if (preloadFile) {
-                        console.log(
+                        console.warn(
                           `Found possible preload file: ${path.join(fullDir, preloadFile)}`,
                         );
                       }
@@ -214,18 +213,6 @@ export function createMiniPlayerWindow(): void {
               const parentPreload = path.join(__dirname, '../preload.js');
               const mainPreload = path.join(__dirname, '../main/preload.js');
 
-              console.log(`Packaged __dirname: ${__dirname}`);
-              console.log(`Checking preload paths in production:`);
-              console.log(
-                `1. ${dirnamePreload} - exists: ${fs.existsSync(dirnamePreload)}`,
-              );
-              console.log(
-                `2. ${parentPreload} - exists: ${fs.existsSync(parentPreload)}`,
-              );
-              console.log(
-                `3. ${mainPreload} - exists: ${fs.existsSync(mainPreload)}`,
-              );
-
               // Use the one that exists
               if (fs.existsSync(dirnamePreload)) return dirnamePreload;
               if (fs.existsSync(parentPreload)) return parentPreload;
@@ -240,10 +227,8 @@ export function createMiniPlayerWindow(): void {
       },
     });
 
-    console.log('Mini player window created, loading URL...');
     // Log the URL we're going to load for debugging
     const miniPlayerUrl = `${resolveHtmlPath('index.html')}?miniPlayer=true#/mini-player`;
-    console.log('Mini player URL:', miniPlayerUrl);
 
     // Load the mini player HTML with a specific query parameter to indicate it's a mini player
     miniPlayerWindow.loadURL(miniPlayerUrl);
@@ -257,16 +242,6 @@ export function createMiniPlayerWindow(): void {
         );
       },
     );
-
-    // Log when page has finished loading
-    miniPlayerWindow.webContents.on('did-finish-load', () => {
-      console.log('Mini player page finished loading');
-    });
-
-    // Log when DOM is ready
-    miniPlayerWindow.webContents.on('dom-ready', () => {
-      console.log('Mini player DOM ready');
-    });
 
     // Maintain square aspect ratio when resizing
     miniPlayerWindow.on('resize', () => {
@@ -476,12 +451,6 @@ export function setupMiniPlayerHandlers(): void {
     try {
       // Check if the request is coming from the mini player window
       if (miniPlayerWindow && event.sender === miniPlayerWindow.webContents) {
-        // Send current track and state
-        console.log(
-          'Sending track data to mini player:',
-          currentTrack ? `Track ID: ${currentTrack.id}` : 'No current track',
-        );
-
         // Ensure we have a valid track object or send null explicitly
         const trackToSend = currentTrack || null;
         event.sender.send('miniPlayer:trackChanged', trackToSend);

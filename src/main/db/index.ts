@@ -104,6 +104,64 @@ function createTables(): void {
 }
 
 /**
+ * Get tracks for a smart playlist
+ * @param rule - Playlist rule
+ * @returns Array of tracks
+ */
+export function getSmartPlaylistTracks(rule: PlaylistRule): Track[] {
+  try {
+    // Return empty array for mock database
+    if (useMockDb) {
+      return [];
+    }
+
+    let query = '';
+
+    switch (rule.type) {
+      case 'recentlyPlayed':
+        query = `
+          SELECT * FROM tracks
+          WHERE lastPlayed IS NOT NULL
+          ORDER BY lastPlayed DESC
+          LIMIT ?
+        `;
+        break;
+      case 'mostPlayed':
+        query = `
+          SELECT * FROM tracks
+          WHERE playCount > 0
+          ORDER BY playCount DESC
+          LIMIT ?
+        `;
+        break;
+      case 'recentlyAdded':
+        query = `
+          SELECT * FROM tracks
+          ORDER BY dateAdded DESC
+          LIMIT ?
+        `;
+        break;
+      default:
+        throw new Error(`Unknown smart playlist type: ${rule.type}`);
+    }
+
+    const tracks = db.prepare(query).all(rule.limit) as Track[];
+
+    return tracks.map((track) => ({
+      ...track,
+      playCount: Number(track.playCount),
+      duration: Number(track.duration),
+    }));
+  } catch (error) {
+    console.error(
+      `Failed to get tracks for smart playlist with rule ${JSON.stringify(rule)}:`,
+      error,
+    );
+    throw error;
+  }
+}
+
+/**
  * Initialize default settings if they don't exist
  */
 function initDefaultSettings(): void {
@@ -320,75 +378,75 @@ function initDefaultPlaylists(): void {
  * Initialize the database
  */
 export function initDatabase(): void {
-  console.log('Initializing database...');
-  console.log('Database path:', DB_PATH);
+  console.warn('Initializing database...');
+  console.warn('Database path:', DB_PATH);
 
   try {
     // Create the database directory if it doesn't exist
     const dbDir = path.dirname(DB_PATH);
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
-      console.log('Created database directory:', dbDir);
+      console.warn('Created database directory:', dbDir);
     } else {
-      console.log('Database directory exists:', dbDir);
+      console.warn('Database directory exists:', dbDir);
     }
 
     // Check if database file exists
     if (fs.existsSync(DB_PATH)) {
-      console.log('Database file exists:', DB_PATH);
-      console.log('Database file size:', fs.statSync(DB_PATH).size, 'bytes');
+      console.warn('Database file exists:', DB_PATH);
+      console.warn('Database file size:', fs.statSync(DB_PATH).size, 'bytes');
     } else {
-      console.log('Database file does not exist, will be created');
+      console.warn('Database file does not exist, will be created');
     }
 
     // Use sql.js
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
       const initSqlJs = require('sql.js');
-      console.log('Successfully required sql.js');
+      console.warn('Successfully required sql.js');
 
       // Initialize sql.js
       initSqlJs()
         .then((SQL: any) => {
-          console.log('Successfully initialized sql.js');
+          console.warn('Successfully initialized sql.js');
           // Check if database file exists
           let dbBuffer;
           if (fs.existsSync(DB_PATH)) {
-            console.log('Loading existing database with sql.js');
+            console.warn('Loading existing database with sql.js');
             // Load existing database
             dbBuffer = fs.readFileSync(DB_PATH);
             db = new SQL.Database(dbBuffer);
-            console.log('Successfully loaded existing database with sql.js');
+            console.warn('Successfully loaded existing database with sql.js');
           } else {
-            console.log('Creating new database with sql.js');
+            console.warn('Creating new database with sql.js');
             // Create new database
             db = new SQL.Database();
-            console.log('Successfully created new database with sql.js');
+            console.warn('Successfully created new database with sql.js');
           }
 
           // Create tables
           createTables();
-          console.log('Tables created or verified');
+          console.warn('Tables created or verified');
 
           // Initialize default settings
           initDefaultSettings();
-          console.log('Default settings initialized');
+          console.warn('Default settings initialized');
 
           // Initialize default playlists
           initDefaultPlaylists();
-          console.log('Default playlists initialized');
+          console.warn('Default playlists initialized');
 
           // Save the database to disk
           const sqlJsData = db.export();
           const sqlJsBuffer = Buffer.from(sqlJsData);
           fs.writeFileSync(DB_PATH, sqlJsBuffer);
-          console.log('Database saved to disk');
+          console.warn('Database saved to disk');
 
-          console.log('SQLite database loaded successfully using sql.js');
+          console.warn('SQLite database loaded successfully using sql.js');
 
           // Create a custom implementation for sql.js
           const originalDb = db;
-          console.log('Creating wrapper for sql.js');
+          console.warn('Creating wrapper for sql.js');
 
           // Create a wrapper object with compatible methods
           db = {
@@ -442,7 +500,7 @@ export function initDatabase(): void {
 
                 all: (...params: any[]) => {
                   try {
-                    console.log(
+                    console.warn(
                       'sql.js wrapper all() method called with SQL:',
                       sql,
                     );
@@ -462,7 +520,7 @@ export function initDatabase(): void {
                     }
 
                     stmt.free();
-                    console.log(
+                    console.warn(
                       `sql.js wrapper all() method returning ${results.length} results`,
                     );
                     return results;
@@ -538,7 +596,7 @@ export function initDatabase(): void {
           };
 
           useMockDb = false;
-          console.log('Using sql.js implementation: useMockDb =', useMockDb);
+          console.warn('Using sql.js implementation: useMockDb =', useMockDb);
           return true; // Return a value to satisfy the linter
         })
         .catch((sqlJsError: any) => {
@@ -548,21 +606,21 @@ export function initDatabase(): void {
           );
           db = mockDb;
           useMockDb = true;
-          console.log('Using mock database: useMockDb =', useMockDb);
+          console.warn('Using mock database: useMockDb =', useMockDb);
           return false; // Return a value to satisfy the linter
         });
     } catch (sqlJsError) {
       console.error('Failed to load sql.js, using mock database:', sqlJsError);
       db = mockDb;
       useMockDb = true;
-      console.log('Using mock database (catch block): useMockDb =', useMockDb);
+      console.warn('Using mock database (catch block): useMockDb =', useMockDb);
     }
   } catch (error) {
     console.error('Failed to initialize database:', error);
     // Use mock database as fallback
     db = mockDb;
     useMockDb = true;
-    console.log(
+    console.warn(
       'Using mock database (outer catch block): useMockDb =',
       useMockDb,
     );
@@ -584,15 +642,15 @@ export function closeDatabase(): void {
  */
 export function getAllTracks(): Track[] {
   try {
-    console.log('Getting all tracks from database...');
+    console.warn('Getting all tracks from database...');
     if (useMockDb) {
-      console.log('Using mock database, returning empty array');
+      console.warn('Using mock database, returning empty array');
       return [];
     }
     const tracks = db.prepare('SELECT * FROM tracks').all() as Track[];
-    console.log(`Retrieved ${tracks.length} tracks from database`);
+    console.warn(`Retrieved ${tracks.length} tracks from database`);
     if (tracks.length > 0) {
-      console.log(
+      console.warn(
         'First track:',
         JSON.stringify({
           id: tracks[0].id,
@@ -648,7 +706,7 @@ export function getTrackById(id: string): Track | null {
  */
 export function addTrack(track: Omit<Track, 'id'>): Track {
   try {
-    console.log('Adding track to database:', JSON.stringify(track));
+    console.warn('Adding track to database:', JSON.stringify(track));
 
     // Validate required fields
     if (!track.filePath) {
@@ -694,7 +752,7 @@ export function addTrack(track: Omit<Track, 'id'>): Track {
       ...track,
     };
 
-    console.log(
+    console.warn(
       'Prepared track for insertion:',
       JSON.stringify({
         id: newTrack.id,
@@ -714,7 +772,7 @@ export function addTrack(track: Omit<Track, 'id'>): Track {
     `,
     );
 
-    console.log('Executing SQL statement with parameters:', [
+    console.warn('Executing SQL statement with parameters:', [
       newTrack.id,
       newTrack.filePath,
       newTrack.title,
@@ -746,7 +804,7 @@ export function addTrack(track: Omit<Track, 'id'>): Track {
       newTrack.trackNumber,
     );
 
-    console.log('Track added successfully:', newTrack.id);
+    console.warn('Track added successfully:', newTrack.id);
 
     return newTrack;
   } catch (error) {
@@ -1065,7 +1123,7 @@ export function getSettings(): Settings {
       .get('app-settings') as Settings | undefined;
 
     if (!settings) {
-      console.log('Settings not found, initializing default settings');
+      console.warn('Settings not found, initializing default settings');
       // Initialize default settings
       initDefaultSettings();
 
@@ -1164,7 +1222,7 @@ export async function backupDatabase(backupPath: string): Promise<boolean> {
 
     // Create a backup
     await db.backup(backupPath);
-    console.log(`Database backed up to ${backupPath}`);
+    console.warn(`Database backed up to ${backupPath}`);
     return true;
   } catch (error) {
     console.error(`Failed to backup database to ${backupPath}:`, error);
@@ -1196,71 +1254,13 @@ export function restoreDatabase(restorePath: string): boolean {
 }
 
 /**
- * Get tracks for a smart playlist
- * @param rule - Playlist rule
- * @returns Array of tracks
- */
-export function getSmartPlaylistTracks(rule: PlaylistRule): Track[] {
-  try {
-    // Return empty array for mock database
-    if (useMockDb) {
-      return [];
-    }
-
-    let query = '';
-
-    switch (rule.type) {
-      case 'recentlyPlayed':
-        query = `
-          SELECT * FROM tracks
-          WHERE lastPlayed IS NOT NULL
-          ORDER BY lastPlayed DESC
-          LIMIT ?
-        `;
-        break;
-      case 'mostPlayed':
-        query = `
-          SELECT * FROM tracks
-          WHERE playCount > 0
-          ORDER BY playCount DESC
-          LIMIT ?
-        `;
-        break;
-      case 'recentlyAdded':
-        query = `
-          SELECT * FROM tracks
-          ORDER BY dateAdded DESC
-          LIMIT ?
-        `;
-        break;
-      default:
-        throw new Error(`Unknown smart playlist type: ${rule.type}`);
-    }
-
-    const tracks = db.prepare(query).all(rule.limit) as Track[];
-
-    return tracks.map((track) => ({
-      ...track,
-      playCount: Number(track.playCount),
-      duration: Number(track.duration),
-    }));
-  } catch (error) {
-    console.error(
-      `Failed to get tracks for smart playlist with rule ${JSON.stringify(rule)}:`,
-      error,
-    );
-    throw error;
-  }
-}
-
-/**
  * Reset the database by deleting it and reinitializing
  * @returns Promise<boolean> indicating success
  */
 export function resetDatabase(): Promise<boolean> {
   return new Promise((resolve) => {
     try {
-      console.log('Resetting database...');
+      console.warn('Resetting database...');
 
       // Close the database connection
       closeDatabase();
@@ -1268,7 +1268,7 @@ export function resetDatabase(): Promise<boolean> {
       // Delete the database file
       if (fs.existsSync(DB_PATH)) {
         fs.unlinkSync(DB_PATH);
-        console.log('Database file deleted');
+        console.warn('Database file deleted');
       }
 
       // Start database initialization
@@ -1279,6 +1279,7 @@ export function resetDatabase(): Promise<boolean> {
       const maxAttempts = 50; // 5 seconds max wait time
 
       const checkDbReady = setInterval(() => {
+        // eslint-disable-next-line no-plusplus
         attempts++;
 
         // Check if db is defined and not the mock db
@@ -1300,7 +1301,7 @@ export function resetDatabase(): Promise<boolean> {
                 // Initialize default playlists
                 initDefaultPlaylists();
 
-                console.log('Database reset complete');
+                console.warn('Database reset complete');
                 resolve(true);
                 return;
               } catch (initError) {
@@ -1313,7 +1314,7 @@ export function resetDatabase(): Promise<boolean> {
               }
             }
           } catch (queryError) {
-            console.log('Database not ready yet, waiting...');
+            console.warn('Database not ready yet, waiting...');
           }
         }
 
@@ -1340,7 +1341,7 @@ export function resetDatabase(): Promise<boolean> {
 export function resetTracks(): Promise<boolean> {
   return new Promise((resolve) => {
     try {
-      console.log('Resetting tracks table...');
+      console.warn('Resetting tracks table...');
 
       if (!db || useMockDb) {
         console.error('Database not initialized');
@@ -1350,7 +1351,7 @@ export function resetTracks(): Promise<boolean> {
 
       // Delete all tracks from the database
       db.exec('DELETE FROM tracks');
-      console.log('All tracks deleted from the database');
+      console.warn('All tracks deleted from the database');
 
       resolve(true);
     } catch (error) {
