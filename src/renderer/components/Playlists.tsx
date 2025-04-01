@@ -348,7 +348,8 @@ export default function Playlists({
         },
       },
     ],
-    [sorting], // Add sorting as a dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // Add sorting as a dependency
   );
 
   // Prepare data for Material React Table
@@ -505,13 +506,6 @@ export default function Playlists({
         verticalAlign: 'top', // Align cell content to the top
       },
     },
-    layoutMode: 'grid', // Use grid layout mode for better control
-    displayColumnDefOptions: {
-      'mrt-row-expand': {
-        size: 0, // Minimize any expansion space
-      },
-    },
-    renderTopToolbarCustomActions,
     muiTableBodyRowProps: ({ row }) => ({
       onClick: () => {
         handlePlayTrack(row.original.id);
@@ -520,6 +514,7 @@ export default function Playlists({
       'data-track-id': row.original.id,
       sx: {
         cursor: 'pointer',
+        height: '29px', // @important: must be 29 so that the virtualized estimateSize is corret
         backgroundColor: (theme) => theme.palette.background.default,
         borderBottom: '1px solid',
         borderColor: (theme) => theme.palette.divider,
@@ -538,11 +533,16 @@ export default function Playlists({
                   : theme.palette.grey[300],
             },
           }),
-        '&:hover': {
-          backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle hover effect for non-selected rows
-        },
       },
     }),
+    layoutMode: 'grid', // Use grid layout mode for better control
+    displayColumnDefOptions: {
+      'mrt-row-expand': {
+        size: 0, // Minimize any expansion space
+      },
+    },
+    renderTopToolbarCustomActions,
+
     defaultDisplayColumn: { size: 150 },
     initialState: {
       density: 'compact',
@@ -585,6 +585,7 @@ export default function Playlists({
         </Typography>
       </Box>
     ),
+    memoMode: 'cells',
   });
 
   return (

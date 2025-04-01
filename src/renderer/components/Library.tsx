@@ -298,8 +298,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         defaultHidden: true,
       },
     ],
-    //
-    [], // Add sorting as a dependency
+    [sorting], // Fix the dependency array by adding sorting
   );
 
   // Prepare data for Material React Table
@@ -487,24 +486,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         backgroundColor: (theme) => theme.palette.background.default,
       },
     },
-    // Optimize table body for performance
-    muiTableBodyProps: {
-      sx: {
-        '& td': {
-          padding: '4px 0.5rem', // Reduce cell padding
-          whiteSpace: 'nowrap', // Prevent text wrapping for better performance
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        },
-        width: '100%',
-        alignItems: 'flex-start', // Align content to the top
-        display: 'table-row-group', // Use standard table row group display
-        // Add will-change to optimize for animations and prevent layout thrashing
-        willChange: 'transform',
-        // Add CSS containment for better performance
-        contain: 'content',
-      },
-    },
     muiTableBodyRowProps: ({ row }) => ({
       onClick: () => {
         handlePlayTrack(row.original.id);
@@ -527,13 +508,10 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             '&:hover': {
               backgroundColor: (theme) =>
                 theme.palette.mode === 'dark'
-                  ? theme.palette.grey[700]
+                  ? theme.palette.grey[800]
                   : theme.palette.grey[300],
             },
           }),
-        '&:hover': {
-          backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle hover effect for non-selected rows
-        },
       },
     }),
     layoutMode: 'grid', // Use grid layout mode for better control
