@@ -204,6 +204,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           // Get the current sorting state for this column
           const columnSorting = sorting.find((sort) => sort.id === 'title');
           const isDescending = columnSorting ? columnSorting.desc : false;
+          console.log('isDescending', isDescending);
           return sortByTitle(rowA.original, rowB.original, isDescending);
         },
       },
@@ -424,16 +425,9 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     rowVirtualizerOptions: {
       overscan: 20, // Increased from 5 to 20 for smoother scrolling
       count: data.length,
-      estimateSize: () => 27,
+      estimateSize: () => 29,
       paddingStart: 0,
       paddingEnd: 0,
-      scrollToFn: (offset, _options) => {
-        // Custom scroll implementation for better performance
-        const tableBodyElem = document.querySelector('.MuiTableBody-root');
-        if (tableBodyElem) {
-          tableBodyElem.scrollTop = offset;
-        }
-      },
     },
     rowVirtualizerInstanceRef: rowVirtualizerRef,
     muiSearchTextFieldProps: {
@@ -523,6 +517,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     onSortingChange: (updater) => {
       const newSorting =
         typeof updater === 'function' ? updater(sorting) : updater;
+
       setSorting(newSorting);
       // Update the library view state in the context
       updateLibraryViewState(newSorting, globalFilter);
@@ -543,6 +538,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       'data-track-id': row.original.id,
       sx: {
         cursor: 'pointer',
+        height: '29px',
         backgroundColor: (theme) => theme.palette.background.default,
         borderBottom: '1px solid',
         borderColor: (theme) => theme.palette.divider,
