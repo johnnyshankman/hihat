@@ -293,11 +293,14 @@ This project was built with the following technologies:
 
 - [ ] Smart playlists (Top 50, Recently Played, Recently Added)
 - [ ] Custom playlists
-- [ ] Mini player
-- [ ] Hide/show columns in the song list
-- [ ] Better resizable columns in song list
+- [ ] Mini player in separate window for viewing album art nicely
+- [ ] Powerful quick search by column
+- [ ] 10x faster imports
+- [ ] Improved scrolling for large libraries
+- [ ] Improved resizable columns
+- [ ] Hide/show columns
 - [ ] Edit song basic metadata
-- [ ] Redesign to maximize song list space, mini player for seeing art as big as you want
+- [ ] Redesign to maximize song list space
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features (and known issues).
 
