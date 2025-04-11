@@ -9,6 +9,7 @@ const useSettingsStore = create<SettingsStore>((set) => ({
   id: 'app-settings', // db record name never changes
   libraryPath: '',
   theme: 'light',
+  lastPlayedSongId: null,
   columns: {
     title: true,
     artist: true,
@@ -35,6 +36,7 @@ const useSettingsStore = create<SettingsStore>((set) => ({
         libraryPath,
         theme: state.theme,
         columns: state.columns,
+        lastPlayedSongId: state.lastPlayedSongId,
       };
       await window.electron.settings.update(updatedSettings);
 
@@ -56,6 +58,7 @@ const useSettingsStore = create<SettingsStore>((set) => ({
         libraryPath: appSettings.libraryPath,
         theme: appSettings.theme,
         columns: appSettings.columns,
+        lastPlayedSongId: appSettings.lastPlayedSongId || null,
       });
       return appSettings;
     } catch (error) {
@@ -66,6 +69,7 @@ const useSettingsStore = create<SettingsStore>((set) => ({
       return {
         libraryPath: '',
         theme: 'light',
+        lastPlayedSongId: null,
         columns: {
           title: true,
           artist: true,
@@ -101,6 +105,7 @@ const useSettingsStore = create<SettingsStore>((set) => ({
         libraryPath: state.libraryPath,
         theme: state.theme,
         columns: updatedColumns,
+        lastPlayedSongId: state.lastPlayedSongId,
       };
       await window.electron.settings.update(updatedSettings);
 
@@ -128,6 +133,7 @@ const useSettingsStore = create<SettingsStore>((set) => ({
         libraryPath: store.libraryPath,
         theme,
         columns: store.columns,
+        lastPlayedSongId: store.lastPlayedSongId,
       };
       await window.electron.settings.update(updatedSettings);
 
@@ -136,6 +142,34 @@ const useSettingsStore = create<SettingsStore>((set) => ({
     } catch (error) {
       console.error('Error updating theme:', error);
       useUIStore.getState().showNotification('Failed to update theme', 'error');
+    }
+  },
+
+  setLastPlayedSongId: async (trackId: string | null) => {
+    try {
+      const store = useSettingsStore.getState();
+
+      if (!store.id) {
+        throw new Error('Settings not loaded');
+      }
+
+      // Update the settings in the database
+      const updatedSettings = {
+        id: store.id,
+        libraryPath: store.libraryPath,
+        theme: store.theme,
+        columns: store.columns,
+        lastPlayedSongId: trackId,
+      };
+      await window.electron.settings.update(updatedSettings);
+
+      // Update the settings state
+      set({ lastPlayedSongId: trackId });
+    } catch (error) {
+      console.error('Error updating last played song ID:', error);
+      useUIStore
+        .getState()
+        .showNotification('Failed to update last played song', 'error');
     }
   },
 }));

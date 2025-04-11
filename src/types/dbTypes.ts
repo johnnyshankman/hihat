@@ -69,6 +69,7 @@ export interface Settings {
   libraryPath: string; // Path to the music library folder
   theme: 'dark' | 'light'; // UI theme preference
   columns: ColumnVisibility; // Visible columns in the library view
+  lastPlayedSongId: string | null; // ID of the last played song for resuming playback
 }
 
 /**

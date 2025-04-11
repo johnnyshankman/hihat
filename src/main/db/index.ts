@@ -59,6 +59,61 @@ function sendEventToRenderer(event: string, data: any): void {
 }
 
 /**
+ * Add a column to a table if it doesn't exist
+ * @param tableName - Name of the table
+ * @param columnName - Name of the column to add
+ * @param columnType - SQL type of the column
+ */
+function addColumnIfNotExists(
+  tableName: string,
+  columnName: string,
+  columnType: string,
+): void {
+  try {
+    // Check if the column exists
+    let columnExists = false;
+
+    try {
+      // Use PRAGMA to get table info
+      const tableInfo = db.prepare(`PRAGMA table_info(${tableName})`).all();
+
+      // Check if the column is in the table info
+      columnExists = tableInfo.some(
+        (column: any) => column.name === columnName,
+      );
+    } catch (error) {
+      console.error(`Error checking if column ${columnName} exists:`, error);
+      return;
+    }
+
+    // If the column doesn't exist, add it
+    if (!columnExists) {
+      console.warn(`Adding column ${columnName} to ${tableName} table`);
+      db.exec(
+        `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType}`,
+      );
+      console.warn(`Column ${columnName} added successfully`);
+    } else {
+      console.warn(`Column ${columnName} already exists in ${tableName} table`);
+    }
+  } catch (error) {
+    console.error(`Error adding column ${columnName} to ${tableName}:`, error);
+  }
+}
+
+/**
+ * Run database migrations to update schema for existing databases
+ */
+function runMigrations(): void {
+  try {
+    // Migration 1: Add lastPlayedSongId column to settings table if it doesn't exist
+    addColumnIfNotExists('settings', 'lastPlayedSongId', 'TEXT');
+  } catch (error) {
+    console.error('Error running database migrations:', error);
+  }
+}
+
+/**
  * Create database tables if they don't exist
  */
 function createTables(): void {
@@ -98,7 +153,8 @@ function createTables(): void {
       id TEXT PRIMARY KEY,
       libraryPath TEXT,
       theme TEXT NOT NULL,
-      columns TEXT NOT NULL
+      columns TEXT NOT NULL,
+      lastPlayedSongId TEXT
     )
   `);
 }
@@ -192,19 +248,21 @@ function initDefaultSettings(): void {
           libraryPath: '',
           theme: 'dark',
           columns: defaultColumns,
+          lastPlayedSongId: null,
         };
 
         // Insert default settings
         db.prepare(
           `
-          INSERT INTO settings (id, libraryPath, theme, columns)
-          VALUES (?, ?, ?, ?)
+          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId)
+          VALUES (?, ?, ?, ?, ?)
         `,
         ).run(
           defaultSettings.id,
           defaultSettings.libraryPath,
           defaultSettings.theme,
           JSON.stringify(defaultSettings.columns),
+          defaultSettings.lastPlayedSongId,
         );
       }
     } catch (error) {
@@ -234,19 +292,21 @@ function initDefaultSettings(): void {
         libraryPath: '',
         theme: 'dark',
         columns: defaultColumns,
+        lastPlayedSongId: null,
       };
 
       // Insert default settings
       db.prepare(
         `
-        INSERT INTO settings (id, libraryPath, theme, columns)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId)
+        VALUES (?, ?, ?, ?, ?)
       `,
       ).run(
         defaultSettings.id,
         defaultSettings.libraryPath,
         defaultSettings.theme,
         JSON.stringify(defaultSettings.columns),
+        defaultSettings.lastPlayedSongId,
       );
     }
   } catch (outerError) {
@@ -427,6 +487,10 @@ export function initDatabase(): void {
           // Create tables
           createTables();
           console.warn('Tables created or verified');
+
+          // Run database migrations
+          runMigrations();
+          console.warn('Database migrations completed');
 
           // Initialize default settings
           initDefaultSettings();
@@ -1115,6 +1179,7 @@ export function getSettings(): Settings {
           dateAdded: true,
           lastPlayed: true,
         },
+        lastPlayedSongId: null,
       };
     }
 
@@ -1142,6 +1207,7 @@ export function getSettings(): Settings {
           typeof newSettings.columns === 'string'
             ? JSON.parse(newSettings.columns)
             : newSettings.columns,
+        lastPlayedSongId: newSettings.lastPlayedSongId || null,
       };
     }
 
@@ -1151,6 +1217,7 @@ export function getSettings(): Settings {
         typeof settings.columns === 'string'
           ? JSON.parse(settings.columns)
           : settings.columns,
+      lastPlayedSongId: settings.lastPlayedSongId || null,
     };
   } catch (error) {
     console.error('Failed to get settings:', error);
@@ -1171,6 +1238,7 @@ export function getSettings(): Settings {
         dateAdded: true,
         lastPlayed: true,
       },
+      lastPlayedSongId: null,
     };
   }
 }
@@ -1182,25 +1250,63 @@ export function getSettings(): Settings {
  */
 export function updateSettings(settings: Settings): boolean {
   try {
-    const result = db
-      .prepare(
-        `
-      UPDATE settings
-      SET
-        libraryPath = ?,
-        theme = ?,
-        columns = ?
-      WHERE id = ?
-    `,
-      )
-      .run(
-        settings.libraryPath,
-        settings.theme,
-        JSON.stringify(settings.columns),
-        settings.id,
-      );
+    // First ensure the column exists
+    addColumnIfNotExists('settings', 'lastPlayedSongId', 'TEXT');
 
-    return result.changes > 0;
+    // First try the update with all columns
+    try {
+      const result = db
+        .prepare(
+          `
+        UPDATE settings
+        SET
+          libraryPath = ?,
+          theme = ?,
+          columns = ?,
+          lastPlayedSongId = ?
+        WHERE id = ?
+      `,
+        )
+        .run(
+          settings.libraryPath,
+          settings.theme,
+          JSON.stringify(settings.columns),
+          settings.lastPlayedSongId,
+          settings.id,
+        );
+
+      return result.changes > 0;
+    } catch (error: unknown) {
+      // If we still get an error about the column, fall back to the original update without the new column
+      if (
+        error instanceof Error &&
+        error.message.includes('no such column: lastPlayedSongId')
+      ) {
+        console.warn('Falling back to update without lastPlayedSongId column');
+        const fallbackResult = db
+          .prepare(
+            `
+          UPDATE settings
+          SET
+            libraryPath = ?,
+            theme = ?,
+            columns = ?
+          WHERE id = ?
+        `,
+          )
+          .run(
+            settings.libraryPath,
+            settings.theme,
+            JSON.stringify(settings.columns),
+            settings.id,
+          );
+
+        return fallbackResult.changes > 0;
+      }
+
+      // If it's some other error, rethrow it
+      throw error;
+    }
   } catch (error) {
     console.error('Failed to update settings:', error);
     throw error;

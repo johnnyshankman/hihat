@@ -70,14 +70,14 @@ export interface PlaybackStore {
   silentAudioRef: HTMLAudioElement | null; // reference to the silent audio element for MediaSession
   initPlayer: () => void; // initialize the player instance
 
-  // // Actions
-  // // table actions
+  // Actions
+  // table actions
   selectSpecificSong: (
     trackId: string,
     source: 'library' | 'playlist',
     playlistId?: string | null,
   ) => void;
-  // // player actions
+  // player actions
   setPaused: (paused: boolean) => void;
   skipToNextTrack: () => void;
   skipToPreviousTrack: () => void;
@@ -86,7 +86,7 @@ export interface PlaybackStore {
   toggleRepeatMode: () => void;
   toggleShuffleMode: () => void;
   setSilentAudioRef: (ref: HTMLAudioElement | null) => void; // set the silent audio element reference
-  // // automatic actions (onfinishedtrack)
+  // automatic actions (onfinishedtrack)
   autoPlayNextTrack: () => Promise<void>;
 }
 
@@ -96,12 +96,14 @@ export interface SettingsStore {
   theme: Settings['theme'];
   columns: Settings['columns'];
   id: Settings['id'];
+  lastPlayedSongId: Settings['lastPlayedSongId'];
 
   // Actions
   loadSettings: () => Promise<void>;
   setColumnVisibility: (column: string, isVisible: boolean) => Promise<void>;
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
+  setLastPlayedSongId: (trackId: string | null) => Promise<void>;
 }
 
 // UI Store Types

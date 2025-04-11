@@ -5,7 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import MainLayout from './components/MainLayout';
 import MiniPlayer from './components/MiniPlayer';
 import { lightTheme, darkTheme } from './styles/materialTheme';
-import { usePlaybackStore, useSettingsStore } from './stores';
+import { useLibraryStore, usePlaybackStore, useSettingsStore } from './stores';
 import './App.css';
 
 // Check if this is a mini player window
@@ -41,6 +41,14 @@ function ThemedApp() {
   const theme = useSettingsStore((state) => state.theme);
   const themeToProvide = theme === 'light' ? lightTheme : darkTheme;
   const initPlayer = usePlaybackStore((state) => state.initPlayer);
+  const selectSpecificSong = usePlaybackStore(
+    (state) => state.selectSpecificSong,
+  );
+  const isLoading = useLibraryStore((state) => state.isLoading);
+
+  const setPaused = usePlaybackStore((state) => state.setPaused);
+
+  const lastPlayedSongId = useSettingsStore((state) => state.lastPlayedSongId);
 
   // Get the current track and playback state for cleanup
   const currentTrack = usePlaybackStore((state) => state.currentTrack);
@@ -51,14 +59,32 @@ function ThemedApp() {
   const position = usePlaybackStore((state) => state.position);
   const lastPosition = usePlaybackStore((state) => state.lastPosition);
 
-  // Set the entire app as draggable by default, only ever run this once
+  // Initialize the player and the draggable body
   useEffect(() => {
-    initPlayer(); // also init the global player just one time ever
+    initPlayer(); // initialize the global player just one time ever
     document.body.classList.add('draggable');
     return () => {
       document.body.classList.remove('draggable');
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load the last played song if available after load
+  useEffect(() => {
+    // Load the last played song when the app starts, if available
+    const loadLastPlayedSong = async () => {
+      if (lastPlayedSongId && !isLoading) {
+        try {
+          // Load the track without playing it
+          selectSpecificSong(lastPlayedSongId, 'library');
+          setPaused(true);
+        } catch (error) {
+          console.error('Failed to load last played song:', error);
+        }
+      }
+    };
+
+    loadLastPlayedSong();
+  }, [isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle application shutdown by updating play count tracking
   useEffect(() => {

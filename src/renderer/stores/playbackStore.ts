@@ -3,6 +3,7 @@ import { Gapless5 } from '@regosen/gapless-5';
 import { Track } from '../../types/dbTypes';
 import { PlaybackStore } from './types';
 import useLibraryStore from './libraryStore';
+import useSettingsStore from './settingsStore';
 import {
   findNextSong,
   findPreviousSong,
@@ -98,6 +99,9 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
       // Start tracking play count for the new track
       playbackTracker.startTrackingTrack(trackId);
+
+      // Save the track ID as the last played song
+      useSettingsStore.getState().setLastPlayedSongId(trackId);
 
       return {
         currentTrack: selectedTrack,
@@ -198,6 +202,9 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
       // Start tracking play count for the new track
       playbackTracker.startTrackingTrack(nextSong.id);
 
+      // Save the track ID as the last played song
+      useSettingsStore.getState().setLastPlayedSongId(nextSong.id);
+
       return {
         currentTrack: nextSong,
         position: 0,
@@ -274,6 +281,9 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
         // Start tracking play count for the previous track
         playbackTracker.startTrackingTrack(previousSong.id);
+
+        // Save the track ID as the last played song
+        useSettingsStore.getState().setLastPlayedSongId(previousSong.id);
 
         return {
           currentTrack: previousSong,
@@ -608,6 +618,11 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
       // Start tracking play count for the new track
       playbackTracker.startTrackingTrack(currentTrackThatIsAudiblyPlaying.id);
+
+      // Save the track ID as the last played song
+      useSettingsStore
+        .getState()
+        .setLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
 
       // We need to create a small delay between track changes to avoid the 2-second offset issue
       // The player is already playing the next track at this point
