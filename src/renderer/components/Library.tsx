@@ -414,7 +414,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     enableRowVirtualization: true, // Enable virtualization for better performance
     rowVirtualizerOptions: {
       overscan: 20, // Increased from 5 to 20 for smoother scrolling
-      count: data.length,
       estimateSize: () => 29,
       paddingStart: 0,
       paddingEnd: 0,
