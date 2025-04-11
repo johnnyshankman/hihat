@@ -400,7 +400,12 @@ export default function Playlists({
     enableDensityToggle: false,
     enableFullScreenToggle: false,
     enableRowVirtualization: true, // Enable virtualization for better performance
-    rowVirtualizerOptions: { overscan: 20 }, // Increase overscan for smoother scrolling
+    rowVirtualizerOptions: {
+      overscan: 20, // Increased from 5 to 20 for smoother scrolling
+      estimateSize: () => 29,
+      paddingStart: 0,
+      paddingEnd: 0,
+    },
     rowVirtualizerInstanceRef: rowVirtualizerRef, // Add the row virtualizer ref
     state: {
       sorting,
