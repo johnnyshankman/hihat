@@ -373,14 +373,18 @@ export default function Playlists({
 
   // Create a renderTopToolbarCustomActions function for the main table
   const renderTopToolbarCustomActions = () => (
-    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '40px' }}>
+    <Box
+      sx={{ display: 'flex', gap: 0.5, alignItems: 'center', height: '42px' }}
+    >
       <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
       <Typography variant="h1">
         {selectedPlaylistId
           ? `${
               playlists.find((p) => p.id === selectedPlaylistId)?.name ||
               'Playlist'
-            } (${playlistTracks.length} tracks)`
+            } (${playlistTracks.length} track${
+              playlistTracks.length === 1 ? '' : 's'
+            })`
           : 'Playlists'}
       </Typography>
     </Box>
@@ -481,7 +485,7 @@ export default function Playlists({
         position: 'sticky',
         top: 0,
         zIndex: 2,
-        padding: '4px 8px', // Reduce padding in the toolbar
+        padding: '4px 0', // Reduce padding in the toolbar
         width: '100%',
         backgroundColor: (theme) => theme.palette.background.default,
       },

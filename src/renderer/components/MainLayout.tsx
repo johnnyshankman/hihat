@@ -21,6 +21,7 @@ import {
   Button,
   Divider,
   Tooltip,
+  Paper,
 } from '@mui/material';
 import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
@@ -456,207 +457,209 @@ export default function MainLayout() {
           }}
           variant="persistent"
         >
-          {/* Window Controls */}
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px',
-              WebkitAppRegion: 'drag', // Make this area draggable
-              height: '60px',
-            }}
-          >
+          <Paper sx={{ borderRadius: '0px', height: '100%' }}>
+            {/* Window Controls */}
             <Box
-              sx={{ display: 'flex', gap: '8px', WebkitAppRegion: 'no-drag' }}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px',
+                WebkitAppRegion: 'drag', // Make this area draggable
+                height: '60px',
+              }}
             >
-              <Tooltip title="Close">
-                <IconButton
-                  onClick={() => window.electron.window.close()}
-                  size="small"
-                  sx={{
-                    width: '12px',
-                    height: '12px',
-                    bgcolor: (t) => t.palette.grey[500],
-                    '&:hover': {
-                      bgcolor: '#ff5f57',
-                      '& .MuiSvgIcon-root': {
-                        opacity: 1,
-                        color: 'black',
-                      },
-                    },
-                    padding: 0,
-                  }}
-                >
-                  <CloseIcon
-                    sx={{
-                      fontSize: '8px',
-                      opacity: 0,
-                      transition: 'opacity 0.2s',
-                    }}
-                  />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Minimize">
-                <IconButton
-                  onClick={() => window.electron.window.minimize()}
-                  size="small"
-                  sx={{
-                    width: '12px',
-                    height: '12px',
-                    bgcolor: (t) => t.palette.grey[500],
-                    '&:hover': {
-                      bgcolor: '#ffbd2e',
-                      '& .MuiSvgIcon-root': {
-                        opacity: 1,
-                        color: 'black',
-                      },
-                    },
-                    padding: 0,
-                  }}
-                >
-                  <MinimizeIcon
-                    sx={{
-                      fontSize: '8px',
-                      opacity: 0,
-                      transition: 'opacity 0.2s',
-                    }}
-                  />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={isMaximized ? 'Restore' : 'Maximize'}>
-                <IconButton
-                  onClick={handleMaximize}
-                  size="small"
-                  sx={{
-                    width: '12px',
-                    height: '12px',
-                    bgcolor: (t) => t.palette.grey[500],
-                    '&:hover': {
-                      bgcolor: '#28c940',
-                      '& .MuiSvgIcon-root': {
-                        opacity: 1,
-                        color: 'black',
-                      },
-                    },
-                    padding: 0,
-                  }}
-                >
-                  {isMaximized ? (
-                    <RestoreIcon
-                      sx={{
-                        fontSize: '8px',
-                        opacity: 0,
-                        transition: 'opacity 0.2s',
-                      }}
-                    />
-                  ) : (
-                    <MaximizeIcon
-                      sx={{
-                        fontSize: '8px',
-                        opacity: 0,
-                        transition: 'opacity 0.2s',
-                      }}
-                    />
-                  )}
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Box sx={{ WebkitAppRegion: 'no-drag' }}>
-              {/* Sidebar toggle button */}
-              <Tooltip title={open ? 'Hide Sidebar' : 'Show Sidebar'}>
-                <IconButton
-                  onClick={handleDrawerToggle}
-                  size="small"
-                  sx={{
-                    color: 'text.secondary',
-                    '&:hover': {
-                      color: 'text.primary',
-                    },
-                  }}
-                >
-                  <ViewSidebarRoundedIcon sx={{ fontSize: 20 }} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-
-          <Divider />
-
-          <List sx={{ flexGrow: 1, paddingTop: 0 }}>
-            <ListItemButton
-              data-view="library"
-              onClick={() => handleViewChange('library')}
-              selected={currentView === 'library'}
-              sx={{ WebkitAppRegion: 'no-drag' }}
-            >
-              <ListItemIcon sx={{ minWidth: '38px' }}>
-                <LibraryMusicIcon />
-              </ListItemIcon>
-              <ListItemText primary="Library" />
-            </ListItemButton>
-
-            {/* Playlists with nested list */}
-            <ListItemButton
-              data-view="playlists"
-              onClick={handlePlaylistsClick}
-              sx={{ WebkitAppRegion: 'no-drag' }}
-            >
-              <ListItemIcon sx={{ minWidth: '38px' }}>
-                <QueueMusicIcon />
-              </ListItemIcon>
-              <ListItemText primary="Playlists" />
-              <IconButton
-                onClick={handleAddPlaylistClick}
-                size="small"
-                sx={{ mr: 1, WebkitAppRegion: 'no-drag' }}
+              <Box
+                sx={{ display: 'flex', gap: '8px', WebkitAppRegion: 'no-drag' }}
               >
-                <AddIcon fontSize="small" />
-              </IconButton>
-              {playlistsOpen ? <ExpandLess /> : <ExpandMore />}
-            </ListItemButton>
-
-            <Collapse in={playlistsOpen} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                {playlists.map((playlist) => (
-                  <ListItemButton
-                    key={playlist.id}
-                    data-playlist-id={playlist.id}
-                    onClick={() => handlePlaylistSelect(playlist.id)}
-                    onContextMenu={(e) =>
-                      handlePlaylistContextMenu(e, playlist.id)
-                    }
-                    selected={
-                      currentView === 'playlists' &&
-                      selectedPlaylistId === playlist.id
-                    }
-                    sx={{ pl: 3, py: 0.5, WebkitAppRegion: 'no-drag' }}
+                <Tooltip title="Close">
+                  <IconButton
+                    onClick={() => window.electron.window.close()}
+                    size="small"
+                    sx={{
+                      width: '12px',
+                      height: '12px',
+                      bgcolor: (t) => t.palette.grey[500],
+                      '&:hover': {
+                        bgcolor: '#ff5f57',
+                        '& .MuiSvgIcon-root': {
+                          opacity: 1,
+                          color: 'black',
+                        },
+                      },
+                      padding: 0,
+                    }}
                   >
-                    <ListItemText
-                      primary={playlist.name}
-                      primaryTypographyProps={{
-                        variant: 'body2',
-                        noWrap: true,
-                        title: playlist.name,
+                    <CloseIcon
+                      sx={{
+                        fontSize: '8px',
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
                       }}
                     />
-                  </ListItemButton>
-                ))}
-              </List>
-            </Collapse>
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Minimize">
+                  <IconButton
+                    onClick={() => window.electron.window.minimize()}
+                    size="small"
+                    sx={{
+                      width: '12px',
+                      height: '12px',
+                      bgcolor: (t) => t.palette.grey[500],
+                      '&:hover': {
+                        bgcolor: '#ffbd2e',
+                        '& .MuiSvgIcon-root': {
+                          opacity: 1,
+                          color: 'black',
+                        },
+                      },
+                      padding: 0,
+                    }}
+                  >
+                    <MinimizeIcon
+                      sx={{
+                        fontSize: '8px',
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
+                      }}
+                    />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={isMaximized ? 'Restore' : 'Maximize'}>
+                  <IconButton
+                    onClick={handleMaximize}
+                    size="small"
+                    sx={{
+                      width: '12px',
+                      height: '12px',
+                      bgcolor: (t) => t.palette.grey[500],
+                      '&:hover': {
+                        bgcolor: '#28c940',
+                        '& .MuiSvgIcon-root': {
+                          opacity: 1,
+                          color: 'black',
+                        },
+                      },
+                      padding: 0,
+                    }}
+                  >
+                    {isMaximized ? (
+                      <RestoreIcon
+                        sx={{
+                          fontSize: '8px',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                        }}
+                      />
+                    ) : (
+                      <MaximizeIcon
+                        sx={{
+                          fontSize: '8px',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                        }}
+                      />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Box sx={{ WebkitAppRegion: 'no-drag' }}>
+                {/* Sidebar toggle button */}
+                <Tooltip title={open ? 'Hide Sidebar' : 'Show Sidebar'}>
+                  <IconButton
+                    onClick={handleDrawerToggle}
+                    size="small"
+                    sx={{
+                      color: 'text.secondary',
+                      '&:hover': {
+                        color: 'text.primary',
+                      },
+                    }}
+                  >
+                    <ViewSidebarRoundedIcon sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
 
-            <ListItemButton
-              data-view="settings"
-              onClick={() => handleViewChange('settings')}
-              selected={currentView === 'settings'}
-              sx={{ WebkitAppRegion: 'no-drag' }}
-            >
-              <ListItemIcon sx={{ minWidth: '38px' }}>
-                <SettingsIcon />
-              </ListItemIcon>
-              <ListItemText primary="Settings" />
-            </ListItemButton>
-          </List>
+            <Divider />
+
+            <List sx={{ flexGrow: 1, paddingTop: 0 }}>
+              <ListItemButton
+                data-view="settings"
+                onClick={() => handleViewChange('settings')}
+                selected={currentView === 'settings'}
+                sx={{ WebkitAppRegion: 'no-drag' }}
+              >
+                <ListItemIcon sx={{ minWidth: '38px' }}>
+                  <SettingsIcon />
+                </ListItemIcon>
+                <ListItemText primary="Settings" />
+              </ListItemButton>
+
+              <ListItemButton
+                data-view="library"
+                onClick={() => handleViewChange('library')}
+                selected={currentView === 'library'}
+                sx={{ WebkitAppRegion: 'no-drag' }}
+              >
+                <ListItemIcon sx={{ minWidth: '38px' }}>
+                  <LibraryMusicIcon />
+                </ListItemIcon>
+                <ListItemText primary="Library" />
+              </ListItemButton>
+
+              {/* Playlists with nested list */}
+              <ListItemButton
+                data-view="playlists"
+                onClick={handlePlaylistsClick}
+                sx={{ WebkitAppRegion: 'no-drag' }}
+              >
+                <ListItemIcon sx={{ minWidth: '38px' }}>
+                  <QueueMusicIcon />
+                </ListItemIcon>
+                <ListItemText primary="Playlists" />
+                <IconButton
+                  onClick={handleAddPlaylistClick}
+                  size="small"
+                  sx={{ mr: 1, WebkitAppRegion: 'no-drag' }}
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+                {playlistsOpen ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+
+              <Collapse in={playlistsOpen} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {playlists.map((playlist) => (
+                    <ListItemButton
+                      key={playlist.id}
+                      data-playlist-id={playlist.id}
+                      onClick={() => handlePlaylistSelect(playlist.id)}
+                      onContextMenu={(e) =>
+                        handlePlaylistContextMenu(e, playlist.id)
+                      }
+                      selected={
+                        currentView === 'playlists' &&
+                        selectedPlaylistId === playlist.id
+                      }
+                      sx={{ pl: 3, py: 0.5, WebkitAppRegion: 'no-drag' }}
+                    >
+                      <ListItemText
+                        primary={playlist.name}
+                        primaryTypographyProps={{
+                          variant: 'body2',
+                          noWrap: true,
+                          title: playlist.name,
+                        }}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Collapse>
+            </List>
+          </Paper>
         </Drawer>
         <Main open={open}>
           <Box

@@ -652,7 +652,7 @@ export default function Settings({
         color="default"
         elevation={1}
         position="sticky"
-        sx={{ mb: 2, height: '62px' }}
+        sx={{ mb: 2, height: '60px' }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

@@ -67,7 +67,7 @@ export const darkTheme = createTheme({
     },
     background: {
       default: '#0d0d0d', // Very dark background (almost black) from the screenshot
-      paper: '#1d1d1d', // Slightly lighter for cards/dialogs
+      paper: '#242429', // Slightly lighter for cards/dialogs
     },
     text: {
       primary: '#FFFFFF',
