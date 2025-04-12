@@ -221,6 +221,13 @@ export default class MenuBuilder {
           },
         },
         {
+          label: 'toggle developer tools',
+          accelerator: 'Alt+Ctrl+I',
+          click: () => {
+            this.mainWindow.webContents.toggleDevTools();
+          },
+        },
+        {
           label: 'zoom in',
           accelerator: 'CmdOrCtrl+Plus',
           click: () => {
@@ -270,6 +277,13 @@ export default class MenuBuilder {
           accelerator: 'Command+S',
           click: () => {
             this.mainWindow.webContents.send('ui:toggleSidebar');
+          },
+        },
+        {
+          label: 'toggle developer tools',
+          accelerator: 'Alt+Ctrl+I',
+          click: () => {
+            this.mainWindow.webContents.toggleDevTools();
           },
         },
         {
@@ -460,6 +474,13 @@ export default class MenuBuilder {
                   accelerator: 'CmdOrCtrl+S',
                   click: () => {
                     this.mainWindow.webContents.send('ui:toggleSidebar');
+                  },
+                },
+                {
+                  label: 'toggle developer tools',
+                  accelerator: 'Alt+Ctrl+I',
+                  click: () => {
+                    this.mainWindow.webContents.toggleDevTools();
                   },
                 },
                 {

@@ -75,6 +75,7 @@ function addColumnIfNotExists(
 
     try {
       // Use PRAGMA to get table info
+      // ERROR HERE: db.prepare(...).all is not a function
       const tableInfo = db.prepare(`PRAGMA table_info(${tableName})`).all();
 
       // Check if the column is in the table info
@@ -319,71 +320,15 @@ function initDefaultSettings(): void {
  */
 function initDefaultPlaylists(): void {
   try {
-    // Check if the playlists table exists
+    // First make sure the playlists table exists
     try {
-      const playlistCount = db
-        .prepare('SELECT COUNT(*) as count FROM playlists')
-        .get() as { count: number };
+      // Try to access the table to see if it exists
+      db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='playlists'",
+      ).get();
 
-      if (playlistCount && playlistCount.count === 0) {
-        // Default smart playlists
-        const smartPlaylists: Omit<Playlist, 'id'>[] = [
-          {
-            name: '50 Recently Played Songs',
-            isSmart: true,
-            ruleSet: {
-              type: 'recentlyPlayed',
-              limit: 50,
-            },
-            trackIds: [], // Smart playlists should always have empty trackIds
-          },
-          {
-            name: '50 Most Played Songs',
-            isSmart: true,
-            ruleSet: {
-              type: 'mostPlayed',
-              limit: 50,
-            },
-            trackIds: [], // Smart playlists should always have empty trackIds
-          },
-          {
-            name: '50 Recently Added Songs',
-            isSmart: true,
-            ruleSet: {
-              type: 'recentlyAdded',
-              limit: 50,
-            },
-            trackIds: [], // Smart playlists should always have empty trackIds
-          },
-        ];
-
-        // Insert default playlists
-        const insertPlaylist = db.prepare(`
-          INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
-          VALUES (?, ?, ?, ?, ?)
-        `);
-
-        smartPlaylists.forEach((playlist) => {
-          insertPlaylist.run(
-            uuidv4(),
-            playlist.name,
-            playlist.isSmart ? 1 : 0,
-            playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
-            JSON.stringify([]), // Explicitly use empty array for smart playlists
-          );
-        });
-      }
-    } catch (error) {
-      console.error(
-        'Error checking playlist count, table may not exist yet:',
-        error,
-      );
-      // Ensure the table exists
-      createTables();
-
-      // Try again with the table created
-      // Default smart playlists
-      const smartPlaylists: Omit<Playlist, 'id'>[] = [
+      // Define the default smart playlists we want to ensure exist
+      const defaultSmartPlaylists: Omit<Playlist, 'id'>[] = [
         {
           name: '50 Recently Played Songs',
           isSmart: true,
@@ -413,21 +358,106 @@ function initDefaultPlaylists(): void {
         },
       ];
 
-      // Insert default playlists
+      // Query to check if each specific smart playlist exists
+      const playlistExists = db.prepare(
+        'SELECT COUNT(*) as count FROM playlists WHERE name = ? AND isSmart = 1',
+      );
+
+      // Prepare insert statement
       const insertPlaylist = db.prepare(`
         INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
         VALUES (?, ?, ?, ?, ?)
       `);
 
-      smartPlaylists.forEach((playlist) => {
-        insertPlaylist.run(
-          uuidv4(),
-          playlist.name,
-          playlist.isSmart ? 1 : 0,
-          playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
-          JSON.stringify([]), // Explicitly use empty array for smart playlists
-        );
+      // Check each default playlist and add if missing
+      defaultSmartPlaylists.forEach((playlist) => {
+        try {
+          const exists = playlistExists.get(playlist.name) as { count: number };
+
+          if (!exists || exists.count === 0) {
+            console.warn(`Adding missing smart playlist: ${playlist.name}`);
+            insertPlaylist.run(
+              uuidv4(),
+              playlist.name,
+              playlist.isSmart ? 1 : 0,
+              playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
+              JSON.stringify([]), // Explicitly use empty array for smart playlists
+            );
+          } else {
+            console.warn(`Smart playlist already exists: ${playlist.name}`);
+          }
+        } catch (err) {
+          console.error(
+            `Error checking/adding playlist "${playlist.name}":`,
+            err,
+          );
+        }
       });
+    } catch (error) {
+      console.error(
+        'Error checking playlists table, it may not exist yet:',
+        error,
+      );
+
+      // Ensure the table exists
+      createTables();
+
+      // Define the default smart playlists
+      const defaultSmartPlaylists: Omit<Playlist, 'id'>[] = [
+        {
+          name: '50 Recently Played Songs',
+          isSmart: true,
+          ruleSet: {
+            type: 'recentlyPlayed',
+            limit: 50,
+          },
+          trackIds: [], // Smart playlists should always have empty trackIds
+        },
+        {
+          name: '50 Most Played Songs',
+          isSmart: true,
+          ruleSet: {
+            type: 'mostPlayed',
+            limit: 50,
+          },
+          trackIds: [], // Smart playlists should always have empty trackIds
+        },
+        {
+          name: '50 Recently Added Songs',
+          isSmart: true,
+          ruleSet: {
+            type: 'recentlyAdded',
+            limit: 50,
+          },
+          trackIds: [], // Smart playlists should always have empty trackIds
+        },
+      ];
+
+      // Insert all default playlists since table was just created
+      try {
+        const insertPlaylist = db.prepare(`
+          INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+
+        defaultSmartPlaylists.forEach((playlist) => {
+          console.warn(
+            `Adding default smart playlist to new table: ${playlist.name}`,
+          );
+          insertPlaylist.run(
+            uuidv4(),
+            playlist.name,
+            playlist.isSmart ? 1 : 0,
+            playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
+            JSON.stringify([]), // Explicitly use empty array for smart playlists
+          );
+        });
+      } catch (insertError) {
+        console.error(
+          'Error adding default playlists to new table:',
+          insertError,
+        );
+      }
     }
   } catch (outerError) {
     console.error('Failed to initialize default playlists:', outerError);
