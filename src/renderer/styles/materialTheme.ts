@@ -66,8 +66,8 @@ export const darkTheme = createTheme({
       main: '#666666', // Muted text
     },
     background: {
-      default: '#0d0d0d', // Very dark background (almost black) from the screenshot
-      paper: '#242429', // Slightly lighter for cards/dialogs
+      default: '#000000', // Very dark background (almost black) from the screenshot
+      paper: '#000000', // Slightly lighter for cards/dialogs
     },
     text: {
       primary: '#FFFFFF',
@@ -114,7 +114,7 @@ export const lightTheme = createTheme({
     },
     background: {
       default: '#FFFFFF', // Light background
-      paper: '#F5F5F5', // Slightly darker for cards/dialogs
+      paper: '#FCFCFC', // Slightly darker for cards/dialogs
     },
     text: {
       primary: '#000000',
