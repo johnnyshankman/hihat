@@ -74,12 +74,15 @@ function ThemedApp() {
     const loadLastPlayedSong = async () => {
       // Example code for the renderer
       const logFilePath = await window.electron.app.getLogFilePath();
-      console.log('Log file path:', logFilePath);
+      console.warn('Log file path:', logFilePath);
       if (lastPlayedSongId && !isLoading) {
         try {
           // Load the track without playing it
           selectSpecificSong(lastPlayedSongId, 'library');
           setPaused(true);
+          // scroll to the song in the library
+          // @ts-ignore - custom property on window needs shimming in ts
+          window.hihatScrollToLibraryTrack(lastPlayedSongId);
         } catch (error) {
           console.error('Failed to load last played song:', error);
         }
