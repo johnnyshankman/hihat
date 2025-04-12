@@ -28,6 +28,39 @@ import {
 } from './miniPlayer';
 import backupLibrary from './ipc/backupHandlers';
 
+/**
+ * Configure file logging for production mode
+ */
+function configureLogging() {
+  if (process.env.NODE_ENV === 'production') {
+    // Set log level for file transport
+    log.transports.file.level = 'info';
+
+    // Set log file path - use the app's user data directory
+    log.transports.file.resolvePath = () =>
+      path.join(app.getPath('userData'), 'logs/main.log');
+
+    // Increase max log file size (default is 1MB)
+    log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB
+
+    // Add timestamp to each log message
+    log.transports.file.format =
+      '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
+
+    // Override console methods to redirect to electron-log in production
+    console.log = (...args) => log.info(...args);
+    console.info = (...args) => log.info(...args);
+    console.warn = (...args) => log.warn(...args);
+    console.error = (...args) => log.error(...args);
+    console.debug = (...args) => log.debug(...args);
+
+    log.info('=== Application Started ===');
+    log.info('Version:', app.getVersion());
+    log.info('Platform:', process.platform);
+    log.info('User Data Path:', app.getPath('userData'));
+  }
+}
+
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
@@ -118,6 +151,11 @@ const setupIpcHandlers = () => {
  * Cleanup resources before app exit
  */
 const cleanupResources = () => {
+  // Log application shutdown in production
+  if (process.env.NODE_ENV === 'production') {
+    log.info('=== Application Shutting Down ===');
+  }
+
   // Close database connection
   closeDatabase();
 
@@ -236,6 +274,11 @@ const createWindow = async () => {
  */
 
 app.on('window-all-closed', () => {
+  // Log when all windows are closed in production
+  if (process.env.NODE_ENV === 'production') {
+    log.info('All windows closed');
+  }
+
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
   if (process.platform !== 'darwin') {
@@ -247,6 +290,9 @@ app.on('window-all-closed', () => {
 app
   .whenReady()
   .then(() => {
+    // Configure logging before anything else
+    configureLogging();
+
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the

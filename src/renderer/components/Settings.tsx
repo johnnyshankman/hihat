@@ -932,29 +932,27 @@ export default function Settings({
           Development section containing helpful tools for developers
           that should not be exposed in production
         */}
-        {process.env.NODE_ENV === 'development' && (
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography gutterBottom variant="h2">
-              Development
+
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography gutterBottom variant="h2">
+            Development
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Button
+              color="error"
+              onClick={handleResetDatabase}
+              startIcon={<WarningIcon />}
+              sx={{ mb: 2 }}
+              variant="contained"
+            >
+              Reset Database
+            </Button>
+            <Typography color="text.secondary" variant="body2">
+              This will delete all data and reset the application to its initial
+              state. Use this for development and testing purposes only.
             </Typography>
-            <Box sx={{ mt: 2 }}>
-              <Button
-                color="error"
-                onClick={handleResetDatabase}
-                startIcon={<WarningIcon />}
-                sx={{ mb: 2 }}
-                variant="contained"
-              >
-                Reset Database
-              </Button>
-              <Typography color="text.secondary" variant="body2">
-                This will delete all data and reset the application to its
-                initial state. Use this for development and testing purposes
-                only.
-              </Typography>
-            </Box>
-          </Paper>
-        )}
+          </Box>
+        </Paper>
       </Box>
 
       {/* Scanning progress dialog */}

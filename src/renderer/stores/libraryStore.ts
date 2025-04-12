@@ -65,6 +65,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   loadPlaylists: async () => {
     try {
       const allPlaylists = await window.electron.playlists.getAll();
+      console.warn('Loaded playlists from database:', allPlaylists);
       set({ playlists: allPlaylists });
     } catch (error) {
       console.error('Error loading playlists:', error);

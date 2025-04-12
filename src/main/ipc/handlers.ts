@@ -9,6 +9,7 @@ import { dialog, app, BrowserWindow, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import * as mm from 'music-metadata';
+import log from 'electron-log';
 import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
 import { scanLibrary, importFiles } from '../library/scanner';
@@ -340,6 +341,29 @@ export const appHandlers = {
       };
     }
   }) as IPCHandler<'app:open-in-browser'>,
+
+  'app:getLogFilePath': (async () => {
+    try {
+      // Only provide log file path in production mode
+      if (process.env.NODE_ENV !== 'production') {
+        return { path: null, exists: false };
+      }
+
+      // Get the log file path
+      const logFilePath = log.transports.file.getFile().path;
+
+      // Check if the log file exists
+      const exists = fs.existsSync(logFilePath);
+
+      return {
+        path: logFilePath,
+        exists,
+      };
+    } catch (error) {
+      console.error('Error getting log file path:', error);
+      return { path: null, exists: false };
+    }
+  }) as IPCHandler<'app:getLogFilePath'>,
 };
 
 /**

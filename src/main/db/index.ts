@@ -74,14 +74,29 @@ function addColumnIfNotExists(
     let columnExists = false;
 
     try {
-      // Use PRAGMA to get table info
-      // ERROR HERE: db.prepare(...).all is not a function
-      const tableInfo = db.prepare(`PRAGMA table_info(${tableName})`).all();
+      // Execute PRAGMA directly using exec and process the results
+      const pragmaResults = db.exec(`PRAGMA table_info(${tableName})`);
 
-      // Check if the column is in the table info
-      columnExists = tableInfo.some(
-        (column: any) => column.name === columnName,
-      );
+      // Check if we got results
+      if (pragmaResults && pragmaResults.length > 0) {
+        const tableInfo = pragmaResults[0].values.map((row: any[]) => {
+          // Map column names from SQL.js result format
+          // PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
+          return {
+            cid: row[0],
+            name: row[1],
+            type: row[2],
+            notnull: row[3],
+            dflt_value: row[4],
+            pk: row[5],
+          };
+        });
+
+        // Check if the column is in the table info
+        columnExists = tableInfo.some(
+          (column: any) => column.name === columnName,
+        );
+      }
     } catch (error) {
       console.error(`Error checking if column ${columnName} exists:`, error);
       return;
@@ -1280,9 +1295,6 @@ export function getSettings(): Settings {
  */
 export function updateSettings(settings: Settings): boolean {
   try {
-    // First ensure the column exists
-    addColumnIfNotExists('settings', 'lastPlayedSongId', 'TEXT');
-
     // First try the update with all columns
     try {
       const result = db

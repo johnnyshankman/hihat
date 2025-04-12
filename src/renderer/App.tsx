@@ -72,6 +72,9 @@ function ThemedApp() {
   useEffect(() => {
     // Load the last played song when the app starts, if available
     const loadLastPlayedSong = async () => {
+      // Example code for the renderer
+      const logFilePath = await window.electron.app.getLogFilePath();
+      console.log('Log file path:', logFilePath);
       if (lastPlayedSongId && !isLoading) {
         try {
           // Load the track without playing it

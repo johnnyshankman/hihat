@@ -295,11 +295,19 @@ const electronHandler = {
     },
 
     /**
-     * Open a link in the default browser
-     * @param link - The link to open
+     * Open a URL in the default browser
+     * @param link - URL to open
      */
     openInBrowser(link: string) {
       return ipcRenderer.invoke('app:open-in-browser', { link });
+    },
+
+    /**
+     * Get the path to the log file (only available in production)
+     * @returns Promise that resolves to an object with path and exists properties
+     */
+    getLogFilePath() {
+      return ipcRenderer.invoke('app:getLogFilePath');
     },
   },
 
