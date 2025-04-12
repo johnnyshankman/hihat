@@ -97,6 +97,7 @@ export interface SettingsStore {
   columns: Settings['columns'];
   id: Settings['id'];
   lastPlayedSongId: Settings['lastPlayedSongId'];
+  volume: Settings['volume'];
 
   // Actions
   loadSettings: () => Promise<void>;
@@ -104,6 +105,7 @@ export interface SettingsStore {
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
   setLastPlayedSongId: (trackId: string | null) => Promise<void>;
+  setVolume: (volume: number) => Promise<void>;
 }
 
 // UI Store Types

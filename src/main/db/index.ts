@@ -124,6 +124,9 @@ function runMigrations(): void {
   try {
     // Migration 1: Add lastPlayedSongId column to settings table if it doesn't exist
     addColumnIfNotExists('settings', 'lastPlayedSongId', 'TEXT');
+
+    // Migration 2: Add volume column to settings table if it doesn't exist
+    addColumnIfNotExists('settings', 'volume', 'REAL');
   } catch (error) {
     console.error('Error running database migrations:', error);
   }
@@ -170,7 +173,8 @@ function createTables(): void {
       libraryPath TEXT,
       theme TEXT NOT NULL,
       columns TEXT NOT NULL,
-      lastPlayedSongId TEXT
+      lastPlayedSongId TEXT,
+      volume REAL
     )
   `);
 }
@@ -265,13 +269,14 @@ function initDefaultSettings(): void {
           theme: 'dark',
           columns: defaultColumns,
           lastPlayedSongId: null,
+          volume: 1.0,
         };
 
         // Insert default settings
         db.prepare(
           `
-          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume)
+          VALUES (?, ?, ?, ?, ?, ?)
         `,
         ).run(
           defaultSettings.id,
@@ -279,6 +284,7 @@ function initDefaultSettings(): void {
           defaultSettings.theme,
           JSON.stringify(defaultSettings.columns),
           defaultSettings.lastPlayedSongId,
+          defaultSettings.volume,
         );
       }
     } catch (error) {
@@ -309,13 +315,14 @@ function initDefaultSettings(): void {
         theme: 'dark',
         columns: defaultColumns,
         lastPlayedSongId: null,
+        volume: 1.0,
       };
 
       // Insert default settings
       db.prepare(
         `
-        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume)
+        VALUES (?, ?, ?, ?, ?, ?)
       `,
       ).run(
         defaultSettings.id,
@@ -323,6 +330,7 @@ function initDefaultSettings(): void {
         defaultSettings.theme,
         JSON.stringify(defaultSettings.columns),
         defaultSettings.lastPlayedSongId,
+        defaultSettings.volume,
       );
     }
   } catch (outerError) {
@@ -1225,6 +1233,7 @@ export function getSettings(): Settings {
           lastPlayed: true,
         },
         lastPlayedSongId: null,
+        volume: 1.0,
       };
     }
 
@@ -1253,6 +1262,7 @@ export function getSettings(): Settings {
             ? JSON.parse(newSettings.columns)
             : newSettings.columns,
         lastPlayedSongId: newSettings.lastPlayedSongId || null,
+        volume: newSettings.volume || 1.0,
       };
     }
 
@@ -1263,6 +1273,7 @@ export function getSettings(): Settings {
           ? JSON.parse(settings.columns)
           : settings.columns,
       lastPlayedSongId: settings.lastPlayedSongId || null,
+      volume: settings.volume || 1.0,
     };
   } catch (error) {
     console.error('Failed to get settings:', error);
@@ -1284,6 +1295,7 @@ export function getSettings(): Settings {
         lastPlayed: true,
       },
       lastPlayedSongId: null,
+      volume: 1.0,
     };
   }
 }
@@ -1305,7 +1317,8 @@ export function updateSettings(settings: Settings): boolean {
           libraryPath = ?,
           theme = ?,
           columns = ?,
-          lastPlayedSongId = ?
+          lastPlayedSongId = ?,
+          volume = ?
         WHERE id = ?
       `,
         )
@@ -1314,6 +1327,7 @@ export function updateSettings(settings: Settings): boolean {
           settings.theme,
           JSON.stringify(settings.columns),
           settings.lastPlayedSongId,
+          settings.volume,
           settings.id,
         );
 
@@ -1332,7 +1346,8 @@ export function updateSettings(settings: Settings): boolean {
           SET
             libraryPath = ?,
             theme = ?,
-            columns = ?
+            columns = ?,
+            volume = ?
           WHERE id = ?
         `,
           )
@@ -1340,6 +1355,7 @@ export function updateSettings(settings: Settings): boolean {
             settings.libraryPath,
             settings.theme,
             JSON.stringify(settings.columns),
+            settings.volume,
             settings.id,
           );
 

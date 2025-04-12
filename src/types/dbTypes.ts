@@ -70,6 +70,7 @@ export interface Settings {
   theme: 'dark' | 'light'; // UI theme preference
   columns: ColumnVisibility; // Visible columns in the library view
   lastPlayedSongId: string | null; // ID of the last played song for resuming playback
+  volume: number | null; // Volume level (0-1) for audio playback
 }
 
 /**

@@ -46,6 +46,10 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         throw new Error('No player found while setting volume');
       }
       state.player.setVolume(volume);
+
+      // Persist volume to settings
+      useSettingsStore.getState().setVolume(volume);
+
       return { volume };
     });
   },
@@ -384,6 +388,7 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   // Helper function to get the player instance
   initPlayer: () => {
     const state = get();
+
     // lazily initialize the player
     if (!state.player) {
       const player = new Gapless5({
@@ -391,6 +396,7 @@ const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         crossfade: 25, // 25ms crossfade between tracks
         exclusive: true, // Only one track can play at a time
         loadLimit: 3, // Load up to 3 tracks at a time
+        volume: state.volume,
       });
 
       // Set up error handler
