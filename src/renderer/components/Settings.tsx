@@ -949,7 +949,8 @@ export default function Settings({
             </Button>
             <Typography color="text.secondary" variant="body2">
               This will delete all data and reset the application to its initial
-              state. Use this for development and testing purposes only.
+              state. Use this only if you are okay with losing all of your
+              playcounts and playlists.
             </Typography>
           </Box>
         </Paper>
