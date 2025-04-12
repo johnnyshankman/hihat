@@ -384,9 +384,7 @@ export const fileSystemHandlers = {
       const result = shell.showItemInFolder(filePath);
       return {
         success: result,
-        message: result
-          ? 'Opened file in finder/explorer'
-          : 'Failed to open file in finder/explorer',
+        message: 'File opened in finder/explorer',
       };
     } catch (error) {
       console.error(
