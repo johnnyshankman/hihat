@@ -242,7 +242,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
       set({ isScanning: false });
       useUIStore
         .getState()
-        .showNotification(`Imported ${files.length} files`, 'success');
+        .showNotification(`Processed ${files.length} files`, 'success');
     } catch (error) {
       console.error('Error importing files:', error);
       useUIStore.getState().showNotification('Failed to import files', 'error');
