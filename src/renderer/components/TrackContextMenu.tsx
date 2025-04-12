@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import { Apple, Search, Download } from '@mui/icons-material';
+import { Apple, Search, Download, Delete } from '@mui/icons-material';
 import SpotifyIcon from '../assets/spotify.svg';
 import { usePlaybackStore, useUIStore, useLibraryStore } from '../stores';
+import ConfirmationDialog from './ConfirmationDialog';
 
 interface TrackContextMenuProps {
   open: boolean;
@@ -27,11 +28,19 @@ export default function TrackContextMenu({
   const selectSpecificSong = usePlaybackStore(
     (state) => state.selectSpecificSong,
   );
+  const currentTrack = usePlaybackStore((state) => state.currentTrack);
+  const setPaused = usePlaybackStore((state) => state.setPaused);
   const currentView = useUIStore((state) => state.currentView);
+  const showNotification = useUIStore((state) => state.showNotification);
   const selectedPlaylistId = useLibraryStore(
     (state) => state.selectedPlaylistId,
   );
   const tracks = useLibraryStore((state) => state.tracks);
+  const loadLibrary = useLibraryStore((state) => state.loadLibrary);
+  const loadPlaylists = useLibraryStore((state) => state.loadPlaylists);
+
+  // Add state for the delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (!trackId) return null;
 
@@ -111,53 +120,157 @@ export default function TrackContextMenu({
     }
   };
 
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+    onClose();
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      const track = tracks.find((t) => t.id === trackId);
+
+      if (!track) {
+        showNotification('Track not found', 'error');
+        setDeleteDialogOpen(false);
+        return;
+      }
+
+      // Check if this is the currently playing track and pause playback if it is
+      if (currentTrack && currentTrack.id === trackId) {
+        setPaused(true);
+      }
+
+      // Step 1: Get all playlists that might contain this track
+      const allPlaylists = await window.electron.playlists.getAll();
+
+      // Step 2: Remove the track from all playlists that contain it
+      const playlistsToUpdate = allPlaylists.filter(
+        (playlist) => !playlist.isSmart && playlist.trackIds.includes(trackId),
+      );
+
+      // Update all playlists in parallel using Promise.all
+      await Promise.all(
+        playlistsToUpdate.map((playlist) => {
+          const updatedPlaylist = {
+            ...playlist,
+            trackIds: playlist.trackIds.filter((id) => id !== trackId),
+          };
+
+          return window.electron.playlists.update(updatedPlaylist);
+        }),
+      );
+
+      // Step 3: Delete the track from the database
+      const dbDeleteResult = await window.electron.tracks.delete(trackId);
+
+      if (!dbDeleteResult) {
+        showNotification('Failed to delete track from database', 'error');
+        setDeleteDialogOpen(false);
+        return;
+      }
+
+      // Step 4: Delete the actual file from the filesystem
+      if (track.filePath) {
+        const fileDeleteResult = await window.electron.fileSystem.deleteFile(
+          track.filePath,
+        );
+
+        if (!fileDeleteResult.success) {
+          showNotification(
+            `File deletion warning: ${fileDeleteResult.message}`,
+            'warning',
+          );
+          // Continue with UI updates even if file deletion fails
+        }
+      }
+
+      // Step 5: Update the UI
+      // Reload the library to reflect the deleted track
+      await loadLibrary();
+
+      // Reload playlists to reflect any changes
+      await loadPlaylists();
+
+      showNotification(`Track "${track.title}" has been deleted`, 'success');
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Error deleting track:', error);
+      showNotification('An error occurred while deleting the track', 'error');
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+  };
+
   return (
-    <Menu
-      anchorPosition={anchorPosition || undefined}
-      anchorReference="anchorPosition"
-      onClose={onClose}
-      open={open}
-    >
-      <MenuItem onClick={handlePlayTrack}>
-        <ListItemIcon>
-          <PlayArrowIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Play</ListItemText>
-      </MenuItem>
-      <MenuItem onClick={handleAddToPlaylist}>
-        <ListItemIcon>
-          <PlaylistAddIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Add to Playlist</ListItemText>
-      </MenuItem>
-      <MenuItem onClick={handleShowInFinder}>
-        <ListItemIcon>
-          <Search fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Show in Finder</ListItemText>
-      </MenuItem>
-      <MenuItem onClick={handlerFindOnSpotify}>
-        <ListItemIcon>
-          <img
-            alt="Spotify"
-            src={SpotifyIcon}
-            style={{ filter: 'invert(1)' }}
-          />
-        </ListItemIcon>
-        <ListItemText>Find on Spotify</ListItemText>
-      </MenuItem>
-      <MenuItem onClick={handlerFindOnAppleMusic}>
-        <ListItemIcon>
-          <Apple fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Find on Apple Music</ListItemText>
-      </MenuItem>
-      <MenuItem onClick={handlerDownloadAlbumArt}>
-        <ListItemIcon>
-          <Download fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Download Album Art</ListItemText>
-      </MenuItem>
-    </Menu>
+    <>
+      <Menu
+        anchorPosition={anchorPosition || undefined}
+        anchorReference="anchorPosition"
+        onClose={onClose}
+        open={open}
+      >
+        <MenuItem onClick={handlePlayTrack}>
+          <ListItemIcon>
+            <PlayArrowIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Play</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleAddToPlaylist}>
+          <ListItemIcon>
+            <PlaylistAddIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Add to Playlist</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleShowInFinder}>
+          <ListItemIcon>
+            <Search fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Show in Finder</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handlerFindOnSpotify}>
+          <ListItemIcon>
+            <img
+              alt="Spotify"
+              src={SpotifyIcon}
+              style={{ filter: 'invert(1)' }}
+            />
+          </ListItemIcon>
+          <ListItemText>Find on Spotify</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handlerFindOnAppleMusic}>
+          <ListItemIcon>
+            <Apple fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Find on Apple Music</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handlerDownloadAlbumArt}>
+          <ListItemIcon>
+            <Download fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Download Album Art</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleDeleteClick}>
+          <ListItemIcon>
+            <Delete fontSize="small" htmlColor="red" />
+          </ListItemIcon>
+          <ListItemText style={{ color: 'red' }}>Delete Track</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Confirmation Dialog for track deletion */}
+      <ConfirmationDialog
+        cancelText="Cancel"
+        confirmButtonColor="error"
+        confirmText="Delete"
+        message="This track will be permanently deleted from both the hihat database and your file system. This action cannot be undone. Are you sure you want to continue?"
+        onCancel={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        open={deleteDialogOpen}
+        title="Delete Track"
+      />
+    </>
   );
 }

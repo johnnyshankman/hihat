@@ -374,23 +374,28 @@ export const fileSystemHandlers = {
     try {
       return fs.existsSync(filePath);
     } catch (error) {
-      console.error(`Error checking if file exists: ${filePath}`, error);
+      console.error(`Error checking if file ${filePath} exists:`, error);
       return false;
     }
   }) as IPCHandler<'fileSystem:fileExists'>,
 
   'fileSystem:showInFinder': (async ({ filePath }) => {
     try {
-      if (!fs.existsSync(filePath)) {
-        return { success: false, message: 'File does not exist' };
-      }
-      shell.showItemInFolder(filePath);
-      return { success: true };
+      const result = shell.showItemInFolder(filePath);
+      return {
+        success: result,
+        message: result
+          ? 'Opened file in finder/explorer'
+          : 'Failed to open file in finder/explorer',
+      };
     } catch (error) {
-      console.error(`Error showing file in finder: ${filePath}`, error);
+      console.error(
+        `Error showing file ${filePath} in finder/explorer:`,
+        error,
+      );
       return {
         success: false,
-        message: (error as Error).message || 'Unknown error',
+        message: `Error: ${(error as Error).message || 'Unknown error'}`,
       };
     }
   }) as IPCHandler<'fileSystem:showInFinder'>,
@@ -460,6 +465,30 @@ export const fileSystemHandlers = {
       };
     }
   }) as IPCHandler<'fileSystem:downloadAlbumArt'>,
+
+  'fileSystem:deleteFile': (async ({ filePath }) => {
+    try {
+      if (!fs.existsSync(filePath)) {
+        return {
+          success: false,
+          message: 'File does not exist',
+        };
+      }
+
+      fs.unlinkSync(filePath);
+
+      return {
+        success: true,
+        message: 'File deleted successfully',
+      };
+    } catch (error) {
+      console.error(`Error deleting file ${filePath}:`, error);
+      return {
+        success: false,
+        message: `Error: ${(error as Error).message || 'Unknown error'}`,
+      };
+    }
+  }) as IPCHandler<'fileSystem:deleteFile'>,
 };
 
 /**

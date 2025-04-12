@@ -61,6 +61,7 @@ export type Channels =
   | 'fileSystem:fileExists'
   | 'fileSystem:showInFinder'
   | 'fileSystem:downloadAlbumArt'
+  | 'fileSystem:deleteFile'
 
   // Playback operations
   | 'playback:play'
@@ -160,6 +161,7 @@ export interface IPCRequests {
   'fileSystem:fileExists': { filePath: string };
   'fileSystem:showInFinder': { filePath: string };
   'fileSystem:downloadAlbumArt': { track: Track };
+  'fileSystem:deleteFile': { filePath: string };
 
   // Playback operations
   'playback:play': { trackId: string };
@@ -296,6 +298,10 @@ export interface IPCResponses {
     success: boolean;
     message?: string;
     filePath?: string;
+  };
+  'fileSystem:deleteFile': {
+    success: boolean;
+    message?: string;
   };
 
   // Playback operations

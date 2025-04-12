@@ -143,6 +143,15 @@ const electronHandler = {
     downloadAlbumArt(track: any) {
       return ipcRenderer.invoke('fileSystem:downloadAlbumArt', { track });
     },
+
+    /**
+     * Delete a file from the file system
+     * @param filePath - Path to the file to delete
+     * @returns Promise that resolves to an object with success status
+     */
+    deleteFile(filePath: string) {
+      return ipcRenderer.invoke('fileSystem:deleteFile', { filePath });
+    },
   },
 
   // Track management functions

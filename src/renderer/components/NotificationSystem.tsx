@@ -77,7 +77,7 @@ export default function NotificationSystem() {
           <Alert
             onClose={() => removeNotification(notification.id)}
             severity={notification.type}
-            sx={{ width: '100%' }}
+            sx={{ width: '100%', color: 'white' }}
             variant="filled"
           >
             {notification.message}
