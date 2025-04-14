@@ -90,8 +90,6 @@ export default function Playlists({
   const updateColumnVisibility = useSettingsAndPlaybackStore(
     (state) => state.setColumnVisibility,
   );
-
-  // Get state and actions from playback store
   const currentTrack = useSettingsAndPlaybackStore(
     (state) => state.currentTrack,
   );

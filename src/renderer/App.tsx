@@ -5,10 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import MainLayout from './components/MainLayout';
 import MiniPlayer from './components/MiniPlayer';
 import { lightTheme, darkTheme } from './styles/materialTheme';
-import {
-  useLibraryStore,
-  useSettingsAndPlaybackStore,
-} from './stores';
+import { useLibraryStore, useSettingsAndPlaybackStore } from './stores';
 import './App.css';
 
 // Check if this is a mini player window
