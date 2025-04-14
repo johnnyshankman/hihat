@@ -635,7 +635,15 @@ export default function MainLayout() {
               </ListItemButton>
 
               <Collapse in={playlistsOpen} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
+                <List
+                  component="div"
+                  disablePadding
+                  sx={{
+                    overflow: 'hidden',
+                    background: '#0E1112',
+                    py: 0.5,
+                  }}
+                >
                   {playlists.map((playlist) => (
                     <ListItemButton
                       key={playlist.id}
@@ -648,14 +656,15 @@ export default function MainLayout() {
                         currentView === 'playlists' &&
                         selectedPlaylistId === playlist.id
                       }
-                      sx={{ pl: 3, py: 0.5, WebkitAppRegion: 'no-drag' }}
+                      sx={{ px: 2.25, py: 0.5, WebkitAppRegion: 'no-drag' }}
                     >
                       <ListItemText
                         primary={playlist.name}
                         primaryTypographyProps={{
-                          variant: 'body2',
                           noWrap: true,
                           title: playlist.name,
+                          fontWeight: 700,
+                          fontSize: '12px',
                         }}
                       />
                     </ListItemButton>
