@@ -34,7 +34,7 @@ import {
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import { formatDuration } from '../utils/formatters';
-import { usePlaybackStore, useUIStore } from '../stores';
+import { useSettingsAndPlaybackStore, useUIStore } from '../stores';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -85,28 +85,38 @@ function AlbumArtPlaceholder() {
 
 export default function Player() {
   // Use selective state from the playback store to prevent unnecessary re-renders
-  const currentTrack = usePlaybackStore((state) => state.currentTrack);
-  const paused = usePlaybackStore((state) => state.paused);
-  const position = usePlaybackStore((state) => state.position);
-  const duration = usePlaybackStore((state) => state.duration);
-  const volume = usePlaybackStore((state) => state.volume);
-  const playbackSource = usePlaybackStore((state) => state.playbackSource);
-  const repeatMode = usePlaybackStore((state) => state.repeatMode);
-  const shuffleMode = usePlaybackStore((state) => state.shuffleMode);
+  const currentTrack = useSettingsAndPlaybackStore(
+    (state) => state.currentTrack,
+  );
+  const paused = useSettingsAndPlaybackStore((state) => state.paused);
+  const position = useSettingsAndPlaybackStore((state) => state.position);
+  const duration = useSettingsAndPlaybackStore((state) => state.duration);
+  const volume = useSettingsAndPlaybackStore((state) => state.volume);
+  const playbackSource = useSettingsAndPlaybackStore(
+    (state) => state.playbackSource,
+  );
+  const repeatMode = useSettingsAndPlaybackStore((state) => state.repeatMode);
+  const shuffleMode = useSettingsAndPlaybackStore((state) => state.shuffleMode);
 
   // Get actions from the store
-  const setPaused = usePlaybackStore((state) => state.setPaused);
-  const skipToNextTrack = usePlaybackStore((state) => state.skipToNextTrack);
-  const skipToPreviousTrack = usePlaybackStore(
+  const setPaused = useSettingsAndPlaybackStore((state) => state.setPaused);
+  const skipToNextTrack = useSettingsAndPlaybackStore(
+    (state) => state.skipToNextTrack,
+  );
+  const skipToPreviousTrack = useSettingsAndPlaybackStore(
     (state) => state.skipToPreviousTrack,
   );
-  const seekToPosition = usePlaybackStore((state) => state.seekToPosition);
-  const setVolume = usePlaybackStore((state) => state.setVolume);
-  const toggleRepeatMode = usePlaybackStore((state) => state.toggleRepeatMode);
-  const toggleShuffleMode = usePlaybackStore(
+  const seekToPosition = useSettingsAndPlaybackStore(
+    (state) => state.seekToPosition,
+  );
+  const setVolume = useSettingsAndPlaybackStore((state) => state.setVolume);
+  const toggleRepeatMode = useSettingsAndPlaybackStore(
+    (state) => state.toggleRepeatMode,
+  );
+  const toggleShuffleMode = useSettingsAndPlaybackStore(
     (state) => state.toggleShuffleMode,
   );
-  const setSilentAudioRef = usePlaybackStore(
+  const setSilentAudioRef = useSettingsAndPlaybackStore(
     (state) => state.setSilentAudioRef,
   );
 

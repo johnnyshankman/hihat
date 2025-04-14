@@ -15,7 +15,7 @@ import {
   type MRT_RowVirtualizer as MrtRowVirtualizer,
 } from 'material-react-table';
 import type { Updater } from '@tanstack/react-table';
-import { useLibraryStore, usePlaybackStore, useSettingsStore } from '../stores';
+import { useLibraryStore, useSettingsAndPlaybackStore } from '../stores';
 import { Track } from '../../types/dbTypes';
 import TrackContextMenu from './TrackContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
@@ -84,16 +84,24 @@ export default function Playlists({
   );
 
   // Get state from settings store
-  const columnVisibility = useSettingsStore((state) => state.columns);
-  const updateColumnVisibility = useSettingsStore(
+  const columnVisibility = useSettingsAndPlaybackStore(
+    (state) => state.columns,
+  );
+  const updateColumnVisibility = useSettingsAndPlaybackStore(
     (state) => state.setColumnVisibility,
   );
 
   // Get state and actions from playback store
-  const currentTrack = usePlaybackStore((state) => state.currentTrack);
-  const playbackSource = usePlaybackStore((state) => state.playbackSource);
-  const playTrack = usePlaybackStore((state) => state.selectSpecificSong);
-  const playbackSourcePlaylistId = usePlaybackStore(
+  const currentTrack = useSettingsAndPlaybackStore(
+    (state) => state.currentTrack,
+  );
+  const playbackSource = useSettingsAndPlaybackStore(
+    (state) => state.playbackSource,
+  );
+  const playTrack = useSettingsAndPlaybackStore(
+    (state) => state.selectSpecificSong,
+  );
+  const playbackSourcePlaylistId = useSettingsAndPlaybackStore(
     (state) => state.playbackSourcePlaylistId,
   );
 

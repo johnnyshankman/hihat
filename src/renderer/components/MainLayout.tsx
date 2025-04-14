@@ -35,7 +35,11 @@ import MinimizeIcon from '@mui/icons-material/Remove';
 import MaximizeIcon from '@mui/icons-material/CropSquare';
 import RestoreIcon from '@mui/icons-material/FilterNone';
 import ViewSidebarRoundedIcon from '@mui/icons-material/ViewSidebarRounded';
-import { useLibraryStore, useSettingsStore, useUIStore } from '../stores';
+import {
+  useLibraryStore,
+  useSettingsAndPlaybackStore,
+  useUIStore,
+} from '../stores';
 import Library from './Library';
 import Playlists from './Playlists';
 import Settings from './Settings';
@@ -106,7 +110,7 @@ export default function MainLayout() {
   const deletePlaylist = useLibraryStore((state) => state.deletePlaylist);
   const createPlaylist = useLibraryStore((state) => state.createPlaylist);
 
-  const theme = useSettingsStore((state) => state.theme);
+  const theme = useSettingsAndPlaybackStore((state) => state.theme);
 
   const currentView = useUIStore((state) => state.currentView);
   const setCurrentView = useUIStore((state) => state.setCurrentView);

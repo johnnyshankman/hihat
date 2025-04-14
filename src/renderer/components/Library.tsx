@@ -23,7 +23,7 @@ import {
   type MRT_RowVirtualizer as MrtRowVirtualizer,
 } from 'material-react-table';
 import { Updater } from '@tanstack/react-table';
-import { useLibraryStore, usePlaybackStore, useSettingsStore } from '../stores';
+import { useLibraryStore, useSettingsAndPlaybackStore } from '../stores';
 import TrackContextMenu from './TrackContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import SidebarToggle from './SidebarToggle';
@@ -90,15 +90,23 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     (state) => state.updateLibraryViewState,
   );
   // Get state from settings store
-  const columnVisibility = useSettingsStore((state) => state.columns);
-  const updateColumnVisibility = useSettingsStore(
+  const columnVisibility = useSettingsAndPlaybackStore(
+    (state) => state.columns,
+  );
+  const updateColumnVisibility = useSettingsAndPlaybackStore(
     (state) => state.setColumnVisibility,
   );
 
   // Get state from playback store
-  const currentTrack = usePlaybackStore((state) => state.currentTrack);
-  const playbackSource = usePlaybackStore((state) => state.playbackSource);
-  const playTrack = usePlaybackStore((state) => state.selectSpecificSong);
+  const currentTrack = useSettingsAndPlaybackStore(
+    (state) => state.currentTrack,
+  );
+  const playbackSource = useSettingsAndPlaybackStore(
+    (state) => state.playbackSource,
+  );
+  const playTrack = useSettingsAndPlaybackStore(
+    (state) => state.selectSpecificSong,
+  );
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);

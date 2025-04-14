@@ -4,7 +4,11 @@ import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Apple, Search, Download, Delete } from '@mui/icons-material';
 import SpotifyIcon from '../assets/spotify.svg';
-import { usePlaybackStore, useUIStore, useLibraryStore } from '../stores';
+import {
+  useSettingsAndPlaybackStore,
+  useUIStore,
+  useLibraryStore,
+} from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
 
 interface TrackContextMenuProps {
@@ -25,11 +29,13 @@ export default function TrackContextMenu({
   trackId,
   onAddToPlaylist,
 }: TrackContextMenuProps) {
-  const selectSpecificSong = usePlaybackStore(
+  const selectSpecificSong = useSettingsAndPlaybackStore(
     (state) => state.selectSpecificSong,
   );
-  const currentTrack = usePlaybackStore((state) => state.currentTrack);
-  const setPaused = usePlaybackStore((state) => state.setPaused);
+  const currentTrack = useSettingsAndPlaybackStore(
+    (state) => state.currentTrack,
+  );
+  const setPaused = useSettingsAndPlaybackStore((state) => state.setPaused);
   const currentView = useUIStore((state) => state.currentView);
   const showNotification = useUIStore((state) => state.showNotification);
   const selectedPlaylistId = useLibraryStore(

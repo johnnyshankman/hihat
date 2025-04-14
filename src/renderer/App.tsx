@@ -5,7 +5,10 @@ import CssBaseline from '@mui/material/CssBaseline';
 import MainLayout from './components/MainLayout';
 import MiniPlayer from './components/MiniPlayer';
 import { lightTheme, darkTheme } from './styles/materialTheme';
-import { useLibraryStore, usePlaybackStore, useSettingsStore } from './stores';
+import {
+  useLibraryStore,
+  useSettingsAndPlaybackStore,
+} from './stores';
 import './App.css';
 
 // Check if this is a mini player window
@@ -14,7 +17,7 @@ const isMiniPlayerWindow =
 
 // Mini player specific app that only renders the mini player
 function MiniPlayerApp() {
-  const theme = useSettingsStore((state) => state.theme);
+  const theme = useSettingsAndPlaybackStore((state) => state.theme);
   const themeToProvide = theme === 'light' ? lightTheme : darkTheme;
 
   // Set data attribute on body for mini player specific styling
@@ -38,26 +41,32 @@ function MiniPlayerApp() {
 
 // Main app component
 function ThemedApp() {
-  const theme = useSettingsStore((state) => state.theme);
+  const theme = useSettingsAndPlaybackStore((state) => state.theme);
   const themeToProvide = theme === 'light' ? lightTheme : darkTheme;
-  const initPlayer = usePlaybackStore((state) => state.initPlayer);
-  const selectSpecificSong = usePlaybackStore(
+  const initPlayer = useSettingsAndPlaybackStore((state) => state.initPlayer);
+  const selectSpecificSong = useSettingsAndPlaybackStore(
     (state) => state.selectSpecificSong,
   );
   const isLoading = useLibraryStore((state) => state.isLoading);
 
-  const setPaused = usePlaybackStore((state) => state.setPaused);
+  const setPaused = useSettingsAndPlaybackStore((state) => state.setPaused);
 
-  const lastPlayedSongId = useSettingsStore((state) => state.lastPlayedSongId);
+  const lastPlayedSongId = useSettingsAndPlaybackStore(
+    (state) => state.lastPlayedSongId,
+  );
 
   // Get the current track and playback state for cleanup
-  const currentTrack = usePlaybackStore((state) => state.currentTrack);
-  const paused = usePlaybackStore((state) => state.paused);
-  const lastPlaybackTimeUpdateRef = usePlaybackStore(
+  const currentTrack = useSettingsAndPlaybackStore(
+    (state) => state.currentTrack,
+  );
+  const paused = useSettingsAndPlaybackStore((state) => state.paused);
+  const lastPlaybackTimeUpdateRef = useSettingsAndPlaybackStore(
     (state) => state.lastPlaybackTimeUpdateRef,
   );
-  const position = usePlaybackStore((state) => state.position);
-  const lastPosition = usePlaybackStore((state) => state.lastPosition);
+  const position = useSettingsAndPlaybackStore((state) => state.position);
+  const lastPosition = useSettingsAndPlaybackStore(
+    (state) => state.lastPosition,
+  );
 
   // Initialize the player and the draggable body
   useEffect(() => {

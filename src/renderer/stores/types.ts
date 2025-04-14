@@ -120,3 +120,59 @@ export interface UIStore {
   removeNotification: (id: string) => void;
   setCurrentView: (view: 'library' | 'playlists' | 'settings') => void;
 }
+
+// Combined Settings and Playback Store Types
+export interface SettingsAndPlaybackStore {
+  // Settings state
+  libraryPath: Settings['libraryPath'];
+  theme: Settings['theme'];
+  columns: Settings['columns'];
+  id: Settings['id'];
+  lastPlayedSongId: Settings['lastPlayedSongId'];
+
+  // Playback state
+  currentTrack: Track | null;
+  paused: boolean;
+  position: number;
+  duration: number;
+  volume: number; // Shared state between settings and playback
+  playbackSource: 'library' | 'playlist';
+  playbackSourcePlaylistId: string | null;
+  repeatMode: 'off' | 'track' | 'all';
+  shuffleMode: boolean;
+  shuffleHistory: Track[];
+
+  // Internal state
+  player: Gapless5 | null;
+  lastPositionUpdateRef: number;
+  lastPlaybackTimeUpdateRef: number;
+  lastPosition: number;
+  silentAudioRef: HTMLAudioElement | null;
+
+  // Combined actions
+  // Settings actions
+  loadSettings: () => Promise<Settings>;
+  setColumnVisibility: (column: string, isVisible: boolean) => Promise<void>;
+  setTheme: (theme: 'light' | 'dark') => Promise<void>;
+  setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
+  setLastPlayedSongId: (trackId: string | null) => Promise<void>;
+
+  // Volume is shared between settings and playback
+  setVolume: (volume: number) => void;
+
+  // Playback actions
+  initPlayer: () => void;
+  selectSpecificSong: (
+    trackId: string,
+    source: 'library' | 'playlist',
+    playlistId?: string | null,
+  ) => void;
+  setPaused: (paused: boolean) => void;
+  skipToNextTrack: () => void;
+  skipToPreviousTrack: () => void;
+  seekToPosition: (position: number) => void;
+  toggleRepeatMode: () => void;
+  toggleShuffleMode: () => void;
+  setSilentAudioRef: (ref: HTMLAudioElement | null) => void;
+  autoPlayNextTrack: () => Promise<void>;
+}

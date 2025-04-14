@@ -27,7 +27,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
 import BackupIcon from '@mui/icons-material/Backup';
-import { useSettingsStore } from '../stores';
+import { useSettingsAndPlaybackStore } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
 import type { Channels } from '../../types/ipc';
@@ -50,15 +50,17 @@ export default function Settings({
   onDrawerToggle,
 }: SettingsProps) {
   // settings store stuff
-  const libraryPath = useSettingsStore((state) => state.libraryPath);
-  const theme = useSettingsStore((state) => state.theme);
-  const columns = useSettingsStore((state) => state.columns);
-  const updateColumnVisibility = useSettingsStore(
+  const libraryPath = useSettingsAndPlaybackStore((state) => state.libraryPath);
+  const theme = useSettingsAndPlaybackStore((state) => state.theme);
+  const columns = useSettingsAndPlaybackStore((state) => state.columns);
+  const updateColumnVisibility = useSettingsAndPlaybackStore(
     (state) => state.setColumnVisibility,
   );
   const loadLibrary = useLibraryStore((state) => state.loadLibrary);
-  const setLibraryPath = useSettingsStore((state) => state.setLibraryPath);
-  const updateTheme = useSettingsStore((state) => state.setTheme);
+  const setLibraryPath = useSettingsAndPlaybackStore(
+    (state) => state.setLibraryPath,
+  );
+  const updateTheme = useSettingsAndPlaybackStore((state) => state.setTheme);
   // library store stuff
   const scanLibrary = useLibraryStore((state) => state.scanLibrary);
   const importFiles = useLibraryStore((state) => state.importFiles);
