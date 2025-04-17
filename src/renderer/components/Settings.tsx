@@ -930,14 +930,9 @@ export default function Settings({
           </FormGroup>
         </Paper>
 
-        {/*
-          Development section containing helpful tools for developers
-          that should not be exposed in production
-        */}
-
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography gutterBottom variant="h2">
-            Development
+            Danger Zone
           </Typography>
           <Box sx={{ mt: 2 }}>
             <Button
@@ -952,7 +947,8 @@ export default function Settings({
             <Typography color="text.secondary" variant="body2">
               This will delete all data and reset the application to its initial
               state. Use this only if you are okay with losing all of your
-              playcounts and playlists.
+              playcounts and playlists, as these are solely tracked by hihat
+              itself. Your music library will not be affected.
             </Typography>
           </Box>
         </Paper>
