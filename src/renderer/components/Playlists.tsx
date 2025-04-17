@@ -15,6 +15,7 @@ import {
   type MRT_RowVirtualizer as MrtRowVirtualizer,
 } from 'material-react-table';
 import type { Updater } from '@tanstack/react-table';
+import Marquee from 'react-fast-marquee';
 import { useLibraryStore, useSettingsAndPlaybackStore } from '../stores';
 import { Track } from '../../types/dbTypes';
 import TrackContextMenu from './TrackContextMenu';
@@ -125,6 +126,13 @@ export default function Playlists({
 
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
+
+  // Local state for marquee scrolling
+  const [isPlaylistNameScrolling, setIsPlaylistNameScrolling] = useState(false);
+
+  // Refs for playlist name elements
+  const playlistNameRef = useRef<HTMLDivElement>(null);
+  const playlistNameRef2 = useRef<HTMLDivElement>(null);
 
   // Define getPlaylistTracks as a useCallback to use it in dependencies
   const getPlaylistTracks = useCallback(() => {
@@ -259,6 +267,61 @@ export default function Playlists({
     };
   }, [scrollToTrack]);
 
+  // Check if playlist name text overflows its container
+  useEffect(() => {
+    const checkPlaylistNameOverflow = () => {
+      if (playlistNameRef.current) {
+        const isOverflowing =
+          playlistNameRef.current.scrollWidth >
+          playlistNameRef.current.clientWidth;
+        setIsPlaylistNameScrolling(isOverflowing);
+      }
+    };
+
+    checkPlaylistNameOverflow();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkPlaylistNameOverflow);
+    if (playlistNameRef.current) {
+      resizeObserver.observe(playlistNameRef.current);
+    }
+
+    const currentPlaylistNameRef = playlistNameRef.current;
+    return () => {
+      if (currentPlaylistNameRef) {
+        resizeObserver.unobserve(currentPlaylistNameRef);
+      }
+    };
+  }, [selectedPlaylistId, playlists]);
+
+  // Check if playlist name in marquee overflows
+  useEffect(() => {
+    const checkPlaylistNameOverflow2 = () => {
+      if (playlistNameRef2.current) {
+        const isOverflowing =
+          playlistNameRef2.current.scrollWidth >
+          (playlistNameRef2.current.parentElement?.parentElement?.parentElement
+            ?.clientWidth || 10000000);
+        setIsPlaylistNameScrolling(isOverflowing);
+      }
+    };
+
+    checkPlaylistNameOverflow2();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkPlaylistNameOverflow2);
+    if (playlistNameRef2.current) {
+      resizeObserver.observe(playlistNameRef2.current);
+    }
+
+    const currentPlaylistNameRef2 = playlistNameRef2.current;
+    return () => {
+      if (currentPlaylistNameRef2) {
+        resizeObserver.unobserve(currentPlaylistNameRef2);
+      }
+    };
+  }, [selectedPlaylistId, playlists]);
+
   // Define columns for Material React Table
   const columns = useMemo<MrtColumnDef<TableData>[]>(
     () => [
@@ -378,40 +441,72 @@ export default function Playlists({
   }, [playlistTracks]);
 
   // Create a renderTopToolbarCustomActions function for the main table
-  const renderTopToolbarCustomActions = () => (
-    <Box
-      sx={{
-        display: 'flex',
-        gap: 2,
-        alignItems: 'center',
-        height: '42px',
-        pl: '8px',
-      }}
-    >
-      <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-      <div
-        style={{
+  const renderTopToolbarCustomActions = () => {
+    // Get the playlist name content
+    let playlistNameContent;
+
+    if (!selectedPlaylistId) {
+      playlistNameContent = '----';
+    } else if (isPlaylistNameScrolling) {
+      playlistNameContent = (
+        <Marquee delay={0.5} pauseOnHover speed={10}>
+          <div ref={playlistNameRef2}>
+            {playlists.find((p) => p.id === selectedPlaylistId)?.name ||
+              'Playlist'}
+            &nbsp;&nbsp;-&nbsp;&nbsp;
+          </div>
+        </Marquee>
+      );
+    } else {
+      playlistNameContent = (
+        <div ref={playlistNameRef}>
+          {playlists.find((p) => p.id === selectedPlaylistId)?.name ||
+            'Playlist'}
+        </div>
+      );
+    }
+
+    return (
+      <Box
+        sx={{
           display: 'flex',
-          flexDirection: 'row',
-          gap: 12,
-          alignItems: 'end',
+          gap: 2,
+          alignItems: 'center',
+          height: '47px',
+          pl: '8px',
         }}
       >
-        <Typography variant="h1">
-          {selectedPlaylistId
-            ? `${
-                playlists.find((p) => p.id === selectedPlaylistId)?.name ||
-                'Playlist'
-              }`
-            : '----'}
-        </Typography>
-        <Typography sx={{ color: 'text.secondary' }} variant="body2">
-          [{playlistTracks.length} track{playlistTracks.length === 1 ? '' : 's'}
-          ]
-        </Typography>
-      </div>
-    </Box>
-  );
+        <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            gap: 12,
+            alignItems: 'end',
+          }}
+        >
+          <Typography
+            sx={{
+              maxWidth: window.innerWidth < 768 ? '200px' : '400px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+            variant="h1"
+          >
+            {playlistNameContent}
+          </Typography>
+          <Typography
+            sx={{ color: 'text.secondary', flexShrink: 0 }}
+            variant="body2"
+          >
+            [{playlistTracks.length} track
+            {playlistTracks.length === 1 ? '' : 's'}]
+          </Typography>
+        </div>
+      </Box>
+    );
+  };
 
   // Configure the table
   const table = useMaterialReactTable({
@@ -498,6 +593,7 @@ export default function Playlists({
         position: 'sticky',
         top: 0,
         zIndex: 1,
+        height: '48px',
         backgroundColor: (theme) => theme.palette.background.default,
         opacity: 1.0,
       },
@@ -508,8 +604,6 @@ export default function Playlists({
         position: 'sticky',
         top: 0,
         zIndex: 2,
-        padding: '0',
-        minHeight: '60px !important',
         width: '100%',
         borderBottom: '1px solid',
         borderColor: (theme) => theme.palette.divider,

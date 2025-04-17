@@ -196,8 +196,8 @@ const createWindow = async () => {
     show: false,
     width: 1024,
     height: 728,
-    minWidth: 400,
-    minHeight: 560,
+    minWidth: 640,
+    minHeight: 400,
     icon: getAssetPath('icon.png'),
     frame: false, // Use frameless window for all platforms
     backgroundColor: '#00000000', // Transparent background

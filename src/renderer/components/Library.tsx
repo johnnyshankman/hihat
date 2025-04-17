@@ -372,7 +372,8 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         display: 'flex',
         gap: 1,
         alignItems: 'center',
-        height: '42px',
+        height: '100%',
+        minHeight: '100%',
         pl: '8px',
       }}
     >
@@ -487,7 +488,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         position: 'sticky',
         top: 0,
         zIndex: 2,
-        padding: '0',
         minHeight: '60px !important',
         width: '100%',
         borderBottom: '1px solid',
