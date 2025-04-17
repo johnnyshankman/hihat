@@ -21,7 +21,7 @@ const currentState = {
   volume: 0.75,
   queue: [] as string[], // Track IDs in the current queue
   queueIndex: -1, // Current position in the queue
-  repeatMode: 'track' as 'track' | 'all' | 'none',
+  repeatMode: 'none' as 'track' | 'all' | 'none',
   shuffleMode: false,
   shuffleHistory: [] as string[],
 };

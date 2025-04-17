@@ -516,7 +516,24 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         const modes: ('off' | 'track' | 'all')[] = ['off', 'track', 'all'];
         const currentIndex = modes.indexOf(state.repeatMode);
         const nextIndex = (currentIndex + 1) % modes.length;
-        return { repeatMode: modes[nextIndex] };
+
+        const repeatMode = modes[nextIndex];
+
+        /**
+         * @important Leverage the Gapless5 player's singleMode to achive perfect
+         * repeating in single song repeat mode.
+         * We dont do this programmatically in the autoPlayNextTrack/skipToNextTrack methods
+         * like we do with repeat mode 'all' or 'none' because it would break the gapless playback.
+         */
+        if (repeatMode === 'track') {
+          if (state.player) {
+            state.player.singleMode = true;
+          }
+        } else if (state.player) {
+          state.player.singleMode = false;
+        }
+
+        return { repeatMode, player: state.player };
       });
     },
 
@@ -740,6 +757,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         // at this point the new song is already playing
         if (state.repeatMode === 'track') {
+          // so go back to the track we were just playing and play it again
           state.player.gotoTrack(0);
           state.player.play();
 
@@ -758,6 +776,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           return {
             position: 0,
             lastPosition: 0,
+            paused: false,
             lastPlaybackTimeUpdateRef: Date.now(),
           };
         }
