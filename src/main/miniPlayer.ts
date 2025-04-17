@@ -155,14 +155,14 @@ export function createMiniPlayerWindow(): void {
       maxHeight: size * 2,
       frame: false,
       show: false,
-      titleBarStyle: 'customButtonsOnHover',
+      titleBarStyle: 'hidden',
       backgroundColor: '#00000000', // Transparent background
       useContentSize: true, // Use content size for more accurate sizing
       x: savedPosition?.x, // Set x position if available
       y: savedPosition?.y, // Set y position if available
       alwaysOnTop: true, // Keep the mini player on top of other windows
-      minimizable: false, // Disable minimize button
-      maximizable: false, // Disable maximize button
+      minimizable: true, // Disable minimize button
+      maximizable: true, // Disable maximize button
       closable: true,
       webPreferences: {
         nodeIntegration: false,
