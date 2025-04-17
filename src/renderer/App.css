@@ -146,3 +146,14 @@ button, input, a, [role="button"],
 .MuiList-root, .MuiMenu-root, .MuiPopover-root {
   -webkit-app-region: no-drag !important;
 }
+
+
+/**
+ * Give the library/playlist table proper padding on left and right
+ */
+.MuiTableCell-root:first-child {
+  padding-left: 16px;
+}
+.MuiTableCell-root:last-child {
+  padding-right: 16px;
+}
