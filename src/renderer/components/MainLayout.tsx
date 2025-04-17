@@ -640,8 +640,18 @@ export default function MainLayout() {
                   disablePadding
                   sx={{
                     overflow: 'hidden',
-                    background: '#0E1112',
+                    mt: 0.75,
                     py: 0.5,
+                    mx: 1.5,
+                    borderRadius: 1,
+                    backgroundColor: (t) =>
+                      t.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.05)'
+                        : 'rgba(0, 0, 0, 0.03)',
+                    boxShadow: (t) =>
+                      t.palette.mode === 'dark'
+                        ? 'inset 0 1px 3px rgba(0, 0, 0, 0.2)'
+                        : 'inset 0 1px 2px rgba(0, 0, 0, 0.1)',
                   }}
                 >
                   {playlists.map((playlist) => (
@@ -656,15 +666,40 @@ export default function MainLayout() {
                         currentView === 'playlists' &&
                         selectedPlaylistId === playlist.id
                       }
-                      sx={{ px: 2.25, py: 0.5, WebkitAppRegion: 'no-drag' }}
+                      sx={{
+                        py: 0.5,
+                        WebkitAppRegion: 'no-drag',
+                        borderRadius: 0.75,
+                        mx: 0.5,
+                        my: 0.25,
+                        '&.Mui-selected': {
+                          backgroundColor: (t) =>
+                            t.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.12)'
+                              : 'rgba(0, 0, 0, 0.08)',
+                        },
+                        '&:hover': {
+                          backgroundColor: (t) =>
+                            t.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(0, 0, 0, 0.05)',
+                        },
+                        '&.Mui-selected:hover': {
+                          backgroundColor: (t) =>
+                            t.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.15)'
+                              : 'rgba(0, 0, 0, 0.12)',
+                        },
+                      }}
                     >
                       <ListItemText
                         primary={playlist.name}
                         primaryTypographyProps={{
                           noWrap: true,
                           title: playlist.name,
-                          fontWeight: 700,
+                          fontWeight: 500,
                           fontSize: '12px',
+                          color: 'text.secondary',
                         }}
                       />
                     </ListItemButton>
@@ -720,12 +755,16 @@ export default function MainLayout() {
         open={contextMenu !== null}
       >
         {/* Only show delete option for non-smart playlists */}
-        {contextMenu && !contextMenu.isSmart && (
+        {contextMenu && !contextMenu.isSmart ? (
           <MenuItem onClick={handleDeletePlaylist}>
             <ListItemIcon>
               <DeleteIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Delete Playlist</ListItemText>
+          </MenuItem>
+        ) : (
+          <MenuItem onClick={() => {}}>
+            <ListItemText>No options available</ListItemText>
           </MenuItem>
         )}
       </Menu>

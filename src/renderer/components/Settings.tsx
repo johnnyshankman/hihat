@@ -817,7 +817,9 @@ export default function Settings({
             sx={{ display: 'block', mb: 2 }}
             variant="caption"
           >
-            The default appearance of hihat.
+            We recommend using the dark theme for better readability and lower
+            eye strain, though our light theme is modeled after the original
+            iTunes.
           </Typography>
 
           <FormGroup>
@@ -835,14 +837,14 @@ export default function Settings({
 
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography gutterBottom variant="h2">
-            Column Visibility
+            Table Column Visibility
           </Typography>
           <Typography
             color="text.secondary"
             sx={{ display: 'block', mb: 2 }}
             variant="caption"
           >
-            The default visibility of columns in the library and playlists
+            The default visibility of columns in the Library and Playlists
             views.
           </Typography>
           <FormGroup>
