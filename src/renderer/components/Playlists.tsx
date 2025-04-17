@@ -382,23 +382,34 @@ export default function Playlists({
     <Box
       sx={{
         display: 'flex',
-        gap: 1,
+        gap: 2,
         alignItems: 'center',
         height: '42px',
         pl: '8px',
       }}
     >
       <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-      <Typography variant="h1">
-        {selectedPlaylistId
-          ? `${
-              playlists.find((p) => p.id === selectedPlaylistId)?.name ||
-              'Playlist'
-            } (${playlistTracks.length} track${
-              playlistTracks.length === 1 ? '' : 's'
-            })`
-          : 'Playlists'}
-      </Typography>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          gap: 12,
+          alignItems: 'end',
+        }}
+      >
+        <Typography variant="h1">
+          {selectedPlaylistId
+            ? `${
+                playlists.find((p) => p.id === selectedPlaylistId)?.name ||
+                'Playlist'
+              }`
+            : '----'}
+        </Typography>
+        <Typography sx={{ color: 'text.secondary' }} variant="body2">
+          [{playlistTracks.length} track{playlistTracks.length === 1 ? '' : 's'}
+          ]
+        </Typography>
+      </div>
     </Box>
   );
 
