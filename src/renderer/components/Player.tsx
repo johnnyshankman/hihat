@@ -31,6 +31,7 @@ import {
   Shuffle,
   ShuffleOn,
 } from '@mui/icons-material';
+import Marquee from 'react-fast-marquee';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import { formatDuration } from '../utils/formatters';
@@ -141,6 +142,14 @@ export default function Player() {
     null,
   );
   const [albumArt, setAlbumArt] = useState<string | null>(null);
+  const [isTitleScrolling, setIsTitleScrolling] = useState(false);
+  const [isArtistAlbumScrolling, setIsArtistAlbumScrolling] = useState(false);
+
+  // Refs for title and artist+album text elements
+  const titleRef = useRef<HTMLDivElement>(null);
+  const titleRef2 = useRef<HTMLDivElement>(null);
+  const artistAlbumRef = useRef<HTMLDivElement>(null);
+  const artistAlbumRef2 = useRef<HTMLDivElement>(null);
 
   // Get the setCurrentView function from the UI store
   const setCurrentView = useUIStore((state) => state.setCurrentView);
@@ -492,6 +501,115 @@ export default function Player() {
     }
   }, [currentTrack, playbackSource, setCurrentView]);
 
+  // Check if title text overflows its container
+  useEffect(() => {
+    const checkTitleOverflow = () => {
+      if (titleRef.current) {
+        const isOverflowing =
+          titleRef.current.scrollWidth > titleRef.current.clientWidth;
+        setIsTitleScrolling(isOverflowing);
+      }
+    };
+
+    checkTitleOverflow();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkTitleOverflow);
+    if (titleRef.current) {
+      resizeObserver.observe(titleRef.current);
+    }
+
+    const currentTitleRef = titleRef.current;
+    return () => {
+      if (currentTitleRef) {
+        resizeObserver.unobserve(currentTitleRef);
+      }
+    };
+  }, [currentTrack?.title]);
+
+  // Check if title text in marquee overflows
+  useEffect(() => {
+    const checkTitleOverflow2 = () => {
+      if (titleRef2.current) {
+        const isOverflowing =
+          titleRef2.current.scrollWidth >
+          (titleRef2.current.parentElement?.parentElement?.parentElement
+            ?.clientWidth || 10000000);
+        setIsTitleScrolling(isOverflowing);
+      }
+    };
+
+    checkTitleOverflow2();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkTitleOverflow2);
+    if (titleRef2.current) {
+      resizeObserver.observe(titleRef2.current);
+    }
+
+    const currentTitleRef2 = titleRef2.current;
+    return () => {
+      if (currentTitleRef2) {
+        resizeObserver.unobserve(currentTitleRef2);
+      }
+    };
+  }, [currentTrack?.title]);
+
+  // Check if artist+album text overflows its container
+  useEffect(() => {
+    const checkArtistAlbumOverflow = () => {
+      if (artistAlbumRef.current) {
+        const isOverflowing =
+          artistAlbumRef.current.scrollWidth >
+          artistAlbumRef.current.clientWidth;
+        setIsArtistAlbumScrolling(isOverflowing);
+      }
+    };
+
+    checkArtistAlbumOverflow();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkArtistAlbumOverflow);
+    if (artistAlbumRef.current) {
+      resizeObserver.observe(artistAlbumRef.current);
+    }
+
+    const currentArtistAlbumRef = artistAlbumRef.current;
+    return () => {
+      if (currentArtistAlbumRef) {
+        resizeObserver.unobserve(currentArtistAlbumRef);
+      }
+    };
+  }, [currentTrack?.artist, currentTrack?.album]);
+
+  // Check if artist+album text in marquee overflows
+  useEffect(() => {
+    const checkArtistAlbumOverflow2 = () => {
+      if (artistAlbumRef2.current) {
+        const isOverflowing =
+          artistAlbumRef2.current.scrollWidth >
+          (artistAlbumRef2.current.parentElement?.parentElement?.parentElement
+            ?.clientWidth || 10000000);
+        setIsArtistAlbumScrolling(isOverflowing);
+      }
+    };
+
+    checkArtistAlbumOverflow2();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkArtistAlbumOverflow2);
+    if (artistAlbumRef2.current) {
+      resizeObserver.observe(artistAlbumRef2.current);
+    }
+
+    const currentArtistAlbumRef2 = artistAlbumRef2.current;
+    return () => {
+      if (currentArtistAlbumRef2) {
+        resizeObserver.unobserve(currentArtistAlbumRef2);
+      }
+    };
+  }, [currentTrack?.artist, currentTrack?.album]);
+
   return (
     <Paper
       elevation={3}
@@ -596,7 +714,6 @@ export default function Player() {
                 }
               >
                 <Typography
-                  noWrap
                   onClick={handleTrackTitleClick}
                   sx={{
                     cursor: playbackSource ? 'pointer' : 'default',
@@ -605,14 +722,44 @@ export default function Player() {
                       color: playbackSource ? 'primary.main' : 'inherit',
                     },
                     transition: 'color 0.2s',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                   }}
                   variant="body1"
                 >
-                  {currentTrack.title}
+                  {isTitleScrolling ? (
+                    <Marquee delay={0.5} pauseOnHover speed={10}>
+                      <div ref={titleRef2}>
+                        {currentTrack.title}&nbsp;&nbsp;•&nbsp;&nbsp;
+                      </div>
+                    </Marquee>
+                  ) : (
+                    <div ref={titleRef}>{currentTrack.title}</div>
+                  )}
                 </Typography>
               </Tooltip>
-              <Typography color="textSecondary" noWrap variant="body2">
-                {currentTrack.artist} • {currentTrack.album}
+              <Typography
+                color="textSecondary"
+                sx={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+                variant="body2"
+              >
+                {isArtistAlbumScrolling ? (
+                  <Marquee delay={0.5} pauseOnHover speed={10}>
+                    <div ref={artistAlbumRef2}>
+                      {currentTrack.artist} • {currentTrack.album}
+                      &nbsp;&nbsp;•&nbsp;&nbsp;
+                    </div>
+                  </Marquee>
+                ) : (
+                  <div ref={artistAlbumRef}>
+                    {currentTrack.artist} • {currentTrack.album}
+                  </div>
+                )}
               </Typography>
             </>
           ) : (
