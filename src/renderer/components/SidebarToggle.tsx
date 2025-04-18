@@ -37,7 +37,7 @@ function SidebarToggle({ isOpen, onToggle }: SidebarToggleProps) {
         }}
         type="button"
       >
-        <ViewSidebarRoundedIcon sx={{ fontSize: 24 }} />
+        <ViewSidebarRoundedIcon sx={{ fontSize: 20 }} />
       </button>
     </Tooltip>
   );

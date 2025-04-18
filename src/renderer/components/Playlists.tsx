@@ -473,16 +473,16 @@ export default function Playlists({
           gap: 2,
           alignItems: 'center',
           height: '47px',
-          pl: '8px',
+          pl: '0',
+          flexShrink: 0,
         }}
       >
         <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-        <div
-          style={{
+        <Box
+          sx={{
             display: 'flex',
             flexDirection: 'row',
-            gap: 12,
-            alignItems: 'end',
+            alignItems: 'center',
           }}
         >
           <Typography
@@ -492,18 +492,35 @@ export default function Playlists({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
-            variant="h1"
+            variant="h2"
           >
             {playlistNameContent}
           </Typography>
-          <Typography
-            sx={{ color: 'text.secondary', flexShrink: 0 }}
-            variant="body2"
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              borderRadius: '16px',
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? theme.palette.grey[800]
+                  : theme.palette.grey[200],
+              px: 1.5,
+              py: 0.5,
+              justifyContent: 'center',
+            }}
           >
-            [{playlistTracks.length} track
-            {playlistTracks.length === 1 ? '' : 's'}]
-          </Typography>
-        </div>
+            <Typography
+              sx={{
+                color: (theme) => theme.palette.text.secondary,
+                lineHeight: 1,
+              }}
+              variant="body2"
+            >
+              {playlistTracks.length.toLocaleString()}&nbsp;♫
+            </Typography>
+          </Box>
+        </Box>
       </Box>
     );
   };
@@ -551,13 +568,60 @@ export default function Playlists({
       updatePlaylistViewState(sorting, newFilter, selectedPlaylistId);
     },
     onColumnVisibilityChange: handleColumnVisibilityChange,
+    // Add better styling for the search field container
+    muiTopToolbarProps: {
+      sx: {
+        borderBottom: '1px solid',
+        borderColor: (theme) => theme.palette.divider,
+        minHeight: '64px', // Set minimum height instead of fixed height
+        padding: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        overflow: 'visible',
+        flexWrap: 'wrap', // Allow wrapping when needed
+        gap: '8px', // Add gap between elements when they wrap
+      },
+    },
+
+    // Improve search field styling
     muiSearchTextFieldProps: {
       placeholder: 'Search library',
       variant: 'outlined',
+      size: 'small',
+      InputProps: {
+        style: {
+          height: '40px',
+        },
+      },
+      sx: {
+        minWidth: '200px',
+        maxWidth: '300px',
+        '& .MuiInputBase-root': {
+          height: '40px',
+        },
+        m: 0, // Remove margin and let the parent container handle spacing
+      },
+    },
+    // Adjust the filter container styling
+    muiFilterTextFieldProps: {
+      sx: {
+        height: '40px',
+        '& .MuiInputBase-root': {
+          height: '40px',
+        },
+        m: 0, // Remove margin
+      },
+    },
+    // Add styling for the toolbar filter container
+    muiToolbarAlertBannerProps: {
+      sx: {
+        maxHeight: '40px',
+      },
     },
     muiTableContainerProps: {
       sx: {
-        height: '100%',
+        height: 'calc(100% - 64px)', // Keep this as a baseline, but it will adapt if toolbar grows
+        flexGrow: 1, // Allow the table to grow and take remaining space
         width: '100%',
         overflow: 'auto',
         display: 'flex',
@@ -587,43 +651,6 @@ export default function Playlists({
         backgroundColor: (theme) => theme.palette.background.default,
       },
     },
-    // Make sure the table header stays fixed when scrolling
-    muiTableHeadProps: {
-      sx: {
-        position: 'sticky',
-        top: 0,
-        zIndex: 1,
-        height: '48px',
-        backgroundColor: (theme) => theme.palette.background.default,
-        opacity: 1.0,
-      },
-    },
-    // Ensure the toolbar stays fixed
-    muiTopToolbarProps: {
-      sx: {
-        position: 'sticky',
-        top: 0,
-        zIndex: 2,
-        width: '100%',
-        borderBottom: '1px solid',
-        borderColor: (theme) => theme.palette.divider,
-      },
-    },
-    // Remove padding from the table body and ensure it aligns to the top
-    muiTableBodyProps: {
-      sx: {
-        '& td': { padding: '4px 0.5rem' }, // Reduce cell padding
-        width: '100%',
-        alignItems: 'flex-start', // Align content to the top
-        display: 'table-row-group', // Use standard table row group display
-      },
-    },
-    // Ensure the table body container doesn't center content vertically
-    muiTableBodyCellProps: {
-      sx: {
-        verticalAlign: 'top', // Align cell content to the top
-      },
-    },
     muiTableBodyRowProps: ({ row }) => ({
       onClick: () => {
         handlePlayTrack(row.original.id);
@@ -632,11 +659,11 @@ export default function Playlists({
       'data-track-id': row.original.id,
       sx: {
         cursor: 'pointer',
-        height: '29px', // @important: must be 29 so that the virtualized estimateSize is corret
+        height: '29px', // @important: must be 29 so that the virtualized estimateSize is corretg
         backgroundColor: (theme) => theme.palette.background.default,
         borderBottom: '1px solid',
         borderColor: (theme) => theme.palette.divider,
-        // Highlight the currently playing track if it's from THE CURRENT playlist
+        // Use simplified conditional styling for better performance
         ...(currentTrack?.id === row.original.id &&
           playbackSource === 'playlist' &&
           playbackSourcePlaylistId === selectedPlaylistId && {
@@ -647,12 +674,13 @@ export default function Playlists({
             '&:hover': {
               backgroundColor: (theme) =>
                 theme.palette.mode === 'dark'
-                  ? theme.palette.grey[700]
+                  ? theme.palette.grey[800]
                   : theme.palette.grey[300],
             },
           }),
       },
     }),
+
     layoutMode: 'grid', // Use grid layout mode for better control
     displayColumnDefOptions: {
       'mrt-row-expand': {
@@ -660,7 +688,6 @@ export default function Playlists({
       },
     },
     renderTopToolbarCustomActions,
-
     defaultDisplayColumn: { size: 150 },
     initialState: {
       density: 'compact',

@@ -366,21 +366,66 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   };
 
   // Update the renderTopToolbarCustomActions function to include the SidebarToggle
-  const renderTopToolbarCustomActions = () => (
-    <Box
-      sx={{
-        display: 'flex',
-        gap: 1,
-        alignItems: 'center',
-        height: '100%',
-        minHeight: '100%',
-        pl: '8px',
-      }}
-    >
-      <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-      <Typography variant="h1">Library</Typography>
-    </Box>
-  );
+  const renderTopToolbarCustomActions = () => {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1,
+          alignItems: 'center',
+          height: '47px',
+          pl: '0',
+          flexShrink: 0,
+        }}
+      >
+        <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}
+        >
+          <Typography
+            sx={{
+              maxWidth: window.innerWidth < 768 ? '200px' : '400px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              mr: 1,
+            }}
+            variant="h2"
+          >
+            Library
+          </Typography>
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              borderRadius: '16px',
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? theme.palette.grey[800]
+                  : theme.palette.grey[200],
+              px: 1.5,
+              py: 0.5,
+              justifyContent: 'center',
+            }}
+          >
+            <Typography
+              sx={{
+                color: (theme) => theme.palette.text.secondary,
+                lineHeight: 1,
+              }}
+              variant="body2"
+            >
+              {tracks.length.toLocaleString()}&nbsp;♫
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    );
+  };
 
   // Function to scroll to a specific track by ID
   const scrollToTrack = useCallback(
@@ -436,13 +481,62 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       paddingEnd: 0,
     },
     rowVirtualizerInstanceRef: rowVirtualizerRef,
+    positionToolbarAlertBanner: 'bottom', // Position any alert banners at the bottom
+
+    // Add better styling for the search field container
+    muiTopToolbarProps: {
+      sx: {
+        borderBottom: '1px solid',
+        borderColor: (theme) => theme.palette.divider,
+        minHeight: '64px', // Set minimum height instead of fixed height
+        padding: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        overflow: 'visible',
+        flexWrap: 'wrap', // Allow wrapping when needed
+        gap: '8px', // Add gap between elements when they wrap
+      },
+    },
+
+    // Improve search field styling
     muiSearchTextFieldProps: {
       placeholder: 'Search library',
       variant: 'outlined',
+      size: 'small',
+      InputProps: {
+        style: {
+          height: '40px',
+        },
+      },
+      sx: {
+        minWidth: '200px',
+        maxWidth: '300px',
+        '& .MuiInputBase-root': {
+          height: '40px',
+        },
+        m: 0, // Remove margin and let the parent container handle spacing
+      },
+    },
+    // Adjust the filter container styling
+    muiFilterTextFieldProps: {
+      sx: {
+        height: '40px',
+        '& .MuiInputBase-root': {
+          height: '40px',
+        },
+        m: 0, // Remove margin
+      },
+    },
+    // Add styling for the toolbar filter container
+    muiToolbarAlertBannerProps: {
+      sx: {
+        maxHeight: '40px',
+      },
     },
     muiTableContainerProps: {
       sx: {
-        height: '100%',
+        height: 'calc(100% - 64px)', // Keep this as a baseline, but it will adapt if toolbar grows
+        flexGrow: 1, // Allow the table to grow and take remaining space
         width: '100%',
         overflow: 'auto',
         display: 'flex',
@@ -470,28 +564,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         tableLayout: 'fixed', // Force table to respect container width
         height: 'auto', // Don't expand to fill container
         backgroundColor: (theme) => theme.palette.background.default,
-      },
-    },
-    // Make sure the table header stays fixed when scrolling
-    muiTableHeadProps: {
-      sx: {
-        position: 'sticky',
-        top: 0,
-        zIndex: 1,
-        backgroundColor: (theme) => theme.palette.background.default,
-        opacity: 1.0,
-      },
-    },
-    // Ensure the toolbar stays fixed
-    muiTopToolbarProps: {
-      sx: {
-        position: 'sticky',
-        top: 0,
-        zIndex: 2,
-        minHeight: '60px !important',
-        width: '100%',
-        borderBottom: '1px solid',
-        borderColor: (theme) => theme.palette.divider,
       },
     },
     muiTableBodyRowProps: ({ row }) => ({
@@ -601,7 +673,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: 'hidden', // Changed from 'auto' to 'hidden' to prevent scrollbar conflicts
         padding: 0,
         margin: 0,
         backgroundColor: (theme) => theme.palette.background.default,
@@ -614,9 +686,8 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           width: '100%',
           padding: 0,
           margin: 0,
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
+          display: 'flex', // Add display flex
+          flexDirection: 'column', // Add flex direction column
           backgroundColor: (theme) => theme.palette.background.default,
         }}
       >

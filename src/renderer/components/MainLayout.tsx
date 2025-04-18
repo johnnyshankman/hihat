@@ -715,7 +715,6 @@ export default function MainLayout() {
               display: 'flex',
               flexDirection: 'column',
               height: 'calc(100vh - 100px)', // Adjusted height since AppBar is removed
-              overflow: 'hidden',
               width: '100%',
               WebkitAppRegion: 'drag', // Make content area draggable by default
               '& button, & input, & a, & [role="button"], & .MuiTableContainer-root, & .MuiDataGrid-root, & .MuiSlider-root':
@@ -739,6 +738,7 @@ export default function MainLayout() {
           </Box>
         </Main>
       </Box>
+
       <PlayerWrapper open={open} sx={{ WebkitAppRegion: 'no-drag' }}>
         <Player />
       </PlayerWrapper>
