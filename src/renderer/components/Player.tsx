@@ -729,7 +729,12 @@ export default function Player() {
                   variant="body1"
                 >
                   {isTitleScrolling ? (
-                    <Marquee delay={0.5} pauseOnHover speed={10}>
+                    <Marquee
+                      gradient
+                      gradientColor={theme.palette.background.default}
+                      gradientWidth={10}
+                      speed={10}
+                    >
                       <div ref={titleRef2}>
                         {currentTrack.title}&nbsp;&nbsp;•&nbsp;&nbsp;
                       </div>
@@ -745,11 +750,17 @@ export default function Player() {
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
+                  fontWeight: '500',
                 }}
                 variant="body2"
               >
                 {isArtistAlbumScrolling ? (
-                  <Marquee delay={0.5} pauseOnHover speed={10}>
+                  <Marquee
+                    gradient
+                    gradientColor={theme.palette.background.default}
+                    gradientWidth={10}
+                    speed={10}
+                  >
                     <div ref={artistAlbumRef2}>
                       {currentTrack.artist} • {currentTrack.album}
                       &nbsp;&nbsp;•&nbsp;&nbsp;
