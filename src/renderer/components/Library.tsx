@@ -503,19 +503,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       placeholder: 'Search library',
       variant: 'outlined',
       size: 'small',
-      InputProps: {
-        style: {
-          height: '40px',
-        },
-      },
-      sx: {
-        minWidth: '200px',
-        maxWidth: '300px',
-        '& .MuiInputBase-root': {
-          height: '40px',
-        },
-        m: 0, // Remove margin and let the parent container handle spacing
-      },
     },
     // Adjust the filter container styling
     muiFilterTextFieldProps: {
@@ -535,7 +522,7 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     },
     muiTableContainerProps: {
       sx: {
-        height: 'calc(100% - 64px)', // Keep this as a baseline, but it will adapt if toolbar grows
+        height: 'calc(100% - 100px)', // Keep this as a baseline, but it will adapt if toolbar grows
         flexGrow: 1, // Allow the table to grow and take remaining space
         width: '100%',
         overflow: 'auto',

@@ -470,7 +470,7 @@ export default function MainLayout() {
                 justifyContent: 'space-between',
                 padding: '12px',
                 WebkitAppRegion: 'drag', // Make this area draggable
-                height: '60px',
+                height: '63px',
               }}
             >
               <Box

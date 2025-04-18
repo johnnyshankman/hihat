@@ -416,6 +416,15 @@ export default function Playlists({
           return sortByDateAdded(rowA.original, rowB.original, isDescending);
         },
       },
+      {
+        accessorKey: 'trackNumber',
+        header: 'Track #',
+        size: 80,
+        enableHiding: true,
+        enableColumnFilter: false,
+        enableGlobalFilter: false,
+        defaultHidden: true,
+      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -470,7 +479,7 @@ export default function Playlists({
       <Box
         sx={{
           display: 'flex',
-          gap: 2,
+          gap: 1,
           alignItems: 'center',
           height: '47px',
           pl: '0',
@@ -491,6 +500,7 @@ export default function Playlists({
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              mr: 1,
             }}
             variant="h2"
           >
@@ -551,6 +561,7 @@ export default function Playlists({
       globalFilter,
       columnVisibility: {
         ...((columnVisibility as unknown as MrtVisibilityState) || {}),
+        trackNumber: false, // Always hide track number column
       },
     },
     onSortingChange: (updater) => {
@@ -585,22 +596,9 @@ export default function Playlists({
 
     // Improve search field styling
     muiSearchTextFieldProps: {
-      placeholder: 'Search library',
+      placeholder: 'Search playlist',
       variant: 'outlined',
       size: 'small',
-      InputProps: {
-        style: {
-          height: '40px',
-        },
-      },
-      sx: {
-        minWidth: '200px',
-        maxWidth: '300px',
-        '& .MuiInputBase-root': {
-          height: '40px',
-        },
-        m: 0, // Remove margin and let the parent container handle spacing
-      },
     },
     // Adjust the filter container styling
     muiFilterTextFieldProps: {
@@ -620,7 +618,7 @@ export default function Playlists({
     },
     muiTableContainerProps: {
       sx: {
-        height: 'calc(100% - 64px)', // Keep this as a baseline, but it will adapt if toolbar grows
+        height: 'calc(100% - 100px)', // Keep this as a baseline, but it will adapt if toolbar grows
         flexGrow: 1, // Allow the table to grow and take remaining space
         width: '100%',
         overflow: 'auto',
@@ -682,11 +680,6 @@ export default function Playlists({
     }),
 
     layoutMode: 'grid', // Use grid layout mode for better control
-    displayColumnDefOptions: {
-      'mrt-row-expand': {
-        size: 0, // Minimize any expansion space
-      },
-    },
     renderTopToolbarCustomActions,
     defaultDisplayColumn: { size: 150 },
     initialState: {
@@ -695,6 +688,8 @@ export default function Playlists({
         trackNumber: false, // Always hide track number column
       },
     },
+    memoMode: 'cells',
+    positionToolbarAlertBanner: 'bottom', // Position any alert banners at the bottom
     renderEmptyRowsFallback: () => (
       <Box
         sx={{
@@ -704,7 +699,7 @@ export default function Playlists({
           justifyContent: 'center',
           padding: 4,
           height: '50vh',
-          width: '100%',
+          width: drawerOpen ? `calc(100vw - 240px)` : '100vw',
         }}
       >
         <Typography
@@ -730,7 +725,6 @@ export default function Playlists({
         </Typography>
       </Box>
     ),
-    memoMode: 'cells',
   });
 
   return (
@@ -754,7 +748,6 @@ export default function Playlists({
             width: '100%',
             padding: 0,
             margin: 0,
-            overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             backgroundColor: (theme) => theme.palette.background.default,
@@ -765,12 +758,35 @@ export default function Playlists({
       ) : (
         <Box
           sx={{
-            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 4,
+            height: '50vh',
+            width: drawerOpen ? `calc(100vw - 240px)` : '100vw',
             backgroundColor: (theme) => theme.palette.background.default,
           }}
         >
-          <Typography sx={{ mt: 2 }} variant="body1">
-            Select a playlist to view its tracks.
+          <Typography
+            sx={{
+              color: 'text.secondary',
+              fontWeight: 'medium',
+              mb: 1,
+            }}
+            variant="h6"
+          >
+            Select a playlist
+          </Typography>
+          <Typography
+            sx={{
+              color: 'text.secondary',
+              textAlign: 'center',
+              maxWidth: '400px',
+            }}
+            variant="body2"
+          >
+            Choose a playlist from the sidebar to view its tracks.
           </Typography>
         </Box>
       )}
