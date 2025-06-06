@@ -17,7 +17,7 @@ import {
   sortByLastPlayed,
 } from './sortingFunctions';
 
-const STATIC_ROW_HEIGHT = 29;
+const STATIC_ROW_HEIGHT = 24;
 
 // Custom formatter for duration in seconds
 export const formatDurationFromSeconds = (seconds: number): string => {
@@ -110,6 +110,13 @@ export const getCommonColumnDefs = (
       const isDescending = columnSorting ? columnSorting.desc : false;
       return sortByGenre(rowA.original, rowB.original, isDescending);
     },
+    Cell: ({ cell }: { cell: MrtCell<TableData> }) => {
+      const value = cell.getValue<string>();
+      if (value === 'Unknown Genre') {
+        return '-';
+      }
+      return value;
+    },
   },
   {
     accessorKey: 'duration',
@@ -147,7 +154,7 @@ export const getCommonColumnDefs = (
     size: 120,
     Cell: ({ cell }: { cell: MrtCell<TableData> }) => {
       const date = cell.getValue<string>();
-      return date ? new Date(date).toLocaleDateString() : 'Never';
+      return date ? new Date(date).toLocaleDateString() : '-';
     },
     sortingFn: (
       rowA: Row<TableData>,
@@ -394,10 +401,13 @@ export const getCommonRowStyling = (
   cursor: 'pointer',
   height: `${STATIC_ROW_HEIGHT}px`,
   backgroundColor: (theme: Theme) => theme.palette.background.default,
+  // alternate row colors for readability
   '&:nth-of-type(odd)': {
     backgroundColor: (theme: Theme) =>
       theme.palette.mode === 'dark' ? '#040404' : theme.palette.grey[50],
   },
+  userSelect: 'none', // get rid of text selection
+  // override the background color for the current track
   ...(currentTrackId === rowId &&
     playbackSource === expectedSource &&
     (!playbackSourcePlaylistId ||

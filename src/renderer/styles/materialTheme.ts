@@ -31,13 +31,14 @@ const baseThemeOptions: ThemeOptions = {
       fontWeight: 500,
     },
     body1: {
-      fontSize: '15px',
+      fontSize: '14px',
       fontWeight: 400,
     },
     body2: {
       fontSize: '13px',
       fontWeight: 400,
-      letterSpacing: '-0.35px',
+      lineHeight: '16px',
+      WebkitFontSmoothing: 'antialiased',
     },
   },
   shape: {
