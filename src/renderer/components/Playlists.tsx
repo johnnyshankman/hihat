@@ -680,7 +680,7 @@ export default function Playlists({
         // styles for odd rows
         '&:nth-of-type(odd)': {
           backgroundColor: (theme) =>
-            theme.palette.mode === 'dark' ? '#080808' : theme.palette.grey[50],
+            theme.palette.mode === 'dark' ? '#040404' : theme.palette.grey[50],
         },
         // Override the bg color for the currently playing track
         ...(currentTrack?.id === row.original.id &&
