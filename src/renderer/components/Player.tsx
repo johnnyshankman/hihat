@@ -482,6 +482,10 @@ export default function Player() {
       // Wait a short time for the view to change before scrolling
       setTimeout(() => {
         // @ts-ignore - Custom property added to window
+        console.log(
+          'scrolling to library track',
+          window.hihatScrollToLibraryTrack,
+        );
         if (window.hihatScrollToLibraryTrack) {
           // @ts-ignore
           window.hihatScrollToLibraryTrack(currentTrack.id);
@@ -714,6 +718,7 @@ export default function Player() {
                 }
               >
                 <Typography
+                  component="div"
                   onClick={handleTrackTitleClick}
                   sx={{
                     cursor: playbackSource ? 'pointer' : 'default',
@@ -746,6 +751,7 @@ export default function Player() {
               </Tooltip>
               <Typography
                 color="textSecondary"
+                component="div"
                 sx={{
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
