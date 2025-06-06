@@ -404,7 +404,7 @@ export const getCommonRowStyling = (
   // alternate row colors for readability
   '&:nth-of-type(odd)': {
     backgroundColor: (theme: Theme) =>
-      theme.palette.mode === 'dark' ? '#040404' : theme.palette.grey[50],
+      theme.palette.mode === 'dark' ? '#010101' : theme.palette.grey[50],
   },
   userSelect: 'none', // get rid of text selection
   // override the background color for the current track

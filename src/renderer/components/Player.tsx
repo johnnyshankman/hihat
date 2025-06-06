@@ -641,7 +641,8 @@ export default function Player() {
           width: '100%',
           height: '100%',
           py: { xs: 1, sm: 2 },
-          backgroundColor: (t) => t.palette.background.default,
+          backgroundColor: (t) =>
+            t.palette.mode === 'dark' ? '#0D0D0D' : '#FFFFFF', // matches the toolbar and header row
           borderTop: '1px solid',
           borderColor: (t) => t.palette.divider,
         }}
@@ -713,7 +714,7 @@ export default function Player() {
                 placement="top"
                 title={
                   playbackSource
-                    ? `Scroll to track in ${playbackSource === 'library' ? 'Library' : 'Playlist'}`
+                    ? `Scroll to song in ${playbackSource === 'library' ? 'library' : 'playlist'}`
                     : ''
                 }
               >

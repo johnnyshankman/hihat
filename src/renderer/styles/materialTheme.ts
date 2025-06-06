@@ -67,7 +67,7 @@ export const darkTheme = createTheme({
       main: '#666666', // Muted text
     },
     background: {
-      default: '#000000', // Very dark background (almost black) from the screenshot
+      default: '#000000', // Very dark background almost black
       paper: '#000000', // Slightly lighter for cards/dialogs
     },
     text: {

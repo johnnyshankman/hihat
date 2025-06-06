@@ -46,7 +46,7 @@ import Settings from './Settings';
 import Player from './Player';
 import NotificationSystem from './NotificationSystem';
 
-const drawerWidth = 240;
+const drawerWidth = 230;
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
   open?: boolean;
@@ -461,7 +461,13 @@ export default function MainLayout() {
           }}
           variant="persistent"
         >
-          <Paper sx={{ borderRadius: '0px', height: '100%' }}>
+          <Paper
+            sx={{
+              borderRadius: '0px',
+              height: '100%',
+              backgroundColor: theme === 'dark' ? '#0D0D0D' : '#FFFFFF',
+            }}
+          >
             {/* Window Controls */}
             <Box
               sx={{
@@ -587,21 +593,7 @@ export default function MainLayout() {
               </Box>
             </Box>
 
-            <Divider />
-
             <List sx={{ flexGrow: 1, paddingTop: 0 }}>
-              <ListItemButton
-                data-view="settings"
-                onClick={() => handleViewChange('settings')}
-                selected={currentView === 'settings'}
-                sx={{ WebkitAppRegion: 'no-drag' }}
-              >
-                <ListItemIcon sx={{ minWidth: '38px' }}>
-                  <SettingsIcon />
-                </ListItemIcon>
-                <ListItemText primary="Settings" />
-              </ListItemButton>
-
               <ListItemButton
                 data-view="library"
                 onClick={() => handleViewChange('library')}
@@ -667,7 +659,7 @@ export default function MainLayout() {
                         selectedPlaylistId === playlist.id
                       }
                       sx={{
-                        py: 0.5,
+                        py: 0.1,
                         WebkitAppRegion: 'no-drag',
                         borderRadius: 0.75,
                         mx: 0.5,
@@ -675,20 +667,8 @@ export default function MainLayout() {
                         '&.Mui-selected': {
                           backgroundColor: (t) =>
                             t.palette.mode === 'dark'
-                              ? 'rgba(255, 255, 255, 0.12)'
-                              : 'rgba(0, 0, 0, 0.08)',
-                        },
-                        '&:hover': {
-                          backgroundColor: (t) =>
-                            t.palette.mode === 'dark'
-                              ? 'rgba(255, 255, 255, 0.08)'
-                              : 'rgba(0, 0, 0, 0.05)',
-                        },
-                        '&.Mui-selected:hover': {
-                          backgroundColor: (t) =>
-                            t.palette.mode === 'dark'
-                              ? 'rgba(255, 255, 255, 0.15)'
-                              : 'rgba(0, 0, 0, 0.12)',
+                              ? t.palette.grey[700]
+                              : t.palette.grey[300],
                         },
                       }}
                     >
@@ -706,6 +686,18 @@ export default function MainLayout() {
                   ))}
                 </List>
               </Collapse>
+
+              <ListItemButton
+                data-view="settings"
+                onClick={() => handleViewChange('settings')}
+                selected={currentView === 'settings'}
+                sx={{ WebkitAppRegion: 'no-drag' }}
+              >
+                <ListItemIcon sx={{ minWidth: '38px' }}>
+                  <SettingsIcon />
+                </ListItemIcon>
+                <ListItemText primary="Settings" />
+              </ListItemButton>
             </List>
           </Paper>
         </Drawer>
