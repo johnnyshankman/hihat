@@ -665,38 +665,31 @@ export default function Playlists({
         backgroundColor: (theme) => theme.palette.background.default,
       },
     },
-    muiTableBodyProps: {
-      sx: {
-        '& tr:nth-of-type(odd)': {
-          backgroundColor: (theme) =>
-            theme.palette.mode === 'dark' ? '#080808' : theme.palette.grey[50],
-        },
-      },
-    },
     muiTableBodyRowProps: ({ row }) => ({
       onClick: () => {
         handlePlayTrack(row.original.id);
       },
       onContextMenu: (e) => handleContextMenu(e, row.original.id),
       'data-track-id': row.original.id,
+      // styles for the row
       sx: {
         cursor: 'pointer',
-        height: '29px', // @important: must be 29 so that the virtualized estimateSize is corretg
+        // @todo make 29 a constant js var
+        height: '29px', // @important: must be 29 so that the virtualized estimateSize is correct
         backgroundColor: (theme) => theme.palette.background.default,
-        // Use simplified conditional styling for better performance
+        // styles for odd rows
+        '&:nth-of-type(odd)': {
+          backgroundColor: (theme) =>
+            theme.palette.mode === 'dark' ? '#080808' : theme.palette.grey[50],
+        },
+        // Override the bg color for the currently playing track
         ...(currentTrack?.id === row.original.id &&
           playbackSource === 'playlist' &&
           playbackSourcePlaylistId === selectedPlaylistId && {
             backgroundColor: (theme) =>
               theme.palette.mode === 'dark'
-                ? theme.palette.grey[800]
-                : theme.palette.grey[400],
-            '&:hover': {
-              backgroundColor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? theme.palette.grey[800]
-                  : theme.palette.grey[300],
-            },
+                ? `${theme.palette.grey[800]} !important`
+                : `${theme.palette.grey[400]} !important`,
           }),
       },
     }),
