@@ -498,6 +498,13 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       },
     },
 
+    // Remove border from table body cells
+    muiTableBodyCellProps: {
+      sx: {
+        borderBottom: 'none',
+      },
+    },
+
     // Improve search field styling
     muiSearchTextFieldProps: {
       placeholder: 'Search library',
@@ -553,6 +560,14 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         backgroundColor: (theme) => theme.palette.background.default,
       },
     },
+    muiTableBodyProps: {
+      sx: {
+        '& tr:nth-of-type(odd)': {
+          backgroundColor: (theme) =>
+            theme.palette.mode === 'dark' ? '#050505' : theme.palette.grey[50],
+        },
+      },
+    },
     muiTableBodyRowProps: ({ row }) => ({
       onClick: () => {
         handlePlayTrack(row.original.id);
@@ -563,8 +578,6 @@ export default function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         cursor: 'pointer',
         height: '29px', // @important: must be 29 so that the virtualized estimateSize is corretg
         backgroundColor: (theme) => theme.palette.background.default,
-        borderBottom: '1px solid',
-        borderColor: (theme) => theme.palette.divider,
         // Use simplified conditional styling for better performance
         ...(currentTrack?.id === row.original.id &&
           playbackSource === 'library' && {
