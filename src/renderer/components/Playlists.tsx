@@ -601,6 +601,15 @@ export default function Playlists({
       },
     },
 
+    // Remove border from table head and make it fully opaque
+    muiTableHeadProps: {
+      sx: {
+        borderBottom: '1px solid',
+        borderColor: (theme) => theme.palette.divider,
+        opacity: 1.0,
+      },
+    },
+
     // Improve search field styling
     muiSearchTextFieldProps: {
       placeholder: 'Search playlist',
@@ -660,7 +669,7 @@ export default function Playlists({
       sx: {
         '& tr:nth-of-type(odd)': {
           backgroundColor: (theme) =>
-            theme.palette.mode === 'dark' ? '#050505' : theme.palette.grey[50],
+            theme.palette.mode === 'dark' ? '#080808' : theme.palette.grey[50],
         },
       },
     },
