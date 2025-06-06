@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from 'react';
 import {
   Box,
   Typography,
@@ -26,6 +32,7 @@ import {
   getCommonColumnDefs,
   type TableData,
 } from '../utils/tableConfig';
+import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 
 // Define the type for directory selection result
 interface DirectorySelectionResult {
@@ -156,6 +163,39 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   const handleClosePlaylistDialog = () => {
     setPlaylistDialogOpen(false);
   };
+
+  // Function to scroll to a specific track by ID
+  const scrollToTrack = useCallback(
+    (trackId: string) => {
+      if (!rowVirtualizerRef.current) return;
+
+      // Get the filtered and sorted track IDs based on current view state
+      const trackIds = getFilteredAndSortedTrackIds('library');
+
+      // Find the index of the track in the filtered and sorted list
+      const trackIndex = trackIds.indexOf(trackId);
+
+      if (trackIndex !== -1) {
+        // Scroll to the track
+        rowVirtualizerRef.current.scrollToIndex(trackIndex, {
+          align: 'center',
+        });
+      }
+    },
+    // The function doesn't depend on any props or state since it gets current state from the store
+    [],
+  );
+
+  // Expose the scrollToTrack function to the window object
+  useEffect(() => {
+    // @ts-ignore - Adding custom property to window
+    window.hihatScrollToLibraryTrack = scrollToTrack;
+
+    return () => {
+      // @ts-ignore - Cleanup
+      delete window.hihatScrollToLibraryTrack;
+    };
+  }, [scrollToTrack]);
 
   // Get columns from shared configuration
   const columns = useMemo(() => getCommonColumnDefs(sorting), [sorting]);
