@@ -26,6 +26,7 @@ import {
   getCommonColumnDefs,
   type TableData,
 } from '../utils/tableConfig';
+import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 
 // Define props interface for Playlists component
 interface PlaylistsProps {
@@ -156,31 +157,23 @@ export default function Playlists({
   // Function to scroll to a specific track by ID
   const scrollToTrack = useCallback(
     (trackId: string) => {
-      if (!rowVirtualizerRef.current || !playlistTracks) return;
+      if (!rowVirtualizerRef.current) return;
 
-      const trackIndex = playlistTracks.findIndex(
-        (track) => track.id === trackId,
-      );
+      // Get the filtered and sorted track IDs based on current view state
+      const trackIds = getFilteredAndSortedTrackIds('playlist');
+
+      // Find the index of the track in the filtered and sorted list
+      const trackIndex = trackIds.indexOf(trackId);
+
       if (trackIndex !== -1) {
         // Scroll to the track
-        rowVirtualizerRef.current.scrollToIndex(trackIndex);
-
-        // Add visual feedback by adding a class to the row
-        setTimeout(() => {
-          const row = document.querySelector(`[data-track-id="${trackId}"]`);
-          if (row) {
-            // Add a highlight class
-            row.classList.add('highlight-row');
-
-            // Remove the class after animation completes
-            setTimeout(() => {
-              row.classList.remove('highlight-row');
-            }, 2000);
-          }
-        }, 200); // Wait for the scroll to complete
+        rowVirtualizerRef.current.scrollToIndex(trackIndex, {
+          align: 'center',
+        });
       }
     },
-    [playlistTracks],
+    // The function doesn't depend on any props or state since it gets current state from the store
+    [],
   );
 
   // Expose the scrollToTrack function to the window object
