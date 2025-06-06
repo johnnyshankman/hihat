@@ -709,7 +709,7 @@ export default function Player() {
                 placement="top"
                 title={
                   playbackSource
-                    ? `Click to view in ${playbackSource === 'library' ? 'Library' : 'Playlist'}`
+                    ? `Scroll to track in ${playbackSource === 'library' ? 'Library' : 'Playlist'}`
                     : ''
                 }
               >
