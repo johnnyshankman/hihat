@@ -51,7 +51,7 @@ function calculateDirectorySize(
 
 /**
  * Gets statistics about the music library
- * @returns Object containing songCount and sizeInGB
+ * @returns Object containing songCount, sizeInGB, totalPlays, and totalDurationHours
  */
 function getLibraryStats() {
   try {
@@ -60,12 +60,28 @@ function getLibraryStats() {
     const { libraryPath } = settings;
 
     if (!libraryPath || !fs.existsSync(libraryPath)) {
-      return { songCount: 0, sizeInGB: 0 };
+      return {
+        songCount: 0,
+        sizeInGB: 0,
+        totalPlays: 0,
+        totalDurationHours: 0,
+      };
     }
 
     // Get all tracks from the database to count songs
     const tracks = db.getAllTracks();
     const songCount = tracks.length;
+
+    // Calculate total plays and duration
+    const totalPlays = tracks.reduce(
+      (sum, track) => sum + (track.playCount || 0),
+      0,
+    );
+    const totalDurationSeconds = tracks.reduce(
+      (sum, track) => sum + (track.duration || 0),
+      0,
+    );
+    const totalDurationHours = totalDurationSeconds / 3600; // Convert seconds to hours
 
     // Define supported music extensions
     const musicExtensions = ['.mp3', '.m4a', '.flac', '.wav', '.ogg', '.aac'];
@@ -76,10 +92,10 @@ function getLibraryStats() {
     // Convert bytes to GB
     const sizeInGB = totalSizeBytes / (1024 * 1024 * 1024);
 
-    return { songCount, sizeInGB };
+    return { songCount, sizeInGB, totalPlays, totalDurationHours };
   } catch (error) {
     console.error('Error calculating library stats:', error);
-    return { songCount: 0, sizeInGB: 0 };
+    return { songCount: 0, sizeInGB: 0, totalPlays: 0, totalDurationHours: 0 };
   }
 }
 
@@ -144,9 +160,10 @@ export default class MenuBuilder {
             dialog.showMessageBox(this.mainWindow, {
               type: 'info',
               title: 'Library Stats',
-              message: `Songs: ${
-                stats.songCount
-              }\nSize: ${stats.sizeInGB.toFixed(2)} GB`,
+              message: `Songs: ${stats.songCount}
+Size: ${stats.sizeInGB.toFixed(2)} GB
+Plays: ${stats.totalPlays.toLocaleString()}
+Duration: ${stats.totalDurationHours.toFixed(1)} hours`,
             });
           },
         },

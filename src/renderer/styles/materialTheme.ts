@@ -35,7 +35,7 @@ const baseThemeOptions: ThemeOptions = {
       fontWeight: 400,
     },
     body2: {
-      fontSize: '13px',
+      fontSize: '12px',
       fontWeight: 400,
       lineHeight: '16px',
       WebkitFontSmoothing: 'antialiased',
@@ -97,7 +97,7 @@ export const darkTheme = createTheme({
       A100: '#d5d5d5',
       A200: '#aaaaaa',
       A400: '#303030',
-      A700: '#1E1E1E',
+      A700: '#0D0D0D',
     },
   },
 });
