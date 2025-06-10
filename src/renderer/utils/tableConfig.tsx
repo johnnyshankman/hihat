@@ -393,30 +393,39 @@ export const getCommonColumnVisibilityHandler = (
 export const getCommonRowStyling = (
   rowId: string,
   currentTrackId: string | undefined,
+  selectedTrackIds: string[] | undefined,
   playbackSource: string,
   expectedSource: string,
   playbackSourcePlaylistId?: string,
   selectedPlaylistId?: string,
 ) => ({
-  cursor: 'pointer',
-  height: `${STATIC_ROW_HEIGHT}px`,
+  cursor: 'pointer', // show you can click on the row
+  height: `${STATIC_ROW_HEIGHT}px`, // get the height perfectly in line with the MRT configuration
+  userSelect: 'none', // get rid of text selection
+  // set a default background color
   backgroundColor: (theme: Theme) => theme.palette.background.default,
-  // alternate row colors for readability
+  // alternate background colors for readability
   '&:nth-of-type(odd)': {
     backgroundColor: (theme: Theme) =>
       theme.palette.mode === 'dark'
         ? theme.palette.grey.A700
         : theme.palette.grey[50],
   },
-  userSelect: 'none', // get rid of text selection
-  // override the background color for the current track
+  // override the background color for the selected tracks
+  ...(selectedTrackIds?.includes(rowId) && {
+    backgroundColor: (theme: Theme) =>
+      theme.palette.mode === 'dark'
+        ? `${theme.palette.grey[600]} !important`
+        : `${theme.palette.grey[400]} !important`,
+  }),
+  // override the background color for the currently playing track
   ...(currentTrackId === rowId &&
     playbackSource === expectedSource &&
     (!playbackSourcePlaylistId ||
       playbackSourcePlaylistId === selectedPlaylistId) && {
       backgroundColor: (theme: Theme) =>
         theme.palette.mode === 'dark'
-          ? `${theme.palette.grey[800]} !important`
-          : `${theme.palette.grey[400]} !important`,
+          ? `rgba(255, 0, 0, 0.5) !important`
+          : `rgba(0, 255, 0, 0.5) !important`,
     }),
 });

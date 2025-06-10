@@ -78,6 +78,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     mouseY: number;
   } | null>(null);
   const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
+  const [selectedTracks, setSelectedTracks] = useState<any>({});
 
   // Global filter state for search
   const [globalFilter, setGlobalFilter] = useState('');
@@ -315,15 +316,57 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       ...getCommonTableConfig(drawerOpen).muiSearchTextFieldProps,
       placeholder: 'Search library',
     },
+    onRowSelectionChange: () => {
+      // do absolutely nothing, we handle this manually
+    },
     muiTableBodyRowProps: ({ row }) => ({
-      onClick: () => {
-        handlePlayTrack(row.original.id);
+      onClick: (e) => {
+        setSelectedTracks((prev: any) => {
+          const newSelectedTracks = { ...prev };
+          const trackId = row.original.id;
+
+          // If track is already selected, always remove it regardless of shift key
+          if (newSelectedTracks[trackId]) {
+            delete newSelectedTracks[trackId];
+            return newSelectedTracks;
+          }
+
+          // If shift is not held, clear other selections and select only this track
+          if (!e.shiftKey) {
+            return { [trackId]: true };
+          }
+
+          // If shift is held, add this track to existing selection
+          newSelectedTracks[trackId] = true;
+          return newSelectedTracks;
+        });
       },
-      onContextMenu: (e) => handleContextMenu(e, row.original.id),
+      onDoubleClick: () => {
+        // play the track
+        handlePlayTrack(row.original.id);
+        // make this the only selected track
+        setSelectedTracks({ [row.original.id]: true });
+      },
+      onContextMenu: (e) => {
+        handleContextMenu(e, row.original.id);
+        // make this the only selected track
+
+        if (Object.keys(selectedTracks).length === 1) {
+          setSelectedTracks({
+            [row.original.id]: true,
+          });
+        } else {
+          setSelectedTracks({
+            ...selectedTracks,
+            [row.original.id]: true,
+          });
+        }
+      },
       'data-track-id': row.original.id,
       sx: getCommonRowStyling(
         row.original.id,
         currentTrack?.id || undefined,
+        Object.keys(selectedTracks),
         playbackSource || '',
         'library',
       ),
