@@ -10,6 +10,7 @@ import {
   useLibraryStore,
 } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
+import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 
 interface TrackContextMenuProps {
   open: boolean;
@@ -141,6 +142,12 @@ export default function TrackContextMenu({
         return;
       }
 
+      // Get the next track ID before deletion
+      const trackIds = getFilteredAndSortedTrackIds('library');
+      const currentIndex = trackIds.indexOf(trackId);
+      const nextTrackId =
+        currentIndex < trackIds.length - 1 ? trackIds[currentIndex + 1] : null;
+
       // Check if this is the currently playing track and pause playback if it is
       if (currentTrack && currentTrack.id === trackId) {
         setPaused(true);
@@ -199,6 +206,12 @@ export default function TrackContextMenu({
 
       showNotification(`Track "${track.title}" has been deleted`, 'success');
       setDeleteDialogOpen(false);
+
+      // Step 6: Scroll to the next track if it exists
+      if (nextTrackId) {
+        // @ts-ignore - Using custom property we added to window
+        window.hihatScrollToLibraryTrack?.(nextTrackId);
+      }
     } catch (error) {
       console.error('Error deleting track:', error);
       showNotification('An error occurred while deleting the track', 'error');

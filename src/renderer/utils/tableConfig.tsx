@@ -423,9 +423,7 @@ export const getCommonRowStyling = (
     playbackSource === expectedSource &&
     (!playbackSourcePlaylistId ||
       playbackSourcePlaylistId === selectedPlaylistId) && {
-      backgroundColor: (theme: Theme) =>
-        theme.palette.mode === 'dark'
-          ? `rgba(255, 0, 0, 0.5) !important`
-          : `rgba(0, 255, 0, 0.5) !important`,
+      backgroundColor: (theme: Theme) => theme.palette.background.default,
+      filter: 'invert(1)',
     }),
 });
