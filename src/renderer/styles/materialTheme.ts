@@ -35,7 +35,7 @@ const baseThemeOptions: ThemeOptions = {
       fontWeight: 400,
     },
     body2: {
-      fontSize: '12px',
+      fontSize: '13px',
       fontWeight: 400,
       lineHeight: '16px',
       WebkitFontSmoothing: 'antialiased',

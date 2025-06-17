@@ -17,7 +17,7 @@ import {
   sortByLastPlayed,
 } from './sortingFunctions';
 
-const STATIC_ROW_HEIGHT = 22;
+const STATIC_ROW_HEIGHT = 23;
 
 // Custom formatter for duration in seconds
 export const formatDurationFromSeconds = (seconds: number): string => {
