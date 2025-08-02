@@ -8,7 +8,6 @@ import {
   Typography,
   Button,
   Collapse,
-  Fade,
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
@@ -81,161 +80,175 @@ export default function NotificationSystem() {
   }
 
   return (
-    <Box
-      sx={{
-        position: 'fixed',
-        bottom: 24,
-        right: 24,
-        zIndex: 2000,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        gap: 1,
-      }}
-    >
-      {/* Notification Badge/Toggle */}
-      <Fade in={notifications.length > 0 || isExpanded}>
-        <IconButton
-          onClick={handleToggle}
+    <>
+      {/* Notification Badge positioned next to volume control */}
+      {notifications.length > 0 && (
+        <Box
           sx={{
-            backgroundColor: 'primary.main',
-            color: 'white',
-            '&:hover': {
-              backgroundColor: 'primary.dark',
-            },
-            animation: hasNewNotifications
-              ? 'pulse 1s ease-in-out infinite'
-              : 'none',
-            '@keyframes pulse': {
-              '0%': {
-                transform: 'scale(1)',
-                boxShadow: '0 0 0 0 rgba(33, 150, 243, 0.7)',
-              },
-              '70%': {
-                transform: 'scale(1.05)',
-                boxShadow: '0 0 0 10px rgba(33, 150, 243, 0)',
-              },
-              '100%': {
-                transform: 'scale(1)',
-                boxShadow: '0 0 0 0 rgba(33, 150, 243, 0)',
-              },
-            },
+            position: 'fixed',
+            bottom: 16,
+            right: 65, // Position to the left of volume control
+            zIndex: 2000,
           }}
         >
-          <Badge badgeContent={notifications.length} color="error">
-            <NotificationsIcon />
-          </Badge>
-        </IconButton>
-      </Fade>
-
-      {/* Notification Panel */}
-      <Collapse in={isExpanded}>
-        <Paper
-          elevation={8}
-          sx={{
-            width: '400px',
-            maxHeight: '400px',
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: 'background.paper',
-            borderRadius: 2,
-            overflow: 'hidden',
-          }}
-        >
-          {/* Header */}
-          <Box
+          <IconButton
+            onClick={handleToggle}
+            size="medium"
             sx={{
-              p: 2,
-              borderBottom: 1,
-              borderColor: 'divider',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Typography variant="h6">
-              Notifications ({notifications.length})
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {notifications.length > 0 && (
-                <Button
-                  onClick={handleClearAll}
-                  size="small"
-                  startIcon={<ClearAllIcon />}
-                  variant="text"
-                >
-                  Clear All
-                </Button>
-              )}
-              <IconButton onClick={() => setIsExpanded(false)} size="small">
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </Box>
-
-          {/* Scrollable Notification List */}
-          <Box
-            ref={scrollContainerRef}
-            sx={{
-              flexGrow: 1,
-              overflowY: 'auto',
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1,
-              maxHeight: '320px',
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'action.hover',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: 'action.selected',
-                borderRadius: '4px',
-                '&:hover': {
-                  backgroundColor: 'action.disabled',
+              color: 'text.primary',
+              animation: hasNewNotifications
+                ? 'pulse 1s ease-in-out infinite'
+                : 'none',
+              '@keyframes pulse': {
+                '0%': {
+                  transform: 'scale(1)',
+                },
+                '50%': {
+                  transform: 'scale(1.1)',
+                },
+                '100%': {
+                  transform: 'scale(1)',
                 },
               },
             }}
           >
-            {notifications.length === 0 ? (
-              <Typography
-                color="text.secondary"
-                sx={{ textAlign: 'center', py: 4 }}
-                variant="body2"
+            <Badge
+              badgeContent={notifications.length}
+              color="error"
+              sx={{
+                '& .MuiBadge-badge': {
+                  fontSize: '0.65rem',
+                  height: '16px',
+                  minWidth: '16px',
+                  padding: '0 4px',
+                },
+              }}
+            >
+              <NotificationsIcon fontSize="small" />
+            </Badge>
+          </IconButton>
+        </Box>
+      )}
+
+      {/* Notification Panel */}
+      {isExpanded && (
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 60,
+            right: 24,
+            zIndex: 2001,
+          }}
+        >
+          <Collapse in={isExpanded}>
+            <Paper
+              elevation={8}
+              sx={{
+                width: '400px',
+                maxHeight: '400px',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: 'background.paper',
+                borderRadius: 2,
+                overflow: 'hidden',
+              }}
+            >
+              {/* Header */}
+              <Box
+                sx={{
+                  p: 2,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
               >
-                No notifications
-              </Typography>
-            ) : (
-              notifications.map((notification) => (
-                <Alert
-                  key={notification.id}
-                  onClose={() => removeNotification(notification.id)}
-                  severity={notification.type}
-                  sx={{
-                    width: '100%',
-                    animation: 'slideIn 0.3s ease-out',
-                    '@keyframes slideIn': {
-                      from: {
-                        transform: 'translateX(50px)',
-                        opacity: 0,
-                      },
-                      to: {
-                        transform: 'translateX(0)',
-                        opacity: 1,
-                      },
+                <Typography variant="h6">
+                  Notifications ({notifications.length})
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {notifications.length > 0 && (
+                    <Button
+                      onClick={handleClearAll}
+                      size="small"
+                      startIcon={<ClearAllIcon />}
+                      variant="text"
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                  <IconButton onClick={() => setIsExpanded(false)} size="small">
+                    <CloseIcon />
+                  </IconButton>
+                </Box>
+              </Box>
+
+              {/* Scrollable Notification List */}
+              <Box
+                ref={scrollContainerRef}
+                sx={{
+                  flexGrow: 1,
+                  overflowY: 'auto',
+                  p: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1,
+                  maxHeight: '320px',
+                  '&::-webkit-scrollbar': {
+                    width: '8px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: 'action.hover',
+                    borderRadius: '4px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: 'action.selected',
+                    borderRadius: '4px',
+                    '&:hover': {
+                      backgroundColor: 'action.disabled',
                     },
-                  }}
-                >
-                  {notification.message}
-                </Alert>
-              ))
-            )}
-          </Box>
-        </Paper>
-      </Collapse>
-    </Box>
+                  },
+                }}
+              >
+                {notifications.length === 0 ? (
+                  <Typography
+                    color="text.secondary"
+                    sx={{ textAlign: 'center', py: 4 }}
+                    variant="body2"
+                  >
+                    No notifications
+                  </Typography>
+                ) : (
+                  notifications.map((notification) => (
+                    <Alert
+                      key={notification.id}
+                      onClose={() => removeNotification(notification.id)}
+                      severity={notification.type}
+                      sx={{
+                        width: '100%',
+                        animation: 'slideIn 0.3s ease-out',
+                        '@keyframes slideIn': {
+                          from: {
+                            transform: 'translateX(50px)',
+                            opacity: 0,
+                          },
+                          to: {
+                            transform: 'translateX(0)',
+                            opacity: 1,
+                          },
+                        },
+                      }}
+                    >
+                      {notification.message}
+                    </Alert>
+                  ))
+                )}
+              </Box>
+            </Paper>
+          </Collapse>
+        </Box>
+      )}
+    </>
   );
 }
