@@ -482,10 +482,6 @@ export default function Player() {
       // Wait a short time for the view to change before scrolling
       setTimeout(() => {
         // @ts-ignore - Custom property added to window
-        console.log(
-          'scrolling to library track',
-          window.hihatScrollToLibraryTrack,
-        );
         if (window.hihatScrollToLibraryTrack) {
           // @ts-ignore
           window.hihatScrollToLibraryTrack(currentTrack.id);

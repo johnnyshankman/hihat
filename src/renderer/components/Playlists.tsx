@@ -14,9 +14,14 @@ import {
   type MRT_RowVirtualizer as MrtRowVirtualizer,
 } from 'material-react-table';
 import Marquee from 'react-fast-marquee';
-import { useLibraryStore, useSettingsAndPlaybackStore } from '../stores';
+import {
+  useLibraryStore,
+  useSettingsAndPlaybackStore,
+  useUIStore,
+} from '../stores';
 import { Track } from '../../types/dbTypes';
 import TrackContextMenu from './TrackContextMenu';
+import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import SidebarToggle from './SidebarToggle';
 import {
@@ -88,6 +93,12 @@ export default function Playlists({
   // Playlist selection dialog state
   const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
 
+  // Multi-select state
+  const [selectedTracks, setSelectedTracks] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
+
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
 
@@ -152,6 +163,54 @@ export default function Playlists({
 
   const handleClosePlaylistDialog = () => {
     setPlaylistDialogOpen(false);
+  };
+
+  // Multi-select handlers
+  const handleMultiSelectRemoveFromPlaylist = async () => {
+    const selectedTrackIds = Object.keys(selectedTracks);
+    if (selectedTrackIds.length === 0 || !selectedPlaylistId) return;
+
+    const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
+    if (!selectedPlaylist || selectedPlaylist.isSmart) {
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to remove ${selectedTrackIds.length} track${selectedTrackIds.length > 1 ? 's' : ''} from "${selectedPlaylist.name}"?`;
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      // Get the showNotification function from the UI store
+      const { showNotification } = useUIStore.getState();
+
+      // Remove the selected tracks from the playlist
+      const updatedPlaylist = {
+        ...selectedPlaylist,
+        trackIds: selectedPlaylist.trackIds.filter(
+          (id) => !selectedTrackIds.includes(id),
+        ),
+      };
+
+      // Update the playlist
+      await window.electron.playlists.update(updatedPlaylist);
+
+      // Reload playlists to reflect changes
+      await useLibraryStore.getState().loadPlaylists();
+
+      // Clear selection after removal
+      setSelectedTracks({});
+
+      showNotification(
+        `Successfully removed ${selectedTrackIds.length} track${selectedTrackIds.length > 1 ? 's' : ''} from "${selectedPlaylist.name}"`,
+        'success',
+      );
+    } catch (error) {
+      console.error('Error removing tracks from playlist:', error);
+      const { showNotification } = useUIStore.getState();
+      showNotification('Failed to remove tracks from playlist', 'error');
+    }
   };
 
   // Function to scroll to a specific track by ID
@@ -384,21 +443,94 @@ export default function Playlists({
       ...getCommonTableConfig(drawerOpen).muiSearchTextFieldProps,
       placeholder: 'Search playlist',
     },
-    muiTableBodyRowProps: ({ row }) => ({
-      onClick: () => {
-        handlePlayTrack(row.original.id);
-      },
-      onContextMenu: (e) => handleContextMenu(e, row.original.id),
-      'data-track-id': row.original.id,
-      sx: getCommonRowStyling(
-        row.original.id,
-        currentTrack?.id || undefined,
-        playbackSource || '',
-        'playlist',
-        playbackSourcePlaylistId || undefined,
-        selectedPlaylistId || undefined,
-      ),
-    }),
+    onRowSelectionChange: () => {
+      // do absolutely nothing, we handle this manually
+    },
+    muiTableBodyRowProps: ({ row, table: tableInstance }) => {
+      // Get the current visible rows
+      const visibleRows = tableInstance.getRowModel().rows;
+      const currentIndex = visibleRows.findIndex(
+        (r) => r.original.id === row.original.id,
+      );
+
+      return {
+        onClick: (e) => {
+          const trackId = row.original.id;
+
+          setSelectedTracks((prev) => {
+            // Cmd/Ctrl + Click: Toggle selection
+            if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+              const newSelectedTracks = { ...prev };
+              if (newSelectedTracks[trackId]) {
+                delete newSelectedTracks[trackId];
+              } else {
+                newSelectedTracks[trackId] = true;
+              }
+              setLastClickedIndex(currentIndex);
+              return newSelectedTracks;
+            }
+
+            // Shift + Click: Range selection (always replace existing selection)
+            if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
+              // If no previous selection, treat as normal click
+              if (lastClickedIndex === null) {
+                setLastClickedIndex(currentIndex);
+                return { [trackId]: true };
+              }
+
+              const start = Math.min(lastClickedIndex, currentIndex);
+              const end = Math.max(lastClickedIndex, currentIndex);
+
+              // Create new selection with only the range
+              const rangeSelection: Record<string, boolean> = {};
+
+              // Select all tracks in range
+              for (let i = start; i <= end; i += 1) {
+                const rowData = visibleRows[i]?.original;
+                if (rowData) {
+                  rangeSelection[rowData.id] = true;
+                }
+              }
+
+              // Don't update lastClickedIndex on shift+click to maintain the anchor point
+              return rangeSelection;
+            }
+
+            // Normal click: Select only this track
+            setLastClickedIndex(currentIndex);
+            return { [trackId]: true };
+          });
+        },
+        onDoubleClick: () => {
+          // play the track
+          handlePlayTrack(row.original.id);
+          // make this the only selected track
+          setSelectedTracks({ [row.original.id]: true });
+        },
+        onContextMenu: (e) => {
+          const trackId = row.original.id;
+
+          // If right-clicking on an already selected track, keep selection
+          if (selectedTracks[trackId]) {
+            handleContextMenu(e, trackId);
+          } else {
+            // If right-clicking on unselected track, select only that track
+            setSelectedTracks({ [trackId]: true });
+            handleContextMenu(e, trackId);
+          }
+        },
+        'data-track-id': row.original.id,
+        sx: getCommonRowStyling(
+          row.original.id,
+          currentTrack?.id || undefined,
+          Object.keys(selectedTracks),
+          playbackSource || '',
+          'playlist',
+          playbackSourcePlaylistId || undefined,
+          selectedPlaylistId || undefined,
+        ),
+      };
+    },
     renderTopToolbarCustomActions,
     renderEmptyRowsFallback: () => (
       <Box
@@ -501,18 +633,33 @@ export default function Playlists({
         </Box>
       )}
 
-      {/* Context menu */}
-      <TrackContextMenu
-        anchorPosition={
-          contextMenu !== null
-            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-            : null
-        }
-        onAddToPlaylist={handleAddToPlaylist}
-        onClose={handleCloseContextMenu}
-        open={contextMenu !== null}
-        trackId={selectedTrackId}
-      />
+      {/* Context menu - show multi-select menu if multiple tracks selected */}
+      {Object.keys(selectedTracks).length > 1 ? (
+        <MultiSelectContextMenu
+          anchorPosition={
+            contextMenu !== null
+              ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+              : null
+          }
+          isPlaylistView
+          onClose={handleCloseContextMenu}
+          onRemoveFromPlaylist={handleMultiSelectRemoveFromPlaylist}
+          open={contextMenu !== null}
+          selectedCount={Object.keys(selectedTracks).length}
+        />
+      ) : (
+        <TrackContextMenu
+          anchorPosition={
+            contextMenu !== null
+              ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+              : null
+          }
+          onAddToPlaylist={handleAddToPlaylist}
+          onClose={handleCloseContextMenu}
+          open={contextMenu !== null}
+          trackId={selectedTrackId}
+        />
+      )}
 
       {/* Playlist selection dialog */}
       {selectedTrackId && (

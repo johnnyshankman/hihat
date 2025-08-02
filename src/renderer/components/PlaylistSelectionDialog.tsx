@@ -15,16 +15,20 @@ import {
 } from '@mui/material';
 import { useLibraryStore } from '../stores';
 
+/* eslint-disable react/require-default-props */
 interface PlaylistSelectionDialogProps {
   open: boolean;
   onClose: () => void;
-  trackId: string;
+  trackId?: string;
+  trackIds?: string[];
 }
+/* eslint-enable react/require-default-props */
 
-export default function PlaylistSelectionDialog({
+function PlaylistSelectionDialog({
   open,
   onClose,
-  trackId,
+  trackId = undefined,
+  trackIds = undefined,
 }: PlaylistSelectionDialogProps) {
   const playlists = useLibraryStore((state) => state.playlists);
   const addTrackToPlaylist = useLibraryStore(
@@ -35,12 +39,20 @@ export default function PlaylistSelectionDialog({
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [showNewPlaylistInput, setShowNewPlaylistInput] = useState(false);
 
+  // Use trackIds if provided, otherwise use single trackId
+  const tracksToAdd = trackIds || (trackId ? [trackId] : []);
+
   const handleAddToPlaylist = async (playlistId: string) => {
     try {
-      await addTrackToPlaylist(trackId, playlistId);
+      // Add all tracks to the playlist
+      // eslint-disable-next-line no-restricted-syntax
+      for (const id of tracksToAdd) {
+        // eslint-disable-next-line no-await-in-loop
+        await addTrackToPlaylist(id, playlistId);
+      }
       onClose();
     } catch (error) {
-      console.error('Error adding track to playlist:', error);
+      console.error('Error adding tracks to playlist:', error);
     }
   };
 
@@ -57,7 +69,12 @@ export default function PlaylistSelectionDialog({
         );
 
         if (newPlaylist && newPlaylist.id) {
-          await addTrackToPlaylist(trackId, newPlaylist.id);
+          // Add all tracks to the new playlist
+          // eslint-disable-next-line no-restricted-syntax
+          for (const id of tracksToAdd) {
+            // eslint-disable-next-line no-await-in-loop
+            await addTrackToPlaylist(id, newPlaylist.id);
+          }
         }
 
         setNewPlaylistName('');
@@ -78,7 +95,11 @@ export default function PlaylistSelectionDialog({
 
   return (
     <Dialog fullWidth maxWidth="sm" onClose={onClose} open={open}>
-      <DialogTitle>Add to Playlist</DialogTitle>
+      <DialogTitle>
+        Add{' '}
+        {tracksToAdd.length > 1 ? `${tracksToAdd.length} tracks` : '1 track'} to
+        Playlist
+      </DialogTitle>
       <DialogContent>
         {playlists.length > 0 ? (
           <>
@@ -155,3 +176,5 @@ export default function PlaylistSelectionDialog({
     </Dialog>
   );
 }
+
+export default PlaylistSelectionDialog;

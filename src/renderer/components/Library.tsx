@@ -21,8 +21,13 @@ import {
   type MRT_RowVirtualizer as MrtRowVirtualizer,
   type MRT_VisibilityState as MrtVisibilityState,
 } from 'material-react-table';
-import { useLibraryStore, useSettingsAndPlaybackStore } from '../stores';
+import {
+  useLibraryStore,
+  useSettingsAndPlaybackStore,
+  useUIStore,
+} from '../stores';
 import TrackContextMenu from './TrackContextMenu';
+import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import SidebarToggle from './SidebarToggle';
 import {
@@ -78,7 +83,12 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     mouseY: number;
   } | null>(null);
   const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
-  const [selectedTracks, setSelectedTracks] = useState<any>({});
+  const [selectedTracks, setSelectedTracks] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
+  const [multiSelectPlaylistDialogOpen, setMultiSelectPlaylistDialogOpen] =
+    useState(false);
 
   // Global filter state for search
   const [globalFilter, setGlobalFilter] = useState('');
@@ -163,6 +173,100 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
 
   const handleClosePlaylistDialog = () => {
     setPlaylistDialogOpen(false);
+  };
+
+  // Multi-select handlers
+  const handleMultiSelectAddToPlaylist = () => {
+    setMultiSelectPlaylistDialogOpen(true);
+  };
+
+  const handleCloseMultiSelectPlaylistDialog = () => {
+    setMultiSelectPlaylistDialogOpen(false);
+  };
+
+  const handleMultiSelectDeleteTracks = async () => {
+    const selectedTrackIds = Object.keys(selectedTracks);
+    if (selectedTrackIds.length === 0) return;
+
+    const confirmMessage = `Are you sure you want to delete ${selectedTrackIds.length} track${selectedTrackIds.length > 1 ? 's' : ''}? This will permanently delete the files from your computer.`;
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      // Get the showNotification function from the UI store
+      const { showNotification } = useUIStore.getState();
+
+      // Step 1: Get all playlists that might contain these tracks
+      const allPlaylists = await window.electron.playlists.getAll();
+
+      // For each selected track
+      // eslint-disable-next-line no-restricted-syntax
+      for (const trackId of selectedTrackIds) {
+        const track = tracks.find((t) => t.id === trackId);
+        // eslint-disable-next-line no-continue
+        if (!track) continue;
+
+        // Step 2: Remove the track from all playlists that contain it
+        const playlistsToUpdate = allPlaylists.filter(
+          (playlist) =>
+            !playlist.isSmart && playlist.trackIds.includes(trackId),
+        );
+
+        // Update all playlists in parallel
+        // eslint-disable-next-line no-await-in-loop
+        await Promise.all(
+          playlistsToUpdate.map((playlist) => {
+            const updatedPlaylist = {
+              ...playlist,
+              trackIds: playlist.trackIds.filter((id) => id !== trackId),
+            };
+            return window.electron.playlists.update(updatedPlaylist);
+          }),
+        );
+
+        // Step 3: Delete the track from the database
+        // eslint-disable-next-line no-await-in-loop
+        const dbDeleteResult = await window.electron.tracks.delete(trackId);
+
+        if (!dbDeleteResult) {
+          showNotification(`Failed to delete track: ${track.title}`, 'error');
+          // eslint-disable-next-line no-continue
+          continue;
+        }
+
+        // Step 4: Delete the actual file from the filesystem
+        if (track.filePath) {
+          // eslint-disable-next-line no-await-in-loop
+          const fileDeleteResult = await window.electron.fileSystem.deleteFile(
+            track.filePath,
+          );
+
+          if (!fileDeleteResult) {
+            showNotification(
+              `Failed to delete file for: ${track.title}`,
+              'warning',
+            );
+          }
+        }
+      }
+
+      // Reload the library to reflect changes
+      await useLibraryStore.getState().loadLibrary();
+
+      // Clear selection after deletion
+      setSelectedTracks({});
+
+      showNotification(
+        `Successfully deleted ${selectedTrackIds.length} track${selectedTrackIds.length > 1 ? 's' : ''}`,
+        'success',
+      );
+    } catch (error) {
+      console.error('Error deleting tracks:', error);
+      const { showNotification } = useUIStore.getState();
+      showNotification('Failed to delete tracks', 'error');
+    }
   };
 
   // Function to scroll to a specific track by ID
@@ -319,58 +423,89 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     onRowSelectionChange: () => {
       // do absolutely nothing, we handle this manually
     },
-    muiTableBodyRowProps: ({ row }) => ({
-      onClick: (e) => {
-        setSelectedTracks((prev: any) => {
-          const newSelectedTracks = { ...prev };
+    muiTableBodyRowProps: ({ row, table: tableInstance }) => {
+      // Get the current visible rows
+      const visibleRows = tableInstance.getRowModel().rows;
+      const currentIndex = visibleRows.findIndex(
+        (r) => r.original.id === row.original.id,
+      );
+
+      return {
+        onClick: (e) => {
           const trackId = row.original.id;
 
-          // If track is already selected, always remove it regardless of shift key
-          if (newSelectedTracks[trackId]) {
-            delete newSelectedTracks[trackId];
-            return newSelectedTracks;
-          }
+          setSelectedTracks((prev) => {
+            // Cmd/Ctrl + Click: Toggle selection
+            if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+              const newSelectedTracks = { ...prev };
+              if (newSelectedTracks[trackId]) {
+                delete newSelectedTracks[trackId];
+              } else {
+                newSelectedTracks[trackId] = true;
+              }
+              setLastClickedIndex(currentIndex);
+              return newSelectedTracks;
+            }
 
-          // If shift is not held, clear other selections and select only this track
-          if (!e.shiftKey) {
+            // Shift + Click: Range selection (always replace existing selection)
+            if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
+              // If no previous selection, treat as normal click
+              if (lastClickedIndex === null) {
+                setLastClickedIndex(currentIndex);
+                return { [trackId]: true };
+              }
+
+              const start = Math.min(lastClickedIndex, currentIndex);
+              const end = Math.max(lastClickedIndex, currentIndex);
+
+              // Create new selection with only the range
+              const rangeSelection: Record<string, boolean> = {};
+
+              // Select all tracks in range
+              for (let i = start; i <= end; i += 1) {
+                const rowData = visibleRows[i]?.original;
+                if (rowData) {
+                  rangeSelection[rowData.id] = true;
+                }
+              }
+
+              // Don't update lastClickedIndex on shift+click to maintain the anchor point
+              return rangeSelection;
+            }
+
+            // Normal click: Select only this track
+            setLastClickedIndex(currentIndex);
             return { [trackId]: true };
+          });
+        },
+        onDoubleClick: () => {
+          // play the track
+          handlePlayTrack(row.original.id);
+          // make this the only selected track
+          setSelectedTracks({ [row.original.id]: true });
+        },
+        onContextMenu: (e) => {
+          const trackId = row.original.id;
+
+          // If right-clicking on an already selected track, keep selection
+          if (selectedTracks[trackId]) {
+            handleContextMenu(e, trackId);
+          } else {
+            // If right-clicking on unselected track, select only that track
+            setSelectedTracks({ [trackId]: true });
+            handleContextMenu(e, trackId);
           }
-
-          // If shift is held, add this track to existing selection
-          newSelectedTracks[trackId] = true;
-          return newSelectedTracks;
-        });
-      },
-      onDoubleClick: () => {
-        // play the track
-        handlePlayTrack(row.original.id);
-        // make this the only selected track
-        setSelectedTracks({ [row.original.id]: true });
-      },
-      onContextMenu: (e) => {
-        handleContextMenu(e, row.original.id);
-        // make this the only selected track
-
-        if (Object.keys(selectedTracks).length === 1) {
-          setSelectedTracks({
-            [row.original.id]: true,
-          });
-        } else {
-          setSelectedTracks({
-            ...selectedTracks,
-            [row.original.id]: true,
-          });
-        }
-      },
-      'data-track-id': row.original.id,
-      sx: getCommonRowStyling(
-        row.original.id,
-        currentTrack?.id || undefined,
-        Object.keys(selectedTracks),
-        playbackSource || '',
-        'library',
-      ),
-    }),
+        },
+        'data-track-id': row.original.id,
+        sx: getCommonRowStyling(
+          row.original.id,
+          currentTrack?.id || undefined,
+          Object.keys(selectedTracks),
+          playbackSource || '',
+          'library',
+        ),
+      };
+    },
     renderTopToolbarCustomActions,
     renderEmptyRowsFallback: () => (
       <Box
@@ -461,18 +596,42 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         />
       )}
 
-      {/* Context menu */}
-      <TrackContextMenu
-        anchorPosition={
-          contextMenu !== null
-            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-            : null
-        }
-        onAddToPlaylist={handleAddToPlaylist}
-        onClose={handleCloseContextMenu}
-        open={contextMenu !== null}
-        trackId={selectedTrackId}
-      />
+      {/* Context menu - show multi-select menu if multiple tracks selected */}
+      {Object.keys(selectedTracks).length > 1 ? (
+        <MultiSelectContextMenu
+          anchorPosition={
+            contextMenu !== null
+              ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+              : null
+          }
+          onAddToPlaylist={handleMultiSelectAddToPlaylist}
+          onClose={handleCloseContextMenu}
+          onDeleteTracks={handleMultiSelectDeleteTracks}
+          open={contextMenu !== null}
+          selectedCount={Object.keys(selectedTracks).length}
+        />
+      ) : (
+        <TrackContextMenu
+          anchorPosition={
+            contextMenu !== null
+              ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+              : null
+          }
+          onAddToPlaylist={handleAddToPlaylist}
+          onClose={handleCloseContextMenu}
+          open={contextMenu !== null}
+          trackId={selectedTrackId}
+        />
+      )}
+
+      {/* Multi-select playlist selection dialog */}
+      {multiSelectPlaylistDialogOpen && (
+        <PlaylistSelectionDialog
+          onClose={handleCloseMultiSelectPlaylistDialog}
+          open={multiSelectPlaylistDialogOpen}
+          trackIds={Object.keys(selectedTracks)}
+        />
+      )}
     </Box>
   );
 }
