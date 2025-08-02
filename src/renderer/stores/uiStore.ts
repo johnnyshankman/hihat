@@ -24,23 +24,13 @@ const useUIStore = create<UIStore>((set) => ({
       autoHideDuration,
     };
 
-    // Add new notification and limit to max 3 in the state
-    set((state) => {
-      const updatedNotifications = [...state.notifications, newNotification];
-      const limitedNotifications =
-        updatedNotifications.length > 3
-          ? updatedNotifications.slice(-3)
-          : updatedNotifications;
+    // Add new notification without limiting (we'll handle display limits in the UI)
+    set((state) => ({
+      notifications: [...state.notifications, newNotification],
+    }));
 
-      return { notifications: limitedNotifications };
-    });
-
-    // Auto-remove notification after duration
-    if (autoHideDuration > 0) {
-      setTimeout(() => {
-        useUIStore.getState().removeNotification(id);
-      }, autoHideDuration);
-    }
+    // Don't auto-remove notifications anymore - let the user manage them
+    // This prevents notifications from disappearing while the user is reading them
   },
 
   removeNotification: (id: string) =>
@@ -48,6 +38,11 @@ const useUIStore = create<UIStore>((set) => ({
       notifications: state.notifications.filter(
         (notification) => notification.id !== id,
       ),
+    })),
+
+  clearAllNotifications: () =>
+    set(() => ({
+      notifications: [],
     })),
 }));
 

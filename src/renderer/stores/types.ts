@@ -118,6 +118,7 @@ export interface UIStore {
     autoHideDuration?: number,
   ) => void;
   removeNotification: (id: string) => void;
+  clearAllNotifications: () => void;
   setCurrentView: (view: 'library' | 'playlists' | 'settings') => void;
 }
 
