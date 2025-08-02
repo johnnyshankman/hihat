@@ -9,12 +9,21 @@ import { useUIStore } from '../stores';
 const CustomSnackbar = forwardRef<HTMLDivElement, SnackbarProps>(
   (props, ref) => {
     // Extract only the props we need to pass to Snackbar
-    const { children, open, autoHideDuration, onClose, anchorOrigin, sx, key } =
-      props;
+    // Note: 'key' is a special React prop and should not be extracted or passed
+    const {
+      children,
+      open,
+      autoHideDuration,
+      onClose,
+      anchorOrigin,
+      sx,
+      // Destructure but don't use these props to filter them out
+      ownerState: _ownerState,
+      ..._otherProps
+    } = props as SnackbarProps & { ownerState?: any };
 
     return (
       <Snackbar
-        key={key}
         ref={ref}
         anchorOrigin={anchorOrigin}
         autoHideDuration={autoHideDuration}
