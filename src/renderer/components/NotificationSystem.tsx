@@ -1,48 +1,11 @@
-import React, { useEffect, forwardRef } from 'react';
-import { Snackbar, Alert, Stack, SnackbarProps } from '@mui/material';
+import React, { useEffect } from 'react';
+import { Alert, Box } from '@mui/material';
 import { useUIStore } from '../stores';
-
-/**
- * Custom Snackbar component that filters out unsupported props
- * This prevents the "ownerState" prop from being passed to ClickAwayListener
- */
-const CustomSnackbar = forwardRef<HTMLDivElement, SnackbarProps>(
-  (props, ref) => {
-    // Extract only the props we need to pass to Snackbar
-    // Note: 'key' is a special React prop and should not be extracted or passed
-    const {
-      children,
-      open,
-      autoHideDuration,
-      onClose,
-      anchorOrigin,
-      sx,
-      // Destructure but don't use these props to filter them out
-      ownerState: _ownerState,
-      ..._otherProps
-    } = props as SnackbarProps & { ownerState?: any };
-
-    return (
-      <Snackbar
-        ref={ref}
-        anchorOrigin={anchorOrigin}
-        autoHideDuration={autoHideDuration}
-        onClose={onClose}
-        open={open}
-        sx={sx}
-      >
-        {children}
-      </Snackbar>
-    );
-  },
-);
-
-CustomSnackbar.displayName = 'CustomSnackbar';
 
 /**
  * NotificationSystem component
  *
- * Displays notifications from the UIStore as Snackbars
+ * Displays notifications from the UIStore as stacked Alerts
  * Limited to showing only the latest 3 notifications at a time
  * Automatically dismisses older notifications that are not visible
  */
@@ -69,30 +32,62 @@ export default function NotificationSystem() {
     });
   }, [notifications, visibleNotifications, removeNotification]);
 
+  // Auto-dismiss notifications after their duration
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    visibleNotifications.forEach((notification) => {
+      if (notification.autoHideDuration) {
+        const timer = setTimeout(() => {
+          removeNotification(notification.id);
+        }, notification.autoHideDuration);
+        timers.push(timer);
+      }
+    });
+
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, [visibleNotifications, removeNotification]);
+
   return (
-    <Stack
-      spacing={2}
-      sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 2000 }}
+    <Box
+      sx={{
+        position: 'fixed',
+        bottom: 24,
+        right: 24,
+        zIndex: 2000,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+      }}
     >
       {visibleNotifications.map((notification) => (
-        <CustomSnackbar
+        <Alert
           key={notification.id}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          autoHideDuration={notification.autoHideDuration}
           onClose={() => removeNotification(notification.id)}
-          open
-          sx={{ position: 'static', mb: 1 }}
+          severity={notification.type}
+          sx={{
+            width: '100%',
+            minWidth: '300px',
+            color: 'white',
+            animation: 'slideIn 0.3s ease-out',
+            '@keyframes slideIn': {
+              from: {
+                transform: 'translateX(100%)',
+                opacity: 0,
+              },
+              to: {
+                transform: 'translateX(0)',
+                opacity: 1,
+              },
+            },
+          }}
+          variant="filled"
         >
-          <Alert
-            onClose={() => removeNotification(notification.id)}
-            severity={notification.type}
-            sx={{ width: '100%', color: 'white' }}
-            variant="filled"
-          >
-            {notification.message}
-          </Alert>
-        </CustomSnackbar>
+          {notification.message}
+        </Alert>
       ))}
-    </Stack>
+    </Box>
   );
 }
