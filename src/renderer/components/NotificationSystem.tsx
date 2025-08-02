@@ -2,15 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Alert,
   Box,
-  Badge,
-  IconButton,
   Paper,
   Typography,
   Button,
   Collapse,
+  IconButton,
 } from '@mui/material';
 import {
-  Notifications as NotificationsIcon,
   Close as CloseIcon,
   ClearAll as ClearAllIcon,
 } from '@mui/icons-material';
@@ -30,7 +28,6 @@ export default function NotificationSystem() {
   );
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousCountRef = useRef(notifications.length);
 
@@ -38,9 +35,6 @@ export default function NotificationSystem() {
   useEffect(() => {
     if (notifications.length > 0 && previousCountRef.current === 0) {
       setIsExpanded(true);
-      setHasNewNotifications(true);
-    } else if (notifications.length > previousCountRef.current) {
-      setHasNewNotifications(true);
     }
     previousCountRef.current = notifications.length;
   }, [notifications.length]);
@@ -52,23 +46,17 @@ export default function NotificationSystem() {
     }
   }, [notifications.length]);
 
-  // Clear "new" indicator when panel is expanded
+  // Listen for toggle events from the Player component
   useEffect(() => {
-    if (isExpanded) {
-      const timer = setTimeout(() => {
-        setHasNewNotifications(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [isExpanded]);
+    const handleToggleEvent = () => {
+      setIsExpanded((prev) => !prev);
+    };
 
-  const handleToggle = () => {
-    setIsExpanded(!isExpanded);
-    if (!isExpanded) {
-      setHasNewNotifications(false);
-    }
-  };
+    window.addEventListener('toggleNotificationPanel', handleToggleEvent);
+    return () => {
+      window.removeEventListener('toggleNotificationPanel', handleToggleEvent);
+    };
+  }, []);
 
   const handleClearAll = () => {
     clearAllNotifications();
@@ -81,55 +69,6 @@ export default function NotificationSystem() {
 
   return (
     <>
-      {/* Notification Badge positioned next to volume control */}
-      {notifications.length > 0 && (
-        <Box
-          sx={{
-            position: 'fixed',
-            bottom: 16,
-            right: 65, // Position to the left of volume control
-            zIndex: 2000,
-          }}
-        >
-          <IconButton
-            onClick={handleToggle}
-            size="medium"
-            sx={{
-              color: 'text.primary',
-              animation: hasNewNotifications
-                ? 'pulse 1s ease-in-out infinite'
-                : 'none',
-              '@keyframes pulse': {
-                '0%': {
-                  transform: 'scale(1)',
-                },
-                '50%': {
-                  transform: 'scale(1.1)',
-                },
-                '100%': {
-                  transform: 'scale(1)',
-                },
-              },
-            }}
-          >
-            <Badge
-              badgeContent={notifications.length}
-              color="error"
-              sx={{
-                '& .MuiBadge-badge': {
-                  fontSize: '0.65rem',
-                  height: '16px',
-                  minWidth: '16px',
-                  padding: '0 4px',
-                },
-              }}
-            >
-              <NotificationsIcon fontSize="small" />
-            </Badge>
-          </IconButton>
-        </Box>
-      )}
-
       {/* Notification Panel */}
       {isExpanded && (
         <Box

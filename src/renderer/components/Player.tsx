@@ -14,6 +14,7 @@ import {
   Stack,
   Popover,
   Tooltip,
+  Badge,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -30,6 +31,7 @@ import {
   RepeatOne,
   Shuffle,
   ShuffleOn,
+  Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import Marquee from 'react-fast-marquee';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -81,6 +83,82 @@ function AlbumArtPlaceholder() {
         hihat
       </Typography>
     </Box>
+  );
+}
+
+// Notification button component
+function NotificationButton() {
+  const notifications = useUIStore((state) => state.notifications);
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
+  const previousCountRef = useRef(notifications.length);
+
+  // Track when new notifications arrive
+  useEffect(() => {
+    if (notifications.length > previousCountRef.current) {
+      setHasNewNotifications(true);
+    }
+    previousCountRef.current = notifications.length;
+  }, [notifications.length]);
+
+  // Clear "new" indicator after a short delay
+  useEffect(() => {
+    if (hasNewNotifications) {
+      const timer = setTimeout(() => {
+        setHasNewNotifications(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [hasNewNotifications]);
+
+  const handleClick = () => {
+    // Toggle the notification panel in NotificationSystem
+    const event = new CustomEvent('toggleNotificationPanel');
+    window.dispatchEvent(event);
+    setHasNewNotifications(false);
+  };
+
+  if (notifications.length === 0) {
+    return null;
+  }
+
+  return (
+    <IconButton
+      onClick={handleClick}
+      size="medium"
+      sx={{
+        color: 'text.primary',
+        animation: hasNewNotifications
+          ? 'pulse 1s ease-in-out infinite'
+          : 'none',
+        '@keyframes pulse': {
+          '0%': {
+            transform: 'scale(1)',
+          },
+          '50%': {
+            transform: 'scale(1.1)',
+          },
+          '100%': {
+            transform: 'scale(1)',
+          },
+        },
+      }}
+    >
+      <Badge
+        badgeContent={notifications.length}
+        color="error"
+        sx={{
+          '& .MuiBadge-badge': {
+            fontSize: '0.65rem',
+            height: '16px',
+            minWidth: '16px',
+            padding: '0 4px',
+          },
+        }}
+      >
+        <NotificationsIcon fontSize="small" />
+      </Badge>
+    </IconButton>
   );
 }
 
@@ -923,7 +1001,7 @@ export default function Player() {
           </Box>
         </Box>
 
-        {/* Volume control */}
+        {/* Volume control and notifications */}
         <Box
           sx={{
             width: { xs: '25%', sm: '25%' },
@@ -931,8 +1009,11 @@ export default function Player() {
             alignItems: 'center',
             justifyContent: 'flex-end',
             pr: { xs: 0, sm: 1 },
+            gap: 1,
           }}
         >
+          {/* Notification button */}
+          <NotificationButton />
           <IconButton onClick={toggleVolumeControls} size="medium">
             {renderVolumeIcon()}
           </IconButton>
