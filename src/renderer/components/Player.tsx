@@ -125,7 +125,7 @@ function NotificationButton() {
   return (
     <IconButton
       onClick={handleClick}
-      size="medium"
+      size="small"
       sx={{
         color: 'text.primary',
         animation: hasNewNotifications
@@ -222,12 +222,16 @@ export default function Player() {
   const [albumArt, setAlbumArt] = useState<string | null>(null);
   const [isTitleScrolling, setIsTitleScrolling] = useState(false);
   const [isArtistAlbumScrolling, setIsArtistAlbumScrolling] = useState(false);
+  const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const [isCompactInfoScrolling, setIsCompactInfoScrolling] = useState(false);
 
   // Refs for title and artist+album text elements
   const titleRef = useRef<HTMLDivElement>(null);
   const titleRef2 = useRef<HTMLDivElement>(null);
   const artistAlbumRef = useRef<HTMLDivElement>(null);
   const artistAlbumRef2 = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const compactInfoRef = useRef<HTMLDivElement>(null);
 
   // Get the setCurrentView function from the UI store
   const setCurrentView = useUIStore((state) => state.setCurrentView);
@@ -235,6 +239,30 @@ export default function Player() {
   // Use Material UI's theme breakpoints
   const theme = useTheme();
   const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Detect when container width is less than 540px
+  useEffect(() => {
+    const checkContainerWidth = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.offsetWidth;
+        setIsCompactLayout(width < 540);
+      }
+    };
+
+    checkContainerWidth();
+
+    const resizeObserver = new ResizeObserver(checkContainerWidth);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    const currentContainerRef = containerRef.current;
+    return () => {
+      if (currentContainerRef) {
+        resizeObserver.unobserve(currentContainerRef);
+      }
+    };
+  }, []);
 
   // Fetch album art when current track changes
   useEffect(() => {
@@ -505,6 +533,71 @@ export default function Player() {
     return <VolumeUp />;
   };
 
+  // Get icon size for play/pause button
+  const getPlayPauseIconSize = () => {
+    if (isCompactLayout) return 'small';
+    if (isXsScreen) return 'medium';
+    return 'large';
+  };
+
+  // Render compact track info
+  const renderCompactTrackInfo = () => {
+    if (!currentTrack) {
+      return (
+        <Typography
+          sx={{
+            display: 'block',
+            color: 'text.secondary',
+            fontSize: '0.7rem',
+            textAlign: 'center',
+          }}
+          variant="caption"
+        >
+          No track playing
+        </Typography>
+      );
+    }
+
+    if (isCompactInfoScrolling) {
+      return (
+        <Marquee
+          gradient
+          gradientColor={theme.palette.background.default}
+          gradientWidth={20}
+          speed={20}
+        >
+          <Box
+            component="span"
+            sx={{
+              color: 'text.secondary',
+              fontSize: '0.7rem',
+            }}
+          >
+            {currentTrack.title} — {currentTrack.artist}
+            &nbsp;&nbsp;&nbsp;&nbsp;
+          </Box>
+        </Marquee>
+      );
+    }
+
+    return (
+      <Box
+        ref={compactInfoRef}
+        sx={{
+          display: 'block',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          color: 'text.secondary',
+          fontSize: '0.7rem',
+          textAlign: 'center',
+        }}
+      >
+        {currentTrack.title} — {currentTrack.artist}
+      </Box>
+    );
+  };
+
   // Render repeat icon based on repeat mode
   const renderRepeatIcon = () => {
     const iconSize = 'small';
@@ -688,6 +781,49 @@ export default function Player() {
     };
   }, [currentTrack?.artist, currentTrack?.album]);
 
+  // Check if compact info text overflows
+  useEffect(() => {
+    const checkCompactInfoOverflow = () => {
+      if (compactInfoRef.current && isCompactLayout) {
+        const container = compactInfoRef.current;
+        const parent = container.parentElement;
+        if (parent) {
+          // Create a temporary span to measure the text width
+          const tempSpan = document.createElement('span');
+          tempSpan.style.position = 'absolute';
+          tempSpan.style.visibility = 'hidden';
+          tempSpan.style.whiteSpace = 'nowrap';
+          tempSpan.style.font = window.getComputedStyle(container).font;
+          tempSpan.textContent = `${currentTrack?.title} — ${currentTrack?.artist}`;
+          document.body.appendChild(tempSpan);
+
+          const textWidth = tempSpan.offsetWidth;
+          const containerWidth = parent.offsetWidth;
+
+          document.body.removeChild(tempSpan);
+
+          const isOverflowing = textWidth > containerWidth;
+          setIsCompactInfoScrolling(isOverflowing);
+        }
+      }
+    };
+
+    checkCompactInfoOverflow();
+
+    // Create a ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver(checkCompactInfoOverflow);
+    if (compactInfoRef.current && compactInfoRef.current.parentElement) {
+      resizeObserver.observe(compactInfoRef.current.parentElement);
+    }
+
+    const currentCompactInfoRef = compactInfoRef.current;
+    return () => {
+      if (currentCompactInfoRef?.parentElement) {
+        resizeObserver.unobserve(currentCompactInfoRef.parentElement);
+      }
+    };
+  }, [currentTrack?.title, currentTrack?.artist, isCompactLayout]);
+
   return (
     <Paper
       elevation={3}
@@ -708,13 +844,14 @@ export default function Player() {
         style={{ display: 'none' }}
       />
       <Box
+        ref={containerRef}
         sx={{
           display: 'flex',
           alignItems: 'center',
-          px: { xs: 1, sm: 2 },
+          px: isCompactLayout ? 1 : { xs: 1, sm: 2 },
           width: '100%',
           height: '100%',
-          py: { xs: 1, sm: 2 },
+          py: isCompactLayout ? 0.5 : { xs: 1, sm: 2 },
           backgroundColor: (t) =>
             t.palette.mode === 'dark' ? '#0D0D0D' : '#FFFFFF', // matches the toolbar and header row
           borderTop: '1px solid',
@@ -726,11 +863,12 @@ export default function Player() {
           onClick={currentTrack ? openMiniPlayer : undefined}
           sx={{
             height: '100%',
-            mr: { xs: 1, sm: 2 },
+            mr: isCompactLayout ? 0.5 : { xs: 1, sm: 2 },
             borderRadius: '4px',
             aspectRatio: '1/1',
             cursor: currentTrack ? 'pointer' : 'default',
             position: 'relative',
+            flexShrink: 0,
             '&:hover .overlay': {
               opacity: 1,
             },
@@ -778,7 +916,7 @@ export default function Player() {
           sx={{
             width: { xs: '15%', sm: '20%' },
             overflow: 'hidden',
-            display: { xs: 'none', sm: 'block' },
+            display: isCompactLayout ? 'none' : { xs: 'none', sm: 'block' },
           }}
         >
           {currentTrack ? (
@@ -864,21 +1002,22 @@ export default function Player() {
         {/* Playback controls */}
         <Box
           sx={{
-            width: { xs: '85%', sm: '50%' },
+            width: isCompactLayout ? 'auto' : { xs: '85%', sm: '50%' },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            px: { xs: 1, sm: 2 },
-            py: 1,
+            px: isCompactLayout ? 0.5 : { xs: 1, sm: 2 },
+            py: isCompactLayout ? 0.5 : 1,
             flexGrow: 1,
+            minWidth: 0, // Allow shrinking
           }}
         >
           <Stack
             alignItems="center"
             direction="row"
             justifyContent="center"
-            spacing={{ xs: 0.25, sm: 1 }}
+            spacing={isCompactLayout ? 0 : { xs: 0.25, sm: 1 }}
             sx={{ mb: 0.0, width: '100%' }}
           >
             <Tooltip title={getRepeatTooltipText()}>
@@ -888,7 +1027,7 @@ export default function Player() {
                   onClick={toggleRepeatMode}
                   size="small"
                   sx={{
-                    padding: { xs: '4px', sm: '8px' },
+                    padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
                   }}
                 >
                   {renderRepeatIcon()}
@@ -900,24 +1039,26 @@ export default function Player() {
               onClick={skipToPreviousTrack}
               size="medium"
               sx={{
-                padding: { xs: '4px', sm: '8px' },
+                padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
               }}
             >
-              <SkipPrevious fontSize={isXsScreen ? 'small' : 'medium'} />
+              <SkipPrevious
+                fontSize={isCompactLayout || isXsScreen ? 'small' : 'medium'}
+              />
             </IconButton>
             <IconButton
               disabled={!currentTrack}
               onClick={() => setPaused(!paused)}
               size="large"
               sx={{
-                mx: { xs: 0.25, sm: 1 },
-                padding: { xs: '8px', sm: '12px' },
+                mx: isCompactLayout ? 0.25 : { xs: 0.25, sm: 1 },
+                padding: isCompactLayout ? '4px' : { xs: '8px', sm: '12px' },
               }}
             >
               {!paused ? (
-                <Pause fontSize={isXsScreen ? 'medium' : 'large'} />
+                <Pause fontSize={getPlayPauseIconSize()} />
               ) : (
-                <PlayArrow fontSize={isXsScreen ? 'medium' : 'large'} />
+                <PlayArrow fontSize={getPlayPauseIconSize()} />
               )}
             </IconButton>
             <IconButton
@@ -925,10 +1066,12 @@ export default function Player() {
               onClick={skipToNextTrack}
               size="medium"
               sx={{
-                padding: { xs: '4px', sm: '8px' },
+                padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
               }}
             >
-              <SkipNext fontSize={isXsScreen ? 'small' : 'medium'} />
+              <SkipNext
+                fontSize={isCompactLayout || isXsScreen ? 'small' : 'medium'}
+              />
             </IconButton>
             <Tooltip title={getShuffleTooltipText()}>
               <span>
@@ -937,7 +1080,7 @@ export default function Player() {
                   onClick={toggleShuffleMode}
                   size="small"
                   sx={{
-                    padding: { xs: '4px', sm: '8px' },
+                    padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
                   }}
                 >
                   {renderShuffleIcon()}
@@ -946,11 +1089,63 @@ export default function Player() {
             </Tooltip>
           </Stack>
 
-          {/* Seek slider */}
+          {/* Seek slider and track info for compact layout */}
+          {isCompactLayout && (
+            <>
+              <Box
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mt: 0.5,
+                  mb: 0,
+                  px: 1,
+                }}
+              >
+                <Slider
+                  disabled={!currentTrack}
+                  max={duration}
+                  onChange={(_, val) => {
+                    seekToPosition(val as number);
+                  }}
+                  size="small"
+                  sx={{
+                    width: '100%',
+                    color: (t) => t.palette.grey[500],
+                    '& .MuiSlider-thumb': {
+                      height: 6,
+                      width: 6,
+                    },
+                    '& .MuiSlider-track': {
+                      height: 2,
+                    },
+                    '& .MuiSlider-rail': {
+                      height: 2,
+                    },
+                  }}
+                  value={position}
+                />
+              </Box>
+              {/* Compact track info */}
+              <Box
+                sx={{
+                  width: '100%',
+                  overflow: 'hidden',
+                  mt: 0.5,
+                  px: 1,
+                }}
+              >
+                {renderCompactTrackInfo()}
+              </Box>
+            </>
+          )}
+
+          {/* Seek slider for normal layout */}
           <Box
             sx={{
               width: '100%',
-              display: 'flex',
+              display: isCompactLayout ? 'none' : 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               mt: 0.0,
@@ -1004,17 +1199,21 @@ export default function Player() {
         {/* Volume control and notifications */}
         <Box
           sx={{
-            width: { xs: '25%', sm: '25%' },
+            width: isCompactLayout ? 'auto' : { xs: '25%', sm: '25%' },
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
-            pr: { xs: 0, sm: 1 },
-            gap: 1,
+            pr: isCompactLayout ? 0.5 : { xs: 0, sm: 1 },
+            gap: isCompactLayout ? 0.5 : 1,
+            flexShrink: 0,
           }}
         >
           {/* Notification button */}
           <NotificationButton />
-          <IconButton onClick={toggleVolumeControls} size="medium">
+          <IconButton
+            onClick={toggleVolumeControls}
+            size={isCompactLayout ? 'small' : 'medium'}
+          >
             {renderVolumeIcon()}
           </IconButton>
           <Popover
