@@ -136,8 +136,12 @@ export const getCommonColumnDefs = (
   },
   {
     accessorKey: 'playCount',
-    header: 'Play Count',
+    header: 'Plays',
     size: 80,
+    Cell: ({ cell }: { cell: MrtCell<TableData> }) => {
+      const value = cell.getValue<number>();
+      return value === 0 ? '-' : value;
+    },
     sortingFn: (
       rowA: Row<TableData>,
       rowB: Row<TableData>,
