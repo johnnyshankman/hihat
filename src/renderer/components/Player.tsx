@@ -1052,7 +1052,7 @@ export default function Player() {
               size="large"
               sx={{
                 mx: isCompactLayout ? 0.25 : { xs: 0.25, sm: 1 },
-                padding: isCompactLayout ? '4px' : { xs: '8px', sm: '12px' },
+                padding: isCompactLayout ? '4px' : { xs: '8px', sm: '6px' },
               }}
             >
               {!paused ? (
