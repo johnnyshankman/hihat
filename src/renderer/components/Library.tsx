@@ -97,9 +97,16 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [multiSelectPlaylistDialogOpen, setMultiSelectPlaylistDialogOpen] =
     useState(false);
-  const [artistBrowserOpen, setArtistBrowserOpen] = useState(false);
   const artistFilter = useLibraryStore((state) => state.artistFilter);
   const setArtistFilter = useLibraryStore((state) => state.setArtistFilter);
+  const [artistBrowserOpen, setArtistBrowserOpen] = useState(!!artistFilter);
+
+  // Open artist browser when artist filter is set
+  useEffect(() => {
+    if (artistFilter && !artistBrowserOpen) {
+      setArtistBrowserOpen(true);
+    }
+  }, [artistFilter, artistBrowserOpen]);
 
   // Handle artist browser toggle - clear selection when closing
   const handleArtistBrowserToggle = () => {

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import {
   Box,
   List,
@@ -36,6 +36,7 @@ export default function ArtistBrowser({
   const tracks = useLibraryStore((state) => state.tracks);
   const isMobile = useMediaQuery('(max-width:768px)');
   const isSmallScreen = useMediaQuery('(max-width:900px)');
+  const listRef = useRef<HTMLUListElement>(null);
 
   // Adjust width based on screen size
   let browserWidth = width;
@@ -91,6 +92,24 @@ export default function ArtistBrowser({
       ? theme.palette.grey[700]
       : theme.palette.grey[400];
   };
+
+  // Scroll to selected artist when it changes or when browser opens
+  useEffect(() => {
+    if (open && selectedArtist && listRef.current) {
+      // Use setTimeout to ensure the browser is fully opened before scrolling
+      setTimeout(() => {
+        const selectedElement = listRef.current?.querySelector(
+          `[data-artist="${CSS.escape(selectedArtist)}"]`,
+        );
+        if (selectedElement) {
+          selectedElement.scrollIntoView({
+            behavior: 'auto', // Instant scroll instead of smooth
+            block: 'center',
+          });
+        }
+      }, 300); // Increased timeout to ensure collapse animation completes
+    }
+  }, [open, selectedArtist]);
 
   return (
     <Box
@@ -169,6 +188,7 @@ export default function ArtistBrowser({
 
           {/* Artist list */}
           <List
+            ref={listRef}
             sx={{
               flexGrow: 1,
               overflow: 'auto',
@@ -249,6 +269,7 @@ export default function ArtistBrowser({
             {artists.map((artist) => (
               <ListItemButton
                 key={artist}
+                data-artist={artist}
                 onClick={() => handleArtistClick(artist)}
                 selected={selectedArtist === artist}
                 sx={{
