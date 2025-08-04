@@ -508,7 +508,7 @@ export default function Settings({
         await scanLibrary(libraryPath);
 
         // Reload the library to clear out old tracks in the UI with new ones
-        await loadLibrary();
+        await loadLibrary(false);
       } catch (error) {
         console.error('Error scanning library:', error);
         setScanStatus('Failed');

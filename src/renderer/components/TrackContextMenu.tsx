@@ -32,7 +32,7 @@ function TrackContextMenu({
   trackId,
   onAddToPlaylist,
   isPlaylistView = false,
-  onRemoveFromPlaylist,
+  onRemoveFromPlaylist = undefined,
 }: TrackContextMenuProps) {
   const selectSpecificSong = useSettingsAndPlaybackStore(
     (state) => state.selectSpecificSong,
@@ -203,7 +203,7 @@ function TrackContextMenu({
 
       // Step 5: Update the UI
       // Reload the library to reflect the deleted track
-      await loadLibrary();
+      await loadLibrary(false);
 
       // Reload playlists to reflect any changes
       await loadPlaylists();
@@ -314,10 +314,5 @@ function TrackContextMenu({
     </>
   );
 }
-
-TrackContextMenu.defaultProps = {
-  isPlaylistView: false,
-  onRemoveFromPlaylist: undefined,
-};
 
 export default TrackContextMenu;

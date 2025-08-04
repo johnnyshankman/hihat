@@ -29,7 +29,7 @@ export interface LibraryStore {
 
   // Actions
   // import related actions
-  loadLibrary: () => Promise<void>;
+  loadLibrary: (isInitialLoad?: boolean) => Promise<void>;
   loadPlaylists: () => Promise<void>;
   scanLibrary: (libraryPath: string) => Promise<void>;
   importFiles: (files: string[]) => Promise<void>;

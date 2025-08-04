@@ -253,7 +253,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       }
 
       // Reload the library to reflect changes
-      await useLibraryStore.getState().loadLibrary();
+      await useLibraryStore.getState().loadLibrary(false);
 
       // Clear selection after deletion
       setSelectedTracks({});

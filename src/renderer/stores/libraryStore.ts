@@ -23,8 +23,11 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   // Actions
-  loadLibrary: async () => {
-    set({ isLoading: true });
+  loadLibrary: async (isInitialLoad = true) => {
+    // Only show loading screen on initial app load, not during library refreshes
+    if (isInitialLoad) {
+      set({ isLoading: true });
+    }
 
     let allTracks: Track[] = [];
     try {
@@ -236,7 +239,8 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
       set({ isScanning: true });
       await window.electron.library.import(files);
       // Load library first to update the tracks list
-      await get().loadLibrary();
+      // Pass false to avoid showing loading screen during refresh
+      await get().loadLibrary(false);
       // Then load playlists to update smart playlists
       await get().loadPlaylists();
       set({ isScanning: false });
@@ -287,7 +291,8 @@ if (typeof window !== 'undefined') {
       );
 
     // Reload the library to get the updated tracks
-    useLibraryStore.getState().loadLibrary();
+    // Pass false to avoid showing loading screen during refresh
+    useLibraryStore.getState().loadLibrary(false);
     // Reload the playlists to update the smart playlists
     useLibraryStore.getState().loadPlaylists();
   });
