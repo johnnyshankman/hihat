@@ -21,6 +21,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     filtering: '',
     playlistId: null,
   },
+  lastViewedTrackId: null,
 
   // Actions
   loadLibrary: async (isInitialLoad = true) => {
@@ -276,6 +277,10 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
         playlistId,
       },
     });
+  },
+
+  setLastViewedTrackId: (trackId: string | null) => {
+    set({ lastViewedTrackId: trackId });
   },
 }));
 

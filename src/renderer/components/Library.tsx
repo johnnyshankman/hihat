@@ -57,6 +57,10 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   const updateLibraryViewState = useLibraryStore(
     (state) => state.updateLibraryViewState,
   );
+  const lastViewedTrackId = useLibraryStore((state) => state.lastViewedTrackId);
+  const setLastViewedTrackId = useLibraryStore(
+    (state) => state.setLastViewedTrackId,
+  );
   // Get state from settings store
   const columnVisibility = useSettingsAndPlaybackStore(
     (state) => state.columns,
@@ -301,6 +305,41 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       delete window.hihatScrollToLibraryTrack;
     };
   }, [scrollToTrack]);
+
+  // Save the currently visible track on unmount
+  useEffect(() => {
+    return () => {
+      // On unmount, save the currently visible track
+      if (rowVirtualizerRef.current) {
+        const virtualizer = rowVirtualizerRef.current;
+        const visibleRange = virtualizer.range;
+        
+        if (visibleRange) {
+          // Get the middle visible item index
+          const middleIndex = Math.floor(
+            (visibleRange.startIndex + visibleRange.endIndex) / 2,
+          );
+          
+          // Get the filtered and sorted track IDs based on current view state
+          const trackIds = getFilteredAndSortedTrackIds('library');
+          
+          if (trackIds[middleIndex]) {
+            setLastViewedTrackId(trackIds[middleIndex]);
+          }
+        }
+      }
+    };
+  }, [setLastViewedTrackId]);
+
+  // Restore scroll position on mount
+  useEffect(() => {
+    if (lastViewedTrackId && rowVirtualizerRef.current && tracks.length > 0) {
+      // Use a small delay to ensure the virtualizer is ready
+      setTimeout(() => {
+        scrollToTrack(lastViewedTrackId);
+      }, 100);
+    }
+  }, [lastViewedTrackId, scrollToTrack, tracks.length]);
 
   // Get columns from shared configuration
   const columns = useMemo(() => getCommonColumnDefs(sorting), [sorting]);

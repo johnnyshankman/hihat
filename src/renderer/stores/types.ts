@@ -26,6 +26,7 @@ export interface LibraryStore {
     filtering: string;
     playlistId: string | null;
   };
+  lastViewedTrackId: string | null;
 
   // Actions
   // import related actions
@@ -46,6 +47,7 @@ export interface LibraryStore {
     filtering: string,
     playlistId: string | null,
   ) => void;
+  setLastViewedTrackId: (trackId: string | null) => void;
 }
 
 // Playback Store Types
