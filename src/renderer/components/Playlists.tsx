@@ -165,6 +165,49 @@ export default function Playlists({
     setPlaylistDialogOpen(false);
   };
 
+  // Single track remove from playlist handler
+  const handleSingleTrackRemoveFromPlaylist = async (trackId: string) => {
+    if (!selectedPlaylistId) return;
+
+    const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
+    if (!selectedPlaylist || selectedPlaylist.isSmart) {
+      return;
+    }
+
+    const track = tracks.find((t) => t.id === trackId);
+    const confirmMessage = `Are you sure you want to remove "${track?.title}" from "${selectedPlaylist.name}"?`;
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      // Get the showNotification function from the UI store
+      const { showNotification } = useUIStore.getState();
+
+      // Remove the track from the playlist
+      const updatedPlaylist = {
+        ...selectedPlaylist,
+        trackIds: selectedPlaylist.trackIds.filter((id) => id !== trackId),
+      };
+
+      // Update the playlist
+      await window.electron.playlists.update(updatedPlaylist);
+
+      // Reload playlists to reflect changes
+      await useLibraryStore.getState().loadPlaylists();
+
+      showNotification(
+        `Successfully removed "${track?.title}" from "${selectedPlaylist.name}"`,
+        'success',
+      );
+    } catch (error) {
+      console.error('Error removing track from playlist:', error);
+      const { showNotification } = useUIStore.getState();
+      showNotification('Failed to remove track from playlist', 'error');
+    }
+  };
+
   // Multi-select handlers
   const handleMultiSelectRemoveFromPlaylist = async () => {
     const selectedTrackIds = Object.keys(selectedTracks);
@@ -654,8 +697,10 @@ export default function Playlists({
               ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
               : null
           }
+          isPlaylistView
           onAddToPlaylist={handleAddToPlaylist}
           onClose={handleCloseContextMenu}
+          onRemoveFromPlaylist={handleSingleTrackRemoveFromPlaylist}
           open={contextMenu !== null}
           trackId={selectedTrackId}
         />

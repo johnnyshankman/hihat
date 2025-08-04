@@ -21,14 +21,18 @@ interface TrackContextMenuProps {
   onClose: () => void;
   trackId: string | null;
   onAddToPlaylist: (trackId: string) => void;
+  isPlaylistView?: boolean;
+  onRemoveFromPlaylist?: (trackId: string) => void;
 }
 
-export default function TrackContextMenu({
+function TrackContextMenu({
   open,
   anchorPosition,
   onClose,
   trackId,
   onAddToPlaylist,
+  isPlaylistView = false,
+  onRemoveFromPlaylist,
 }: TrackContextMenuProps) {
   const selectSpecificSong = useSettingsAndPlaybackStore(
     (state) => state.selectSpecificSong,
@@ -223,6 +227,12 @@ export default function TrackContextMenu({
     setDeleteDialogOpen(false);
   };
 
+  const handleRemoveFromPlaylist = async () => {
+    if (!trackId || !onRemoveFromPlaylist) return;
+    onRemoveFromPlaylist(trackId);
+    onClose();
+  };
+
   return (
     <>
       <Menu
@@ -271,12 +281,23 @@ export default function TrackContextMenu({
           </ListItemIcon>
           <ListItemText>Download Album Art</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleDeleteClick}>
-          <ListItemIcon>
-            <Delete fontSize="small" htmlColor="red" />
-          </ListItemIcon>
-          <ListItemText style={{ color: 'red' }}>Delete Track</ListItemText>
-        </MenuItem>
+        {isPlaylistView && onRemoveFromPlaylist ? (
+          <MenuItem onClick={handleRemoveFromPlaylist}>
+            <ListItemIcon>
+              <Delete fontSize="small" htmlColor="red" />
+            </ListItemIcon>
+            <ListItemText style={{ color: 'red' }}>
+              Remove from Playlist
+            </ListItemText>
+          </MenuItem>
+        ) : (
+          <MenuItem onClick={handleDeleteClick}>
+            <ListItemIcon>
+              <Delete fontSize="small" htmlColor="red" />
+            </ListItemIcon>
+            <ListItemText style={{ color: 'red' }}>Delete Track</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
       {/* Confirmation Dialog for track deletion */}
@@ -293,3 +314,10 @@ export default function TrackContextMenu({
     </>
   );
 }
+
+TrackContextMenu.defaultProps = {
+  isPlaylistView: false,
+  onRemoveFromPlaylist: undefined,
+};
+
+export default TrackContextMenu;
