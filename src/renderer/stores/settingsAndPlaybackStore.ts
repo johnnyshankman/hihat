@@ -274,11 +274,17 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
         }
 
+        const artistFilter =
+          playbackSource === 'library'
+            ? useLibraryStore.getState().artistFilter
+            : null;
+
         const nextSong = findNextSong(
           trackId,
           state.shuffleMode,
           playbackSource,
           state.repeatMode,
+          artistFilter,
         );
 
         state.player.pause();
@@ -346,11 +352,17 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
 
         // @todo: make it take into account repeat mode 'all'
+        const artistFilter =
+          state.playbackSource === 'library'
+            ? useLibraryStore.getState().artistFilter
+            : null;
+
         const nextSong = findNextSong(
           state.currentTrack?.id,
           state.shuffleMode,
           state.playbackSource,
           state.repeatMode,
+          artistFilter,
         );
 
         if (!nextSong) {
@@ -372,6 +384,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           state.shuffleMode,
           state.playbackSource,
           state.repeatMode,
+          artistFilter,
         );
 
         // First pause current playback
@@ -429,12 +442,18 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
 
           // Find the previous song
+          const artistFilter =
+            state.playbackSource === 'library'
+              ? useLibraryStore.getState().artistFilter
+              : null;
+
           const previousSong = findPreviousSong(
             state.currentTrack.id,
             state.shuffleMode,
             state.playbackSource,
             state.repeatMode,
             state.shuffleHistory,
+            artistFilter,
           );
 
           if (!previousSong) {
@@ -800,11 +819,17 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
 
         // Calculate the song to play after the song that is already playing now
+        const artistFilter =
+          state.playbackSource === 'library'
+            ? useLibraryStore.getState().artistFilter
+            : null;
+
         const nextSong = findNextSong(
           currentTrackThatIsAudiblyPlaying.id,
           state.shuffleMode,
           state.playbackSource,
           state.repeatMode,
+          artistFilter,
         );
 
         // Update shuffle history if needed, never longer than 100 items

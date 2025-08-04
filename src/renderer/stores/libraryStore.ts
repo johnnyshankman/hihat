@@ -16,6 +16,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     sorting: [{ id: 'artist', desc: false }],
     filtering: '',
   },
+  artistFilter: null,
   playlistViewState: {
     sorting: [{ id: 'artist', desc: false }],
     filtering: '',
@@ -281,6 +282,10 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
 
   setLastViewedTrackId: (trackId: string | null) => {
     set({ lastViewedTrackId: trackId });
+  },
+
+  setArtistFilter: (artist: string | null) => {
+    set({ artistFilter: artist });
   },
 }));
 

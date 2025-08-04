@@ -98,7 +98,8 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   const [multiSelectPlaylistDialogOpen, setMultiSelectPlaylistDialogOpen] =
     useState(false);
   const [artistBrowserOpen, setArtistBrowserOpen] = useState(false);
-  const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
+  const artistFilter = useLibraryStore((state) => state.artistFilter);
+  const setArtistFilter = useLibraryStore((state) => state.setArtistFilter);
 
   // Handle artist browser toggle - clear selection when closing
   const handleArtistBrowserToggle = () => {
@@ -107,7 +108,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
 
     // If closing the browser, reset to "All Artists"
     if (!newOpenState) {
-      setSelectedArtist(null);
+      setArtistFilter(null);
     }
   };
 
@@ -366,10 +367,10 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     let filteredTracks = tracks;
 
     // Filter by selected artist if one is selected
-    if (selectedArtist) {
+    if (artistFilter) {
       filteredTracks = tracks.filter((track) => {
         const artist = track.albumArtist || track.artist || 'Unknown Artist';
-        return artist === selectedArtist;
+        return artist === artistFilter;
       });
     }
 
@@ -388,7 +389,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         trackNumber: track.trackNumber || null,
       };
     });
-  }, [tracks, selectedArtist]);
+  }, [tracks, artistFilter]);
 
   // Update the renderTopToolbarCustomActions function to include the SidebarToggle
   const renderTopToolbarCustomActions = () => {
@@ -643,10 +644,10 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     >
       {/* Artist Browser */}
       <ArtistBrowser
-        onArtistSelect={setSelectedArtist}
+        onArtistSelect={setArtistFilter}
         onToggle={handleArtistBrowserToggle}
         open={artistBrowserOpen}
-        selectedArtist={selectedArtist}
+        selectedArtist={artistFilter}
       />
 
       {/* Main content area */}

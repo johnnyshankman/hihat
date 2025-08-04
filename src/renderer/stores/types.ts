@@ -21,6 +21,7 @@ export interface LibraryStore {
     sorting: any;
     filtering: string;
   };
+  artistFilter: string | null;
   playlistViewState: {
     sorting: any;
     filtering: string;
@@ -48,6 +49,7 @@ export interface LibraryStore {
     playlistId: string | null,
   ) => void;
   setLastViewedTrackId: (trackId: string | null) => void;
+  setArtistFilter: (artist: string | null) => void;
 }
 
 // Playback Store Types
