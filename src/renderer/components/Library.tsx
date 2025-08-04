@@ -100,6 +100,17 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   const [artistBrowserOpen, setArtistBrowserOpen] = useState(false);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
 
+  // Handle artist browser toggle - clear selection when closing
+  const handleArtistBrowserToggle = () => {
+    const newOpenState = !artistBrowserOpen;
+    setArtistBrowserOpen(newOpenState);
+
+    // If closing the browser, reset to "All Artists"
+    if (!newOpenState) {
+      setSelectedArtist(null);
+    }
+  };
+
   // Global filter state for search
   const [globalFilter, setGlobalFilter] = useState('');
 
@@ -400,7 +411,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
           }
         >
           <IconButton
-            onClick={() => setArtistBrowserOpen(!artistBrowserOpen)}
+            onClick={handleArtistBrowserToggle}
             size="small"
             sx={{
               color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
@@ -633,7 +644,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       {/* Artist Browser */}
       <ArtistBrowser
         onArtistSelect={setSelectedArtist}
-        onToggle={() => setArtistBrowserOpen(!artistBrowserOpen)}
+        onToggle={handleArtistBrowserToggle}
         open={artistBrowserOpen}
         selectedArtist={selectedArtist}
       />
