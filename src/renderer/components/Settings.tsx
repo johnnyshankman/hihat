@@ -704,19 +704,45 @@ export default function Settings({
               <Divider sx={{ my: 2 }} />
             </Grid>
 
+            <Grid item sm={6} xs={12}>
+              <Typography gutterBottom variant="h2">
+                Import Music
+              </Typography>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography
+                  color="text.secondary"
+                  sx={{ display: 'block', fontSize: '0.75rem' }}
+                >
+                  Select music files to import directly into your hihat library.
+                  hihat will deduplicate songs automatically.
+                </Typography>
+                <Button
+                  color="primary"
+                  disabled={!libraryPath || isScanning}
+                  fullWidth
+                  onClick={handleAddSongs}
+                  startIcon={<AddIcon />}
+                  variant="contained"
+                >
+                  Add Songs
+                </Button>
+              </Box>
+            </Grid>
+
             {/* Library Operations Section */}
             <Grid item sm={6} xs={12}>
               <Typography gutterBottom variant="h2">
-                Library Management
-              </Typography>
-              <Typography
-                color="text.secondary"
-                sx={{ display: 'block', mb: 2 }}
-                variant="caption"
-              >
-                Manage your music library.
+                Rescan Library
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography
+                  color="text.secondary"
+                  sx={{ display: 'block', fontSize: '0.75rem' }}
+                >
+                  Scans your existing Library Location for any new changes then
+                  updates your hihat library accordingly.
+                </Typography>
                 <Button
                   color="primary"
                   disabled={!libraryPath || isScanning}
@@ -727,45 +753,6 @@ export default function Settings({
                 >
                   {isScanning ? 'Scanning...' : 'Rescan Library'}
                 </Button>
-                <Typography
-                  color="text.secondary"
-                  sx={{ display: 'block', fontSize: '0.75rem' }}
-                >
-                  Scan your existing library directory for any new changes and
-                  update your hihat library.
-                </Typography>
-              </Box>
-            </Grid>
-
-            <Grid item sm={6} xs={12}>
-              <Typography gutterBottom variant="h2">
-                Import Music
-              </Typography>
-              <Typography
-                color="text.secondary"
-                sx={{ display: 'block', mb: 2 }}
-                variant="caption"
-              >
-                Add music to your library.
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Button
-                  color="primary"
-                  disabled={!libraryPath || isScanning}
-                  fullWidth
-                  onClick={handleAddSongs}
-                  startIcon={<AddIcon />}
-                  variant="outlined"
-                >
-                  Add Songs
-                </Button>
-                <Typography
-                  color="text.secondary"
-                  sx={{ display: 'block', fontSize: '0.75rem' }}
-                >
-                  Select music files to import directly into your hihat library.
-                  hihat will deduplicate songs automatically.
-                </Typography>
               </Box>
             </Grid>
 
@@ -776,19 +763,22 @@ export default function Settings({
             {/* Backup Section */}
             <Grid item xs={12}>
               <Typography gutterBottom variant="h2">
-                Library Backup
+                Library Backup / Copy
               </Typography>
               <Typography
                 color="text.secondary"
                 sx={{ display: 'block', mb: 2 }}
                 variant="caption"
               >
-                Create a backup of your music library to an external drive or
-                another location.
+                Saves your entire music library to any external drive or
+                location. Uses rsync to do this efficiently while preserving
+                file structure and metadata, just like iTunes with iPods
+                back-in-the-day. Will only copy over new or updated files and
+                will never delete data already in the location for the backup.
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Button
-                  color="secondary"
+                  color="primary"
                   disabled={!libraryPath || isScanning || isBackupInProgress}
                   onClick={handleBackupLibrary}
                   startIcon={<BackupIcon />}
@@ -796,13 +786,6 @@ export default function Settings({
                 >
                   {isBackupInProgress ? 'Backing Up...' : 'Backup Library'}
                 </Button>
-                <Typography
-                  color="text.secondary"
-                  sx={{ display: 'block', fontSize: '0.75rem' }}
-                >
-                  Uses rsync to efficiently copy your music files to another
-                  location while preserving file structure and metadata.
-                </Typography>
               </Box>
             </Grid>
           </Grid>
