@@ -114,6 +114,7 @@ export interface SettingsStore {
 export interface UIStore {
   notifications: Notification[];
   currentView: 'library' | 'playlists' | 'settings';
+  artistBrowserOpen: boolean;
   showNotification: (
     message: string,
     type: 'info' | 'success' | 'warning' | 'error',
@@ -122,6 +123,7 @@ export interface UIStore {
   removeNotification: (id: string) => void;
   clearAllNotifications: () => void;
   setCurrentView: (view: 'library' | 'playlists' | 'settings') => void;
+  setArtistBrowserOpen: (open: boolean) => void;
 }
 
 // Combined Settings and Playback Store Types

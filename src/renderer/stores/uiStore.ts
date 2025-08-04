@@ -6,6 +6,7 @@ const useUIStore = create<UIStore>((set) => ({
   // State
   notifications: [],
   currentView: 'library',
+  artistBrowserOpen: false,
 
   // Actions
   setCurrentView: (view: 'library' | 'playlists' | 'settings') =>
@@ -44,6 +45,8 @@ const useUIStore = create<UIStore>((set) => ({
     set(() => ({
       notifications: [],
     })),
+
+  setArtistBrowserOpen: (open: boolean) => set({ artistBrowserOpen: open }),
 }));
 
 export default useUIStore;

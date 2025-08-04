@@ -13,6 +13,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   MaterialReactTable,
@@ -21,6 +23,7 @@ import {
   type MRT_RowVirtualizer as MrtRowVirtualizer,
   type MRT_VisibilityState as MrtVisibilityState,
 } from 'material-react-table';
+import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
 import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
@@ -30,6 +33,7 @@ import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import SidebarToggle from './SidebarToggle';
+import ArtistBrowser from './ArtistBrowser';
 import {
   getCommonTableConfig,
   getCommonColumnVisibilityHandler,
@@ -93,6 +97,8 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [multiSelectPlaylistDialogOpen, setMultiSelectPlaylistDialogOpen] =
     useState(false);
+  const [artistBrowserOpen, setArtistBrowserOpen] = useState(false);
+  const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
 
   // Global filter state for search
   const [globalFilter, setGlobalFilter] = useState('');
@@ -308,21 +314,21 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
 
   // Save the currently visible track on unmount
   useEffect(() => {
+    const virtualizerRef = rowVirtualizerRef.current;
     return () => {
       // On unmount, save the currently visible track
-      if (rowVirtualizerRef.current) {
-        const virtualizer = rowVirtualizerRef.current;
-        const visibleRange = virtualizer.range;
-        
+      if (virtualizerRef) {
+        const visibleRange = virtualizerRef.range;
+
         if (visibleRange) {
           // Get the middle visible item index
           const middleIndex = Math.floor(
             (visibleRange.startIndex + visibleRange.endIndex) / 2,
           );
-          
+
           // Get the filtered and sorted track IDs based on current view state
           const trackIds = getFilteredAndSortedTrackIds('library');
-          
+
           if (trackIds[middleIndex]) {
             setLastViewedTrackId(trackIds[middleIndex]);
           }
@@ -344,9 +350,19 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   // Get columns from shared configuration
   const columns = useMemo(() => getCommonColumnDefs(sorting), [sorting]);
 
-  // Prepare data for Material React Table
+  // Prepare data for Material React Table with artist filtering
   const data = useMemo<TableData[]>(() => {
-    return tracks.map((track) => {
+    let filteredTracks = tracks;
+
+    // Filter by selected artist if one is selected
+    if (selectedArtist) {
+      filteredTracks = tracks.filter((track) => {
+        const artist = track.albumArtist || track.artist || 'Unknown Artist';
+        return artist === selectedArtist;
+      });
+    }
+
+    return filteredTracks.map((track) => {
       return {
         id: track.id || '',
         title: track.title || 'Unknown Title',
@@ -361,7 +377,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         trackNumber: track.trackNumber || null,
       };
     });
-  }, [tracks]);
+  }, [tracks, selectedArtist]);
 
   // Update the renderTopToolbarCustomActions function to include the SidebarToggle
   const renderTopToolbarCustomActions = () => {
@@ -377,6 +393,25 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         }}
       >
         <SidebarToggle isOpen={drawerOpen} onToggle={_onDrawerToggle} />
+        {/* Artist browser toggle button */}
+        <Tooltip
+          title={
+            artistBrowserOpen ? 'Hide artist browser' : 'Show artist browser'
+          }
+        >
+          <IconButton
+            onClick={() => setArtistBrowserOpen(!artistBrowserOpen)}
+            size="small"
+            sx={{
+              color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
+              '&:hover': {
+                color: artistBrowserOpen ? 'primary.dark' : 'text.primary',
+              },
+            }}
+          >
+            <LibraryMusicIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Tooltip>
         <Box
           sx={{
             display: 'flex',
@@ -417,7 +452,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
               }}
               variant="body2"
             >
-              {tracks.length.toLocaleString()}&nbsp;♫
+              {data.length.toLocaleString()}&nbsp;♫
             </Typography>
           </Box>
         </Box>
@@ -588,89 +623,111 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         height: '100%',
         width: '100%',
         display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden', // Changed from 'auto' to 'hidden' to prevent scrollbar conflicts
+        flexDirection: 'row',
+        overflow: 'hidden',
         padding: 0,
         margin: 0,
         backgroundColor: (theme) => theme.palette.background.default,
       }}
     >
+      {/* Artist Browser */}
+      <ArtistBrowser
+        onArtistSelect={setSelectedArtist}
+        onToggle={() => setArtistBrowserOpen(!artistBrowserOpen)}
+        open={artistBrowserOpen}
+        selectedArtist={selectedArtist}
+      />
+
+      {/* Main content area */}
       <Box
         sx={{
           flexGrow: 1,
           height: '100%',
-          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
           padding: 0,
           margin: 0,
-          display: 'flex', // Add display flex
-          flexDirection: 'column', // Add flex direction column
           backgroundColor: (theme) => theme.palette.background.default,
         }}
       >
-        <MaterialReactTable table={table} />
+        <Box
+          sx={{
+            flexGrow: 1,
+            height: '100%',
+            width: '100%',
+            padding: 0,
+            margin: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: (theme) => theme.palette.background.default,
+          }}
+        >
+          <MaterialReactTable table={table} />
+        </Box>
+
+        {/* Library path selection dialog */}
+        <Dialog onClose={handleCloseDialog} open={dialogOpen}>
+          <DialogTitle>Set Library Path</DialogTitle>
+          <DialogContent>
+            <Typography gutterBottom>
+              Please select your music library folder:
+            </Typography>
+            <Button onClick={handleSelectFolder} variant="contained">
+              Select Folder
+            </Button>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Cancel</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Playlist selection dialog */}
+        {selectedTrackId && (
+          <PlaylistSelectionDialog
+            onClose={handleClosePlaylistDialog}
+            open={playlistDialogOpen}
+            trackId={selectedTrackId}
+          />
+        )}
+
+        {/* Context menu - show multi-select menu if multiple tracks selected */}
+        {Object.keys(selectedTracks).length > 1 ? (
+          <MultiSelectContextMenu
+            anchorPosition={
+              contextMenu !== null
+                ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+                : null
+            }
+            onAddToPlaylist={handleMultiSelectAddToPlaylist}
+            onClose={handleCloseContextMenu}
+            onDeleteTracks={handleMultiSelectDeleteTracks}
+            open={contextMenu !== null}
+            selectedCount={Object.keys(selectedTracks).length}
+          />
+        ) : (
+          <TrackContextMenu
+            anchorPosition={
+              contextMenu !== null
+                ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+                : null
+            }
+            onAddToPlaylist={handleAddToPlaylist}
+            onClose={handleCloseContextMenu}
+            open={contextMenu !== null}
+            trackId={selectedTrackId}
+          />
+        )}
+
+        {/* Multi-select playlist selection dialog */}
+        {multiSelectPlaylistDialogOpen && (
+          <PlaylistSelectionDialog
+            onClose={handleCloseMultiSelectPlaylistDialog}
+            open={multiSelectPlaylistDialogOpen}
+            trackIds={Object.keys(selectedTracks)}
+          />
+        )}
       </Box>
-
-      {/* Library path selection dialog */}
-      <Dialog onClose={handleCloseDialog} open={dialogOpen}>
-        <DialogTitle>Set Library Path</DialogTitle>
-        <DialogContent>
-          <Typography gutterBottom>
-            Please select your music library folder:
-          </Typography>
-          <Button onClick={handleSelectFolder} variant="contained">
-            Select Folder
-          </Button>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Playlist selection dialog */}
-      {selectedTrackId && (
-        <PlaylistSelectionDialog
-          onClose={handleClosePlaylistDialog}
-          open={playlistDialogOpen}
-          trackId={selectedTrackId}
-        />
-      )}
-
-      {/* Context menu - show multi-select menu if multiple tracks selected */}
-      {Object.keys(selectedTracks).length > 1 ? (
-        <MultiSelectContextMenu
-          anchorPosition={
-            contextMenu !== null
-              ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-              : null
-          }
-          onAddToPlaylist={handleMultiSelectAddToPlaylist}
-          onClose={handleCloseContextMenu}
-          onDeleteTracks={handleMultiSelectDeleteTracks}
-          open={contextMenu !== null}
-          selectedCount={Object.keys(selectedTracks).length}
-        />
-      ) : (
-        <TrackContextMenu
-          anchorPosition={
-            contextMenu !== null
-              ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-              : null
-          }
-          onAddToPlaylist={handleAddToPlaylist}
-          onClose={handleCloseContextMenu}
-          open={contextMenu !== null}
-          trackId={selectedTrackId}
-        />
-      )}
-
-      {/* Multi-select playlist selection dialog */}
-      {multiSelectPlaylistDialogOpen && (
-        <PlaylistSelectionDialog
-          onClose={handleCloseMultiSelectPlaylistDialog}
-          open={multiSelectPlaylistDialogOpen}
-          trackIds={Object.keys(selectedTracks)}
-        />
-      )}
     </Box>
   );
 }
