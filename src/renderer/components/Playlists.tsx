@@ -418,6 +418,7 @@ export default function Playlists({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               mr: 1,
+              userSelect: 'none',
             }}
             variant="h2"
           >
@@ -435,6 +436,7 @@ export default function Playlists({
               px: 1.5,
               py: 0.5,
               justifyContent: 'center',
+              userSelect: 'none',
             }}
           >
             <Typography

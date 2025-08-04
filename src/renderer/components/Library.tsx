@@ -22,8 +22,15 @@ import {
   type MRT_SortingState as MrtSortingState,
   type MRT_RowVirtualizer as MrtRowVirtualizer,
   type MRT_VisibilityState as MrtVisibilityState,
+  // eslint-disable-next-line camelcase
+  MRT_ToggleFiltersButton,
+  // eslint-disable-next-line camelcase
+  MRT_ShowHideColumnsButton,
+  // eslint-disable-next-line camelcase
+  MRT_ToggleGlobalFilterButton,
 } from 'material-react-table';
 import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
+import PeopleIcon from '@mui/icons-material/People';
 import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
@@ -412,25 +419,14 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         }}
       >
         <SidebarToggle isOpen={drawerOpen} onToggle={_onDrawerToggle} />
-        {/* Artist browser toggle button */}
-        <Tooltip
-          title={
-            artistBrowserOpen ? 'Hide artist browser' : 'Show artist browser'
-          }
-        >
-          <IconButton
-            onClick={handleArtistBrowserToggle}
-            size="small"
-            sx={{
-              color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
-              '&:hover': {
-                color: artistBrowserOpen ? 'primary.dark' : 'text.primary',
-              },
-            }}
-          >
-            <LibraryMusicIcon sx={{ fontSize: 20 }} />
-          </IconButton>
-        </Tooltip>
+        {/* <LibraryMusicIcon
+          sx={{
+            fontSize: 20,
+            color: 'text.secondary',
+            ml: 1,
+            alignSelf: 'center',
+          }}
+        /> */}
         <Box
           sx={{
             display: 'flex',
@@ -445,6 +441,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               mr: 1,
+              userSelect: 'none',
             }}
             variant="h2"
           >
@@ -462,6 +459,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
               px: 1.5,
               py: 0.5,
               justifyContent: 'center',
+              userSelect: 'none',
             }}
           >
             <Typography
@@ -600,6 +598,43 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       };
     },
     renderTopToolbarCustomActions,
+    renderToolbarInternalActions: ({ table: tableInstance }) => (
+      <Box
+        sx={{
+          display: 'flex',
+          gap: '2px',
+          height: '100%',
+          marginTop: '4px',
+          alignItems: 'center',
+          justifyContent: 'center',
+          alignContent: 'center',
+        }}
+      >
+        {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
+        <MRT_ToggleGlobalFilterButton table={tableInstance} />
+        {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
+        <MRT_ToggleFiltersButton table={tableInstance} />
+        {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
+        <MRT_ShowHideColumnsButton table={tableInstance} />
+        <Tooltip
+          title={
+            artistBrowserOpen ? 'Hide artist browser' : 'Show artist browser'
+          }
+        >
+          <IconButton
+            onClick={handleArtistBrowserToggle}
+            sx={{
+              color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
+              '&:hover': {
+                color: artistBrowserOpen ? 'primary.dark' : 'text.primary',
+              },
+            }}
+          >
+            <PeopleIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    ),
     renderEmptyRowsFallback: () => (
       <Box
         sx={{
@@ -649,14 +684,6 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         backgroundColor: (theme) => theme.palette.background.default,
       }}
     >
-      {/* Artist Browser */}
-      <ArtistBrowser
-        onArtistSelect={setArtistFilter}
-        onToggle={handleArtistBrowserToggle}
-        open={artistBrowserOpen}
-        selectedArtist={artistFilter}
-      />
-
       {/* Main content area */}
       <Box
         sx={{
@@ -747,6 +774,14 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
           />
         )}
       </Box>
+
+      {/* Artist Browser */}
+      <ArtistBrowser
+        onArtistSelect={setArtistFilter}
+        onToggle={handleArtistBrowserToggle}
+        open={artistBrowserOpen}
+        selectedArtist={artistFilter}
+      />
     </Box>
   );
 }

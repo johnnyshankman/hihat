@@ -136,7 +136,7 @@ export default function ArtistBrowser({
             display: 'flex',
             flexDirection: 'column',
             borderRadius: 0,
-            borderRight: `1px solid ${theme.palette.divider}`,
+            borderLeft: `1px solid ${theme.palette.divider}`,
             backgroundColor:
               theme.palette.mode === 'dark'
                 ? theme.palette.grey[900]
@@ -157,10 +157,10 @@ export default function ArtistBrowser({
                 theme.palette.mode === 'dark'
                   ? 'rgba(255,255,255,0.02)'
                   : 'rgba(0,0,0,0.02)',
+              userSelect: 'none',
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <PeopleIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
               <Typography
                 sx={{
                   fontWeight: 500,
@@ -172,7 +172,7 @@ export default function ArtistBrowser({
                 Artists
               </Typography>
             </Box>
-            <Tooltip title="Hide artist browser">
+            <Tooltip placement="bottom" title="Hide artist browser">
               <IconButton
                 onClick={onToggle}
                 size="small"
@@ -181,7 +181,7 @@ export default function ArtistBrowser({
                   '&:hover': { color: 'text.primary' },
                 }}
               >
-                <ChevronLeftIcon fontSize="small" />
+                <ChevronRightIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           </Box>
@@ -222,6 +222,7 @@ export default function ArtistBrowser({
                 py: 0.4,
                 px: 1.5,
                 minHeight: 32,
+                userSelect: 'none',
                 '&:hover': {
                   backgroundColor:
                     theme.palette.mode === 'dark'
@@ -276,6 +277,7 @@ export default function ArtistBrowser({
                   py: 0.4,
                   px: 1.5,
                   minHeight: 32,
+                  userSelect: 'none',
                   '&:hover': {
                     backgroundColor:
                       theme.palette.mode === 'dark'
@@ -332,13 +334,13 @@ export default function ArtistBrowser({
         <Box
           sx={{
             position: 'absolute',
-            left: 0,
+            right: 0,
             top: '90%',
             transform: 'translateY(-90%)',
             zIndex: 10,
           }}
         >
-          <Tooltip placement="right" title="Show artist browser">
+          <Tooltip placement="left" title="Show artist browser">
             <IconButton
               onClick={onToggle}
               sx={{
@@ -347,7 +349,7 @@ export default function ArtistBrowser({
                     ? theme.palette.grey[800]
                     : theme.palette.grey[200],
                 // same radius as the sidebar playlist buttons
-                borderRadius: '0 4px 4px 0',
+                borderRadius: '4px 0 0 4px',
                 '&:hover': {
                   backgroundColor:
                     theme.palette.mode === 'dark'
@@ -356,7 +358,7 @@ export default function ArtistBrowser({
                 },
               }}
             >
-              <ChevronRightIcon />
+              <ChevronLeftIcon />
             </IconButton>
           </Tooltip>
         </Box>

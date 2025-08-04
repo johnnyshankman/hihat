@@ -1160,6 +1160,7 @@ export default function Player() {
                 minWidth: { xs: '30px', sm: '40px' },
                 textAlign: 'right',
                 fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                userSelect: 'none',
               }}
               variant="caption"
             >
@@ -1188,6 +1189,7 @@ export default function Player() {
                 ml: 1,
                 minWidth: { xs: '30px', sm: '40px' },
                 fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                userSelect: 'none',
               }}
               variant="caption"
             >
