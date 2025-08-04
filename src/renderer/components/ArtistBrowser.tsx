@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
+import PeopleIcon from '@mui/icons-material/People';
 import { useLibraryStore } from '../stores';
 
 interface ArtistBrowserProps {
@@ -127,7 +127,9 @@ export default function ArtistBrowser({
           {/* Header */}
           <Box
             sx={{
-              p: 1,
+              minHeight: '64px',
+              px: 1.5,
+              py: 1,
               borderBottom: `1px solid ${theme.palette.divider}`,
               display: 'flex',
               alignItems: 'center',
@@ -138,16 +140,15 @@ export default function ArtistBrowser({
                   : 'rgba(0,0,0,0.02)',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <LibraryMusicIcon
-                sx={{ fontSize: 18, color: 'text.secondary' }}
-              />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <PeopleIcon sx={{ fontSize: 24, color: 'text.secondary' }} />
               <Typography
                 sx={{
-                  fontWeight: 600,
-                  color: 'text.secondary',
+                  fontWeight: 500,
+                  fontSize: '1.25rem',
+                  lineHeight: 1.6,
                 }}
-                variant="subtitle2"
+                variant="h6"
               >
                 Artists
               </Typography>
@@ -311,8 +312,8 @@ export default function ArtistBrowser({
           sx={{
             position: 'absolute',
             left: 0,
-            top: '50%',
-            transform: 'translateY(-50%)',
+            top: '90%',
+            transform: 'translateY(-90%)',
             zIndex: 10,
           }}
         >
@@ -324,6 +325,7 @@ export default function ArtistBrowser({
                   theme.palette.mode === 'dark'
                     ? theme.palette.grey[800]
                     : theme.palette.grey[200],
+                // same radius as the sidebar playlist buttons
                 borderRadius: '0 4px 4px 0',
                 '&:hover': {
                   backgroundColor:
