@@ -138,7 +138,7 @@ export default function ArtistBrowser({
             borderLeft: `1px solid ${theme.palette.divider}`,
             backgroundColor:
               theme.palette.mode === 'dark'
-                ? theme.palette.grey[900]
+                ? theme.palette.grey.A700
                 : theme.palette.grey[50],
           }}
         >
