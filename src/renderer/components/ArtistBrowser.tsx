@@ -8,6 +8,7 @@ import {
   IconButton,
   Collapse,
   Paper,
+  Theme,
   useTheme,
   useMediaQuery,
   Tooltip,
@@ -194,22 +195,30 @@ export default function ArtistBrowser({
               py: 0,
               '&::-webkit-scrollbar': {
                 width: '8px',
+                height: '8px',
               },
               '&::-webkit-scrollbar-track': {
                 backgroundColor: 'transparent',
               },
               '&::-webkit-scrollbar-thumb': {
-                backgroundColor:
+                backgroundColor: (_theme: Theme) =>
                   theme.palette.mode === 'dark'
                     ? 'rgba(255,255,255,0.1)'
                     : 'rgba(0,0,0,0.1)',
                 borderRadius: '0px',
                 '&:hover': {
-                  backgroundColor:
+                  backgroundColor: (_theme: Theme) =>
                     theme.palette.mode === 'dark'
                       ? 'rgba(255,255,255,0.2)'
                       : 'rgba(0,0,0,0.2)',
                 },
+              },
+              '&::-webkit-scrollbar-corner': {
+                backgroundColor: (_theme: Theme) =>
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(255,255,255,0.1)'
+                    : 'rgba(0,0,0,0.1)',
+                borderRadius: '0px',
               },
             }}
           >

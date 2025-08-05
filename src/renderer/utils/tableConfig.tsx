@@ -236,6 +236,33 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
       padding: 0,
       margin: 0,
       backgroundColor: (theme: Theme) => theme.palette.background.default,
+      '&::-webkit-scrollbar': {
+        width: '8px',
+        height: '8px',
+      },
+      '&::-webkit-scrollbar-track': {
+        backgroundColor: 'transparent',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        backgroundColor: (theme: Theme) =>
+          theme.palette.mode === 'dark'
+            ? 'rgba(255,255,255,0.1)'
+            : 'rgba(0,0,0,0.1)',
+        borderRadius: '0px',
+        '&:hover': {
+          backgroundColor: (theme: Theme) =>
+            theme.palette.mode === 'dark'
+              ? 'rgba(255,255,255,0.2)'
+              : 'rgba(0,0,0,0.2)',
+        },
+      },
+      '&::-webkit-scrollbar-corner': {
+        backgroundColor: (theme: Theme) =>
+          theme.palette.mode === 'dark'
+            ? 'rgba(255,255,255,0.1)'
+            : 'rgba(0,0,0,0.1)',
+        borderRadius: '0px',
+      },
     },
   },
 
@@ -350,7 +377,7 @@ export const getCommonRowStyling = (
   // set a default background color
   backgroundColor: (theme: Theme) => theme.palette.background.default,
   // alternate background colors for readability
-  '&:nth-of-type(odd)': {
+  '&:nth-of-type(even)': {
     backgroundColor: (theme: Theme) =>
       theme.palette.mode === 'dark'
         ? theme.palette.grey.A700
