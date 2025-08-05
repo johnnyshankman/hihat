@@ -154,7 +154,7 @@ export default function ArtistBrowser({
               justifyContent: 'space-between',
               backgroundColor:
                 theme.palette.mode === 'dark'
-                  ? '#0D0D0D'
+                  ? '#0C0C0C'
                   : theme.palette.background.paper,
               userSelect: 'none',
             }}
@@ -203,7 +203,7 @@ export default function ArtistBrowser({
                   theme.palette.mode === 'dark'
                     ? 'rgba(255,255,255,0.1)'
                     : 'rgba(0,0,0,0.1)',
-                borderRadius: '4px',
+                borderRadius: '0px',
                 '&:hover': {
                   backgroundColor:
                     theme.palette.mode === 'dark'
@@ -222,6 +222,9 @@ export default function ArtistBrowser({
                 px: 1.5,
                 minHeight: 32,
                 userSelect: 'none',
+                backgroundColor:
+                  theme.palette.mode === 'dark' ? 'black' : 'transparent',
+
                 '&:hover': {
                   backgroundColor:
                     theme.palette.mode === 'dark'
@@ -266,7 +269,7 @@ export default function ArtistBrowser({
               />
             </ListItemButton>
 
-            {artists.map((artist, index) => (
+            {artists.map((artist, _index) => (
               <ListItemButton
                 key={artist}
                 data-artist={artist}
@@ -278,9 +281,7 @@ export default function ArtistBrowser({
                   minHeight: 32,
                   userSelect: 'none',
                   backgroundColor:
-                    theme.palette.mode === 'dark'
-                      ? 'rgba(0, 0, 0, 0.3)'
-                      : 'transparent',
+                    theme.palette.mode === 'dark' ? 'black' : 'transparent',
                   '&:hover': {
                     backgroundColor:
                       theme.palette.mode === 'dark'
@@ -298,6 +299,12 @@ export default function ArtistBrowser({
                           ? `${theme.palette.grey[600]} !important`
                           : `${theme.palette.grey[400]} !important`,
                     },
+                  },
+                  '&:nth-of-type(even)': {
+                    backgroundColor:
+                      theme.palette.mode === 'dark'
+                        ? theme.palette.grey.A700
+                        : theme.palette.grey[50],
                   },
                 }}
               >
