@@ -345,7 +345,7 @@ export default function Playlists({
   }, [selectedPlaylistId, playlists]);
 
   // Get columns from shared configuration
-  const columns = useMemo(() => getCommonColumnDefs(sorting), [sorting]);
+  const columns = useMemo(() => getCommonColumnDefs(), []);
 
   // Prepare data for Material React Table
   const data = useMemo<TableData[]>(() => {

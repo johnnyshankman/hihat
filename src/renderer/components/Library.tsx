@@ -29,7 +29,6 @@ import {
   // eslint-disable-next-line camelcase
   MRT_ToggleGlobalFilterButton,
 } from 'material-react-table';
-import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
 import PeopleIcon from '@mui/icons-material/People';
 import {
   useLibraryStore,
@@ -374,7 +373,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   }, [lastViewedTrackId, scrollToTrack, tracks.length]);
 
   // Get columns from shared configuration
-  const columns = useMemo(() => getCommonColumnDefs(sorting), [sorting]);
+  const columns = useMemo(() => getCommonColumnDefs(), []);
 
   // Prepare data for Material React Table with artist filtering
   const data = useMemo<TableData[]>(() => {

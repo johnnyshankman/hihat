@@ -1,7 +1,6 @@
 import { Theme, Box, Typography } from '@mui/material';
 import {
   MRT_VisibilityState as MrtVisibilityState,
-  MRT_SortingState as MrtSortingState,
   MRT_Cell as MrtCell,
   MRT_ColumnDef as MrtColumnDef,
 } from 'material-react-table';
@@ -52,64 +51,34 @@ export interface TableData {
 }
 
 // Define common column definitions
-export const getCommonColumnDefs = (
-  sorting: MrtSortingState,
-): MrtColumnDef<TableData>[] => [
+export const getCommonColumnDefs = (): MrtColumnDef<TableData>[] => [
   {
     accessorKey: 'title',
     header: 'Title',
     size: 350,
-    sortingFn: (
-      rowA: Row<TableData>,
-      rowB: Row<TableData>,
-      _columnId: string,
-    ) => {
-      const columnSorting = sorting.find((sort) => sort.id === 'title');
-      const isDescending = columnSorting ? columnSorting.desc : false;
-      return sortByTitle(rowA.original, rowB.original, isDescending);
-    },
+    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
+      sortByTitle(rowA.original, rowB.original, false),
   },
   {
     accessorKey: 'artist',
     header: 'Artist',
     size: 200,
-    sortingFn: (
-      rowA: Row<TableData>,
-      rowB: Row<TableData>,
-      _columnId: string,
-    ) => {
-      const columnSorting = sorting.find((sort) => sort.id === 'artist');
-      const isDescending = columnSorting ? columnSorting.desc : false;
-      return sortByArtist(rowA.original, rowB.original, isDescending);
-    },
+    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
+      sortByArtist(rowA.original, rowB.original, false),
   },
   {
     accessorKey: 'album',
     header: 'Album',
     size: 200,
-    sortingFn: (
-      rowA: Row<TableData>,
-      rowB: Row<TableData>,
-      _columnId: string,
-    ) => {
-      const columnSorting = sorting.find((sort) => sort.id === 'album');
-      const isDescending = columnSorting ? columnSorting.desc : false;
-      return sortByAlbum(rowA.original, rowB.original, isDescending);
-    },
+    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
+      sortByAlbum(rowA.original, rowB.original, false),
   },
   {
     accessorKey: 'genre',
     header: 'Genre',
     size: 120,
-    sortingFn: (
-      rowA: Row<TableData>,
-      rowB: Row<TableData>,
-      _columnId: string,
-    ) => {
-      const columnSorting = sorting.find((sort) => sort.id === 'genre');
-      const isDescending = columnSorting ? columnSorting.desc : false;
-      return sortByGenre(rowA.original, rowB.original, isDescending);
-    },
+    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
+      sortByGenre(rowA.original, rowB.original, false),
     Cell: ({ cell }: { cell: MrtCell<TableData> }) => {
       const value = cell.getValue<string>();
       if (value === 'Unknown Genre') {
@@ -124,15 +93,8 @@ export const getCommonColumnDefs = (
     size: 80,
     Cell: ({ cell }: { cell: MrtCell<TableData> }) =>
       formatDurationFromSeconds(cell.getValue<number>()),
-    sortingFn: (
-      rowA: Row<TableData>,
-      rowB: Row<TableData>,
-      _columnId: string,
-    ) => {
-      const columnSorting = sorting.find((sort) => sort.id === 'duration');
-      const isDescending = columnSorting ? columnSorting.desc : false;
-      return sortByDuration(rowA.original, rowB.original, isDescending);
-    },
+    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
+      sortByDuration(rowA.original, rowB.original, false),
   },
   {
     accessorKey: 'playCount',
@@ -142,15 +104,8 @@ export const getCommonColumnDefs = (
       const value = cell.getValue<number>();
       return value === 0 ? '-' : value;
     },
-    sortingFn: (
-      rowA: Row<TableData>,
-      rowB: Row<TableData>,
-      _columnId: string,
-    ) => {
-      const columnSorting = sorting.find((sort) => sort.id === 'playCount');
-      const isDescending = columnSorting ? columnSorting.desc : false;
-      return sortByPlayCount(rowA.original, rowB.original, isDescending);
-    },
+    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
+      sortByPlayCount(rowA.original, rowB.original, false),
   },
   {
     accessorKey: 'lastPlayed',
@@ -160,15 +115,8 @@ export const getCommonColumnDefs = (
       const date = cell.getValue<string>();
       return date ? new Date(date).toLocaleDateString() : '-';
     },
-    sortingFn: (
-      rowA: Row<TableData>,
-      rowB: Row<TableData>,
-      _columnId: string,
-    ) => {
-      const columnSorting = sorting.find((sort) => sort.id === 'lastPlayed');
-      const isDescending = columnSorting ? columnSorting.desc : false;
-      return sortByLastPlayed(rowA.original, rowB.original, isDescending);
-    },
+    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
+      sortByLastPlayed(rowA.original, rowB.original, false),
   },
   {
     accessorKey: 'dateAdded',
@@ -178,15 +126,8 @@ export const getCommonColumnDefs = (
       const date = cell.getValue<string>();
       return date ? new Date(date).toLocaleDateString() : '';
     },
-    sortingFn: (
-      rowA: Row<TableData>,
-      rowB: Row<TableData>,
-      _columnId: string,
-    ) => {
-      const columnSorting = sorting.find((sort) => sort.id === 'dateAdded');
-      const isDescending = columnSorting ? columnSorting.desc : false;
-      return sortByDateAdded(rowA.original, rowB.original, isDescending);
-    },
+    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
+      sortByDateAdded(rowA.original, rowB.original, false),
   },
   {
     accessorKey: 'trackNumber',
