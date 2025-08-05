@@ -82,14 +82,14 @@ export default function ArtistBrowser({
   // Helper functions for selected text colors
   const getSelectedPrimaryColor = () => {
     return theme.palette.mode === 'dark'
-      ? theme.palette.grey[900]
-      : theme.palette.grey[100];
+      ? theme.palette.common.white
+      : theme.palette.common.black;
   };
 
   const getSelectedSecondaryColor = () => {
     return theme.palette.mode === 'dark'
-      ? theme.palette.grey[700]
-      : theme.palette.grey[400];
+      ? theme.palette.grey[300]
+      : theme.palette.grey[700];
   };
 
   // Scroll to selected artist when it changes or when browser opens
@@ -138,8 +138,8 @@ export default function ArtistBrowser({
             borderLeft: `1px solid ${theme.palette.divider}`,
             backgroundColor:
               theme.palette.mode === 'dark'
-                ? theme.palette.grey.A700
-                : theme.palette.grey[50],
+                ? theme.palette.background.paper
+                : theme.palette.background.default,
           }}
         >
           {/* Header */}
@@ -154,8 +154,8 @@ export default function ArtistBrowser({
               justifyContent: 'space-between',
               backgroundColor:
                 theme.palette.mode === 'dark'
-                  ? 'rgba(255,255,255,0.02)'
-                  : 'rgba(0,0,0,0.02)',
+                  ? '#0D0D0D'
+                  : theme.palette.background.paper,
               userSelect: 'none',
             }}
           >
@@ -225,19 +225,19 @@ export default function ArtistBrowser({
                 '&:hover': {
                   backgroundColor:
                     theme.palette.mode === 'dark'
-                      ? 'rgba(255,255,255,0.05)'
-                      : 'rgba(0,0,0,0.05)',
+                      ? 'rgba(255,255,255,0.03)'
+                      : 'rgba(0,0,0,0.03)',
                 },
                 '&.Mui-selected': {
                   backgroundColor:
                     theme.palette.mode === 'dark'
-                      ? theme.palette.grey[200]
-                      : theme.palette.grey[800],
+                      ? theme.palette.grey[600]
+                      : theme.palette.grey[400],
                   '&:hover': {
                     backgroundColor:
                       theme.palette.mode === 'dark'
-                        ? theme.palette.grey[200]
-                        : theme.palette.grey[800],
+                        ? theme.palette.grey[600]
+                        : theme.palette.grey[400],
                   },
                 },
               }}
@@ -266,7 +266,7 @@ export default function ArtistBrowser({
               />
             </ListItemButton>
 
-            {artists.map((artist) => (
+            {artists.map((artist, index) => (
               <ListItemButton
                 key={artist}
                 data-artist={artist}
@@ -277,22 +277,26 @@ export default function ArtistBrowser({
                   px: 1.5,
                   minHeight: 32,
                   userSelect: 'none',
+                  backgroundColor:
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(0, 0, 0, 0.3)'
+                      : 'transparent',
                   '&:hover': {
                     backgroundColor:
                       theme.palette.mode === 'dark'
-                        ? 'rgba(255,255,255,0.05)'
-                        : 'rgba(0,0,0,0.05)',
+                        ? 'rgba(255,255,255,0.03)'
+                        : 'rgba(0,0,0,0.03)',
                   },
                   '&.Mui-selected': {
                     backgroundColor:
                       theme.palette.mode === 'dark'
-                        ? theme.palette.grey[200]
-                        : theme.palette.grey[800],
+                        ? `${theme.palette.grey[600]} !important`
+                        : `${theme.palette.grey[400]} !important`,
                     '&:hover': {
                       backgroundColor:
                         theme.palette.mode === 'dark'
-                          ? theme.palette.grey[200]
-                          : theme.palette.grey[800],
+                          ? `${theme.palette.grey[600]} !important`
+                          : `${theme.palette.grey[400]} !important`,
                     },
                   },
                 }}
