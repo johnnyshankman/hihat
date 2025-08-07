@@ -134,6 +134,7 @@ export const findNextSong = (
   playbackSource: 'library' | 'playlist',
   repeatMode: 'off' | 'track' | 'all',
   artistFilter?: string | null,
+  shuffleHistory?: Track[],
 ): Track | undefined => {
   if (!currentTrackId) return undefined;
 
@@ -144,6 +145,37 @@ export const findNextSong = (
   // Get the filtered and sorted track IDs
   const trackIds = getFilteredAndSortedTrackIds(playbackSource, artistFilter);
 
+  // if shuffle mode is on, return a random track that hasn't been played yet
+  if (shuffleMode) {
+    // Get the set of already played track IDs from shuffle history
+    const playedTrackIds = new Set(shuffleHistory?.map(t => t.id) || []);
+    
+    // Also add the current track to the played set
+    playedTrackIds.add(currentTrackId);
+    
+    // Filter out already played tracks from available tracks
+    const availableTrackIds = trackIds.filter(id => !playedTrackIds.has(id));
+    
+    // If no unplayed tracks are available
+    if (availableTrackIds.length === 0) {
+      // If repeat mode is all, we've played all songs, so start over
+      if (repeatMode === 'all') {
+        // Clear history and pick a random track from all tracks
+        const randomIndex = Math.floor(Math.random() * trackIds.length);
+        const randomTrackId = trackIds[randomIndex];
+        return tracks.find((t) => t.id === randomTrackId);
+      }
+      // No more songs to play
+      return undefined;
+    }
+    
+    // Pick a random track from the available (unplayed) tracks
+    const randomIndex = Math.floor(Math.random() * availableTrackIds.length);
+    const randomTrackId = availableTrackIds[randomIndex];
+    return tracks.find((t) => t.id === randomTrackId);
+  }
+
+  // Non-shuffle mode remains the same
   // find the current index of the current track
   const currentIndex = trackIds.indexOf(currentTrackId);
 
@@ -151,19 +183,12 @@ export const findNextSong = (
   if (currentIndex === trackIds.length - 1) {
     // if repeat mode is all, return the first track
     if (repeatMode === 'all') {
-      return tracks[0];
+      const firstTrackId = trackIds[0];
+      return tracks.find((t) => t.id === firstTrackId);
     }
 
     // otherwise, return undefined
-    // @TODO: should i just return the current song?
     return undefined;
-  }
-
-  // if shuffle mode is on, return a random track
-  if (shuffleMode) {
-    const randomIndex = Math.floor(Math.random() * trackIds.length);
-    const randomTrackId = trackIds[randomIndex];
-    return tracks.find((t) => t.id === randomTrackId);
   }
 
   // return the next track
