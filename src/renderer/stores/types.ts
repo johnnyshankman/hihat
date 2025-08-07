@@ -64,6 +64,7 @@ export interface PlaybackStore {
   repeatMode: 'off' | 'track' | 'all'; // off, track, all
   shuffleMode: boolean; // shuffle mode
   shuffleHistory: Track[]; // history of shuffled tracks
+  shuffleHistoryPosition: number; // current position in shuffle history (-1 means at the tip)
 
   // Internal state (not exposed in the context API)
   player: Gapless5 | null;
