@@ -21,7 +21,9 @@ import {
 // Import BrowserWindow for sending events
 
 // Database file path
-const DB_PATH = path.join(app.getPath('userData'), 'library.db');
+const DB_PATH = process.env.TEST_MODE === 'true' && process.env.TEST_DB_PATH
+  ? process.env.TEST_DB_PATH
+  : path.join(app.getPath('userData'), 'library.db');
 
 // Database instance
 let db: any;

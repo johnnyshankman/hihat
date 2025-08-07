@@ -79,6 +79,8 @@ if (process.env.NODE_ENV === 'production') {
 const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
+const isTest = process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true';
+
 if (isDebug) {
   require('electron-debug')();
 }
@@ -193,7 +195,7 @@ const createWindow = async () => {
 
   // Create window options
   mainWindow = new BrowserWindow({
-    show: false,
+    show: isTest, // Show immediately in test mode
     width: 1024,
     height: 728,
     minWidth: 640,
@@ -202,9 +204,19 @@ const createWindow = async () => {
     frame: false, // Use frameless window for all platforms
     backgroundColor: '#00000000', // Transparent background
     webPreferences: {
-      preload: app.isPackaged
-        ? path.join(__dirname, 'preload.js')
-        : path.join(__dirname, '../../.erb/dll/preload.js'),
+      preload: (() => {
+        // For production and tests running the built app
+        if (app.isPackaged || process.env.NODE_ENV === 'production' || isTest) {
+          return path.join(__dirname, 'preload.js');
+        }
+        // For development
+        return path.join(__dirname, '../../.erb/dll/preload.js');
+      })(),
+      // Test mode configuration
+      sandbox: !isTest,
+      nodeIntegration: false, // Keep false for security
+      contextIsolation: true, // Keep true for security
+      webSecurity: true, // Keep true for security
     },
   });
 
@@ -216,7 +228,8 @@ const createWindow = async () => {
     }
     if (process.env.START_MINIMIZED) {
       mainWindow.minimize();
-    } else {
+    } else if (!isTest) {
+      // In test mode, window is already shown
       mainWindow.show();
     }
   });

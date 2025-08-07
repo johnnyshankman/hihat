@@ -30,3 +30,9 @@ npm-debug.log.*
 
 # Claude Code settings
 .claude
+
+# E2E Testing
+e2e/screenshots/
+playwright-report/
+test-results/
+.test-data/
