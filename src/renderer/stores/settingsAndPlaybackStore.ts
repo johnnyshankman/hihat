@@ -41,6 +41,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     duration: 0, // duration of the playing track in seconds
     playbackSource: 'library', // the source of the playback (library or playlist)
     playbackSourcePlaylistId: null, // the ID of the specific playlist if playbackSource is 'playlist'
+    playbackContextArtistFilter: null, // the artist filter that was active when playback started
     repeatMode: 'off', // off, track, all
     shuffleMode: false, // shuffle mode
     shuffleHistory: [], // history of shuffled tracks
@@ -271,9 +272,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         let shuffleHistoryPosition = -1;
         if (state.shuffleMode) {
           // Clear history if changing playback source or playlist
-          const sourceChanged = playbackSource !== state.playbackSource || 
-            (playbackSource === 'playlist' && playlistId !== state.playbackSourcePlaylistId);
-          
+          const sourceChanged =
+            playbackSource !== state.playbackSource ||
+            (playbackSource === 'playlist' &&
+              playlistId !== state.playbackSourcePlaylistId);
+
           if (sourceChanged) {
             // Starting fresh with new source
             shuffleHistory = [selectedTrack];
@@ -281,16 +284,22 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           } else {
             // Same source, maintain history
             // If we're in the middle of history, truncate everything after our position
-            if (state.shuffleHistoryPosition >= 0 && state.shuffleHistoryPosition < state.shuffleHistory.length - 1) {
-              shuffleHistory = state.shuffleHistory.slice(0, state.shuffleHistoryPosition + 1);
+            if (
+              state.shuffleHistoryPosition >= 0 &&
+              state.shuffleHistoryPosition < state.shuffleHistory.length - 1
+            ) {
+              shuffleHistory = state.shuffleHistory.slice(
+                0,
+                state.shuffleHistoryPosition + 1,
+              );
             } else {
               shuffleHistory = [...state.shuffleHistory];
             }
-            
+
             // Add the selected track
             shuffleHistory.push(selectedTrack);
             shuffleHistoryPosition = shuffleHistory.length - 1;
-            
+
             if (shuffleHistory.length > 100) {
               shuffleHistory.shift();
               shuffleHistoryPosition = Math.max(0, shuffleHistoryPosition - 1);
@@ -298,6 +307,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
         }
 
+        // Capture the current artist filter at the time of playback
         const artistFilter =
           playbackSource === 'library'
             ? useLibraryStore.getState().artistFilter
@@ -347,6 +357,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackSource,
           playbackSourcePlaylistId:
             playbackSource === 'playlist' ? playlistId : null,
+          playbackContextArtistFilter: artistFilter, // Store the artist filter context
         };
       });
     },
@@ -380,7 +391,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // If in shuffle mode
         if (state.shuffleMode) {
           // Check if we're navigating within history (not at the tip)
-          if (state.shuffleHistoryPosition >= 0 && state.shuffleHistoryPosition < state.shuffleHistory.length - 1) {
+          if (
+            state.shuffleHistoryPosition >= 0 &&
+            state.shuffleHistoryPosition < state.shuffleHistory.length - 1
+          ) {
             // Move forward in shuffle history
             const newPosition = state.shuffleHistoryPosition + 1;
             const nextSong = state.shuffleHistory[newPosition];
@@ -429,10 +443,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
 
           // We're at the tip of history, need to get a new random song
-          const artistFilter =
-            state.playbackSource === 'library'
-              ? useLibraryStore.getState().artistFilter
-              : null;
+          // Use the playback context artist filter, not the current one
+          const artistFilter = state.playbackContextArtistFilter;
 
           const nextSong = findNextSong(
             state.currentTrack?.id,
@@ -450,38 +462,56 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           // Check if we need to clear history (when all songs have been played with repeat all)
           // Get total available tracks to determine if we've played them all
           const library = useLibraryStore.getState().tracks;
-          const playlists = useLibraryStore.getState().playlists;
+          const { playlists } = useLibraryStore.getState();
           let totalAvailableTracks = 0;
-          
+
           if (state.playbackSource === 'library') {
-            totalAvailableTracks = artistFilter 
-              ? library.filter(t => (t.albumArtist || t.artist || 'Unknown Artist') === artistFilter).length
+            totalAvailableTracks = artistFilter
+              ? library.filter(
+                  (t) =>
+                    (t.albumArtist || t.artist || 'Unknown Artist') ===
+                    artistFilter,
+                ).length
               : library.length;
           } else if (state.playbackSource === 'playlist') {
-            const playlist = playlists.find(p => p.id === state.playbackSourcePlaylistId);
+            const playlist = playlists.find(
+              (p) => p.id === state.playbackSourcePlaylistId,
+            );
             totalAvailableTracks = playlist?.trackIds.length || 0;
           }
-          
-          const allTracksPlayed = state.shuffleHistory.length >= totalAvailableTracks - 1;
-          
+
+          const allTracksPlayed =
+            state.shuffleHistory.length >= totalAvailableTracks - 1;
+
           // Add current track to history and new track
-          let shuffleHistory = allTracksPlayed && state.repeatMode === 'all' 
-            ? [] // Clear history when starting over with repeat all
-            : [...state.shuffleHistory];
-          
+          let shuffleHistory =
+            allTracksPlayed && state.repeatMode === 'all'
+              ? [] // Clear history when starting over with repeat all
+              : [...state.shuffleHistory];
+
           // If we were in the middle of history, truncate everything after our position
-          if (state.shuffleHistoryPosition >= 0 && state.shuffleHistoryPosition < shuffleHistory.length - 1) {
-            shuffleHistory = shuffleHistory.slice(0, state.shuffleHistoryPosition + 1);
+          if (
+            state.shuffleHistoryPosition >= 0 &&
+            state.shuffleHistoryPosition < shuffleHistory.length - 1
+          ) {
+            shuffleHistory = shuffleHistory.slice(
+              0,
+              state.shuffleHistoryPosition + 1,
+            );
           }
-          
+
           // Add the current track if not already at the end
-          if (shuffleHistory.length === 0 || shuffleHistory[shuffleHistory.length - 1].id !== state.currentTrack.id) {
+          if (
+            shuffleHistory.length === 0 ||
+            shuffleHistory[shuffleHistory.length - 1].id !==
+              state.currentTrack.id
+          ) {
             shuffleHistory.push(state.currentTrack);
           }
-          
+
           // Add the new next song
           shuffleHistory.push(nextSong);
-          
+
           // Keep history limited to 100 items
           if (shuffleHistory.length > 100) {
             shuffleHistory.shift();
@@ -493,8 +523,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             state.shuffleMode,
             state.playbackSource,
             state.repeatMode,
-            artistFilter,
-            [...state.shuffleHistory, state.currentTrack, nextSong].filter(Boolean),
+            state.playbackContextArtistFilter,
+            [...state.shuffleHistory, state.currentTrack, nextSong].filter(
+              Boolean,
+            ),
           );
 
           // First pause current playback
@@ -537,10 +569,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
 
         // Non-shuffle mode - standard behavior
-        const artistFilter =
-          state.playbackSource === 'library'
-            ? useLibraryStore.getState().artistFilter
-            : null;
+        // Use the playback context artist filter, not the current one
+        const artistFilter = state.playbackContextArtistFilter;
 
         const nextSong = findNextSong(
           state.currentTrack?.id,
@@ -626,7 +656,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
             if (previousSong) {
               // Calculate the next song (which is the current position in history)
-              const futureNextSong = state.shuffleHistory[state.shuffleHistoryPosition];
+              const futureNextSong =
+                state.shuffleHistory[state.shuffleHistoryPosition];
 
               // First pause current playback
               state.player.pause();
@@ -668,10 +699,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
 
           // Find the previous song (for non-shuffle or when at beginning of history)
-          const artistFilter =
-            state.playbackSource === 'library'
-              ? useLibraryStore.getState().artistFilter
-              : null;
+          // Use the playback context artist filter, not the current one
+          const artistFilter = state.playbackContextArtistFilter;
 
           const previousSong = findPreviousSong(
             state.currentTrack.id,
@@ -780,10 +809,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
     toggleShuffleMode: () => {
       return set((state) => {
-        return { 
-          shuffleMode: !state.shuffleMode, 
-          shuffleHistory: [], 
-          shuffleHistoryPosition: -1 
+        return {
+          shuffleMode: !state.shuffleMode,
+          shuffleHistory: [],
+          shuffleHistoryPosition: -1,
         };
       });
     },
@@ -1047,27 +1076,32 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // Handle shuffle mode with history
         if (state.shuffleMode) {
           // Check if we're navigating within history
-          if (state.shuffleHistoryPosition >= 0 && state.shuffleHistoryPosition < state.shuffleHistory.length - 1) {
+          if (
+            state.shuffleHistoryPosition >= 0 &&
+            state.shuffleHistoryPosition < state.shuffleHistory.length - 1
+          ) {
             // We're in the middle of history, move forward
             const newPosition = state.shuffleHistoryPosition + 1;
             const nextTrackInHistory = state.shuffleHistory[newPosition];
-            
+
             // Add the next song from history
             if (nextTrackInHistory) {
               const futureNextSong = state.shuffleHistory[newPosition + 1];
               if (futureNextSong) {
                 state.player.addTrack(getTrackUrl(futureNextSong.filePath));
               }
-              
+
               // Update media session
               updateMediaSession(currentTrackThatIsAudiblyPlaying);
-              
+
               // Start tracking play count for the new track
-              playbackTracker.startTrackingTrack(currentTrackThatIsAudiblyPlaying.id);
-              
+              playbackTracker.startTrackingTrack(
+                currentTrackThatIsAudiblyPlaying.id,
+              );
+
               // Save the track ID as the last played song
               get().setLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
-              
+
               return {
                 currentTrack: currentTrackThatIsAudiblyPlaying,
                 duration: currentTrackThatIsAudiblyPlaying.duration,
@@ -1079,12 +1113,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               };
             }
           }
-          
+
           // We're at the tip of history, get a new random song
-          const artistFilter =
-            state.playbackSource === 'library'
-              ? useLibraryStore.getState().artistFilter
-              : null;
+          // Use the playback context artist filter, not the current one
+          const artistFilter = state.playbackContextArtistFilter;
 
           const nextSong = findNextSong(
             currentTrackThatIsAudiblyPlaying.id,
@@ -1092,7 +1124,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             state.playbackSource,
             state.repeatMode,
             artistFilter,
-            shuffleHistory,
+            state.shuffleHistory,
           );
 
           if (!nextSong) {
@@ -1102,38 +1134,57 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           // Check if we need to clear history (when all songs have been played with repeat all)
           // Get total available tracks to determine if we've played them all
           const library = useLibraryStore.getState().tracks;
-          const playlists = useLibraryStore.getState().playlists;
+          const { playlists } = useLibraryStore.getState();
           let totalAvailableTracks = 0;
-          
+
           if (state.playbackSource === 'library') {
-            totalAvailableTracks = artistFilter 
-              ? library.filter(t => (t.albumArtist || t.artist || 'Unknown Artist') === artistFilter).length
+            totalAvailableTracks = artistFilter
+              ? library.filter(
+                  (t) =>
+                    (t.albumArtist || t.artist || 'Unknown Artist') ===
+                    artistFilter,
+                ).length
               : library.length;
           } else if (state.playbackSource === 'playlist') {
-            const playlist = playlists.find(p => p.id === state.playbackSourcePlaylistId);
+            const playlist = playlists.find(
+              (p) => p.id === state.playbackSourcePlaylistId,
+            );
             totalAvailableTracks = playlist?.trackIds.length || 0;
           }
-          
-          const allTracksPlayed = state.shuffleHistory.length >= totalAvailableTracks - 1;
+
+          const allTracksPlayed =
+            state.shuffleHistory.length >= totalAvailableTracks - 1;
 
           // Update shuffle history
-          let shuffleHistory = allTracksPlayed && state.repeatMode === 'all' 
-            ? [] // Clear history when starting over with repeat all
-            : [...state.shuffleHistory];
-          
+          let shuffleHistory =
+            allTracksPlayed && state.repeatMode === 'all'
+              ? [] // Clear history when starting over with repeat all
+              : [...state.shuffleHistory];
+
           // If we were in the middle of history, truncate everything after our position
-          if (state.shuffleHistoryPosition >= 0 && state.shuffleHistoryPosition < shuffleHistory.length - 1) {
-            shuffleHistory = shuffleHistory.slice(0, state.shuffleHistoryPosition + 1);
+          if (
+            state.shuffleHistoryPosition >= 0 &&
+            state.shuffleHistoryPosition < shuffleHistory.length - 1
+          ) {
+            shuffleHistory = shuffleHistory.slice(
+              0,
+              state.shuffleHistoryPosition + 1,
+            );
           }
-          
+
           // Add the track that just finished if not already at the end
-          if (state.currentTrack && (shuffleHistory.length === 0 || shuffleHistory[shuffleHistory.length - 1].id !== state.currentTrack.id)) {
+          if (
+            state.currentTrack &&
+            (shuffleHistory.length === 0 ||
+              shuffleHistory[shuffleHistory.length - 1].id !==
+                state.currentTrack.id)
+          ) {
             shuffleHistory.push(state.currentTrack);
           }
-          
+
           // Add the currently playing track
           shuffleHistory.push(currentTrackThatIsAudiblyPlaying);
-          
+
           // Keep history limited to 100 items
           if (shuffleHistory.length > 100) {
             shuffleHistory.shift();
@@ -1146,7 +1197,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           updateMediaSession(currentTrackThatIsAudiblyPlaying);
 
           // Start tracking play count for the new track
-          playbackTracker.startTrackingTrack(currentTrackThatIsAudiblyPlaying.id);
+          playbackTracker.startTrackingTrack(
+            currentTrackThatIsAudiblyPlaying.id,
+          );
 
           // Save the track ID as the last played song
           get().setLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
@@ -1164,10 +1217,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
 
         // Non-shuffle mode - standard behavior
-        const artistFilter =
-          state.playbackSource === 'library'
-            ? useLibraryStore.getState().artistFilter
-            : null;
+        // Use the playback context artist filter, not the current one
+        const artistFilter = state.playbackContextArtistFilter;
 
         const nextSong = findNextSong(
           currentTrackThatIsAudiblyPlaying.id,

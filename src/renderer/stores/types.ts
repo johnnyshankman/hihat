@@ -61,6 +61,7 @@ export interface PlaybackStore {
   volume: number; // volume of the global player
   playbackSource: 'library' | 'playlist'; // the source of the playback (library or playlist)
   playbackSourcePlaylistId: string | null; // the ID of the specific playlist if playbackSource is 'playlist'
+  playbackContextArtistFilter: string | null; // the artist filter that was active when playback started
   repeatMode: 'off' | 'track' | 'all'; // off, track, all
   shuffleMode: boolean; // shuffle mode
   shuffleHistory: Track[]; // history of shuffled tracks
@@ -146,9 +147,11 @@ export interface SettingsAndPlaybackStore {
   volume: number; // Shared state between settings and playback
   playbackSource: 'library' | 'playlist';
   playbackSourcePlaylistId: string | null;
+  playbackContextArtistFilter: string | null;
   repeatMode: 'off' | 'track' | 'all';
   shuffleMode: boolean;
   shuffleHistory: Track[];
+  shuffleHistoryPosition: number;
 
   // Internal state
   player: Gapless5 | null;
