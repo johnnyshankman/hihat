@@ -1,8 +1,33 @@
 import { _electron as electron, ElectronApplication, Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import sqlite3 from 'sqlite3';
 
 export class TestHelpers {
+  static async initializeTestDatabase(dbPath: string): Promise<void> {
+    const sqlFilePath = path.join(__dirname, '../fixtures/test-db.sql');
+    const sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
+    
+    return new Promise((resolve, reject) => {
+      const db = new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        // Execute the SQL file to create tables and insert test data
+        db.exec(sqlContent, (execErr) => {
+          db.close();
+          if (execErr) {
+            reject(execErr);
+          } else {
+            resolve();
+          }
+        });
+      });
+    });
+  }
+
   static async launchApp(): Promise<{ app: ElectronApplication; page: Page }> {
     const testDbPath = path.join(__dirname, '../fixtures/test-db.sqlite');
     const songsPath = path.join(__dirname, '../fixtures/test-songs');
@@ -11,6 +36,9 @@ export class TestHelpers {
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
+    
+    // Initialize the test database with seed data
+    await this.initializeTestDatabase(testDbPath);
 
     // Path to the built application
     const appPath = path.join(__dirname, '../../release/app');
