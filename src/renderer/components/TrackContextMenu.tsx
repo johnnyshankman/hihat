@@ -146,11 +146,20 @@ function TrackContextMenu({
         return;
       }
 
-      // Get the next track ID before deletion
-      const trackIds = getFilteredAndSortedTrackIds('library');
+      // Get the target track ID before deletion (next track, or previous if we're deleting the last track)
+      // Need to get the artist filter from the library store for accurate track ordering
+      const { artistFilter } = useLibraryStore.getState();
+      const trackIds = getFilteredAndSortedTrackIds('library', artistFilter);
       const currentIndex = trackIds.indexOf(trackId);
-      const nextTrackId =
-        currentIndex < trackIds.length - 1 ? trackIds[currentIndex + 1] : null;
+      let targetTrackId: string | null = null;
+
+      // First try to find the next track
+      if (currentIndex < trackIds.length - 1) {
+        targetTrackId = trackIds[currentIndex + 1];
+      } else if (currentIndex > 0) {
+        // If we're deleting the last track, scroll to the previous one
+        targetTrackId = trackIds[currentIndex - 1];
+      }
 
       // Check if this is the currently playing track and pause playback if it is
       if (currentTrack && currentTrack.id === trackId) {
@@ -211,10 +220,10 @@ function TrackContextMenu({
       showNotification(`Track "${track.title}" has been deleted`, 'success');
       setDeleteDialogOpen(false);
 
-      // Step 6: Scroll to the next track if it exists
-      if (nextTrackId) {
+      // Step 6: Scroll to the target track if it exists
+      if (targetTrackId) {
         // @ts-ignore - Using custom property we added to window
-        window.hihatScrollToLibraryTrack?.(nextTrackId);
+        window.hihatScrollToLibraryTrack?.(targetTrackId);
       }
     } catch (error) {
       console.error('Error deleting track:', error);

@@ -219,6 +219,49 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     setMultiSelectPlaylistDialogOpen(false);
   };
 
+  // Function to scroll to a specific track by ID
+  const scrollToTrack = useCallback(
+    (trackId: string) => {
+      if (!rowVirtualizerRef.current) return;
+
+      // Get the filtered and sorted track IDs based on current view state
+      // Include artist filter for accurate positioning
+      const trackIds = getFilteredAndSortedTrackIds('library', artistFilter);
+
+      // Find the index of the track in the filtered and sorted list
+      const trackIndex = trackIds.indexOf(trackId);
+
+      console.log('scrollToTrack called with:', {
+        trackId,
+        trackIndex,
+        totalTracks: trackIds.length,
+        artistFilter,
+      });
+
+      if (trackIndex !== -1) {
+        // Scroll to the track
+        rowVirtualizerRef.current.scrollToIndex(trackIndex, {
+          align: 'center',
+        });
+        console.log('Scrolled to index:', trackIndex);
+      } else {
+        console.log('Track not found in current view');
+      }
+    },
+    [artistFilter],
+  );
+
+  // Expose the scrollToTrack function to the window object
+  useEffect(() => {
+    // @ts-ignore - Adding custom property to window
+    window.hihatScrollToLibraryTrack = scrollToTrack;
+
+    return () => {
+      // @ts-ignore - Cleanup
+      delete window.hihatScrollToLibraryTrack;
+    };
+  }, [scrollToTrack]);
+
   const handleMultiSelectDeleteTracks = async () => {
     const selectedTrackIds = Object.keys(selectedTracks);
     if (selectedTrackIds.length === 0) return;
@@ -232,6 +275,61 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     try {
       // Get the showNotification function from the UI store
       const { showNotification } = useUIStore.getState();
+
+      // Before deletion, determine which track to scroll to after deletion
+      // Get the current filtered and sorted track IDs with artist filter
+      const currentTrackIds = getFilteredAndSortedTrackIds(
+        'library',
+        artistFilter,
+      );
+
+      // Find all indices of tracks being deleted
+      const deletedIndices = selectedTrackIds
+        .map((trackId) => currentTrackIds.indexOf(trackId))
+        .filter((index) => index !== -1)
+        .sort((a, b) => a - b); // Sort indices in ascending order
+
+      // Find the track to scroll to: the next track after the highest deleted index
+      let targetTrackId: string | null = null;
+      if (deletedIndices.length > 0) {
+        const highestDeletedIndex = deletedIndices[deletedIndices.length - 1];
+
+        console.log('Deletion info:', {
+          selectedTrackIds,
+          deletedIndices,
+          highestDeletedIndex,
+          totalTracks: currentTrackIds.length,
+        });
+
+        // Look for the next track that won't be deleted
+        for (
+          let i = highestDeletedIndex + 1;
+          i < currentTrackIds.length;
+          i += 1
+        ) {
+          const candidateTrackId = currentTrackIds[i];
+          if (!selectedTrackIds.includes(candidateTrackId)) {
+            targetTrackId = candidateTrackId;
+            console.log('Found next track:', candidateTrackId, 'at index', i);
+            break;
+          }
+        }
+
+        // If no track found after the highest deleted index,
+        // look for a track before the lowest deleted index
+        if (!targetTrackId && deletedIndices[0] > 0) {
+          for (let i = deletedIndices[0] - 1; i >= 0; i -= 1) {
+            const candidateTrackId = currentTrackIds[i];
+            if (!selectedTrackIds.includes(candidateTrackId)) {
+              targetTrackId = candidateTrackId;
+              console.log('Found previous track:', candidateTrackId, 'at index', i);
+              break;
+            }
+          }
+        }
+
+        console.log('Target track for scrolling:', targetTrackId);
+      }
 
       // Step 1: Get all playlists that might contain these tracks
       const allPlaylists = await window.electron.playlists.getAll();
@@ -293,6 +391,15 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       // Clear selection after deletion
       setSelectedTracks({});
 
+      // Scroll to the target track if one was determined
+      if (targetTrackId) {
+        // Use a longer timeout to ensure the table has re-rendered with the new data
+        setTimeout(() => {
+          console.log('Scrolling to track:', targetTrackId);
+          scrollToTrack(targetTrackId);
+        }, 300);
+      }
+
       showNotification(
         `Successfully deleted ${selectedTrackIds.length} track${selectedTrackIds.length > 1 ? 's' : ''}`,
         'success',
@@ -303,39 +410,6 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       showNotification('Failed to delete tracks', 'error');
     }
   };
-
-  // Function to scroll to a specific track by ID
-  const scrollToTrack = useCallback(
-    (trackId: string) => {
-      if (!rowVirtualizerRef.current) return;
-
-      // Get the filtered and sorted track IDs based on current view state
-      const trackIds = getFilteredAndSortedTrackIds('library');
-
-      // Find the index of the track in the filtered and sorted list
-      const trackIndex = trackIds.indexOf(trackId);
-
-      if (trackIndex !== -1) {
-        // Scroll to the track
-        rowVirtualizerRef.current.scrollToIndex(trackIndex, {
-          align: 'center',
-        });
-      }
-    },
-    // The function doesn't depend on any props or state since it gets current state from the store
-    [],
-  );
-
-  // Expose the scrollToTrack function to the window object
-  useEffect(() => {
-    // @ts-ignore - Adding custom property to window
-    window.hihatScrollToLibraryTrack = scrollToTrack;
-
-    return () => {
-      // @ts-ignore - Cleanup
-      delete window.hihatScrollToLibraryTrack;
-    };
-  }, [scrollToTrack]);
 
   // Save the currently visible track on unmount
   useEffect(() => {
