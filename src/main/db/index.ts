@@ -21,9 +21,19 @@ import {
 // Import BrowserWindow for sending events
 
 // Database file path
+// Use separate directories for development and production to prevent settings conflicts
+const getUserDataPath = () => {
+  const basePath = app.getPath('userData');
+  // In development mode, use a separate directory to isolate settings
+  if (process.env.NODE_ENV === 'development') {
+    return path.join(basePath, '..', `${app.getName()}-dev`);
+  }
+  return basePath;
+};
+
 const DB_PATH = process.env.TEST_MODE === 'true' && process.env.TEST_DB_PATH
   ? process.env.TEST_DB_PATH
-  : path.join(app.getPath('userData'), 'library.db');
+  : path.join(getUserDataPath(), 'library.db');
 
 // Database instance
 let db: any;

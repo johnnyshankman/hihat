@@ -36,9 +36,14 @@ function configureLogging() {
     // Set log level for file transport
     log.transports.file.level = 'info';
 
-    // Set log file path - use the app's user data directory
-    log.transports.file.resolvePath = () =>
-      path.join(app.getPath('userData'), 'logs/main.log');
+    // Set log file path - use separate directories for dev and prod
+    log.transports.file.resolvePath = () => {
+      const basePath = app.getPath('userData');
+      const userDataPath = process.env.NODE_ENV === 'development'
+        ? path.join(basePath, '..', `${app.getName()}-dev`)
+        : basePath;
+      return path.join(userDataPath, 'logs/main.log');
+    };
 
     // Increase max log file size (default is 1MB)
     log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB
@@ -57,7 +62,12 @@ function configureLogging() {
     log.info('=== Application Started ===');
     log.info('Version:', app.getVersion());
     log.info('Platform:', process.platform);
-    log.info('User Data Path:', app.getPath('userData'));
+    const basePath = app.getPath('userData');
+    const actualUserDataPath = process.env.NODE_ENV === 'development'
+      ? path.join(basePath, '..', `${app.getName()}-dev`)
+      : basePath;
+    log.info('User Data Path:', actualUserDataPath);
+    log.info('Environment:', process.env.NODE_ENV || 'production');
   }
 }
 

@@ -33,6 +33,17 @@ let playbackState = {
 let windowPosition: { x: number; y: number } | null = null;
 
 /**
+ * Get the user data path, using separate directories for dev and prod
+ */
+function getUserDataPath(): string {
+  const basePath = app.getPath('userData');
+  if (process.env.NODE_ENV === 'development') {
+    return path.join(basePath, '..', `${app.getName()}-dev`);
+  }
+  return basePath;
+}
+
+/**
  * Save the mini player window position
  */
 function saveWindowPosition(): void {
@@ -41,7 +52,7 @@ function saveWindowPosition(): void {
     windowPosition = { x: position[0], y: position[1] };
 
     // Save to file
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getUserDataPath();
     const positionFilePath = path.join(userDataPath, 'miniPlayerPosition.json');
 
     try {
@@ -64,7 +75,7 @@ function loadWindowPosition(): { x: number; y: number } | null {
     return windowPosition;
   }
 
-  const userDataPath = app.getPath('userData');
+  const userDataPath = getUserDataPath();
   const positionFilePath = path.join(userDataPath, 'miniPlayerPosition.json');
 
   try {
