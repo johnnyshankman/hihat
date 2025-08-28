@@ -322,7 +322,12 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
             const candidateTrackId = currentTrackIds[i];
             if (!selectedTrackIds.includes(candidateTrackId)) {
               targetTrackId = candidateTrackId;
-              console.log('Found previous track:', candidateTrackId, 'at index', i);
+              console.log(
+                'Found previous track:',
+                candidateTrackId,
+                'at index',
+                i,
+              );
               break;
             }
           }
@@ -582,7 +587,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     ),
     muiSearchTextFieldProps: {
       ...getCommonTableConfig(drawerOpen).muiSearchTextFieldProps,
-      placeholder: 'Search library',
+      placeholder: 'Filter tracks',
     },
     onRowSelectionChange: () => {
       // do absolutely nothing, we handle this manually
