@@ -405,19 +405,22 @@ function initDefaultPlaylists(): void {
       `);
 
       // Check each default playlist and add if missing
+      let playlistsAdded = false;
       defaultSmartPlaylists.forEach((playlist) => {
         try {
           const exists = playlistExists.get(playlist.name) as { count: number };
 
           if (!exists || exists.count === 0) {
             console.warn(`Adding missing smart playlist: ${playlist.name}`);
+            const playlistId = uuidv4();
             insertPlaylist.run(
-              uuidv4(),
+              playlistId,
               playlist.name,
               playlist.isSmart ? 1 : 0,
               playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
               JSON.stringify([]), // Explicitly use empty array for smart playlists
             );
+            playlistsAdded = true;
           } else {
             console.warn(`Smart playlist already exists: ${playlist.name}`);
           }
@@ -428,6 +431,20 @@ function initDefaultPlaylists(): void {
           );
         }
       });
+      
+      // If we added playlists, make sure to save the database to disk
+      if (playlistsAdded && !useMockDb) {
+        console.warn('Smart playlists were added, saving database to disk...');
+        try {
+          const originalDb = (db as any)._originalDb || db;
+          const data = originalDb.export();
+          const buffer = Buffer.from(data);
+          fs.writeFileSync(DB_PATH, buffer);
+          console.warn('Database saved to disk after adding smart playlists');
+        } catch (saveError) {
+          console.error('Error saving database after adding playlists:', saveError);
+        }
+      }
     } catch (error) {
       console.error(
         'Error checking playlists table, it may not exist yet:',
@@ -479,14 +496,29 @@ function initDefaultPlaylists(): void {
           console.warn(
             `Adding default smart playlist to new table: ${playlist.name}`,
           );
+          const playlistId = uuidv4();
           insertPlaylist.run(
-            uuidv4(),
+            playlistId,
             playlist.name,
             playlist.isSmart ? 1 : 0,
             playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
             JSON.stringify([]), // Explicitly use empty array for smart playlists
           );
         });
+        
+        // Save database after inserting playlists into new table
+        if (!useMockDb) {
+          console.warn('Saving database after creating playlists table and adding defaults...');
+          try {
+            const originalDb = (db as any)._originalDb || db;
+            const data = originalDb.export();
+            const buffer = Buffer.from(data);
+            fs.writeFileSync(DB_PATH, buffer);
+            console.warn('Database saved after creating playlists table');
+          } catch (saveErr) {
+            console.error('Error saving database after creating playlists table:', saveErr);
+          }
+        }
       } catch (insertError) {
         console.error(
           'Error adding default playlists to new table:',
@@ -549,36 +581,14 @@ export function initDatabase(): void {
             console.warn('Successfully created new database with sql.js');
           }
 
-          // Create tables
-          createTables();
-          console.warn('Tables created or verified');
-
-          // Run database migrations
-          runMigrations();
-          console.warn('Database migrations completed');
-
-          // Initialize default settings
-          initDefaultSettings();
-          console.warn('Default settings initialized');
-
-          // Initialize default playlists
-          initDefaultPlaylists();
-          console.warn('Default playlists initialized');
-
-          // Save the database to disk
-          const sqlJsData = db.export();
-          const sqlJsBuffer = Buffer.from(sqlJsData);
-          fs.writeFileSync(DB_PATH, sqlJsBuffer);
-          console.warn('Database saved to disk');
-
-          console.warn('SQLite database loaded successfully using sql.js');
-
-          // Create a custom implementation for sql.js
+          // Save the original db reference first
           const originalDb = db;
-          console.warn('Creating wrapper for sql.js');
+          console.warn('Creating wrapper for sql.js BEFORE initialization');
 
           // Create a wrapper object with compatible methods
           db = {
+            // Store original db reference for access
+            _originalDb: originalDb,
             exec: (sql: string) => {
               try {
                 const result = originalDb.exec(sql);
@@ -600,9 +610,14 @@ export function initDatabase(): void {
                     // For get, we execute the query and return the first row
                     const stmt = originalDb.prepare(sql);
 
-                    // Bind parameters
-                    if (params.length > 0) {
-                      stmt.bind(params);
+                    // Bind parameters - handle both array and individual params
+                    if (params && params.length > 0) {
+                      // If the first param is an array, use it directly
+                      if (Array.isArray(params[0]) && params.length === 1) {
+                        stmt.bind(params[0]);
+                      } else {
+                        stmt.bind(params);
+                      }
                     }
 
                     // Step once to get the first row
@@ -629,29 +644,28 @@ export function initDatabase(): void {
 
                 all: (...params: any[]) => {
                   try {
-                    console.warn(
-                      'sql.js wrapper all() method called with SQL:',
-                      sql,
-                    );
                     // For all, we execute the query and return all rows
                     const stmt = originalDb.prepare(sql);
 
-                    // Bind parameters
-                    if (params.length > 0) {
-                      stmt.bind(params);
+                    // Bind parameters - handle both array and individual params
+                    if (params && params.length > 0) {
+                      // If the first param is an array, use it directly
+                      if (Array.isArray(params[0]) && params.length === 1) {
+                        stmt.bind(params[0]);
+                      } else {
+                        stmt.bind(params);
+                      }
                     }
 
                     const results = [];
 
                     // Step through all rows
                     while (stmt.step()) {
-                      results.push(stmt.getAsObject());
+                      const row = stmt.getAsObject();
+                      results.push(row);
                     }
 
                     stmt.free();
-                    console.warn(
-                      `sql.js wrapper all() method returning ${results.length} results`,
-                    );
                     return results;
                   } catch (error) {
                     console.error(
@@ -726,6 +740,41 @@ export function initDatabase(): void {
 
           useMockDb = false;
           console.warn('Using sql.js implementation: useMockDb =', useMockDb);
+          
+          // NOW initialize the database tables and data AFTER wrapper is set up
+          console.warn('Initializing database tables and default data...');
+          
+          // Create tables
+          createTables();
+          console.warn('Tables created or verified');
+
+          // Run database migrations
+          runMigrations();
+          console.warn('Database migrations completed');
+
+          // Initialize default settings
+          initDefaultSettings();
+          console.warn('Default settings initialized');
+
+          // Initialize default playlists
+          initDefaultPlaylists();
+          console.warn('Default playlists initialized');
+          
+          // Verify playlists were added
+          try {
+            const verifyResult = db.exec('SELECT id, name, isSmart FROM playlists');
+            console.warn('Playlists after initialization:', verifyResult);
+          } catch (verifyErr) {
+            console.error('Error verifying playlists:', verifyErr);
+          }
+
+          // Save the database to disk after all initialization
+          const finalData = originalDb.export();
+          const finalBuffer = Buffer.from(finalData);
+          fs.writeFileSync(DB_PATH, finalBuffer);
+          console.warn('Database saved to disk after initialization');
+          
+          console.warn('SQLite database loaded and initialized successfully using sql.js');
           return true; // Return a value to satisfy the linter
         })
         .catch((sqlJsError: any) => {
