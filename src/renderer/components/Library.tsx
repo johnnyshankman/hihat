@@ -578,8 +578,21 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     onGlobalFilterChange: (updater) => {
       const newFilter =
         typeof updater === 'function' ? updater(globalFilter) : updater;
+      const oldFilter = globalFilter;
       setGlobalFilter(newFilter);
       updateLibraryViewState(sorting, newFilter);
+      
+      // When filter is cleared (from non-empty to empty), scroll to current track
+      if (oldFilter && !newFilter && currentTrack && playbackSource === 'library') {
+        // Check if the current track is visible with the current artist filter
+        const visibleTrackIds = getFilteredAndSortedTrackIds('library', artistFilter);
+        if (visibleTrackIds.includes(currentTrack.id)) {
+          // Use setTimeout to ensure the table has re-rendered
+          setTimeout(() => {
+            scrollToTrack(currentTrack.id);
+          }, 100);
+        }
+      }
     },
     onColumnVisibilityChange: getCommonColumnVisibilityHandler(
       columnVisibility as unknown as Record<string, boolean>,

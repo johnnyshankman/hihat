@@ -477,8 +477,23 @@ export default function Playlists({
     onGlobalFilterChange: (updater) => {
       const newFilter =
         typeof updater === 'function' ? updater(globalFilter) : updater;
+      const oldFilter = globalFilter;
       setGlobalFilter(newFilter);
       updatePlaylistViewState(sorting, newFilter, selectedPlaylistId);
+      
+      // When filter is cleared (from non-empty to empty), scroll to current track
+      if (oldFilter && !newFilter && currentTrack && 
+          playbackSource === 'playlist' && 
+          playbackSourcePlaylistId === selectedPlaylistId) {
+        // Check if the current track is in this playlist
+        const playlistTrackIds = playlistTracks.map(t => t.id);
+        if (playlistTrackIds.includes(currentTrack.id)) {
+          // Use setTimeout to ensure the table has re-rendered
+          setTimeout(() => {
+            scrollToTrack(currentTrack.id);
+          }, 100);
+        }
+      }
     },
     onColumnVisibilityChange: getCommonColumnVisibilityHandler(
       columnVisibility as unknown as Record<string, boolean>,
