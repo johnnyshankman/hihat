@@ -34,6 +34,7 @@ import MinimizeIcon from '@mui/icons-material/Remove';
 import MaximizeIcon from '@mui/icons-material/CropSquare';
 import RestoreIcon from '@mui/icons-material/FilterNone';
 import ViewSidebarRoundedIcon from '@mui/icons-material/ViewSidebarRounded';
+import ListIcon from '@mui/icons-material/List';
 import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
@@ -592,111 +593,261 @@ export default function MainLayout() {
               </Box>
             </Box>
 
-            <List sx={{ flexGrow: 1, paddingTop: 0 }}>
-              <ListItemButton
-                data-view="library"
-                onClick={() => handleViewChange('library')}
-                selected={currentView === 'library'}
-                sx={{ WebkitAppRegion: 'no-drag' }}
-              >
-                <ListItemIcon sx={{ minWidth: '38px' }}>
-                  <LibraryMusicIcon />
-                </ListItemIcon>
-                <ListItemText primary="Library" />
-              </ListItemButton>
-
-              {/* Playlists with nested list */}
-              <ListItemButton
-                data-view="playlists"
-                onClick={handlePlaylistsClick}
-                sx={{ WebkitAppRegion: 'no-drag' }}
-              >
-                <ListItemIcon sx={{ minWidth: '38px' }}>
-                  <QueueMusicIcon />
-                </ListItemIcon>
-                <ListItemText primary="Playlists" />
-                <IconButton
-                  onClick={handleAddPlaylistClick}
-                  size="small"
-                  sx={{ mr: 1, WebkitAppRegion: 'no-drag' }}
-                >
-                  <AddIcon fontSize="small" />
-                </IconButton>
-                {playlistsOpen ? <ExpandLess /> : <ExpandMore />}
-              </ListItemButton>
-
-              <Collapse in={playlistsOpen} timeout="auto" unmountOnExit>
-                <List
-                  component="div"
-                  disablePadding
+            <List sx={{ flexGrow: 1, paddingTop: 0, px: 1 }}>
+              {/* Library section */}
+              <Box sx={{ mb: 1 }}>
+                <Box
                   sx={{
-                    overflow: 'hidden',
-                    mt: 0.75,
-                    py: 0.5,
-                    mx: 1.5,
-                    borderRadius: 1,
-                    backgroundColor: (t) =>
-                      t.palette.mode === 'dark'
-                        ? 'rgba(255, 255, 255, 0.05)'
-                        : 'rgba(0, 0, 0, 0.03)',
-                    boxShadow: (t) =>
-                      t.palette.mode === 'dark'
-                        ? 'inset 0 1px 3px rgba(0, 0, 0, 0.2)'
-                        : 'inset 0 1px 2px rgba(0, 0, 0, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    px: 1.5,
+                    py: 0.75,
+                    WebkitAppRegion: 'no-drag',
                   }}
                 >
-                  {playlists.map((playlist) => (
-                    <ListItemButton
-                      key={playlist.id}
-                      data-playlist-id={playlist.id}
-                      onClick={() => handlePlaylistSelect(playlist.id)}
-                      onContextMenu={(e) =>
-                        handlePlaylistContextMenu(e, playlist.id)
-                      }
-                      selected={
-                        currentView === 'playlists' &&
-                        selectedPlaylistId === playlist.id
-                      }
-                      sx={{
-                        py: 0.1,
-                        WebkitAppRegion: 'no-drag',
-                        borderRadius: 0.75,
-                        mx: 0.5,
-                        my: 0.25,
-                        '&.Mui-selected': {
-                          backgroundColor: (t) =>
-                            t.palette.mode === 'dark'
-                              ? t.palette.grey[700]
-                              : t.palette.grey[300],
-                        },
-                      }}
-                    >
-                      <ListItemText
-                        primary={playlist.name}
-                        primaryTypographyProps={{
-                          noWrap: true,
-                          title: playlist.name,
-                          fontWeight: 500,
-                          fontSize: '12px',
-                          color: 'text.secondary',
-                        }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </List>
-              </Collapse>
+                  <Typography
+                    sx={{
+                      flexGrow: 1,
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                      color: (t) => t.palette.text.secondary,
+                      opacity: 0.7,
+                    }}
+                    variant="caption"
+                  >
+                    Library
+                  </Typography>
+                </Box>
+                <ListItemButton
+                  data-view="library"
+                  onClick={() => handleViewChange('library')}
+                  selected={currentView === 'library'}
+                  sx={{
+                    py: 0.75,
+                    px: 1.5,
+                    WebkitAppRegion: 'no-drag',
+                    borderRadius: 1,
+                    mb: 0.25,
+                    '&.Mui-selected': {
+                      backgroundColor: (t) =>
+                        t.palette.mode === 'dark'
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : 'rgba(0, 0, 0, 0.08)',
+                      '& .MuiListItemText-primary': {
+                        fontWeight: 600,
+                      },
+                      '&:hover': {
+                        backgroundColor: (t) =>
+                          t.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.1)'
+                            : 'rgba(0, 0, 0, 0.1)',
+                      },
+                    },
+                    '&:hover': {
+                      backgroundColor: (t) =>
+                        t.palette.mode === 'dark'
+                          ? 'rgba(255, 255, 255, 0.04)'
+                          : 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: '24px',
+                      opacity: 0.7,
+                    }}
+                  >
+                    <LibraryMusicIcon sx={{ fontSize: 16 }} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="All"
+                    primaryTypographyProps={{
+                      fontSize: '13px',
+                      fontWeight: currentView === 'library' ? 600 : 400,
+                    }}
+                  />
+                </ListItemButton>
+              </Box>
 
-              <ListItemButton
-                data-view="settings"
-                onClick={() => handleViewChange('settings')}
-                selected={currentView === 'settings'}
-                sx={{ WebkitAppRegion: 'no-drag' }}
-              >
-                <ListItemIcon sx={{ minWidth: '38px' }}>
-                  <SettingsIcon />
-                </ListItemIcon>
-                <ListItemText primary="Settings" />
-              </ListItemButton>
+              {/* Playlists section */}
+              <Box sx={{ mt: 1, mb: 0.5 }}>
+                <Box
+                  onClick={handlePlaylistsClick}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    px: 1.5,
+                    py: 0.75,
+                    cursor: 'pointer',
+                    WebkitAppRegion: 'no-drag',
+                    '&:hover .playlist-header-text': {
+                      color: (t) => t.palette.text.primary,
+                    },
+                  }}
+                >
+                  <Typography
+                    className="playlist-header-text"
+                    sx={{
+                      flexGrow: 1,
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                      color: (t) => t.palette.text.secondary,
+                      opacity: 0.7,
+                    }}
+                    variant="caption"
+                  >
+                    Playlists
+                  </Typography>
+                  <IconButton
+                    onClick={handleAddPlaylistClick}
+                    size="small"
+                    sx={{
+                      p: 0.25,
+                      mr: 0.5,
+                      WebkitAppRegion: 'no-drag',
+                      opacity: 0.7,
+                      '&:hover': {
+                        opacity: 1,
+                      },
+                    }}
+                  >
+                    <AddIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                  <Box sx={{ opacity: 0.7, display: 'flex', alignItems: 'center' }}>
+                    {playlistsOpen ? (
+                      <ExpandLess sx={{ fontSize: 18 }} />
+                    ) : (
+                      <ExpandMore sx={{ fontSize: 18 }} />
+                    )}
+                  </Box>
+                </Box>
+
+                <Collapse in={playlistsOpen} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {playlists.map((playlist) => (
+                      <ListItemButton
+                        key={playlist.id}
+                        data-playlist-id={playlist.id}
+                        onClick={() => handlePlaylistSelect(playlist.id)}
+                        onContextMenu={(e) =>
+                          handlePlaylistContextMenu(e, playlist.id)
+                        }
+                        selected={
+                          currentView === 'playlists' &&
+                          selectedPlaylistId === playlist.id
+                        }
+                        sx={{
+                          py: 0.75,
+                          px: 1.5,
+                          WebkitAppRegion: 'no-drag',
+                          borderRadius: 1,
+                          mb: 0.25,
+                          '&.Mui-selected': {
+                            backgroundColor: (t) =>
+                              t.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : 'rgba(0, 0, 0, 0.08)',
+                            '& .MuiListItemText-primary': {
+                              fontWeight: 600,
+                            },
+                            '&:hover': {
+                              backgroundColor: (t) =>
+                                t.palette.mode === 'dark'
+                                  ? 'rgba(255, 255, 255, 0.1)'
+                                  : 'rgba(0, 0, 0, 0.1)',
+                            },
+                          },
+                          '&:hover': {
+                            backgroundColor: (t) =>
+                              t.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.04)'
+                                : 'rgba(0, 0, 0, 0.04)',
+                          },
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            minWidth: '24px',
+                            opacity: 0.7,
+                          }}
+                        >
+                          <QueueMusicIcon sx={{ fontSize: 16 }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={playlist.name}
+                          primaryTypographyProps={{
+                            noWrap: true,
+                            title: playlist.name,
+                            fontSize: '13px',
+                            fontWeight:
+                              currentView === 'playlists' &&
+                              selectedPlaylistId === playlist.id
+                                ? 600
+                                : 400,
+                          }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Collapse>
+              </Box>
+
+              {/* Separator and Settings button */}
+              <Box sx={{ mt: 'auto', pt: 1 }}>
+                <Box
+                  sx={{
+                    height: '1px',
+                    backgroundColor: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0.08)',
+                    mx: 1,
+                    mb: 1,
+                  }}
+                />
+                <ListItemButton
+                  data-view="settings"
+                  onClick={() => handleViewChange('settings')}
+                  selected={currentView === 'settings'}
+                  sx={{
+                    WebkitAppRegion: 'no-drag',
+                    borderRadius: 1,
+                    '&.Mui-selected': {
+                      backgroundColor: (t) =>
+                        t.palette.mode === 'dark'
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : 'rgba(0, 0, 0, 0.08)',
+                      '&:hover': {
+                        backgroundColor: (t) =>
+                          t.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.1)'
+                            : 'rgba(0, 0, 0, 0.1)',
+                      },
+                    },
+                    '&:hover': {
+                      backgroundColor: (t) =>
+                        t.palette.mode === 'dark'
+                          ? 'rgba(255, 255, 255, 0.04)'
+                          : 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: '32px' }}>
+                    <SettingsIcon sx={{ fontSize: 20 }} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Settings"
+                    primaryTypographyProps={{
+                      fontSize: '14px',
+                      fontWeight: currentView === 'settings' ? 600 : 400,
+                    }}
+                  />
+                </ListItemButton>
+              </Box>
             </List>
           </Paper>
         </Drawer>
