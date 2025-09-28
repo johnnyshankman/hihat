@@ -349,7 +349,7 @@ export default function ArtistBrowser({
       </Collapse>
 
       {/* Collapsed state - show toggle button */}
-      {!open && (
+      {/* {!open && (
         <Box
           sx={{
             position: 'absolute',
@@ -381,7 +381,7 @@ export default function ArtistBrowser({
             </IconButton>
           </Tooltip>
         </Box>
-      )}
+      )} */}
     </Box>
   );
 }

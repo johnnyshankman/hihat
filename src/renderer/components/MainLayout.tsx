@@ -574,7 +574,31 @@ export default function MainLayout() {
                   </IconButton>
                 </Tooltip>
               </Box>
-              <Box sx={{ WebkitAppRegion: 'no-drag' }}>
+              <Box sx={{ display: 'flex', gap: '4px', WebkitAppRegion: 'no-drag' }}>
+                {/* Settings button */}
+                <Tooltip title="Settings">
+                  <IconButton
+                    onClick={() => handleViewChange('settings')}
+                    size="small"
+                    sx={{
+                      color: currentView === 'settings' ? 'text.primary' : 'text.secondary',
+                      backgroundColor: currentView === 'settings'
+                        ? (theme) => theme.palette.mode === 'dark'
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : 'rgba(0, 0, 0, 0.08)'
+                        : 'transparent',
+                      '&:hover': {
+                        color: 'text.primary',
+                        backgroundColor: (theme) =>
+                          theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.1)'
+                            : 'rgba(0, 0, 0, 0.1)',
+                      },
+                    }}
+                  >
+                    <SettingsIcon sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </Tooltip>
                 {/* Sidebar toggle button */}
                 <Tooltip title={open ? 'Hide Sidebar' : 'Show Sidebar'}>
                   <IconButton
@@ -794,60 +818,6 @@ export default function MainLayout() {
                     ))}
                   </List>
                 </Collapse>
-              </Box>
-
-              {/* Separator and Settings button */}
-              <Box sx={{ mt: 'auto', pt: 1 }}>
-                <Box
-                  sx={{
-                    height: '1px',
-                    backgroundColor: (theme) =>
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(255, 255, 255, 0.08)'
-                        : 'rgba(0, 0, 0, 0.08)',
-                    mx: 1,
-                    mb: 1,
-                  }}
-                />
-                <ListItemButton
-                  data-view="settings"
-                  onClick={() => handleViewChange('settings')}
-                  selected={currentView === 'settings'}
-                  sx={{
-                    WebkitAppRegion: 'no-drag',
-                    borderRadius: 1,
-                    py: 0.75,
-                    '&.Mui-selected': {
-                      backgroundColor: (t) =>
-                        t.palette.mode === 'dark'
-                          ? 'rgba(255, 255, 255, 0.08)'
-                          : 'rgba(0, 0, 0, 0.08)',
-                      '&:hover': {
-                        backgroundColor: (t) =>
-                          t.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.1)'
-                            : 'rgba(0, 0, 0, 0.1)',
-                      },
-                    },
-                    '&:hover': {
-                      backgroundColor: (t) =>
-                        t.palette.mode === 'dark'
-                          ? 'rgba(255, 255, 255, 0.04)'
-                          : 'rgba(0, 0, 0, 0.04)',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: '32px' }}>
-                    <SettingsIcon sx={{ fontSize: 20 }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Settings"
-                    primaryTypographyProps={{
-                      fontSize: '14px',
-                      fontWeight: currentView === 'settings' ? 600 : 400,
-                    }}
-                  />
-                </ListItemButton>
               </Box>
             </List>
           </Paper>
