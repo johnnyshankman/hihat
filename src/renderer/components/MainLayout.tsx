@@ -625,7 +625,7 @@ export default function MainLayout() {
                   onClick={() => handleViewChange('library')}
                   selected={currentView === 'library'}
                   sx={{
-                    py: 0.75,
+                    py: 0.5,
                     px: 1.5,
                     WebkitAppRegion: 'no-drag',
                     borderRadius: 1,
@@ -741,7 +741,7 @@ export default function MainLayout() {
                           selectedPlaylistId === playlist.id
                         }
                         sx={{
-                          py: 0.75,
+                          py: 0.5,
                           px: 1.5,
                           WebkitAppRegion: 'no-drag',
                           borderRadius: 1,
@@ -816,6 +816,7 @@ export default function MainLayout() {
                   sx={{
                     WebkitAppRegion: 'no-drag',
                     borderRadius: 1,
+                    py: 0.75,
                     '&.Mui-selected': {
                       backgroundColor: (t) =>
                         t.palette.mode === 'dark'
