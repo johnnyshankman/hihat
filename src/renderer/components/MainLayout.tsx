@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -842,7 +843,11 @@ export default function MainLayout() {
                             opacity: 0.7,
                           }}
                         >
-                          <QueueMusicIcon sx={{ fontSize: 16 }} />
+                          {playlist.isSmart ? (
+                            <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+                          ) : (
+                            <QueueMusicIcon sx={{ fontSize: 16 }} />
+                          )}
                         </ListItemIcon>
                         <ListItemText
                           primary={playlist.name}
