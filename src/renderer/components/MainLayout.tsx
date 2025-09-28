@@ -29,12 +29,12 @@ import AddIcon from '@mui/icons-material/Add';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import MinimizeIcon from '@mui/icons-material/Remove';
 import MaximizeIcon from '@mui/icons-material/CropSquare';
 import RestoreIcon from '@mui/icons-material/FilterNone';
 import ViewSidebarRoundedIcon from '@mui/icons-material/ViewSidebarRounded';
-import ListIcon from '@mui/icons-material/List';
 import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
@@ -121,6 +121,11 @@ export default function MainLayout() {
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [isMaximized, setIsMaximized] = useState(false);
 
+  // Rename dialog state
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renamePlaylistId, setRenamePlaylistId] = useState<string | null>(null);
+  const [renamePlaylistName, setRenamePlaylistName] = useState('');
+
   // Context menu for playlist deletion
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
@@ -198,6 +203,44 @@ export default function MainLayout() {
       }
       setContextMenu(null);
     }
+  };
+
+  const handleRenamePlaylist = () => {
+    if (contextMenu) {
+      const playlist = playlists.find((p) => p.id === contextMenu.playlistId);
+      if (playlist) {
+        setRenamePlaylistId(playlist.id);
+        setRenamePlaylistName(playlist.name);
+        setRenameDialogOpen(true);
+      }
+      setContextMenu(null);
+    }
+  };
+
+  const handleRenameConfirm = async () => {
+    if (renamePlaylistId && renamePlaylistName.trim()) {
+      try {
+        const playlist = playlists.find((p) => p.id === renamePlaylistId);
+        if (playlist) {
+          const updatedPlaylist = {
+            ...playlist,
+            name: renamePlaylistName.trim(),
+          };
+          await useLibraryStore.getState().updatePlaylist(updatedPlaylist);
+        }
+        setRenameDialogOpen(false);
+        setRenamePlaylistId(null);
+        setRenamePlaylistName('');
+      } catch (error) {
+        console.error('Error renaming playlist:', error);
+      }
+    }
+  };
+
+  const closeRenameDialog = () => {
+    setRenameDialogOpen(false);
+    setRenamePlaylistId(null);
+    setRenamePlaylistName('');
   };
 
   const handleAddPlaylistClick = (event: React.MouseEvent) => {
@@ -867,14 +910,22 @@ export default function MainLayout() {
         onClose={handleContextMenuClose}
         open={contextMenu !== null}
       >
-        {/* Only show delete option for non-smart playlists */}
+        {/* Only show options for non-smart playlists */}
         {contextMenu && !contextMenu.isSmart ? (
-          <MenuItem onClick={handleDeletePlaylist}>
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Delete Playlist</ListItemText>
-          </MenuItem>
+          <>
+            <MenuItem onClick={handleRenamePlaylist}>
+              <ListItemIcon>
+                <EditIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Rename</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleDeletePlaylist}>
+              <ListItemIcon>
+                <DeleteIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Delete Playlist</ListItemText>
+            </MenuItem>
+          </>
         ) : (
           <MenuItem onClick={() => {}}>
             <ListItemText>No options available</ListItemText>
@@ -892,6 +943,11 @@ export default function MainLayout() {
             label="Playlist Name"
             margin="dense"
             onChange={(e) => setNewPlaylistName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleCreatePlaylist();
+              }
+            }}
             type="text"
             value={newPlaylistName}
           />
@@ -900,6 +956,33 @@ export default function MainLayout() {
           <Button onClick={closeCreateDialog}>Cancel</Button>
           <Button color="primary" onClick={handleCreatePlaylist}>
             Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Rename Playlist Dialog */}
+      <Dialog onClose={closeRenameDialog} open={renameDialogOpen}>
+        <DialogTitle>Rename Playlist</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="New Playlist Name"
+            margin="dense"
+            onChange={(e) => setRenamePlaylistName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleRenameConfirm();
+              }
+            }}
+            type="text"
+            value={renamePlaylistName}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeRenameDialog}>Cancel</Button>
+          <Button color="primary" onClick={handleRenameConfirm}>
+            Rename
           </Button>
         </DialogActions>
       </Dialog>
