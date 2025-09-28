@@ -370,32 +370,79 @@ export const getCommonRowStyling = (
   expectedSource: string,
   playbackSourcePlaylistId?: string,
   selectedPlaylistId?: string,
-) => ({
-  cursor: 'pointer', // show you can click on the row
-  height: `${STATIC_ROW_HEIGHT}px`, // get the height perfectly in line with the MRT configuration
-  userSelect: 'none', // get rid of text selection
-  // set a default background color
-  backgroundColor: (theme: Theme) => theme.palette.background.default,
-  // alternate background colors for readability
-  '&:nth-of-type(even)': {
-    backgroundColor: (theme: Theme) =>
-      theme.palette.mode === 'dark'
-        ? theme.palette.grey.A700
-        : theme.palette.grey[50],
-  },
-  // override the background color for the selected tracks
-  ...(selectedTrackIds?.includes(rowId) && {
-    backgroundColor: (theme: Theme) =>
-      theme.palette.mode === 'dark'
-        ? `${theme.palette.grey[600]} !important`
-        : `${theme.palette.grey[400]} !important`,
-  }),
-  // override the background color for the currently playing track
-  ...(currentTrackId === rowId &&
+) => {
+  const isPlaying = currentTrackId === rowId &&
     playbackSource === expectedSource &&
     (!playbackSourcePlaylistId ||
-      playbackSourcePlaylistId === selectedPlaylistId) && {
+      playbackSourcePlaylistId === selectedPlaylistId);
+
+  const isSelected = selectedTrackIds?.includes(rowId);
+
+  return {
+    cursor: 'pointer', // show you can click on the row
+    height: `${STATIC_ROW_HEIGHT}px`, // get the height perfectly in line with the MRT configuration
+    userSelect: 'none', // get rid of text selection
+    // set a default background color
+    backgroundColor: (theme: Theme) => theme.palette.background.default,
+    // alternate background colors for readability
+    '&:nth-of-type(even)': {
+      backgroundColor: (theme: Theme) =>
+        theme.palette.mode === 'dark'
+          ? theme.palette.grey.A700
+          : theme.palette.grey[50],
+    },
+    // Style for selected tracks only
+    ...(isSelected && !isPlaying && {
+      backgroundColor: (theme: Theme) =>
+        theme.palette.mode === 'dark'
+          ? `${theme.palette.grey[600]} !important`
+          : `${theme.palette.grey[400]} !important`,
+    }),
+    // Style for currently playing track only (not selected)
+    ...(isPlaying && !isSelected && {
       backgroundColor: (theme: Theme) => theme.palette.background.default,
       filter: 'invert(1)',
     }),
-});
+    // Style for currently playing AND selected track (animated diagonal stripes pattern)
+    ...(isPlaying && isSelected && {
+      position: 'relative' as const,
+      overflow: 'hidden' as const,
+      backgroundColor: 'transparent !important',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: '-100%',
+        width: '200%',
+        height: '100%',
+        backgroundImage: (theme: Theme) =>
+          theme.palette.mode === 'dark'
+            ? `repeating-linear-gradient(
+                45deg,
+                ${theme.palette.grey[600]},
+                ${theme.palette.grey[600]} 10px,
+                ${theme.palette.grey[700]} 10px,
+                ${theme.palette.grey[700]} 20px
+              )`
+            : `repeating-linear-gradient(
+                45deg,
+                ${theme.palette.grey[400]},
+                ${theme.palette.grey[400]} 10px,
+                ${theme.palette.grey[300]} 10px,
+                ${theme.palette.grey[300]} 20px
+              )`,
+        animation: 'moveStripes 45s linear infinite',
+        pointerEvents: 'none',
+        zIndex: 0,
+      },
+      '@keyframes moveStripes': {
+        '0%': {
+          transform: 'translateX(0)',
+        },
+        '100%': {
+          transform: 'translateX(50%)',
+        },
+      },
+    }),
+  };
+};
