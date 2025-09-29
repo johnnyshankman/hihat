@@ -55,3 +55,29 @@ export function formatFileSize(bytes: number): string {
 
   return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
+
+/**
+ * Calculate total duration in hours and minutes from an array of tracks
+ * @param tracks - Array of tracks with duration in seconds
+ * @returns Total duration formatted as "Xh Ym" or "Ym" if no hours
+ */
+export function calculateTotalHours(
+  tracks: Array<{ duration: number }>,
+): string {
+  const totalSeconds = tracks.reduce(
+    (sum, track) => sum + (track.duration || 0),
+    0,
+  );
+
+  // Round to nearest minute
+  const totalMinutes = Math.round(totalSeconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  // If no hours, just show minutes
+  if (hours === 0) {
+    return `${minutes}m`;
+  }
+
+  return `${hours}h ${minutes}m`;
+}

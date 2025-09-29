@@ -16,6 +16,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -48,6 +49,7 @@ import {
   type TableData,
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
+import { calculateTotalHours } from '../utils/formatters';
 
 // Define the type for directory selection result
 interface DirectorySelectionResult {
@@ -510,6 +512,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
+            gap: 1,
           }}
         >
           <Typography
@@ -518,7 +521,6 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              mr: 1,
               userSelect: 'none',
             }}
             variant="h2"
@@ -549,6 +551,37 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
             >
               {data.length.toLocaleString()}&nbsp;♫
             </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              borderRadius: '16px',
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? theme.palette.grey[800]
+                  : theme.palette.grey[200],
+              px: 1.5,
+              py: 0.5,
+              justifyContent: 'center',
+              userSelect: 'none',
+            }}
+          >
+            <Typography
+              sx={{
+                color: (theme) => theme.palette.text.secondary,
+                lineHeight: 1,
+              }}
+              variant="body2"
+            >
+              {calculateTotalHours(data)}&nbsp;
+            </Typography>
+            <AccessTimeIcon
+              sx={{
+                fontSize: 14,
+                color: (theme) => theme.palette.text.secondary,
+              }}
+            />
           </Box>
         </Box>
       </Box>
@@ -581,11 +614,19 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       const oldFilter = globalFilter;
       setGlobalFilter(newFilter);
       updateLibraryViewState(sorting, newFilter);
-      
+
       // When filter is cleared (from non-empty to empty), scroll to current track
-      if (oldFilter && !newFilter && currentTrack && playbackSource === 'library') {
+      if (
+        oldFilter &&
+        !newFilter &&
+        currentTrack &&
+        playbackSource === 'library'
+      ) {
         // Check if the current track is visible with the current artist filter
-        const visibleTrackIds = getFilteredAndSortedTrackIds('library', artistFilter);
+        const visibleTrackIds = getFilteredAndSortedTrackIds(
+          'library',
+          artistFilter,
+        );
         if (visibleTrackIds.includes(currentTrack.id)) {
           // Use setTimeout to ensure the table has re-rendered
           setTimeout(() => {

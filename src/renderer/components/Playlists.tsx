@@ -6,6 +6,7 @@ import React, {
   useEffect,
 } from 'react';
 import { Box, Typography } from '@mui/material';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -32,6 +33,7 @@ import {
   type TableData,
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
+import { calculateTotalHours } from '../utils/formatters';
 
 // Define props interface for Playlists component
 interface PlaylistsProps {
@@ -409,6 +411,7 @@ export default function Playlists({
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
+            gap: 1,
           }}
         >
           <Typography
@@ -417,7 +420,6 @@ export default function Playlists({
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              mr: 1,
               userSelect: 'none',
             }}
             variant="h2"
@@ -448,6 +450,37 @@ export default function Playlists({
             >
               {playlistTracks.length.toLocaleString()}&nbsp;♫
             </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              borderRadius: '16px',
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? theme.palette.grey[800]
+                  : theme.palette.grey[200],
+              px: 1.5,
+              py: 0.5,
+              justifyContent: 'center',
+              userSelect: 'none',
+            }}
+          >
+            <Typography
+              sx={{
+                color: (theme) => theme.palette.text.secondary,
+                lineHeight: 1,
+              }}
+              variant="body2"
+            >
+              {calculateTotalHours(playlistTracks)}&nbsp;
+            </Typography>
+            <AccessTimeIcon
+              sx={{
+                fontSize: 14,
+                color: (theme) => theme.palette.text.secondary,
+              }}
+            />
           </Box>
         </Box>
       </Box>
@@ -480,13 +513,17 @@ export default function Playlists({
       const oldFilter = globalFilter;
       setGlobalFilter(newFilter);
       updatePlaylistViewState(sorting, newFilter, selectedPlaylistId);
-      
+
       // When filter is cleared (from non-empty to empty), scroll to current track
-      if (oldFilter && !newFilter && currentTrack && 
-          playbackSource === 'playlist' && 
-          playbackSourcePlaylistId === selectedPlaylistId) {
+      if (
+        oldFilter &&
+        !newFilter &&
+        currentTrack &&
+        playbackSource === 'playlist' &&
+        playbackSourcePlaylistId === selectedPlaylistId
+      ) {
         // Check if the current track is in this playlist
-        const playlistTrackIds = playlistTracks.map(t => t.id);
+        const playlistTrackIds = playlistTracks.map((t) => t.id);
         if (playlistTrackIds.includes(currentTrack.id)) {
           // Use setTimeout to ensure the table has re-rendered
           setTimeout(() => {
