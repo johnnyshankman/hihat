@@ -371,7 +371,8 @@ export const getCommonRowStyling = (
   playbackSourcePlaylistId?: string,
   selectedPlaylistId?: string,
 ) => {
-  const isPlaying = currentTrackId === rowId &&
+  const isPlaying =
+    currentTrackId === rowId &&
     playbackSource === expectedSource &&
     (!playbackSourcePlaylistId ||
       playbackSourcePlaylistId === selectedPlaylistId);
@@ -392,103 +393,106 @@ export const getCommonRowStyling = (
           : theme.palette.grey[50],
     },
     // Style for selected tracks only
-    ...(isSelected && !isPlaying && {
-      backgroundColor: (theme: Theme) =>
-        theme.palette.mode === 'dark'
-          ? `${theme.palette.grey[600]} !important`
-          : `${theme.palette.grey[400]} !important`,
-    }),
-    // Style for currently playing track only (not selected) - subtle animated stripes
-    ...(isPlaying && !isSelected && {
-      position: 'relative' as const,
-      overflow: 'hidden' as const,
-      backgroundColor: 'transparent !important',
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: '-100%',
-        width: '200%',
-        height: '100%',
-        backgroundImage: (theme: Theme) =>
+    ...(isSelected &&
+      !isPlaying && {
+        backgroundColor: (theme: Theme) =>
           theme.palette.mode === 'dark'
-            ? `repeating-linear-gradient(
+            ? `${theme.palette.grey[600]} !important`
+            : `${theme.palette.grey[400]} !important`,
+      }),
+    // Style for currently playing track only (not selected) - subtle animated stripes
+    ...(isPlaying &&
+      !isSelected && {
+        position: 'relative' as const,
+        overflow: 'hidden' as const,
+        backgroundColor: 'transparent !important',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: '-100%',
+          width: '200%',
+          height: '100%',
+          backgroundImage: (theme: Theme) =>
+            theme.palette.mode === 'dark'
+              ? `repeating-linear-gradient(
                 45deg,
                 rgba(255, 255, 255, 0.04),
                 rgba(255, 255, 255, 0.04) 10px,
-                rgba(255, 255, 255, 0.08) 10px,
-                rgba(255, 255, 255, 0.08) 20px
+                rgba(255, 255, 255, 0.10) 10px,
+                rgba(255, 255, 255, 0.10) 20px
               )`
-            : `repeating-linear-gradient(
+              : `repeating-linear-gradient(
                 45deg,
-                rgba(0, 0, 0, 0.03),
-                rgba(0, 0, 0, 0.03) 10px,
-                rgba(0, 0, 0, 0.07) 10px,
-                rgba(0, 0, 0, 0.07) 20px
+                rgba(0, 0, 0, 0.04),
+                rgba(0, 0, 0, 0.04) 10px,
+                rgba(0, 0, 0, 0.10) 10px,
+                rgba(0, 0, 0, 0.10) 20px
               )`,
-        animation: 'moveStripes 52s linear infinite',
-        pointerEvents: 'none',
-        zIndex: 0,
-      },
-      // Ensure content appears above the animated background
-      '& > td': {
-        position: 'relative',
-        zIndex: 1,
-      },
-      '@keyframes moveStripes': {
-        '0%': {
-          transform: 'translateX(0)',
+          animation: 'moveStripes 52s linear infinite',
+          pointerEvents: 'none',
+          zIndex: 0,
         },
-        '100%': {
-          transform: 'translateX(50%)',
+        // Ensure content appears above the animated background
+        '& > td': {
+          position: 'relative',
+          zIndex: 1,
         },
-      },
-    }),
+        '@keyframes moveStripes': {
+          '0%': {
+            transform: 'translateX(0)',
+          },
+          '100%': {
+            transform: 'translateX(50%)',
+          },
+        },
+      }),
     // Style for currently playing AND selected track (animated diagonal stripes pattern)
-    ...(isPlaying && isSelected && {
-      position: 'relative' as const,
-      overflow: 'hidden' as const,
-      backgroundColor: 'transparent !important',
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: '-100%',
-        width: '200%',
-        height: '100%',
-        backgroundImage: (theme: Theme) =>
-          theme.palette.mode === 'dark'
-            ? `repeating-linear-gradient(
+    ...(isPlaying &&
+      isSelected && {
+        position: 'relative' as const,
+        overflow: 'hidden' as const,
+        backgroundColor: 'transparent !important',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: '-100%',
+          width: '200%',
+          height: '100%',
+          backgroundImage: (theme: Theme) =>
+            theme.palette.mode === 'dark'
+              ? `repeating-linear-gradient(
                 45deg,
                 ${theme.palette.grey[600]},
                 ${theme.palette.grey[600]} 10px,
                 ${theme.palette.grey[700]} 10px,
                 ${theme.palette.grey[700]} 20px
               )`
-            : `repeating-linear-gradient(
+              : `repeating-linear-gradient(
                 45deg,
                 ${theme.palette.grey[400]},
                 ${theme.palette.grey[400]} 10px,
                 ${theme.palette.grey[300]} 10px,
                 ${theme.palette.grey[300]} 20px
               )`,
-        animation: 'moveStripes 52s linear infinite',
-        pointerEvents: 'none',
-        zIndex: 0,
-      },
-      // Ensure content appears above the animated background
-      '& > td': {
-        position: 'relative',
-        zIndex: 1,
-      },
-      '@keyframes moveStripes': {
-        '0%': {
-          transform: 'translateX(0)',
+          animation: 'moveStripes 52s linear infinite',
+          pointerEvents: 'none',
+          zIndex: 0,
         },
-        '100%': {
-          transform: 'translateX(50%)',
+        // Ensure content appears above the animated background
+        '& > td': {
+          position: 'relative',
+          zIndex: 1,
         },
-      },
-    }),
+        '@keyframes moveStripes': {
+          '0%': {
+            transform: 'translateX(0)',
+          },
+          '100%': {
+            transform: 'translateX(50%)',
+          },
+        },
+      }),
   };
 };
