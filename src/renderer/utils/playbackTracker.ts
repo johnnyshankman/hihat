@@ -18,8 +18,8 @@ export class PlaybackTracker {
   // Map to track accumulated listen time for each track
   private listenTimeMap: Map<string, number> = new Map();
 
-  // Threshold in seconds to count a song as played (30 seconds)
-  private readonly PLAY_COUNT_THRESHOLD = 30;
+  // Threshold in seconds to count a song as played (20 seconds)
+  private readonly PLAY_COUNT_THRESHOLD = 20;
 
   // Has the current track already hit the threshold and been counted?
   private hasCurrentTrackBeenCounted = false;
