@@ -398,10 +398,51 @@ export const getCommonRowStyling = (
           ? `${theme.palette.grey[600]} !important`
           : `${theme.palette.grey[400]} !important`,
     }),
-    // Style for currently playing track only (not selected)
+    // Style for currently playing track only (not selected) - subtle animated stripes
     ...(isPlaying && !isSelected && {
-      backgroundColor: (theme: Theme) => theme.palette.background.default,
-      filter: 'invert(1)',
+      position: 'relative' as const,
+      overflow: 'hidden' as const,
+      backgroundColor: 'transparent !important',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: '-100%',
+        width: '200%',
+        height: '100%',
+        backgroundImage: (theme: Theme) =>
+          theme.palette.mode === 'dark'
+            ? `repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.04),
+                rgba(255, 255, 255, 0.04) 10px,
+                rgba(255, 255, 255, 0.08) 10px,
+                rgba(255, 255, 255, 0.08) 20px
+              )`
+            : `repeating-linear-gradient(
+                45deg,
+                rgba(0, 0, 0, 0.03),
+                rgba(0, 0, 0, 0.03) 10px,
+                rgba(0, 0, 0, 0.07) 10px,
+                rgba(0, 0, 0, 0.07) 20px
+              )`,
+        animation: 'moveStripes 52s linear infinite',
+        pointerEvents: 'none',
+        zIndex: 0,
+      },
+      // Ensure content appears above the animated background
+      '& > td': {
+        position: 'relative',
+        zIndex: 1,
+      },
+      '@keyframes moveStripes': {
+        '0%': {
+          transform: 'translateX(0)',
+        },
+        '100%': {
+          transform: 'translateX(50%)',
+        },
+      },
     }),
     // Style for currently playing AND selected track (animated diagonal stripes pattern)
     ...(isPlaying && isSelected && {
@@ -431,9 +472,14 @@ export const getCommonRowStyling = (
                 ${theme.palette.grey[300]} 10px,
                 ${theme.palette.grey[300]} 20px
               )`,
-        animation: 'moveStripes 45s linear infinite',
+        animation: 'moveStripes 52s linear infinite',
         pointerEvents: 'none',
         zIndex: 0,
+      },
+      // Ensure content appears above the animated background
+      '& > td': {
+        position: 'relative',
+        zIndex: 1,
       },
       '@keyframes moveStripes': {
         '0%': {
