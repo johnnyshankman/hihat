@@ -286,7 +286,7 @@ const electronHandler = {
     },
 
     /**
-     * Show a file selection dialog for music files
+     * Show a file selection dialog for music files (supports both files and folders)
      * @returns Promise that resolves to the selected files
      */
     selectFiles() {

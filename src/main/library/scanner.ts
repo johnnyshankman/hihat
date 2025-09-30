@@ -210,12 +210,14 @@ function findDuplicateTrack(
  * @param sourcePath - Source file path
  * @param libraryPath - Target library path
  * @param metadata - Already parsed metadata to avoid re-parsing
+ * @param folderRoot - Optional root folder path to preserve relative structure
  * @returns New file path in the library
  */
 async function copyFileToLibrary(
   sourcePath: string,
   libraryPath: string,
   metadata: mm.IAudioMetadata,
+  folderRoot?: string,
 ): Promise<string> {
   try {
     await ensureDirectoryExists(libraryPath);
@@ -223,6 +225,65 @@ async function copyFileToLibrary(
     // Get file name and extension
     const fileName = path.basename(sourcePath);
 
+    // If folderRoot is provided, preserve the relative path structure
+    if (folderRoot && sourcePath.startsWith(folderRoot)) {
+      // Get the relative path from the parent of the folder root
+      // This includes the folder root name itself in the structure
+      const folderRootName = path.basename(folderRoot);
+      const relativePath = path.relative(
+        folderRoot,
+        path.dirname(sourcePath),
+      );
+
+      // Create the target directory preserving the relative structure
+      // Include the folder root name to maintain the complete structure
+      const targetDir = path.join(libraryPath, folderRootName, relativePath);
+      await ensureDirectoryExists(targetDir);
+
+      // Create the target file path
+      const targetPath = path.join(targetDir, fileName);
+
+      // Check if the source file is already in the library path
+      if (sourcePath.startsWith(libraryPath)) {
+        // If the file is already in the library path and at the exact target path,
+        // we don't need to copy it
+        if (sourcePath === targetPath) {
+          return targetPath;
+        }
+      }
+
+      // Check if the file already exists at the target location
+      const targetExists = await exists(targetPath);
+      if (targetExists) {
+        // If the file exists and has the same size, assume it's the same file
+        const [sourceStats, targetStats] = await Promise.all([
+          stat(sourcePath),
+          stat(targetPath),
+        ]);
+
+        if (sourceStats.size === targetStats.size) {
+          return targetPath;
+        }
+
+        // If sizes differ, create a unique filename by adding a timestamp
+        const fileNameWithoutExt = path.basename(
+          fileName,
+          path.extname(fileName),
+        );
+        const fileExt = path.extname(fileName);
+        const timestamp = Date.now();
+        const newFileName = `${fileNameWithoutExt}_${timestamp}${fileExt}`;
+        const newTargetPath = path.join(targetDir, newFileName);
+
+        await copyFile(sourcePath, newTargetPath);
+        return newTargetPath;
+      }
+
+      await copyFile(sourcePath, targetPath);
+      return targetPath;
+    }
+
+    // Default behavior: use metadata to create artist/album folder structure
     const { common } = metadata;
     const artist = common.artist || 'Unknown Artist';
     const album = common.album || 'Unknown Album';
@@ -393,6 +454,7 @@ function parseFileMetadata(
  * @param existingFilePaths - Set of existing file paths
  * @param trackMap - Map of existing tracks for efficient lookup
  * @param libraryPath - Path to the library directory
+ * @param folderRoot - Optional root folder path to preserve relative structure
  * @returns Track data if added, null if skipped
  */
 async function processFile(
@@ -400,6 +462,7 @@ async function processFile(
   existingFilePaths: Set<string>,
   trackMap: Map<string, Track>,
   libraryPath: string,
+  folderRoot?: string,
 ): Promise<Omit<Track, 'id'> | null> {
   // Skip if the file is already in the database
   if (existingFilePaths.has(filePath)) {
@@ -465,6 +528,7 @@ async function processFile(
       filePath,
       libraryPath,
       metadata,
+      folderRoot,
     );
 
     // Update the file path to the target path in the library
@@ -487,6 +551,7 @@ async function processFile(
  * @param existingFilePaths - Set of existing file paths
  * @param trackMap - Map of existing tracks for efficient lookup
  * @param libraryPath - Path to the library directory
+ * @param folderRoot - Optional root folder path to preserve relative structure
  * @returns Array of processed track data
  */
 async function processBatch(
@@ -494,11 +559,18 @@ async function processBatch(
   existingFilePaths: Set<string>,
   trackMap: Map<string, Track>,
   libraryPath: string,
+  folderRoot?: string,
 ): Promise<(Omit<Track, 'id'> & { replaceId?: string; oldPath?: string })[]> {
   // Process files in parallel
   const results = await Promise.all(
     fileBatch.map((filePath) =>
-      processFile(filePath, existingFilePaths, trackMap, libraryPath),
+      processFile(
+        filePath,
+        existingFilePaths,
+        trackMap,
+        libraryPath,
+        folderRoot,
+      ),
     ),
   );
 
@@ -703,17 +775,15 @@ export async function scanLibrary(
 
 /**
  * Import specific music files into the database
- * @param filePaths - Array of file paths
+ * @param filePaths - Array of file paths (can include folders)
  * @returns Object with the number of tracks added
  */
 export async function importFiles(
   filePaths: string[],
 ): Promise<{ tracksAdded: number }> {
-  debugLog(`Beginning import of ${filePaths.length} files`);
+  debugLog(`Beginning import of ${filePaths.length} paths`);
 
   try {
-    const totalFiles = filePaths.length;
-
     // Get existing tracks to avoid duplicates
     const existingTracks = db.getAllTracks();
     const existingFilePaths = new Set(
@@ -737,18 +807,99 @@ export async function importFiles(
     // Ensure the library path exists
     await ensureDirectoryExists(libraryPath);
 
-    // Filter out unsupported files
-    const supportedFiles = filePaths.filter((filePath) =>
+    // Separate files and folders
+    const filesToProcess: string[] = [];
+    const foldersToProcess: { folderPath: string; folderRoot: string }[] = [];
+
+    // Check each path to determine if it's a file or folder
+    const pathCheckPromises = filePaths.map(async (itemPath) => {
+      try {
+        const itemStat = await stat(itemPath);
+        if (itemStat.isDirectory()) {
+          // It's a folder - we'll scan it recursively and preserve structure
+          return {
+            type: 'folder' as const,
+            folderPath: itemPath,
+            folderRoot: itemPath,
+          };
+        }
+        if (itemStat.isFile() && isSupportedFile(itemPath)) {
+          // It's a supported file
+          return { type: 'file' as const, filePath: itemPath };
+        }
+      } catch (error) {
+        debugLog(`Error checking path ${itemPath}:`, error);
+      }
+      return null;
+    });
+
+    const pathCheckResults = await Promise.all(pathCheckPromises);
+
+    // Organize into files and folders
+    pathCheckResults.forEach((result) => {
+      if (result?.type === 'folder') {
+        foldersToProcess.push({
+          folderPath: result.folderPath,
+          folderRoot: result.folderRoot,
+        });
+      } else if (result?.type === 'file') {
+        filesToProcess.push(result.filePath);
+      }
+    });
+
+    debugLog(
+      `Found ${filesToProcess.length} individual files and ${foldersToProcess.length} folders to process`,
+    );
+
+    // Collect all files from folders
+    for (const { folderPath, folderRoot } of foldersToProcess) {
+      const folderFiles = getMusicFiles(folderPath);
+      // Tag these files with their folder root for relative path preservation
+      folderFiles.forEach((file) => {
+        filesToProcess.push(file);
+      });
+      debugLog(
+        `Found ${folderFiles.length} music files in folder ${folderPath}`,
+      );
+    }
+
+    // Filter out unsupported files (in case getMusicFiles returned any)
+    const supportedFiles = filesToProcess.filter((filePath) =>
       isSupportedFile(filePath),
     );
 
+    const totalFiles = supportedFiles.length;
+    debugLog(`Total files to import: ${totalFiles}`);
+
+    // Create a map to track which files belong to which folder root
+    const fileToFolderRoot = new Map<string, string>();
+    for (const { folderPath, folderRoot } of foldersToProcess) {
+      const folderFiles = getMusicFiles(folderPath);
+      folderFiles.forEach((file) => {
+        fileToFolderRoot.set(file, folderRoot);
+      });
+    }
+
     // Divide files into batches for parallel processing
     const batchSize = Math.ceil(supportedFiles.length / PARALLEL_PROCESSES);
-    const batches: string[][] = [];
+    const batches: { files: string[]; folderRoot?: string }[] = [];
 
-    for (let i = 0; i < supportedFiles.length; i += batchSize) {
-      batches.push(supportedFiles.slice(i, i + batchSize));
-    }
+    // Create batches
+    Array.from({ length: Math.ceil(supportedFiles.length / batchSize) }).forEach(
+      (_, i) => {
+        const batchFiles = supportedFiles.slice(
+          i * batchSize,
+          (i + 1) * batchSize,
+        );
+        // Determine if all files in this batch share the same folder root
+        const folderRoots = new Set(
+          batchFiles.map((f) => fileToFolderRoot.get(f)).filter(Boolean),
+        );
+        const folderRoot =
+          folderRoots.size === 1 ? Array.from(folderRoots)[0] : undefined;
+        batches.push({ files: batchFiles, folderRoot });
+      },
+    );
 
     debugLog(
       `Created ${batches.length} batches with size ~${batchSize} for processing`,
@@ -765,7 +916,14 @@ export async function importFiles(
     // Process batches in sequence to avoid overwhelming resources
     const processBatches = async (): Promise<void> => {
       for (let i = 0; i < batches.length; i += 1) {
-        const batch = batches[i];
+        const { files: batch, folderRoot } = batches[i];
+
+        // Determine folder root for this batch
+        // If batch has mixed sources, process each file individually with its own root
+        const batchFolderRoots = batch.map((f) => fileToFolderRoot.get(f));
+        const allSameRoot = batchFolderRoots.every(
+          (root) => root === batchFolderRoots[0],
+        );
 
         // Process the batch
         // eslint-disable-next-line no-await-in-loop
@@ -774,6 +932,7 @@ export async function importFiles(
           existingFilePaths,
           trackMap,
           libraryPath,
+          allSameRoot ? batchFolderRoots[0] : undefined,
         );
 
         // Collect files and tracks to delete

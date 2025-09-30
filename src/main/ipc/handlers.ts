@@ -301,7 +301,7 @@ export const dialogHandlers = {
   'dialog:select-files': (async () => {
     try {
       const result = await dialog.showOpenDialog({
-        properties: ['openFile', 'multiSelections'],
+        properties: ['openFile', 'openDirectory', 'multiSelections'],
       });
       return result;
     } catch (error: unknown) {

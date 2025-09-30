@@ -714,8 +714,10 @@ export default function Settings({
                   color="text.secondary"
                   sx={{ display: 'block', fontSize: '0.75rem' }}
                 >
-                  Select music files to import directly into your hihat library.
-                  hihat will deduplicate songs automatically.
+                  Select music files or folders to import directly into your
+                  hihat library. Folders will be recursively scanned for music
+                  files while preserving their structure. hihat will deduplicate
+                  songs automatically.
                 </Typography>
                 <Button
                   color="primary"
