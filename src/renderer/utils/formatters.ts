@@ -57,9 +57,9 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
- * Calculate total duration in hours and minutes from an array of tracks
+ * Calculate total duration in decimal format from an array of tracks
  * @param tracks - Array of tracks with duration in seconds
- * @returns Total duration formatted as "Xh Ym" or "Ym" if no hours
+ * @returns Total duration formatted as "X.Y mins", "X.Y hours", or "X.Y days"
  */
 export function calculateTotalHours(
   tracks: Array<{ duration: number }>,
@@ -69,15 +69,23 @@ export function calculateTotalHours(
     0,
   );
 
-  // Round to nearest minute
-  const totalMinutes = Math.round(totalSeconds / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
+  const totalMinutes = totalSeconds / 60;
+  const totalHours = totalMinutes / 60;
+  const totalDays = totalHours / 24;
 
-  // If no hours, just show minutes
-  if (hours === 0) {
-    return `${minutes}m`;
+  // Under 1 hour: show minutes
+  if (totalHours < 1) {
+    const mins = totalMinutes.toFixed(1);
+    return `${mins}${mins === '1.0' ? 'm' : 'm'}`;
   }
 
-  return `${hours}h ${minutes}m`;
+  // Under 24 hours: show hours
+  if (totalHours < 24) {
+    const hrs = totalHours.toFixed(1);
+    return `${hrs}${hrs === '1.0' ? 'h' : 'h'}`;
+  }
+
+  // 24 hours or more: show days
+  const days = totalDays.toFixed(1);
+  return `${days}${days === '1.0' ? 'd' : 'd'}`;
 }
