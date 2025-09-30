@@ -553,7 +553,7 @@ export default function Player() {
           }}
           variant="caption"
         >
-          No track playing
+          ---
         </Typography>
       );
     }
@@ -994,7 +994,7 @@ export default function Player() {
             </>
           ) : (
             <Typography color="textSecondary" variant="body1">
-              No track playing
+              ---
             </Typography>
           )}
         </Box>
