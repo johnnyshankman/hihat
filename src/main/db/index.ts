@@ -365,7 +365,16 @@ function initDefaultPlaylists(): void {
       // Define the default smart playlists we want to ensure exist
       const defaultSmartPlaylists: Omit<Playlist, 'id'>[] = [
         {
-          name: '50 Recently Played Songs',
+          name: 'Recently Added',
+          isSmart: true,
+          ruleSet: {
+            type: 'recentlyAdded',
+            limit: 50,
+          },
+          trackIds: [], // Smart playlists should always have empty trackIds
+        },
+        {
+          name: 'Recently Played',
           isSmart: true,
           ruleSet: {
             type: 'recentlyPlayed',
@@ -374,19 +383,10 @@ function initDefaultPlaylists(): void {
           trackIds: [], // Smart playlists should always have empty trackIds
         },
         {
-          name: '50 Most Played Songs',
+          name: 'Most Played',
           isSmart: true,
           ruleSet: {
             type: 'mostPlayed',
-            limit: 50,
-          },
-          trackIds: [], // Smart playlists should always have empty trackIds
-        },
-        {
-          name: '50 Recently Added Songs',
-          isSmart: true,
-          ruleSet: {
-            type: 'recentlyAdded',
             limit: 50,
           },
           trackIds: [], // Smart playlists should always have empty trackIds
@@ -457,7 +457,16 @@ function initDefaultPlaylists(): void {
       // Define the default smart playlists
       const defaultSmartPlaylists: Omit<Playlist, 'id'>[] = [
         {
-          name: '50 Recently Played Songs',
+          name: 'Recently Added',
+          isSmart: true,
+          ruleSet: {
+            type: 'recentlyAdded',
+            limit: 50,
+          },
+          trackIds: [], // Smart playlists should always have empty trackIds
+        },
+        {
+          name: 'Recently Played',
           isSmart: true,
           ruleSet: {
             type: 'recentlyPlayed',
@@ -466,19 +475,10 @@ function initDefaultPlaylists(): void {
           trackIds: [], // Smart playlists should always have empty trackIds
         },
         {
-          name: '50 Most Played Songs',
+          name: 'Most Played',
           isSmart: true,
           ruleSet: {
             type: 'mostPlayed',
-            limit: 50,
-          },
-          trackIds: [], // Smart playlists should always have empty trackIds
-        },
-        {
-          name: '50 Recently Added Songs',
-          isSmart: true,
-          ruleSet: {
-            type: 'recentlyAdded',
             limit: 50,
           },
           trackIds: [], // Smart playlists should always have empty trackIds
