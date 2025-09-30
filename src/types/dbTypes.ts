@@ -42,6 +42,7 @@ export interface Playlist {
   id: string; // Unique identifier for the playlist
   name: string; // Playlist name
   isSmart: boolean; // Whether this is a smart playlist
+  smartPlaylistId: string | null; // Stable identifier for built-in smart playlists (e.g., 'recently-added')
   ruleSet: PlaylistRule | null; // Rules for smart playlists
   trackIds: string[]; // Array of track IDs for regular playlists
 }

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS playlists (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   isSmart INTEGER NOT NULL,
+  smartPlaylistId TEXT,
   ruleSet TEXT,
   trackIds TEXT
 );
@@ -43,12 +44,12 @@ INSERT INTO tracks (id, filePath, title, artist, album, albumArtist, genre, dura
 ('test-7', '/test-songs/03 - Kendrick Lamar - King Kunta(Explicit).m4a', 'King Kunta', 'Kendrick Lamar', 'To Pimp a Butterfly', 'Kendrick Lamar', 'Hip Hop', 234.5, 25, '2024-01-04T00:00:00Z', '2024-01-18T00:00:00Z', NULL, 3);
 
 -- Insert test playlists
-INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds) VALUES
-('playlist-1', 'Test Playlist 1', 0, NULL, '["test-1","test-2","test-7"]'),
-('playlist-2', 'Jazz Favorites', 0, NULL, '["test-3","test-4","test-5"]'),
-('playlist-3', 'Recently Added', 1, '{"type":"recentlyAdded","limit":50}', '[]'),
-('playlist-4', 'Recently Played', 1, '{"type":"recentlyPlayed","limit":50}', '[]'),
-('playlist-5', 'Most Played', 1, '{"type":"mostPlayed","limit":50}', '[]');
+INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds) VALUES
+('playlist-1', 'Test Playlist 1', 0, NULL, NULL, '["test-1","test-2","test-7"]'),
+('playlist-2', 'Jazz Favorites', 0, NULL, NULL, '["test-3","test-4","test-5"]'),
+('playlist-3', 'Recently Added', 1, 'recently-added', '{"type":"recentlyAdded","limit":50}', '[]'),
+('playlist-4', 'Recently Played', 1, 'recently-played', '{"type":"recentlyPlayed","limit":50}', '[]'),
+('playlist-5', 'Most Played', 1, 'most-played', '{"type":"mostPlayed","limit":50}', '[]');
 
 -- Insert default settings
 INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume) VALUES 

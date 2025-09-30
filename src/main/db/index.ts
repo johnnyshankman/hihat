@@ -17,6 +17,7 @@ import {
   ColumnVisibility,
   PlaylistRule,
 } from '../../types/dbTypes';
+import { SMART_PLAYLISTS } from '../../types/smartPlaylists';
 
 // Import BrowserWindow for sending events
 
@@ -130,6 +131,35 @@ function addColumnIfNotExists(
 }
 
 /**
+ * Migrate existing smart playlists to use stable smartPlaylistId values
+ * This allows us to rename playlists without creating duplicates
+ */
+function migrateExistingSmartPlaylists(): void {
+  try {
+    console.warn('Migrating existing smart playlists to use stable IDs...');
+
+    // First, delete any smart playlists that don't have a smartPlaylistId
+    // These are orphaned from the old system and will be recreated by initDefaultPlaylists
+    try {
+      const deleteStmt = db.prepare(
+        'DELETE FROM playlists WHERE isSmart = 1 AND smartPlaylistId IS NULL'
+      );
+      const deleteResult = deleteStmt.run();
+      if (deleteResult.changes > 0) {
+        console.warn(`Removed ${deleteResult.changes} old smart playlists without stable IDs`);
+      }
+    } catch (deleteErr) {
+      console.error('Error removing old smart playlists:', deleteErr);
+    }
+
+    // The new smart playlists will be created by initDefaultPlaylists() with proper smartPlaylistId values
+    console.warn('Smart playlist migration complete');
+  } catch (error) {
+    console.error('Error during smart playlist migration:', error);
+  }
+}
+
+/**
  * Run database migrations to update schema for existing databases
  */
 function runMigrations(): void {
@@ -139,6 +169,12 @@ function runMigrations(): void {
 
     // Migration 2: Add volume column to settings table if it doesn't exist
     addColumnIfNotExists('settings', 'volume', 'REAL');
+
+    // Migration 3: Add smartPlaylistId column to playlists table if it doesn't exist
+    addColumnIfNotExists('playlists', 'smartPlaylistId', 'TEXT');
+
+    // Migration 4: Migrate existing smart playlists to use stable IDs
+    migrateExistingSmartPlaylists();
   } catch (error) {
     console.error('Error running database migrations:', error);
   }
@@ -173,6 +209,7 @@ function createTables(): void {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       isSmart INTEGER NOT NULL,
+      smartPlaylistId TEXT,
       ruleSet TEXT,
       trackIds TEXT
     )
@@ -352,6 +389,8 @@ function initDefaultSettings(): void {
 
 /**
  * Initialize default playlists if they don't exist
+ * This function uses stable smartPlaylistId values to identify built-in smart playlists,
+ * allowing their display names to be updated without creating duplicates.
  */
 function initDefaultPlaylists(): void {
   try {
@@ -362,87 +401,69 @@ function initDefaultPlaylists(): void {
         "SELECT name FROM sqlite_master WHERE type='table' AND name='playlists'",
       ).get();
 
-      // Define the default smart playlists we want to ensure exist
-      const defaultSmartPlaylists: Omit<Playlist, 'id'>[] = [
-        {
-          name: 'Recently Added',
-          isSmart: true,
-          ruleSet: {
-            type: 'recentlyAdded',
-            limit: 50,
-          },
-          trackIds: [], // Smart playlists should always have empty trackIds
-        },
-        {
-          name: 'Recently Played',
-          isSmart: true,
-          ruleSet: {
-            type: 'recentlyPlayed',
-            limit: 50,
-          },
-          trackIds: [], // Smart playlists should always have empty trackIds
-        },
-        {
-          name: 'Most Played',
-          isSmart: true,
-          ruleSet: {
-            type: 'mostPlayed',
-            limit: 50,
-          },
-          trackIds: [], // Smart playlists should always have empty trackIds
-        },
-      ];
-
-      // Query to check if each specific smart playlist exists
-      const playlistExists = db.prepare(
-        'SELECT COUNT(*) as count FROM playlists WHERE name = ? AND isSmart = 1',
+      // Prepare statements
+      const playlistExistsBySmartId = db.prepare(
+        'SELECT id, name FROM playlists WHERE smartPlaylistId = ?',
       );
 
-      // Prepare insert statement
       const insertPlaylist = db.prepare(`
-        INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds)
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
 
-      // Check each default playlist and add if missing
-      let playlistsAdded = false;
-      defaultSmartPlaylists.forEach((playlist) => {
-        try {
-          const exists = playlistExists.get(playlist.name) as { count: number };
+      const updatePlaylistName = db.prepare(`
+        UPDATE playlists SET name = ? WHERE smartPlaylistId = ?
+      `);
 
-          if (!exists || exists.count === 0) {
-            console.warn(`Adding missing smart playlist: ${playlist.name}`);
+      // Check each default smart playlist
+      let changesMade = false;
+      SMART_PLAYLISTS.forEach((smartPlaylist) => {
+        try {
+          const existing = playlistExistsBySmartId.get(smartPlaylist.smartPlaylistId) as
+            { id: string; name: string } | undefined;
+
+          if (!existing) {
+            // Smart playlist doesn't exist - add it
+            console.warn(`Adding missing smart playlist: ${smartPlaylist.name} (${smartPlaylist.smartPlaylistId})`);
             const playlistId = uuidv4();
             insertPlaylist.run(
               playlistId,
-              playlist.name,
-              playlist.isSmart ? 1 : 0,
-              playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
-              JSON.stringify([]), // Explicitly use empty array for smart playlists
+              smartPlaylist.name,
+              1, // isSmart
+              smartPlaylist.smartPlaylistId,
+              JSON.stringify(smartPlaylist.ruleSet),
+              JSON.stringify([]), // Empty array for smart playlists
             );
-            playlistsAdded = true;
+            changesMade = true;
+          } else if (existing.name !== smartPlaylist.name) {
+            // Smart playlist exists but name has changed - update it
+            console.warn(
+              `Updating smart playlist name: "${existing.name}" -> "${smartPlaylist.name}" (${smartPlaylist.smartPlaylistId})`
+            );
+            updatePlaylistName.run(smartPlaylist.name, smartPlaylist.smartPlaylistId);
+            changesMade = true;
           } else {
-            console.warn(`Smart playlist already exists: ${playlist.name}`);
+            console.warn(`Smart playlist up to date: ${smartPlaylist.name} (${smartPlaylist.smartPlaylistId})`);
           }
         } catch (err) {
           console.error(
-            `Error checking/adding playlist "${playlist.name}":`,
+            `Error checking/updating playlist "${smartPlaylist.name}":`,
             err,
           );
         }
       });
-      
-      // If we added playlists, make sure to save the database to disk
-      if (playlistsAdded && !useMockDb) {
-        console.warn('Smart playlists were added, saving database to disk...');
+
+      // If we made changes, save the database to disk
+      if (changesMade && !useMockDb) {
+        console.warn('Smart playlists were updated, saving database to disk...');
         try {
           const originalDb = (db as any)._originalDb || db;
           const data = originalDb.export();
           const buffer = Buffer.from(data);
           fs.writeFileSync(DB_PATH, buffer);
-          console.warn('Database saved to disk after adding smart playlists');
+          console.warn('Database saved to disk after updating smart playlists');
         } catch (saveError) {
-          console.error('Error saving database after adding playlists:', saveError);
+          console.error('Error saving database after updating playlists:', saveError);
         }
       }
     } catch (error) {
@@ -454,58 +475,28 @@ function initDefaultPlaylists(): void {
       // Ensure the table exists
       createTables();
 
-      // Define the default smart playlists
-      const defaultSmartPlaylists: Omit<Playlist, 'id'>[] = [
-        {
-          name: 'Recently Added',
-          isSmart: true,
-          ruleSet: {
-            type: 'recentlyAdded',
-            limit: 50,
-          },
-          trackIds: [], // Smart playlists should always have empty trackIds
-        },
-        {
-          name: 'Recently Played',
-          isSmart: true,
-          ruleSet: {
-            type: 'recentlyPlayed',
-            limit: 50,
-          },
-          trackIds: [], // Smart playlists should always have empty trackIds
-        },
-        {
-          name: 'Most Played',
-          isSmart: true,
-          ruleSet: {
-            type: 'mostPlayed',
-            limit: 50,
-          },
-          trackIds: [], // Smart playlists should always have empty trackIds
-        },
-      ];
-
-      // Insert all default playlists since table was just created
+      // Insert all default smart playlists since table was just created
       try {
         const insertPlaylist = db.prepare(`
-          INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds)
+          VALUES (?, ?, ?, ?, ?, ?)
         `);
 
-        defaultSmartPlaylists.forEach((playlist) => {
+        SMART_PLAYLISTS.forEach((smartPlaylist) => {
           console.warn(
-            `Adding default smart playlist to new table: ${playlist.name}`,
+            `Adding default smart playlist to new table: ${smartPlaylist.name} (${smartPlaylist.smartPlaylistId})`,
           );
           const playlistId = uuidv4();
           insertPlaylist.run(
             playlistId,
-            playlist.name,
-            playlist.isSmart ? 1 : 0,
-            playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
-            JSON.stringify([]), // Explicitly use empty array for smart playlists
+            smartPlaylist.name,
+            1, // isSmart
+            smartPlaylist.smartPlaylistId,
+            JSON.stringify(smartPlaylist.ruleSet),
+            JSON.stringify([]), // Empty array for smart playlists
           );
         });
-        
+
         // Save database after inserting playlists into new table
         if (!useMockDb) {
           console.warn('Saving database after creating playlists table and adding defaults...');
@@ -1087,10 +1078,11 @@ export function getAllPlaylists(): Playlist[] {
     }
     const playlists = db.prepare('SELECT * FROM playlists').all();
 
-    return playlists.map((playlist: any) => {
+    const parsedPlaylists = playlists.map((playlist: any) => {
       const parsedPlaylist = {
         ...playlist,
         isSmart: Boolean(playlist.isSmart),
+        smartPlaylistId: playlist.smartPlaylistId || null,
         ruleSet: playlist.ruleSet
           ? JSON.parse(playlist.ruleSet as string)
           : null,
@@ -1117,6 +1109,28 @@ export function getAllPlaylists(): Playlist[] {
 
       return parsedPlaylist;
     });
+
+    // Sort playlists: built-in smart playlists first (by smartPlaylistId order), then user playlists
+    return parsedPlaylists.sort((a: Playlist, b: Playlist) => {
+      const aIsBuiltIn = a.smartPlaylistId !== null;
+      const bIsBuiltIn = b.smartPlaylistId !== null;
+
+      // Both are built-in smart playlists - sort by the order defined in SMART_PLAYLISTS
+      if (aIsBuiltIn && bIsBuiltIn) {
+        const aIndex = SMART_PLAYLISTS.findIndex(sp => sp.smartPlaylistId === a.smartPlaylistId);
+        const bIndex = SMART_PLAYLISTS.findIndex(sp => sp.smartPlaylistId === b.smartPlaylistId);
+        return aIndex - bIndex;
+      }
+
+      // Only a is built-in - a comes first
+      if (aIsBuiltIn) return -1;
+
+      // Only b is built-in - b comes first
+      if (bIsBuiltIn) return 1;
+
+      // Neither is built-in - maintain original order (by database order)
+      return 0;
+    });
   } catch (error) {
     console.error('Failed to get playlists:', error);
     return [];
@@ -1142,6 +1156,7 @@ export function getPlaylistById(id: string): Playlist | null {
       id: playlist.id,
       name: playlist.name,
       isSmart: Boolean(playlist.isSmart),
+      smartPlaylistId: playlist.smartPlaylistId || null,
       ruleSet: playlist.ruleSet
         ? (JSON.parse(playlist.ruleSet as string) as PlaylistRule)
         : null,
@@ -1191,13 +1206,14 @@ export function createPlaylist(playlist: Omit<Playlist, 'id'>): Playlist {
 
     db.prepare(
       `
-      INSERT INTO playlists (id, name, isSmart, ruleSet, trackIds)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds)
+      VALUES (?, ?, ?, ?, ?, ?)
     `,
     ).run(
       newPlaylist.id,
       newPlaylist.name,
       newPlaylist.isSmart ? 1 : 0,
+      newPlaylist.smartPlaylistId || null,
       newPlaylist.ruleSet ? JSON.stringify(newPlaylist.ruleSet) : null,
       JSON.stringify(trackIdsToStore),
     );
@@ -1226,6 +1242,7 @@ export function updatePlaylist(playlist: Playlist): boolean {
       SET
         name = ?,
         isSmart = ?,
+        smartPlaylistId = ?,
         ruleSet = ?,
         trackIds = ?
       WHERE id = ?
@@ -1234,6 +1251,7 @@ export function updatePlaylist(playlist: Playlist): boolean {
       .run(
         playlist.name,
         playlist.isSmart ? 1 : 0,
+        playlist.smartPlaylistId || null,
         playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
         JSON.stringify(trackIdsToStore),
         playlist.id,
@@ -1253,12 +1271,12 @@ export function updatePlaylist(playlist: Playlist): boolean {
  */
 export function deletePlaylist(id: string): boolean {
   try {
-    // First check if this is a smart playlist
+    // First check if this is a built-in smart playlist
     const playlist = getPlaylistById(id);
 
-    // Don't allow deletion of smart playlists
-    if (playlist?.isSmart) {
-      // Deletion of smart playlist with ID ${id} was prevented
+    // Don't allow deletion of built-in smart playlists (those with a smartPlaylistId)
+    if (playlist?.smartPlaylistId) {
+      console.warn(`Deletion of built-in smart playlist with ID ${id} (${playlist.smartPlaylistId}) was prevented`);
       return false;
     }
 

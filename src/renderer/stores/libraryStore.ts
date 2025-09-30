@@ -94,6 +94,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
         name,
         trackIds: [],
         isSmart: false,
+        smartPlaylistId: null,
         ruleSet: null,
       });
 
