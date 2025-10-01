@@ -370,6 +370,7 @@ export const getCommonRowStyling = (
   expectedSource: string,
   playbackSourcePlaylistId?: string,
   selectedPlaylistId?: string,
+  rowIndex?: number,
 ) => {
   const isPlaying =
     currentTrackId === rowId &&
@@ -379,19 +380,20 @@ export const getCommonRowStyling = (
 
   const isSelected = selectedTrackIds?.includes(rowId);
 
+  // Determine if this row should have alternating background based on actual data index
+  const isEvenRow = rowIndex !== undefined && rowIndex % 2 === 0;
+
   return {
     cursor: 'pointer', // show you can click on the row
     height: `${STATIC_ROW_HEIGHT}px`, // get the height perfectly in line with the MRT configuration
     userSelect: 'none', // get rid of text selection
-    // set a default background color
-    backgroundColor: (theme: Theme) => theme.palette.background.default,
-    // alternate background colors for readability
-    '&:nth-of-type(even)': {
-      backgroundColor: (theme: Theme) =>
-        theme.palette.mode === 'dark'
+    // set background color based on actual row index in data, not DOM position
+    backgroundColor: (theme: Theme) =>
+      isEvenRow
+        ? theme.palette.mode === 'dark'
           ? theme.palette.grey.A700
-          : theme.palette.grey[50],
-    },
+          : theme.palette.grey[50]
+        : theme.palette.background.default,
     // Style for selected tracks only
     ...(isSelected &&
       !isPlaying && {

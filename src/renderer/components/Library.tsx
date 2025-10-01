@@ -653,6 +653,9 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         (r) => r.original.id === row.original.id,
       );
 
+      // Use the visual index for row striping
+      const visualIndex = currentIndex !== -1 ? currentIndex : row.index;
+
       return {
         onClick: (e) => {
           const trackId = row.original.id;
@@ -726,6 +729,9 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
           Object.keys(selectedTracks),
           playbackSource || '',
           'library',
+          undefined,
+          undefined,
+          visualIndex,
         ),
       };
     },

@@ -550,6 +550,9 @@ export default function Playlists({
         (r) => r.original.id === row.original.id,
       );
 
+      // Use the visual index for row striping
+      const visualIndex = currentIndex !== -1 ? currentIndex : row.index;
+
       return {
         onClick: (e) => {
           const trackId = row.original.id;
@@ -625,6 +628,7 @@ export default function Playlists({
           'playlist',
           playbackSourcePlaylistId || undefined,
           selectedPlaylistId || undefined,
+          visualIndex,
         ),
       };
     },
