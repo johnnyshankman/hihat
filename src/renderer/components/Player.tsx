@@ -675,53 +675,39 @@ export default function Player() {
   // Check if title text overflows its container
   useEffect(() => {
     const checkTitleOverflow = () => {
+      // Try to measure from the static ref first
       if (titleRef.current) {
         const isOverflowing =
           titleRef.current.scrollWidth > titleRef.current.clientWidth;
         setIsTitleScrolling(isOverflowing);
+        return;
+      }
+
+      // If marquee is showing, measure the text width against the Typography container
+      if (titleRef2.current) {
+        const container = titleRef2.current.parentElement?.parentElement?.parentElement;
+        if (container) {
+          const textWidth = titleRef2.current.scrollWidth;
+          const containerWidth = container.clientWidth;
+          setIsTitleScrolling(textWidth > containerWidth);
+        }
       }
     };
 
     checkTitleOverflow();
 
-    // Create a ResizeObserver to watch for size changes
+    // Create a ResizeObserver to watch for size changes on the Typography parent container
     const resizeObserver = new ResizeObserver(checkTitleOverflow);
-    if (titleRef.current) {
-      resizeObserver.observe(titleRef.current);
+
+    // Observe the Typography component that's always present
+    const typographyContainer = titleRef.current?.parentElement || titleRef2.current?.parentElement?.parentElement?.parentElement;
+    if (typographyContainer) {
+      resizeObserver.observe(typographyContainer);
     }
 
-    const currentTitleRef = titleRef.current;
     return () => {
-      if (currentTitleRef) {
-        resizeObserver.unobserve(currentTitleRef);
-      }
-    };
-  }, [currentTrack?.title]);
-
-  // Check if title text in marquee overflows
-  useEffect(() => {
-    const checkTitleOverflow2 = () => {
-      if (titleRef2.current) {
-        const isOverflowing =
-          titleRef2.current.scrollWidth >
-          (titleRef2.current.parentElement?.parentElement?.parentElement
-            ?.clientWidth || 10000000);
-        setIsTitleScrolling(isOverflowing);
-      }
-    };
-
-    checkTitleOverflow2();
-
-    // Create a ResizeObserver to watch for size changes
-    const resizeObserver = new ResizeObserver(checkTitleOverflow2);
-    if (titleRef2.current) {
-      resizeObserver.observe(titleRef2.current);
-    }
-
-    const currentTitleRef2 = titleRef2.current;
-    return () => {
-      if (currentTitleRef2) {
-        resizeObserver.unobserve(currentTitleRef2);
+      if (typographyContainer) {
+        resizeObserver.unobserve(typographyContainer);
       }
     };
   }, [currentTrack?.title]);
@@ -729,54 +715,40 @@ export default function Player() {
   // Check if artist+album text overflows its container
   useEffect(() => {
     const checkArtistAlbumOverflow = () => {
+      // Try to measure from the static ref first
       if (artistAlbumRef.current) {
         const isOverflowing =
           artistAlbumRef.current.scrollWidth >
           artistAlbumRef.current.clientWidth;
         setIsArtistAlbumScrolling(isOverflowing);
+        return;
+      }
+
+      // If marquee is showing, measure the text width against the Typography container
+      if (artistAlbumRef2.current) {
+        const container = artistAlbumRef2.current.parentElement?.parentElement?.parentElement;
+        if (container) {
+          const textWidth = artistAlbumRef2.current.scrollWidth;
+          const containerWidth = container.clientWidth;
+          setIsArtistAlbumScrolling(textWidth > containerWidth);
+        }
       }
     };
 
     checkArtistAlbumOverflow();
 
-    // Create a ResizeObserver to watch for size changes
+    // Create a ResizeObserver to watch for size changes on the Typography parent container
     const resizeObserver = new ResizeObserver(checkArtistAlbumOverflow);
-    if (artistAlbumRef.current) {
-      resizeObserver.observe(artistAlbumRef.current);
+
+    // Observe the Typography component that's always present
+    const typographyContainer = artistAlbumRef.current?.parentElement || artistAlbumRef2.current?.parentElement?.parentElement?.parentElement;
+    if (typographyContainer) {
+      resizeObserver.observe(typographyContainer);
     }
 
-    const currentArtistAlbumRef = artistAlbumRef.current;
     return () => {
-      if (currentArtistAlbumRef) {
-        resizeObserver.unobserve(currentArtistAlbumRef);
-      }
-    };
-  }, [currentTrack?.artist, currentTrack?.album]);
-
-  // Check if artist+album text in marquee overflows
-  useEffect(() => {
-    const checkArtistAlbumOverflow2 = () => {
-      if (artistAlbumRef2.current) {
-        const isOverflowing =
-          artistAlbumRef2.current.scrollWidth >
-          (artistAlbumRef2.current.parentElement?.parentElement?.parentElement
-            ?.clientWidth || 10000000);
-        setIsArtistAlbumScrolling(isOverflowing);
-      }
-    };
-
-    checkArtistAlbumOverflow2();
-
-    // Create a ResizeObserver to watch for size changes
-    const resizeObserver = new ResizeObserver(checkArtistAlbumOverflow2);
-    if (artistAlbumRef2.current) {
-      resizeObserver.observe(artistAlbumRef2.current);
-    }
-
-    const currentArtistAlbumRef2 = artistAlbumRef2.current;
-    return () => {
-      if (currentArtistAlbumRef2) {
-        resizeObserver.unobserve(currentArtistAlbumRef2);
+      if (typographyContainer) {
+        resizeObserver.unobserve(typographyContainer);
       }
     };
   }, [currentTrack?.artist, currentTrack?.album]);
