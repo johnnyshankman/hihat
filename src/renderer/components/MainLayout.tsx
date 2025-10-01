@@ -273,6 +273,14 @@ export default function MainLayout() {
       },
     );
 
+    // Listen for IPC event to open settings
+    const unsubOpenSettings = window.electron.ipcRenderer.on(
+      'ui:openSettings',
+      () => {
+        setCurrentView('settings');
+      },
+    );
+
     // Check if window is maximized on mount
     checkMaximized();
 
@@ -286,9 +294,10 @@ export default function MainLayout() {
     // Cleanup
     return () => {
       unsubToggleSidebar();
+      unsubOpenSettings();
       unsubMaximizedChange();
     };
-  }, [handleDrawerToggle, checkMaximized]); // Added checkMaximized to dependency array
+  }, [handleDrawerToggle, checkMaximized, setCurrentView]); // Added setCurrentView to dependency array
 
   useEffect(() => {
     // Listen for custom view change events

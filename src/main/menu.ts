@@ -238,6 +238,12 @@ Duration: ${stats.totalDurationHours.toFixed(1)} hours`,
           },
         },
         {
+          label: 'view settings',
+          click: () => {
+            this.mainWindow.webContents.send('ui:openSettings');
+          },
+        },
+        {
           label: 'toggle developer tools',
           accelerator: 'Alt+Ctrl+I',
           click: () => {
@@ -294,6 +300,12 @@ Duration: ${stats.totalDurationHours.toFixed(1)} hours`,
           accelerator: 'Command+S',
           click: () => {
             this.mainWindow.webContents.send('ui:toggleSidebar');
+          },
+        },
+        {
+          label: 'view settings',
+          click: () => {
+            this.mainWindow.webContents.send('ui:openSettings');
           },
         },
         {
@@ -474,6 +486,12 @@ Duration: ${stats.totalDurationHours.toFixed(1)} hours`,
                     this.mainWindow.webContents.send('ui:toggleSidebar');
                   },
                 },
+                {
+                  label: 'view settings',
+                  click: () => {
+                    this.mainWindow.webContents.send('ui:openSettings');
+                  },
+                },
               ]
             : [
                 {
@@ -491,6 +509,12 @@ Duration: ${stats.totalDurationHours.toFixed(1)} hours`,
                   accelerator: 'CmdOrCtrl+S',
                   click: () => {
                     this.mainWindow.webContents.send('ui:toggleSidebar');
+                  },
+                },
+                {
+                  label: 'view settings',
+                  click: () => {
+                    this.mainWindow.webContents.send('ui:openSettings');
                   },
                 },
                 {
