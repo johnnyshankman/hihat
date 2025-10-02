@@ -515,6 +515,7 @@ export default function MainLayout() {
           variant="persistent"
         >
           <Paper
+            elevation={0}
             sx={{
               borderRadius: '0px',
               height: '100%',
@@ -627,19 +628,26 @@ export default function MainLayout() {
                   </IconButton>
                 </Tooltip>
               </Box>
-              <Box sx={{ display: 'flex', gap: '4px', WebkitAppRegion: 'no-drag' }}>
+              <Box
+                sx={{ display: 'flex', gap: '4px', WebkitAppRegion: 'no-drag' }}
+              >
                 {/* Settings button */}
                 <Tooltip title="Settings">
                   <IconButton
                     onClick={() => handleViewChange('settings')}
                     size="small"
                     sx={{
-                      color: currentView === 'settings' ? 'text.primary' : 'text.secondary',
-                      backgroundColor: currentView === 'settings'
-                        ? (theme) => theme.palette.mode === 'dark'
-                          ? 'rgba(255, 255, 255, 0.08)'
-                          : 'rgba(0, 0, 0, 0.08)'
-                        : 'transparent',
+                      color:
+                        currentView === 'settings'
+                          ? 'text.primary'
+                          : 'text.secondary',
+                      backgroundColor:
+                        currentView === 'settings'
+                          ? (theme) =>
+                              theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : 'rgba(0, 0, 0, 0.08)'
+                          : 'transparent',
                       '&:hover': {
                         color: 'text.primary',
                         backgroundColor: (theme) =>
@@ -794,7 +802,9 @@ export default function MainLayout() {
                   >
                     <AddIcon sx={{ fontSize: 16 }} />
                   </IconButton>
-                  <Box sx={{ opacity: 0.7, display: 'flex', alignItems: 'center' }}>
+                  <Box
+                    sx={{ opacity: 0.7, display: 'flex', alignItems: 'center' }}
+                  >
                     {playlistsOpen ? (
                       <ExpandLess sx={{ fontSize: 18 }} />
                     ) : (
@@ -994,8 +1004,10 @@ export default function MainLayout() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeRenameDialog}>Cancel</Button>
-          <Button color="primary" onClick={handleRenameConfirm}>
+          <Button disableElevation onClick={closeRenameDialog}>
+            Cancel
+          </Button>
+          <Button disableElevation onClick={handleRenameConfirm}>
             Rename
           </Button>
         </DialogActions>

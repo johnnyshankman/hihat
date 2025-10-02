@@ -87,7 +87,7 @@ export default function NotificationSystem() {
                 maxHeight: '400px',
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: 'background.paper',
+                backgroundColor: (theme) => theme.palette.background.paper,
                 borderRadius: 2,
                 overflow: 'hidden',
               }}
@@ -109,6 +109,7 @@ export default function NotificationSystem() {
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   {notifications.length > 0 && (
                     <Button
+                      disableElevation
                       onClick={handleClearAll}
                       size="small"
                       startIcon={<ClearAllIcon />}

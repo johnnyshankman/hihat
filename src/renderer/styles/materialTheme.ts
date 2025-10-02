@@ -108,14 +108,14 @@ export const lightTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#3478DA', // Blue accent
+      main: '#000000', // Black
     },
     secondary: {
       main: '#666666', // Muted text
     },
     background: {
       default: '#FFFFFF', // Light background
-      paper: '#FCFCFC', // Slightly darker for cards/dialogs
+      paper: '#FFFFFF', // Slightly darker for cards/dialogs
     },
     text: {
       primary: '#000000',

@@ -177,7 +177,9 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
 
   // MUI component props
   muiTopToolbarProps: {
+    elevation: 0,
     sx: {
+      backgroundColor: (theme: Theme) => theme.palette.background.paper,
       borderBottom: '1px solid',
       borderColor: (theme: Theme) => theme.palette.divider,
       minHeight: '64px',
@@ -201,6 +203,12 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
       borderBottom: '1px solid',
       borderColor: (theme: Theme) => theme.palette.divider,
       opacity: 1.0,
+    },
+  },
+
+  muiTableHeadCellProps: {
+    sx: {
+      backgroundColor: (theme: Theme) => theme.palette.background.paper,
     },
   },
 
@@ -275,7 +283,6 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
       boxShadow: 'none',
       borderRadius: 0,
       overflow: 'hidden',
-      backgroundColor: (theme: Theme) => theme.palette.background.paper,
     },
   },
 
@@ -284,7 +291,6 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
       width: '100%',
       tableLayout: 'fixed',
       height: 'auto',
-      backgroundColor: (theme: Theme) => theme.palette.background.default,
     },
   },
 });

@@ -685,7 +685,8 @@ export default function Player() {
 
       // If marquee is showing, measure the text width against the Typography container
       if (titleRef2.current) {
-        const container = titleRef2.current.parentElement?.parentElement?.parentElement;
+        const container =
+          titleRef2.current.parentElement?.parentElement?.parentElement;
         if (container) {
           const textWidth = titleRef2.current.scrollWidth;
           const containerWidth = container.clientWidth;
@@ -700,7 +701,9 @@ export default function Player() {
     const resizeObserver = new ResizeObserver(checkTitleOverflow);
 
     // Observe the Typography component that's always present
-    const typographyContainer = titleRef.current?.parentElement || titleRef2.current?.parentElement?.parentElement?.parentElement;
+    const typographyContainer =
+      titleRef.current?.parentElement ||
+      titleRef2.current?.parentElement?.parentElement?.parentElement;
     if (typographyContainer) {
       resizeObserver.observe(typographyContainer);
     }
@@ -726,7 +729,8 @@ export default function Player() {
 
       // If marquee is showing, measure the text width against the Typography container
       if (artistAlbumRef2.current) {
-        const container = artistAlbumRef2.current.parentElement?.parentElement?.parentElement;
+        const container =
+          artistAlbumRef2.current.parentElement?.parentElement?.parentElement;
         if (container) {
           const textWidth = artistAlbumRef2.current.scrollWidth;
           const containerWidth = container.clientWidth;
@@ -741,7 +745,9 @@ export default function Player() {
     const resizeObserver = new ResizeObserver(checkArtistAlbumOverflow);
 
     // Observe the Typography component that's always present
-    const typographyContainer = artistAlbumRef.current?.parentElement || artistAlbumRef2.current?.parentElement?.parentElement?.parentElement;
+    const typographyContainer =
+      artistAlbumRef.current?.parentElement ||
+      artistAlbumRef2.current?.parentElement?.parentElement?.parentElement;
     if (typographyContainer) {
       resizeObserver.observe(typographyContainer);
     }
@@ -798,8 +804,9 @@ export default function Player() {
 
   return (
     <Paper
-      elevation={3}
+      elevation={0}
       sx={{
+        backgroundColor: (t) => t.palette.background.paper,
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
@@ -824,8 +831,6 @@ export default function Player() {
           width: '100%',
           height: '100%',
           py: isCompactLayout ? 0.5 : { xs: 1, sm: 2 },
-          backgroundColor: (t) =>
-            t.palette.mode === 'dark' ? '#0D0D0D' : '#FFFFFF', // matches the toolbar and header row
           borderTop: '1px solid',
           borderColor: (t) => t.palette.divider,
         }}

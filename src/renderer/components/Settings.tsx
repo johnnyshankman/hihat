@@ -651,21 +651,26 @@ export default function Settings({
     <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
       {/* Settings Header with Save Button for Library Path */}
       <AppBar
-        color="default"
-        elevation={1}
+        elevation={0}
         position="sticky"
-        sx={{ mb: 2, height: '60px' }}
+        sx={{
+          height: '60px',
+          backgroundColor: (t) => t.palette.background.paper,
+          borderBottom: (t) => `1px solid ${t.palette.divider}`,
+        }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-            <Typography variant="h1">Settings</Typography>
+            <Typography color="text.primary" variant="h1">
+              Settings
+            </Typography>
           </Box>
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ p: 2, WebkitAppRegion: 'no-drag' }}>
-        <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper elevation={1} sx={{ WebkitAppRegion: 'no-drag', p: 2 }}>
+        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Grid container spacing={3}>
             {/* Library Path Section */}
             <Grid item xs={12}>
@@ -793,7 +798,7 @@ export default function Settings({
           </Grid>
         </Paper>
 
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Typography gutterBottom variant="h2">
             Appearance
           </Typography>
@@ -820,7 +825,7 @@ export default function Settings({
           </FormGroup>
         </Paper>
 
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Typography gutterBottom variant="h2">
             Table Column Visibility
           </Typography>
@@ -917,7 +922,7 @@ export default function Settings({
           </FormGroup>
         </Paper>
 
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Typography gutterBottom variant="h2">
             Danger Zone
           </Typography>
@@ -939,7 +944,7 @@ export default function Settings({
             </Typography>
           </Box>
         </Paper>
-      </Box>
+      </Paper>
 
       {/* Scanning progress dialog */}
       <Dialog fullWidth maxWidth="sm" open={isScanning}>
@@ -1044,7 +1049,7 @@ export default function Settings({
               elevation={0}
               sx={{
                 p: 2,
-                bgcolor: 'background.default',
+                backgroundColor: (t) => t.palette.background.paper,
                 maxHeight: '150px',
                 overflow: 'auto',
                 mb: 2,
