@@ -518,7 +518,7 @@ export default function MainLayout() {
             sx={{
               borderRadius: '0px',
               height: '100%',
-              backgroundColor: theme === 'dark' ? '#0D0D0D' : '#FFFFFF',
+              backgroundColor: theme === 'dark' ? '#000000' : '#FFFFFF',
             }}
           >
             {/* Window Controls */}
