@@ -17,8 +17,8 @@ test.describe('Simple Electron Test', () => {
 
   test('should launch and display the app', async () => {
     // Check app name
-    const appName = await app.evaluate(async ({ app }: any) => {
-      return app.getName();
+    const appName = await app.evaluate(async ({ app: electronApp }: any) => {
+      return electronApp.getName();
     });
     expect(appName).toBe('hihat');
 
@@ -32,7 +32,7 @@ test.describe('Simple Electron Test', () => {
 
     // Take a screenshot for debugging
     await page.screenshot({ path: 'e2e/screenshots/app-launched.png' });
-    
+
     // Check if there are any critical errors in console
     const logs: string[] = [];
     page.on('console', (msg: any) => {
@@ -40,25 +40,28 @@ test.describe('Simple Electron Test', () => {
         logs.push(msg.text());
       }
     });
-    
+
     // Wait a bit to catch any delayed errors
     await page.waitForTimeout(3000);
-    
+
     // Check that there are no critical errors
-    const criticalErrors = logs.filter(log => 
-      log.includes('Failed to load') || 
-      log.includes('Cannot read') ||
-      log.includes('undefined')
+    const criticalErrors = logs.filter(
+      (log) =>
+        log.includes('Failed to load') ||
+        log.includes('Cannot read') ||
+        log.includes('undefined'),
     );
-    
+
     if (criticalErrors.length > 0) {
+      // eslint-disable-next-line no-console
       console.log('Critical errors found:', criticalErrors);
     }
-    
+
     // Try to find main UI elements
     const bodyHTML = await page.locator('body').innerHTML();
+    // eslint-disable-next-line no-console
     console.log('Page loaded with content length:', bodyHTML.length);
-    
+
     // The app should have some content
     expect(bodyHTML.length).toBeGreaterThan(100);
   });

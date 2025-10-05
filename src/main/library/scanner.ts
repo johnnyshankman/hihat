@@ -230,10 +230,7 @@ async function copyFileToLibrary(
       // Get the relative path from the parent of the folder root
       // This includes the folder root name itself in the structure
       const folderRootName = path.basename(folderRoot);
-      const relativePath = path.relative(
-        folderRoot,
-        path.dirname(sourcePath),
-      );
+      const relativePath = path.relative(folderRoot, path.dirname(sourcePath));
 
       // Create the target directory preserving the relative structure
       // Include the folder root name to maintain the complete structure
@@ -852,7 +849,8 @@ export async function importFiles(
     );
 
     // Collect all files from folders
-    for (const { folderPath, folderRoot } of foldersToProcess) {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const { folderPath } of foldersToProcess) {
       const folderFiles = getMusicFiles(folderPath);
       // Tag these files with their folder root for relative path preservation
       folderFiles.forEach((file) => {
@@ -873,6 +871,7 @@ export async function importFiles(
 
     // Create a map to track which files belong to which folder root
     const fileToFolderRoot = new Map<string, string>();
+    // eslint-disable-next-line no-restricted-syntax
     for (const { folderPath, folderRoot } of foldersToProcess) {
       const folderFiles = getMusicFiles(folderPath);
       folderFiles.forEach((file) => {
@@ -885,21 +884,21 @@ export async function importFiles(
     const batches: { files: string[]; folderRoot?: string }[] = [];
 
     // Create batches
-    Array.from({ length: Math.ceil(supportedFiles.length / batchSize) }).forEach(
-      (_, i) => {
-        const batchFiles = supportedFiles.slice(
-          i * batchSize,
-          (i + 1) * batchSize,
-        );
-        // Determine if all files in this batch share the same folder root
-        const folderRoots = new Set(
-          batchFiles.map((f) => fileToFolderRoot.get(f)).filter(Boolean),
-        );
-        const folderRoot =
-          folderRoots.size === 1 ? Array.from(folderRoots)[0] : undefined;
-        batches.push({ files: batchFiles, folderRoot });
-      },
-    );
+    Array.from({
+      length: Math.ceil(supportedFiles.length / batchSize),
+    }).forEach((_, i) => {
+      const batchFiles = supportedFiles.slice(
+        i * batchSize,
+        (i + 1) * batchSize,
+      );
+      // Determine if all files in this batch share the same folder root
+      const folderRoots = new Set(
+        batchFiles.map((f) => fileToFolderRoot.get(f)).filter(Boolean),
+      );
+      const folderRoot =
+        folderRoots.size === 1 ? Array.from(folderRoots)[0] : undefined;
+      batches.push({ files: batchFiles, folderRoot });
+    });
 
     debugLog(
       `Created ${batches.length} batches with size ~${batchSize} for processing`,
@@ -916,7 +915,7 @@ export async function importFiles(
     // Process batches in sequence to avoid overwhelming resources
     const processBatches = async (): Promise<void> => {
       for (let i = 0; i < batches.length; i += 1) {
-        const { files: batch, folderRoot } = batches[i];
+        const { files: batch } = batches[i];
 
         // Determine folder root for this batch
         // If batch has mixed sources, process each file individually with its own root

@@ -1,9 +1,10 @@
 /**
  * Electron Test Adapter
- * 
+ *
  * This module provides a bridge between the Electron app and Playwright tests.
  * It modifies the app behavior when running in test mode to make it more testable.
  */
+/* eslint-disable no-use-before-define */
 
 import { app } from 'electron';
 import path from 'path';
@@ -49,15 +50,6 @@ export function injectTestIds(): void {
   if (process.env.TEST_MODE !== 'true') {
     return;
   }
-
-  // This function would be called from preload or renderer
-  // to add data-testid attributes to elements dynamically
-  const addTestId = (selector: string, testId: string) => {
-    const element = document.querySelector(selector);
-    if (element) {
-      element.setAttribute('data-testid', testId);
-    }
-  };
 
   // Wait for DOM to be ready
   if (document.readyState === 'loading') {
@@ -117,12 +109,12 @@ function injectTestIdsToDOM(): void {
     const titleElement = row.querySelector('.song-title');
     const title = titleElement?.textContent || `song-${index}`;
     row.setAttribute('data-testid', `song-row-${title}`);
-    
+
     // Add test IDs to song details
     const artist = row.querySelector('.song-artist');
     if (artist) artist.setAttribute('data-testid', 'song-artist');
     if (titleElement) titleElement.setAttribute('data-testid', 'song-title');
-    
+
     // Add test ID to like button
     const likeBtn = row.querySelector('.like-button');
     if (likeBtn) {

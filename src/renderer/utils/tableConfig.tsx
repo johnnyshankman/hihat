@@ -394,12 +394,14 @@ export const getCommonRowStyling = (
     height: `${STATIC_ROW_HEIGHT}px`, // get the height perfectly in line with the MRT configuration
     userSelect: 'none', // get rid of text selection
     // set background color based on actual row index in data, not DOM position
-    backgroundColor: (theme: Theme) =>
-      isEvenRow
-        ? theme.palette.mode === 'dark'
-          ? theme.palette.grey.A700
-          : theme.palette.grey[50]
-        : theme.palette.background.default,
+    backgroundColor: (theme: Theme) => {
+      if (!isEvenRow) {
+        return theme.palette.background.default;
+      }
+      return theme.palette.mode === 'dark'
+        ? theme.palette.grey.A700
+        : theme.palette.grey[50];
+    },
     // Style for selected tracks only
     ...(isSelected &&
       !isPlaying && {

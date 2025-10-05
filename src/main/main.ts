@@ -39,9 +39,10 @@ function configureLogging() {
     // Set log file path - use separate directories for dev and prod
     log.transports.file.resolvePath = () => {
       const basePath = app.getPath('userData');
-      const userDataPath = process.env.NODE_ENV === 'development'
-        ? path.join(basePath, '..', `${app.getName()}-dev`)
-        : basePath;
+      const userDataPath =
+        process.env.NODE_ENV === 'development'
+          ? path.join(basePath, '..', `${app.getName()}-dev`)
+          : basePath;
       return path.join(userDataPath, 'logs/main.log');
     };
 
@@ -63,9 +64,11 @@ function configureLogging() {
     log.info('Version:', app.getVersion());
     log.info('Platform:', process.platform);
     const basePath = app.getPath('userData');
-    const actualUserDataPath = process.env.NODE_ENV === 'development'
-      ? path.join(basePath, '..', `${app.getName()}-dev`)
-      : basePath;
+    const nodeEnv: string = process.env.NODE_ENV || 'production';
+    const actualUserDataPath =
+      nodeEnv === 'development'
+        ? path.join(basePath, '..', `${app.getName()}-dev`)
+        : basePath;
     log.info('User Data Path:', actualUserDataPath);
     log.info('Environment:', process.env.NODE_ENV || 'production');
   }
@@ -89,7 +92,8 @@ if (process.env.NODE_ENV === 'production') {
 const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
-const isTest = process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true';
+const isTest =
+  process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true';
 
 if (isDebug) {
   require('electron-debug')();

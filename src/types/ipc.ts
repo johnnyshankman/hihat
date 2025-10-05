@@ -56,6 +56,7 @@ export type Channels =
 
   // UI operations
   | 'ui:toggleSidebar'
+  | 'ui:openSettings'
 
   // File system operations
   | 'fileSystem:fileExists'
@@ -156,6 +157,7 @@ export interface IPCRequests {
 
   // UI operations
   'ui:toggleSidebar': void;
+  'ui:openSettings': void;
 
   // File system operations
   'fileSystem:fileExists': { filePath: string };
@@ -290,6 +292,7 @@ export interface IPCResponses {
 
   // UI operations
   'ui:toggleSidebar': boolean;
+  'ui:openSettings': void;
 
   // File system operations
   'fileSystem:fileExists': boolean;
@@ -388,6 +391,7 @@ export type IPCEvents =
   | 'backup-library-error'
   | 'backup-library-progress'
   | 'ui:toggleSidebar'
+  | 'ui:openSettings'
   | 'player:playPause'
   | 'player:nextTrack'
   | 'player:previousTrack'

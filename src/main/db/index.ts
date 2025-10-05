@@ -32,9 +32,10 @@ const getUserDataPath = () => {
   return basePath;
 };
 
-const DB_PATH = process.env.TEST_MODE === 'true' && process.env.TEST_DB_PATH
-  ? process.env.TEST_DB_PATH
-  : path.join(getUserDataPath(), 'library.db');
+const DB_PATH =
+  process.env.TEST_MODE === 'true' && process.env.TEST_DB_PATH
+    ? process.env.TEST_DB_PATH
+    : path.join(getUserDataPath(), 'library.db');
 
 // Database instance
 let db: any;
@@ -142,11 +143,13 @@ function migrateExistingSmartPlaylists(): void {
     // These are orphaned from the old system and will be recreated by initDefaultPlaylists
     try {
       const deleteStmt = db.prepare(
-        'DELETE FROM playlists WHERE isSmart = 1 AND smartPlaylistId IS NULL'
+        'DELETE FROM playlists WHERE isSmart = 1 AND smartPlaylistId IS NULL',
       );
       const deleteResult = deleteStmt.run();
       if (deleteResult.changes > 0) {
-        console.warn(`Removed ${deleteResult.changes} old smart playlists without stable IDs`);
+        console.warn(
+          `Removed ${deleteResult.changes} old smart playlists without stable IDs`,
+        );
       }
     } catch (deleteErr) {
       console.error('Error removing old smart playlists:', deleteErr);
@@ -419,12 +422,15 @@ function initDefaultPlaylists(): void {
       let changesMade = false;
       SMART_PLAYLISTS.forEach((smartPlaylist) => {
         try {
-          const existing = playlistExistsBySmartId.get(smartPlaylist.smartPlaylistId) as
-            { id: string; name: string } | undefined;
+          const existing = playlistExistsBySmartId.get(
+            smartPlaylist.smartPlaylistId,
+          ) as { id: string; name: string } | undefined;
 
           if (!existing) {
             // Smart playlist doesn't exist - add it
-            console.warn(`Adding missing smart playlist: ${smartPlaylist.name} (${smartPlaylist.smartPlaylistId})`);
+            console.warn(
+              `Adding missing smart playlist: ${smartPlaylist.name} (${smartPlaylist.smartPlaylistId})`,
+            );
             const playlistId = uuidv4();
             insertPlaylist.run(
               playlistId,
@@ -438,12 +444,17 @@ function initDefaultPlaylists(): void {
           } else if (existing.name !== smartPlaylist.name) {
             // Smart playlist exists but name has changed - update it
             console.warn(
-              `Updating smart playlist name: "${existing.name}" -> "${smartPlaylist.name}" (${smartPlaylist.smartPlaylistId})`
+              `Updating smart playlist name: "${existing.name}" -> "${smartPlaylist.name}" (${smartPlaylist.smartPlaylistId})`,
             );
-            updatePlaylistName.run(smartPlaylist.name, smartPlaylist.smartPlaylistId);
+            updatePlaylistName.run(
+              smartPlaylist.name,
+              smartPlaylist.smartPlaylistId,
+            );
             changesMade = true;
           } else {
-            console.warn(`Smart playlist up to date: ${smartPlaylist.name} (${smartPlaylist.smartPlaylistId})`);
+            console.warn(
+              `Smart playlist up to date: ${smartPlaylist.name} (${smartPlaylist.smartPlaylistId})`,
+            );
           }
         } catch (err) {
           console.error(
@@ -455,15 +466,21 @@ function initDefaultPlaylists(): void {
 
       // If we made changes, save the database to disk
       if (changesMade && !useMockDb) {
-        console.warn('Smart playlists were updated, saving database to disk...');
+        console.warn(
+          'Smart playlists were updated, saving database to disk...',
+        );
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-underscore-dangle
           const originalDb = (db as any)._originalDb || db;
           const data = originalDb.export();
           const buffer = Buffer.from(data);
           fs.writeFileSync(DB_PATH, buffer);
           console.warn('Database saved to disk after updating smart playlists');
         } catch (saveError) {
-          console.error('Error saving database after updating playlists:', saveError);
+          console.error(
+            'Error saving database after updating playlists:',
+            saveError,
+          );
         }
       }
     } catch (error) {
@@ -499,15 +516,21 @@ function initDefaultPlaylists(): void {
 
         // Save database after inserting playlists into new table
         if (!useMockDb) {
-          console.warn('Saving database after creating playlists table and adding defaults...');
+          console.warn(
+            'Saving database after creating playlists table and adding defaults...',
+          );
           try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-underscore-dangle
             const originalDb = (db as any)._originalDb || db;
             const data = originalDb.export();
             const buffer = Buffer.from(data);
             fs.writeFileSync(DB_PATH, buffer);
             console.warn('Database saved after creating playlists table');
           } catch (saveErr) {
-            console.error('Error saving database after creating playlists table:', saveErr);
+            console.error(
+              'Error saving database after creating playlists table:',
+              saveErr,
+            );
           }
         }
       } catch (insertError) {
@@ -731,10 +754,10 @@ export function initDatabase(): void {
 
           useMockDb = false;
           console.warn('Using sql.js implementation: useMockDb =', useMockDb);
-          
+
           // NOW initialize the database tables and data AFTER wrapper is set up
           console.warn('Initializing database tables and default data...');
-          
+
           // Create tables
           createTables();
           console.warn('Tables created or verified');
@@ -750,10 +773,12 @@ export function initDatabase(): void {
           // Initialize default playlists
           initDefaultPlaylists();
           console.warn('Default playlists initialized');
-          
+
           // Verify playlists were added
           try {
-            const verifyResult = db.exec('SELECT id, name, isSmart FROM playlists');
+            const verifyResult = db.exec(
+              'SELECT id, name, isSmart FROM playlists',
+            );
             console.warn('Playlists after initialization:', verifyResult);
           } catch (verifyErr) {
             console.error('Error verifying playlists:', verifyErr);
@@ -764,8 +789,10 @@ export function initDatabase(): void {
           const finalBuffer = Buffer.from(finalData);
           fs.writeFileSync(DB_PATH, finalBuffer);
           console.warn('Database saved to disk after initialization');
-          
-          console.warn('SQLite database loaded and initialized successfully using sql.js');
+
+          console.warn(
+            'SQLite database loaded and initialized successfully using sql.js',
+          );
           return true; // Return a value to satisfy the linter
         })
         .catch((sqlJsError: any) => {
@@ -1117,8 +1144,12 @@ export function getAllPlaylists(): Playlist[] {
 
       // Both are built-in smart playlists - sort by the order defined in SMART_PLAYLISTS
       if (aIsBuiltIn && bIsBuiltIn) {
-        const aIndex = SMART_PLAYLISTS.findIndex(sp => sp.smartPlaylistId === a.smartPlaylistId);
-        const bIndex = SMART_PLAYLISTS.findIndex(sp => sp.smartPlaylistId === b.smartPlaylistId);
+        const aIndex = SMART_PLAYLISTS.findIndex(
+          (sp) => sp.smartPlaylistId === a.smartPlaylistId,
+        );
+        const bIndex = SMART_PLAYLISTS.findIndex(
+          (sp) => sp.smartPlaylistId === b.smartPlaylistId,
+        );
         return aIndex - bIndex;
       }
 
@@ -1276,7 +1307,9 @@ export function deletePlaylist(id: string): boolean {
 
     // Don't allow deletion of built-in smart playlists (those with a smartPlaylistId)
     if (playlist?.smartPlaylistId) {
-      console.warn(`Deletion of built-in smart playlist with ID ${id} (${playlist.smartPlaylistId}) was prevented`);
+      console.warn(
+        `Deletion of built-in smart playlist with ID ${id} (${playlist.smartPlaylistId}) was prevented`,
+      );
       return false;
     }
 

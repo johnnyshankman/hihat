@@ -233,6 +233,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       // Find the index of the track in the filtered and sorted list
       const trackIndex = trackIds.indexOf(trackId);
 
+      // eslint-disable-next-line no-console
       console.log('scrollToTrack called with:', {
         trackId,
         trackIndex,
@@ -245,8 +246,10 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         rowVirtualizerRef.current.scrollToIndex(trackIndex, {
           align: 'center',
         });
+        // eslint-disable-next-line no-console
         console.log('Scrolled to index:', trackIndex);
       } else {
+        // eslint-disable-next-line no-console
         console.log('Track not found in current view');
       }
     },
@@ -296,6 +299,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       if (deletedIndices.length > 0) {
         const highestDeletedIndex = deletedIndices[deletedIndices.length - 1];
 
+        // eslint-disable-next-line no-console
         console.log('Deletion info:', {
           selectedTrackIds,
           deletedIndices,
@@ -312,6 +316,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
           const candidateTrackId = currentTrackIds[i];
           if (!selectedTrackIds.includes(candidateTrackId)) {
             targetTrackId = candidateTrackId;
+            // eslint-disable-next-line no-console
             console.log('Found next track:', candidateTrackId, 'at index', i);
             break;
           }
@@ -324,6 +329,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
             const candidateTrackId = currentTrackIds[i];
             if (!selectedTrackIds.includes(candidateTrackId)) {
               targetTrackId = candidateTrackId;
+              // eslint-disable-next-line no-console
               console.log(
                 'Found previous track:',
                 candidateTrackId,
@@ -335,6 +341,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
           }
         }
 
+        // eslint-disable-next-line no-console
         console.log('Target track for scrolling:', targetTrackId);
       }
 
@@ -402,6 +409,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       if (targetTrackId) {
         // Use a longer timeout to ensure the table has re-rendered with the new data
         setTimeout(() => {
+          // eslint-disable-next-line no-console
           console.log('Scrolling to track:', targetTrackId);
           scrollToTrack(targetTrackId);
         }, 300);

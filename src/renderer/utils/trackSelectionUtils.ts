@@ -148,14 +148,14 @@ export const findNextSong = (
   // if shuffle mode is on, return a random track that hasn't been played yet
   if (shuffleMode) {
     // Get the set of already played track IDs from shuffle history
-    const playedTrackIds = new Set(shuffleHistory?.map(t => t.id) || []);
-    
+    const playedTrackIds = new Set(shuffleHistory?.map((t) => t.id) || []);
+
     // Also add the current track to the played set
     playedTrackIds.add(currentTrackId);
-    
+
     // Filter out already played tracks from available tracks
-    const availableTrackIds = trackIds.filter(id => !playedTrackIds.has(id));
-    
+    const availableTrackIds = trackIds.filter((id) => !playedTrackIds.has(id));
+
     // If no unplayed tracks are available
     if (availableTrackIds.length === 0) {
       // If repeat mode is all, we've played all songs, so start over
@@ -168,7 +168,7 @@ export const findNextSong = (
       // No more songs to play
       return undefined;
     }
-    
+
     // Pick a random track from the available (unplayed) tracks
     const randomIndex = Math.floor(Math.random() * availableTrackIds.length);
     const randomTrackId = availableTrackIds[randomIndex];
