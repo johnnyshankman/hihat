@@ -309,13 +309,6 @@ Duration: ${stats.totalDurationHours.toFixed(1)} hours`,
           },
         },
         {
-          label: 'toggle developer tools',
-          accelerator: 'Alt+Ctrl+I',
-          click: () => {
-            this.mainWindow.webContents.toggleDevTools();
-          },
-        },
-        {
           label: 'zoom in',
           accelerator: 'CmdOrCtrl+Plus',
           click: () => {
@@ -515,13 +508,6 @@ Duration: ${stats.totalDurationHours.toFixed(1)} hours`,
                   label: 'view settings',
                   click: () => {
                     this.mainWindow.webContents.send('ui:openSettings');
-                  },
-                },
-                {
-                  label: 'toggle developer tools',
-                  accelerator: 'Alt+Ctrl+I',
-                  click: () => {
-                    this.mainWindow.webContents.toggleDevTools();
                   },
                 },
                 {
