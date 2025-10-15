@@ -37,7 +37,11 @@ import Marquee from 'react-fast-marquee';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import { formatDuration } from '../utils/formatters';
-import { useSettingsAndPlaybackStore, useUIStore } from '../stores';
+import {
+  useSettingsAndPlaybackStore,
+  useUIStore,
+  useLibraryStore,
+} from '../stores';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -235,6 +239,9 @@ export default function Player() {
 
   // Get the setCurrentView function from the UI store
   const setCurrentView = useUIStore((state) => state.setCurrentView);
+
+  // Get the setArtistFilter function from the library store
+  const setArtistFilter = useLibraryStore((state) => state.setArtistFilter);
 
   // Use Material UI's theme breakpoints
   const theme = useTheme();
@@ -650,6 +657,9 @@ export default function Player() {
     if (playbackSource === 'library') {
       setCurrentView('library');
 
+      // Clear any active artist filter to ensure the track is visible
+      setArtistFilter(null);
+
       // Wait a short time for the view to change before scrolling
       setTimeout(() => {
         // @ts-ignore - Custom property added to window
@@ -670,7 +680,7 @@ export default function Player() {
         }
       }, 100);
     }
-  }, [currentTrack, playbackSource, setCurrentView]);
+  }, [currentTrack, playbackSource, setCurrentView, setArtistFilter]);
 
   // Check if title text overflows its container
   useEffect(() => {
