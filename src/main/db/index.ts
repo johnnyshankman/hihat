@@ -1636,3 +1636,154 @@ export function resetTracks(): Promise<boolean> {
     }
   });
 }
+
+/**
+ * Bulk import tracks into the database (used for migration)
+ * This function inserts multiple tracks in a batch operation
+ * @param tracks - Array of tracks to import
+ * @returns Number of tracks successfully imported
+ */
+export function bulkImportTracks(tracks: Track[]): number {
+  try {
+    if (!db || useMockDb) {
+      console.error('Database not initialized for bulk import');
+      return 0;
+    }
+
+    console.warn(`Starting bulk import of ${tracks.length} tracks...`);
+
+    const insertStmt = db.prepare(`
+      INSERT OR IGNORE INTO tracks (
+        id, filePath, title, artist, album, albumArtist,
+        genre, duration, playCount, dateAdded, lastPlayed, lyrics, trackNumber
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let successCount = 0;
+
+    tracks.forEach((track, index) => {
+      try {
+        insertStmt.run(
+          track.id,
+          track.filePath,
+          track.title,
+          track.artist,
+          track.album,
+          track.albumArtist,
+          track.genre || '',
+          track.duration,
+          track.playCount,
+          track.dateAdded,
+          track.lastPlayed,
+          track.lyrics,
+          track.trackNumber,
+        );
+        successCount += 1;
+
+        // Log progress every 1000 tracks
+        if ((index + 1) % 1000 === 0) {
+          console.warn(`Imported ${index + 1}/${tracks.length} tracks...`);
+        }
+      } catch (error) {
+        console.error(`Failed to import track ${track.filePath}:`, error);
+      }
+    });
+
+    console.warn(
+      `Bulk import complete: ${successCount}/${tracks.length} tracks imported`,
+    );
+    return successCount;
+  } catch (error) {
+    console.error('Error during bulk track import:', error);
+    return 0;
+  }
+}
+
+/**
+ * Bulk import playlists into the database (used for migration)
+ * This function inserts multiple playlists in a batch operation
+ * @param playlists - Array of playlists to import
+ * @returns Number of playlists successfully imported
+ */
+export function bulkImportPlaylists(playlists: Playlist[]): number {
+  try {
+    if (!db || useMockDb) {
+      console.error('Database not initialized for bulk import');
+      return 0;
+    }
+
+    console.warn(`Starting bulk import of ${playlists.length} playlists...`);
+
+    const insertStmt = db.prepare(`
+      INSERT OR IGNORE INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    let successCount = 0;
+
+    playlists.forEach((playlist) => {
+      try {
+        // For smart playlists, we shouldn't store track IDs
+        const trackIdsToStore = playlist.isSmart ? [] : playlist.trackIds;
+
+        insertStmt.run(
+          playlist.id,
+          playlist.name,
+          playlist.isSmart ? 1 : 0,
+          playlist.smartPlaylistId || null,
+          playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
+          JSON.stringify(trackIdsToStore),
+        );
+        successCount += 1;
+      } catch (error) {
+        console.error(`Failed to import playlist ${playlist.name}:`, error);
+      }
+    });
+
+    console.warn(
+      `Bulk import complete: ${successCount}/${playlists.length} playlists imported`,
+    );
+    return successCount;
+  } catch (error) {
+    console.error('Error during bulk playlist import:', error);
+    return 0;
+  }
+}
+
+/**
+ * Update settings from migration data
+ * This merges migrated settings with existing settings
+ * @param libraryPath - Library path from v1
+ * @param lastPlayedSongId - Last played song ID from v1
+ */
+export function updateSettingsFromMigration(
+  libraryPath: string,
+  lastPlayedSongId: string | null,
+): void {
+  try {
+    if (!db || useMockDb) {
+      console.error('Database not initialized');
+      return;
+    }
+
+    console.warn('Updating settings from migration...');
+
+    // Get current settings
+    const currentSettings = getSettings();
+
+    // Update with migration data
+    const updatedSettings: Settings = {
+      ...currentSettings,
+      libraryPath: libraryPath || currentSettings.libraryPath,
+      lastPlayedSongId: lastPlayedSongId || currentSettings.lastPlayedSongId,
+    };
+
+    // Save updated settings
+    updateSettings(updatedSettings);
+
+    console.warn('Settings updated from migration');
+  } catch (error) {
+    console.error('Error updating settings from migration:', error);
+  }
+}
