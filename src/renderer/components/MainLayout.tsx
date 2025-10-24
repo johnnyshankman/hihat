@@ -13,12 +13,6 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
   Tooltip,
   Paper,
 } from '@mui/material';
@@ -46,6 +40,8 @@ import Playlists from './Playlists';
 import Settings from './Settings';
 import Player from './Player';
 import NotificationSystem from './NotificationSystem';
+import RenamePlaylistDialog from './RenamePlaylistDialog';
+import CreatePlaylistDialog from './CreatePlaylistDialog';
 
 const drawerWidth = 230;
 
@@ -109,7 +105,6 @@ export default function MainLayout() {
   );
   const selectPlaylist = useLibraryStore((state) => state.selectPlaylist);
   const deletePlaylist = useLibraryStore((state) => state.deletePlaylist);
-  const createPlaylist = useLibraryStore((state) => state.createPlaylist);
 
   const theme = useSettingsAndPlaybackStore((state) => state.theme);
 
@@ -119,13 +114,11 @@ export default function MainLayout() {
   const [open, setOpen] = useState(true);
   const [playlistsOpen, setPlaylistsOpen] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newPlaylistName, setNewPlaylistName] = useState('');
   const [isMaximized, setIsMaximized] = useState(false);
 
-  // Rename dialog state
+  // Rename dialog state - simplified to only track open/close and playlist ID
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renamePlaylistId, setRenamePlaylistId] = useState<string | null>(null);
-  const [renamePlaylistName, setRenamePlaylistName] = useState('');
 
   // Context menu for playlist deletion
   const [contextMenu, setContextMenu] = useState<{
@@ -208,40 +201,15 @@ export default function MainLayout() {
 
   const handleRenamePlaylist = () => {
     if (contextMenu) {
-      const playlist = playlists.find((p) => p.id === contextMenu.playlistId);
-      if (playlist) {
-        setRenamePlaylistId(playlist.id);
-        setRenamePlaylistName(playlist.name);
-        setRenameDialogOpen(true);
-      }
+      setRenamePlaylistId(contextMenu.playlistId);
+      setRenameDialogOpen(true);
       setContextMenu(null);
-    }
-  };
-
-  const handleRenameConfirm = async () => {
-    if (renamePlaylistId && renamePlaylistName.trim()) {
-      try {
-        const playlist = playlists.find((p) => p.id === renamePlaylistId);
-        if (playlist) {
-          const updatedPlaylist = {
-            ...playlist,
-            name: renamePlaylistName.trim(),
-          };
-          await useLibraryStore.getState().updatePlaylist(updatedPlaylist);
-        }
-        setRenameDialogOpen(false);
-        setRenamePlaylistId(null);
-        setRenamePlaylistName('');
-      } catch (error) {
-        console.error('Error renaming playlist:', error);
-      }
     }
   };
 
   const closeRenameDialog = () => {
     setRenameDialogOpen(false);
     setRenamePlaylistId(null);
-    setRenamePlaylistName('');
   };
 
   const handleAddPlaylistClick = (event: React.MouseEvent) => {
@@ -249,17 +217,11 @@ export default function MainLayout() {
     setCreateDialogOpen(true);
   };
 
-  const handleCreatePlaylist = async () => {
-    if (newPlaylistName.trim()) {
-      await createPlaylist(newPlaylistName.trim());
-      setNewPlaylistName('');
-      setCreateDialogOpen(false);
-      setPlaylistsOpen(true); // Expand the playlists list
-    }
+  const handlePlaylistCreated = () => {
+    setPlaylistsOpen(true); // Expand the playlists list
   };
 
   const closeCreateDialog = () => {
-    setNewPlaylistName('');
     setCreateDialogOpen(false);
   };
 
@@ -958,60 +920,21 @@ export default function MainLayout() {
       </Menu>
 
       {/* Create Playlist Dialog */}
-      <Dialog onClose={closeCreateDialog} open={createDialogOpen}>
-        <DialogTitle>Create New Playlist</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            label="Playlist Name"
-            margin="dense"
-            onChange={(e) => setNewPlaylistName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleCreatePlaylist();
-              }
-            }}
-            type="text"
-            value={newPlaylistName}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeCreateDialog}>Cancel</Button>
-          <Button color="primary" onClick={handleCreatePlaylist}>
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CreatePlaylistDialog
+        onClose={closeCreateDialog}
+        onPlaylistCreated={handlePlaylistCreated}
+        open={createDialogOpen}
+      />
 
       {/* Rename Playlist Dialog */}
-      <Dialog onClose={closeRenameDialog} open={renameDialogOpen}>
-        <DialogTitle>Rename Playlist</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            label="New Playlist Name"
-            margin="dense"
-            onChange={(e) => setRenamePlaylistName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleRenameConfirm();
-              }
-            }}
-            type="text"
-            value={renamePlaylistName}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button disableElevation onClick={closeRenameDialog}>
-            Cancel
-          </Button>
-          <Button disableElevation onClick={handleRenameConfirm}>
-            Rename
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <RenamePlaylistDialog
+        initialName={
+          playlists.find((p) => p.id === renamePlaylistId)?.name || ''
+        }
+        onClose={closeRenameDialog}
+        open={renameDialogOpen}
+        playlistId={renamePlaylistId}
+      />
 
       {/* Add the NotificationSystem component */}
       <NotificationSystem />

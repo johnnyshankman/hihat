@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -41,6 +41,12 @@ function PlaylistSelectionDialog({
 
   // Use trackIds if provided, otherwise use single trackId
   const tracksToAdd = trackIds || (trackId ? [trackId] : []);
+
+  // Memoize the filtered playlists to prevent unnecessary recalculations
+  const userPlaylists = useMemo(
+    () => playlists.filter((playlist) => !playlist.isSmart),
+    [playlists],
+  );
 
   const handleAddToPlaylist = async (playlistId: string) => {
     try {
@@ -101,25 +107,23 @@ function PlaylistSelectionDialog({
         Playlist
       </DialogTitle>
       <DialogContent>
-        {playlists.length > 0 ? (
+        {userPlaylists.length > 0 ? (
           <>
             <Typography gutterBottom variant="subtitle1">
               Select a playlist:
             </Typography>
             <List sx={{ maxHeight: 300, overflow: 'auto' }}>
-              {playlists
-                .filter((playlist) => !playlist.isSmart)
-                .map((playlist) => (
-                  <ListItemButton
-                    key={playlist.id}
-                    onClick={() => handleAddToPlaylist(playlist.id)}
-                  >
-                    <ListItemText
-                      primary={playlist.name}
-                      secondary={`${playlist.trackIds.length} tracks`}
-                    />
-                  </ListItemButton>
-                ))}
+              {userPlaylists.map((playlist) => (
+                <ListItemButton
+                  key={playlist.id}
+                  onClick={() => handleAddToPlaylist(playlist.id)}
+                >
+                  <ListItemText
+                    primary={playlist.name}
+                    secondary={`${playlist.trackIds.length} tracks`}
+                  />
+                </ListItemButton>
+              ))}
             </List>
           </>
         ) : (
