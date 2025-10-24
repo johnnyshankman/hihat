@@ -9,9 +9,16 @@ import fs from 'fs';
 import sqlite3 from 'sqlite3';
 
 export class TestHelpers {
-  static async initializeTestDatabase(dbPath: string): Promise<void> {
+  static async initializeTestDatabase(
+    dbPath: string,
+    testSongsPath: string,
+  ): Promise<void> {
     const sqlFilePath = path.join(__dirname, '../fixtures/test-db.sql');
-    const sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
+    let sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
+
+    // Replace placeholder with actual test songs path
+    // This ensures file paths in the database point to actual test fixture files
+    sqlContent = sqlContent.replace(/\{\{TEST_SONGS_PATH\}\}/g, testSongsPath);
 
     return new Promise((resolve, reject) => {
       const db = new sqlite3.Database(dbPath, (err) => {
@@ -42,8 +49,8 @@ export class TestHelpers {
       fs.unlinkSync(testDbPath);
     }
 
-    // Initialize the test database with seed data
-    await this.initializeTestDatabase(testDbPath);
+    // Initialize the test database with seed data and proper file paths
+    await this.initializeTestDatabase(testDbPath, songsPath);
 
     // Path to the built application
     const appPath = path.join(__dirname, '../../release/app');
@@ -56,7 +63,8 @@ export class TestHelpers {
       );
     }
 
-    // Launch the built Electron application
+    // Launch the built Electron application with TEST_MODE environment variables
+    // These env vars ensure the app uses test fixtures instead of real user data
     const app = await electron.launch({
       args: [appPath],
       env: {

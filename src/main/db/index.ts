@@ -32,10 +32,29 @@ const getUserDataPath = () => {
   return basePath;
 };
 
-const DB_PATH =
-  process.env.TEST_MODE === 'true' && process.env.TEST_DB_PATH
-    ? process.env.TEST_DB_PATH
-    : path.join(getUserDataPath(), 'library.db');
+/**
+ * Determine the database path based on the environment
+ * TEST_MODE is ONLY used during E2E tests with Playwright
+ * This ensures fixture data never appears in production or development
+ */
+const DB_PATH = (() => {
+  // TEST_MODE: Only use test database during E2E tests
+  // This path points to e2e/fixtures/test-db.sqlite which contains test fixture data
+  if (process.env.TEST_MODE === 'true' && process.env.TEST_DB_PATH) {
+    // Additional safety check: TEST_MODE should never be set in packaged production builds
+    if (app.isPackaged && process.env.NODE_ENV === 'production') {
+      console.error(
+        'WARNING: TEST_MODE is set in production build! Ignoring and using normal database.',
+      );
+      return path.join(getUserDataPath(), 'library.db');
+    }
+    console.warn('Using TEST database:', process.env.TEST_DB_PATH);
+    return process.env.TEST_DB_PATH;
+  }
+
+  // Normal operation: Use standard library database
+  return path.join(getUserDataPath(), 'library.db');
+})();
 
 // Database instance
 let db: any;

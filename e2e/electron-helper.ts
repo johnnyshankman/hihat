@@ -19,6 +19,40 @@ export class ElectronHelper {
   private static mainProcess: ChildProcess | null = null;
 
   /**
+   * Initialize test database with proper path resolution
+   */
+  private static async initTestDatabase(
+    dbPath: string,
+    songsPath: string,
+  ): Promise<void> {
+    const sqlite3 = require('sqlite3');
+    const sqlFilePath = path.join(__dirname, 'fixtures/test-db.sql');
+    let sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
+
+    // Replace placeholders with actual test songs path
+    sqlContent = sqlContent.replace(/\{\{TEST_SONGS_PATH\}\}/g, songsPath);
+
+    return new Promise((resolve, reject) => {
+      const db = new sqlite3.Database(dbPath, (err: Error | null) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        // Execute the SQL file to create tables and insert test data
+        db.exec(sqlContent, (execErr: Error | null) => {
+          db.close();
+          if (execErr) {
+            reject(execErr);
+          } else {
+            resolve();
+          }
+        });
+      });
+    });
+  }
+
+  /**
    * Start the Electron app in dev mode for testing
    */
   static async startDevApp(): Promise<{
@@ -26,12 +60,16 @@ export class ElectronHelper {
     page: Page;
   }> {
     const rootPath = path.join(__dirname, '..');
-
-    // Clean test database
     const testDbPath = path.join(__dirname, 'fixtures/test-db.sqlite');
+    const testSongsPath = path.join(__dirname, 'fixtures/test-songs');
+
+    // Clean test database for fresh start
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
+
+    // Initialize test database with proper paths
+    await this.initTestDatabase(testDbPath, testSongsPath);
 
     // Set test environment variables
     const testEnv = {
@@ -39,10 +77,12 @@ export class ElectronHelper {
       NODE_ENV: 'test',
       TEST_MODE: 'true',
       TEST_DB_PATH: testDbPath,
-      TEST_SONGS_PATH: path.join(__dirname, 'fixtures/test-songs'),
+      TEST_SONGS_PATH: testSongsPath,
     };
 
     console.log('Starting Electron app in test mode...');
+    console.log('Test DB:', testDbPath);
+    console.log('Test Songs:', testSongsPath);
 
     // Start the renderer dev server first
     await this.startRendererServer(testEnv);

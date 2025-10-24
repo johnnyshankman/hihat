@@ -34,14 +34,15 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 -- Insert test tracks
+-- Note: File paths will be replaced with actual paths by the test initialization code
 INSERT INTO tracks (id, filePath, title, artist, album, albumArtist, genre, duration, playCount, dateAdded, lastPlayed, lyrics, trackNumber) VALUES
-('test-1', '/test-songs/03 - A. G. Cook - Undying.m4a', 'Undying', 'A. G. Cook', '7G', 'A. G. Cook', 'Electronic', 243.5, 5, '2024-01-01T00:00:00Z', '2024-01-15T00:00:00Z', NULL, 3),
-('test-2', '/test-songs/03 - A. G. Cook - Windows.m4a', 'Windows', 'A. G. Cook', '7G', 'A. G. Cook', 'Electronic', 189.2, 3, '2024-01-01T00:00:00Z', NULL, NULL, 3),
-('test-3', '/test-songs/03 - Bill Evans - Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1).m4a', 'Alice In Wonderland (Live)', 'Bill Evans', 'Sunday at the Village Vanguard', 'Bill Evans Trio', 'Jazz', 523.7, 12, '2024-01-02T00:00:00Z', '2024-01-16T00:00:00Z', NULL, 3),
-('test-4', '/test-songs/03 - Bill Evans - All Of You (Live At The Village Vanguard, 1961 - Take 2).m4a', 'All Of You (Live)', 'Bill Evans', 'Sunday at the Village Vanguard', 'Bill Evans Trio', 'Jazz', 482.3, 8, '2024-01-02T00:00:00Z', '2024-01-14T00:00:00Z', NULL, 3),
-('test-5', '/test-songs/03 - Bill Evans - Waltz For Debby (Live At The Village Vanguard, New York - 1961 - Take 2).m4a', 'Waltz For Debby (Live)', 'Bill Evans', 'Sunday at the Village Vanguard', 'Bill Evans Trio', 'Jazz', 412.1, 15, '2024-01-03T00:00:00Z', '2024-01-17T00:00:00Z', NULL, 3),
-('test-6', '/test-songs/03 - Bladee - White Meadow.m4a', 'White Meadow', 'Bladee', 'Eversince', 'Bladee', 'Cloud Rap', 187.9, 7, '2024-01-03T00:00:00Z', NULL, NULL, 3),
-('test-7', '/test-songs/03 - Kendrick Lamar - King Kunta(Explicit).m4a', 'King Kunta', 'Kendrick Lamar', 'To Pimp a Butterfly', 'Kendrick Lamar', 'Hip Hop', 234.5, 25, '2024-01-04T00:00:00Z', '2024-01-18T00:00:00Z', NULL, 3);
+('test-1', '{{TEST_SONGS_PATH}}/03 - A. G. Cook - Undying.m4a', 'Undying', 'A. G. Cook', '7G', 'A. G. Cook', 'Electronic', 243.5, 5, '2024-01-01T00:00:00Z', '2024-01-15T00:00:00Z', NULL, 3),
+('test-2', '{{TEST_SONGS_PATH}}/03 - A. G. Cook - Windows.m4a', 'Windows', 'A. G. Cook', '7G', 'A. G. Cook', 'Electronic', 189.2, 3, '2024-01-01T00:00:00Z', NULL, NULL, 3),
+('test-3', '{{TEST_SONGS_PATH}}/03 - Bill Evans - Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1).m4a', 'Alice In Wonderland (Live)', 'Bill Evans', 'Sunday at the Village Vanguard', 'Bill Evans Trio', 'Jazz', 523.7, 12, '2024-01-02T00:00:00Z', '2024-01-16T00:00:00Z', NULL, 3),
+('test-4', '{{TEST_SONGS_PATH}}/03 - Bill Evans - All Of You (Live At The Village Vanguard, 1961 - Take 2).m4a', 'All Of You (Live)', 'Bill Evans', 'Sunday at the Village Vanguard', 'Bill Evans Trio', 'Jazz', 482.3, 8, '2024-01-02T00:00:00Z', '2024-01-14T00:00:00Z', NULL, 3),
+('test-5', '{{TEST_SONGS_PATH}}/03 - Bill Evans - Waltz For Debby (Live At The Village Vanguard, New York - 1961 - Take 2).m4a', 'Waltz For Debby (Live)', 'Bill Evans', 'Sunday at the Village Vanguard', 'Bill Evans Trio', 'Jazz', 412.1, 15, '2024-01-03T00:00:00Z', '2024-01-17T00:00:00Z', NULL, 3),
+('test-6', '{{TEST_SONGS_PATH}}/03 - Bladee - White Meadow.m4a', 'White Meadow', 'Bladee', 'Eversince', 'Bladee', 'Cloud Rap', 187.9, 7, '2024-01-03T00:00:00Z', NULL, NULL, 3),
+('test-7', '{{TEST_SONGS_PATH}}/03 - Kendrick Lamar - King Kunta(Explicit).m4a', 'King Kunta', 'Kendrick Lamar', 'To Pimp a Butterfly', 'Kendrick Lamar', 'Hip Hop', 234.5, 25, '2024-01-04T00:00:00Z', '2024-01-18T00:00:00Z', NULL, 3);
 
 -- Insert test playlists
 INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds) VALUES
@@ -52,5 +53,6 @@ INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds) VA
 ('playlist-5', 'Most Played', 1, 'most-played', '{"type":"mostPlayed","limit":50}', '[]');
 
 -- Insert default settings
-INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume) VALUES 
-('app-settings', '/test-songs', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', 'test-7', 1.0);
+-- Note: libraryPath will be replaced with actual TEST_SONGS_PATH by test initialization code
+INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume) VALUES
+('app-settings', '{{TEST_SONGS_PATH}}', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', 'test-7', 1.0);
