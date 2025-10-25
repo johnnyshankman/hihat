@@ -29,28 +29,50 @@ test.describe('Application Launch', () => {
   test('should display main UI components', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Check for MUI Drawer (sidebar)
-    const sidebar = await page.locator('.MuiDrawer-root').first().isVisible();
-    expect(sidebar).toBe(true);
+    // Wait for app to fully load
+    await page.waitForTimeout(3000);
 
-    // Check for navigation buttons in drawer
-    const libraryButton = await page
-      .getByRole('button', { name: 'Library' })
+    // 1. Check for sidebar/drawer
+    const drawer = await page.locator('.MuiDrawer-root').isVisible();
+    expect(drawer).toBe(true);
+
+    // 2. Check for Library section header in sidebar
+    const libraryHeader = await page.getByText('Library', { exact: false });
+    expect(await libraryHeader.count()).toBeGreaterThan(0);
+
+    // 3. Check for "All" library button (the actual clickable library view button)
+    const allLibraryButton = await page
+      .locator('[data-view="library"]')
       .isVisible();
-    expect(libraryButton).toBe(true);
+    expect(allLibraryButton).toBe(true);
 
-    const playlistButton = await page
-      .getByRole('button', { name: 'Playlists' })
+    // 4. Check for Playlists section header in sidebar
+    const playlistsHeader = await page.getByText('Playlists', { exact: false });
+    expect(await playlistsHeader.count()).toBeGreaterThan(0);
+
+    // 5. Check for playlist items from fixture data (should have 5 playlists)
+    const playlistItems = await page.locator('[data-playlist-id]').count();
+    expect(playlistItems).toBeGreaterThanOrEqual(5);
+
+    // 6. Check for Settings button
+    const settingsButton = await page
+      .getByRole('button', { name: 'Settings' })
       .isVisible();
-    expect(playlistButton).toBe(true);
+    expect(settingsButton).toBe(true);
 
-    // Check for main content area
-    const mainContent = await page.locator('.MuiBox-root').first().isVisible();
+    // 7. Check for main content area (Library view should be default)
+    const mainContent = await page.locator('main').isVisible();
     expect(mainContent).toBe(true);
 
-    // Check for table (library view)
-    const hasTable = await page.locator('.MuiTable-root').count();
-    expect(hasTable).toBeGreaterThan(0);
+    // 8. Check for MaterialReactTable with tracks from fixture data
+    // MaterialReactTable uses virtualization, so we check for track rows by data-track-id
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    const trackRows = await page.locator('[data-track-id]').count();
+    expect(trackRows).toBeGreaterThan(0);
+
+    // 9. Check for Player component at bottom
+    const player = await page.locator('.MuiBox-root').last().isVisible();
+    expect(player).toBe(true);
 
     await TestHelpers.takeScreenshot(page, 'main-ui');
 
