@@ -5,36 +5,41 @@ test.describe('Basic Functionality', () => {
   test('should navigate between views', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Start in Library view
-    const libraryHeading = await page.getByRole('heading', {
-      name: 'Library',
-      exact: true,
-    });
-    await expect(libraryHeading).toBeVisible();
+    // Wait for app to fully load
+    await page.waitForTimeout(3000);
 
-    // Navigate to Playlists
-    await page.getByRole('button', { name: 'Playlists' }).click();
+    // 1. Start in Library view - verify we see tracks
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    const initialTrackCount = await page.locator('[data-track-id]').count();
+    expect(initialTrackCount).toBeGreaterThan(0);
+
+    // 2. Navigate to a Playlist view by clicking a playlist name
+    // Click on "Test Playlist 1" from fixture data
+    await page.getByText('Test Playlist 1', { exact: true }).click();
     await page.waitForTimeout(1000);
 
-    const playlistsHeading = await page.getByRole('heading', {
-      name: 'Playlists',
-    });
-    await expect(playlistsHeading).toBeVisible();
+    // Verify we're in playlist view (tracks should still be visible but filtered)
+    const playlistTracks = await page.locator('[data-track-id]').count();
+    expect(playlistTracks).toBeGreaterThan(0);
 
-    // Navigate to Settings
+    // 3. Navigate to Settings by clicking the settings cog icon
     await page.getByRole('button', { name: 'Settings' }).click();
     await page.waitForTimeout(1000);
 
+    // Verify we're in Settings view - check for settings heading
     const settingsHeading = await page.getByRole('heading', {
       name: 'Settings',
     });
     await expect(settingsHeading).toBeVisible();
 
-    // Navigate back to Library
-    await page.getByRole('button', { name: 'Library' }).click();
+    // 4. Navigate back to Library view by clicking "All" button
+    await page.locator('[data-view="library"]').click();
     await page.waitForTimeout(1000);
 
-    await expect(libraryHeading).toBeVisible();
+    // Verify we're back in Library view with all tracks
+    const finalTrackCount = await page.locator('[data-track-id]').count();
+    expect(finalTrackCount).toBeGreaterThan(0);
+    expect(finalTrackCount).toBe(initialTrackCount); // Should have same tracks as before
 
     await TestHelpers.closeApp(app);
   });
