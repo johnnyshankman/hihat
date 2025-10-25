@@ -819,8 +819,8 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
-                  data-testid="theme-toggle"
                   checked={theme === 'dark'}
+                  data-testid="theme-toggle"
                   onChange={handleThemeChange}
                 />
               }

@@ -22,7 +22,9 @@ test.describe('Settings', () => {
     await expect(
       page.getByRole('heading', { name: 'Library Location' }),
     ).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Appearance' }),
+    ).toBeVisible();
 
     await TestHelpers.takeScreenshot(page, 'settings-view');
 
