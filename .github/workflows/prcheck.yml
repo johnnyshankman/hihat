@@ -3,7 +3,7 @@ on:
   pull_request: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -19,6 +19,9 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium
+
     - name: Typecheck
       run: npm run typecheck
 
@@ -27,3 +30,9 @@ jobs:
 
     - name: Build
       run: npm run build
+
+    - name: Run E2E tests
+      run: npx playwright test
+      env:
+        CI: true
+        NODE_ENV: test
