@@ -648,7 +648,10 @@ export default function Settings({
   };
 
   return (
-    <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
+    <Box
+      data-testid="settings-view"
+      sx={{ height: '100%', width: '100%', overflow: 'auto' }}
+    >
       {/* Settings Header with Save Button for Library Path */}
       <AppBar
         elevation={0}
@@ -816,6 +819,7 @@ export default function Settings({
             <FormControlLabel
               control={
                 <Switch
+                  data-testid="theme-toggle"
                   checked={theme === 'dark'}
                   onChange={handleThemeChange}
                 />

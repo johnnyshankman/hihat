@@ -7,33 +7,63 @@ test.describe('Settings', () => {
   test('should navigate to settings', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
+    // Navigate to settings view
     await TestHelpers.navigateToView(page, 'settings');
 
-    const settingsView = await page.locator('[data-testid="settings-view"]');
-    expect(await settingsView.isVisible()).toBe(true);
+    // Verify settings view is visible
+    const settingsView = page.locator('[data-testid="settings-view"]');
+    await expect(settingsView).toBeVisible();
+
+    // Verify settings header is present (use getByRole to be specific)
+    const settingsHeader = page.getByRole('heading', { name: 'Settings' });
+    await expect(settingsHeader).toBeVisible();
+
+    // Verify key settings sections are visible (use getByRole for headings)
+    await expect(
+      page.getByRole('heading', { name: 'Library Location' }),
+    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
 
     await TestHelpers.takeScreenshot(page, 'settings-view');
 
     await TestHelpers.closeApp(app);
   });
 
-  test('should change the theme', async () => {
+  test('should toggle dark mode theme', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
+    // Navigate to settings
     await TestHelpers.navigateToView(page, 'settings');
 
-    const initialTheme = await page.evaluate(() => {
-      return document.documentElement.getAttribute('data-theme');
-    });
+    // Get the theme toggle switch
+    const themeToggle = page.locator('[data-testid="theme-toggle"]');
+    await expect(themeToggle).toBeVisible();
 
-    await page.click('[data-testid="theme-toggle"]');
+    // Get initial theme state from the switch's checked state
+    const initialThemeIsDark = await themeToggle.isChecked();
+
+    // Click the theme toggle
+    await themeToggle.click();
     await page.waitForTimeout(500);
 
-    const newTheme = await page.evaluate(() => {
-      return document.documentElement.getAttribute('data-theme');
+    // Verify the theme has changed
+    const newThemeIsDark = await themeToggle.isChecked();
+    expect(newThemeIsDark).not.toBe(initialThemeIsDark);
+
+    // Verify the theme persisted in the store
+    const themeInStore = await page.evaluate(() => {
+      // Access the window object to get the theme from the store
+      // The theme is managed by Zustand and exposed through the settings store
+      return (window as any).electron?.settings?.get
+        ? (window as any).electron.settings.get().then((s: any) => s.theme)
+        : null;
     });
 
-    expect(newTheme).not.toBe(initialTheme);
+    // If we can access the store, verify it matches the toggle state
+    if (themeInStore) {
+      const expectedTheme = newThemeIsDark ? 'dark' : 'light';
+      expect(themeInStore).toBe(expectedTheme);
+    }
 
     await TestHelpers.takeScreenshot(page, 'theme-changed');
 

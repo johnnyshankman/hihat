@@ -596,6 +596,7 @@ export default function MainLayout() {
                 {/* Settings button */}
                 <Tooltip title="Settings">
                   <IconButton
+                    data-testid="nav-settings"
                     onClick={() => handleViewChange('settings')}
                     size="small"
                     sx={{
@@ -668,6 +669,7 @@ export default function MainLayout() {
                   </Typography>
                 </Box>
                 <ListItemButton
+                  data-testid="nav-library"
                   data-view="library"
                   onClick={() => handleViewChange('library')}
                   selected={currentView === 'library'}
