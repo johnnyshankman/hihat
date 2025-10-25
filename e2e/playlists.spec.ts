@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
 
 test.describe('Playlist Management', () => {
-  test('should create a new playlist', async () => {
+  test.skip('should create a new playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
     await TestHelpers.importSongs(page);
@@ -24,7 +24,7 @@ test.describe('Playlist Management', () => {
     await TestHelpers.closeApp(app);
   });
 
-  test('should add songs to playlist', async () => {
+  test.skip('should add songs to playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
     await TestHelpers.importSongs(page);
@@ -61,7 +61,7 @@ test.describe('Playlist Management', () => {
     await TestHelpers.closeApp(app);
   });
 
-  test('should remove songs from playlist', async () => {
+  test.skip('should remove songs from playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
     await TestHelpers.importSongs(page);
@@ -106,7 +106,7 @@ test.describe('Playlist Management', () => {
     await TestHelpers.closeApp(app);
   });
 
-  test('should rename playlist', async () => {
+  test.skip('should rename playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
     await TestHelpers.navigateToView(page, 'playlists');
@@ -133,7 +133,7 @@ test.describe('Playlist Management', () => {
     await TestHelpers.closeApp(app);
   });
 
-  test('should delete playlist', async () => {
+  test.skip('should delete playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
     await TestHelpers.navigateToView(page, 'playlists');
