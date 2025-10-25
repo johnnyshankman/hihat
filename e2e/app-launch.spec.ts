@@ -26,7 +26,7 @@ test.describe('Application Launch', () => {
     await TestHelpers.closeApp(app);
   });
 
-  test('should display main UI components', async () => {
+  test('should display default main UI components', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
     // Wait for app to fully load

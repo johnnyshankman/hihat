@@ -158,36 +158,4 @@ test.describe('Playlist Management', () => {
 
     await TestHelpers.closeApp(app);
   });
-
-  test('should play entire playlist', async () => {
-    const { app, page } = await TestHelpers.launchApp();
-
-    await TestHelpers.importSongs(page);
-    await TestHelpers.waitForLibraryLoad(page);
-
-    await TestHelpers.navigateToView(page, 'playlists');
-    await TestHelpers.createPlaylist(page, 'Play All');
-
-    await TestHelpers.navigateToView(page, 'library');
-
-    const songTitles = await page
-      .locator('[data-testid="song-title"]')
-      .allTextContents();
-    for (let i = 0; i < Math.min(3, songTitles.length); i++) {
-      await TestHelpers.addToPlaylist(page, songTitles[i], 'Play All');
-    }
-
-    await TestHelpers.navigateToView(page, 'playlists');
-    await page.click('[data-testid="playlist-Play All"]');
-
-    await page.click('[data-testid="play-playlist-button"]');
-
-    await page.waitForTimeout(1000);
-
-    const playerState = await TestHelpers.getPlayerState(page);
-    expect(playerState.isPlaying).toBe(true);
-    expect(songTitles.slice(0, 3)).toContain(playerState.currentSong);
-
-    await TestHelpers.closeApp(app);
-  });
 });

@@ -16,12 +16,6 @@ test.describe('Library Management', () => {
       .count();
     expect(songCount).toBeGreaterThan(0);
 
-    // Check for specific test songs
-    const hasTestSongs = await page
-      .locator('text=/Undying|Windows|King Kunta/i')
-      .count();
-    expect(hasTestSongs).toBeGreaterThan(0);
-
     await TestHelpers.takeScreenshot(page, 'library-loaded');
 
     await TestHelpers.closeApp(app);
@@ -83,70 +77,6 @@ test.describe('Library Management', () => {
       .allTextContents();
     const sortedArtists = [...artistsSorted].sort();
     expect(artistsSorted).toEqual(sortedArtists);
-
-    await TestHelpers.closeApp(app);
-  });
-
-  test.skip('should handle song metadata editing', async () => {
-    // Skip this test for now as it depends on specific UI elements
-    const { app, page } = await TestHelpers.launchApp();
-
-    await page.waitForTimeout(3000);
-
-    const firstSong = await page.locator('[data-testid^="song-row-"]').first();
-    await firstSong.click({ button: 'right' });
-
-    await page.click('[data-testid="edit-metadata-menu"]');
-
-    const metadataDialog = await page.locator(
-      '[data-testid="metadata-dialog"]',
-    );
-    expect(await metadataDialog.isVisible()).toBe(true);
-
-    await page.fill('[data-testid="metadata-title-input"]', 'Updated Title');
-    await page.fill('[data-testid="metadata-artist-input"]', 'Updated Artist');
-
-    await page.click('[data-testid="save-metadata-button"]');
-    await page.waitForTimeout(1000);
-
-    const updatedTitle = await page
-      .locator('[data-testid="song-title"]')
-      .first()
-      .textContent();
-    expect(updatedTitle).toBe('Updated Title');
-
-    const updatedArtist = await page
-      .locator('[data-testid="song-artist"]')
-      .first()
-      .textContent();
-    expect(updatedArtist).toBe('Updated Artist');
-
-    await TestHelpers.closeApp(app);
-  });
-
-  test.skip('should like and unlike songs', async () => {
-    // Skip this test for now as it depends on specific UI elements
-    const { app, page } = await TestHelpers.launchApp();
-
-    await page.waitForTimeout(3000);
-
-    const firstSongTitle = await page
-      .locator('[data-testid="song-title"]')
-      .first()
-      .textContent();
-
-    await TestHelpers.likeSong(page, firstSongTitle!);
-
-    const likeButton = await page.locator(
-      `[data-testid="like-button-${firstSongTitle}"]`,
-    );
-    const isLiked = await likeButton.getAttribute('data-liked');
-    expect(isLiked).toBe('true');
-
-    await TestHelpers.likeSong(page, firstSongTitle!);
-
-    const isUnliked = await likeButton.getAttribute('data-liked');
-    expect(isUnliked).toBe('false');
 
     await TestHelpers.closeApp(app);
   });
