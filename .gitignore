@@ -36,3 +36,4 @@ e2e/screenshots/
 playwright-report/
 test-results/
 .test-data/
+e2e/fixtures/*.sqlite
