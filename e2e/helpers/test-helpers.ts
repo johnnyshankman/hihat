@@ -40,6 +40,36 @@ export class TestHelpers {
     });
   }
 
+  static async initializeNewUserDatabase(
+    dbPath: string,
+    testSongsPath: string,
+  ): Promise<void> {
+    const sqlFilePath = path.join(__dirname, '../fixtures/new-user-db.sql');
+    let sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
+
+    // Replace placeholder with actual test songs path
+    sqlContent = sqlContent.replace(/\{\{TEST_SONGS_PATH\}\}/g, testSongsPath);
+
+    return new Promise((resolve, reject) => {
+      const db = new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        // Execute the SQL file to create tables with empty tracks
+        db.exec(sqlContent, (execErr) => {
+          db.close();
+          if (execErr) {
+            reject(execErr);
+          } else {
+            resolve();
+          }
+        });
+      });
+    });
+  }
+
   static async launchApp(): Promise<{ app: ElectronApplication; page: Page }> {
     const testDbPath = path.join(__dirname, '../fixtures/test-db.sqlite');
     const songsPath = path.join(__dirname, '../fixtures/test-songs');
@@ -65,6 +95,61 @@ export class TestHelpers {
 
     // Launch the built Electron application with TEST_MODE environment variables
     // These env vars ensure the app uses test fixtures instead of real user data
+    const app = await electron.launch({
+      args: [appPath],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        TEST_MODE: 'true',
+        TEST_DB_PATH: testDbPath,
+        TEST_SONGS_PATH: songsPath,
+      },
+      timeout: 30000,
+    });
+
+    // Wait for the first window
+    const page = await app.firstWindow();
+
+    // Wait for the app to fully load
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000); // Give React time to render
+
+    // Verify the app has loaded by checking for root content
+    const rootContent = await page.locator('#root').innerHTML();
+    if (rootContent.length < 100) {
+      throw new Error('Application did not render properly');
+    }
+
+    return { app, page };
+  }
+
+  static async launchAppAsBrandNewUser(): Promise<{
+    app: ElectronApplication;
+    page: Page;
+  }> {
+    const testDbPath = path.join(__dirname, '../fixtures/new-user-db.sqlite');
+    const songsPath = path.join(__dirname, '../fixtures/test-songs');
+
+    // Clean test database for fresh start
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+
+    // Initialize the new user database with empty library
+    await this.initializeNewUserDatabase(testDbPath, songsPath);
+
+    // Path to the built application
+    const appPath = path.join(__dirname, '../../release/app');
+    const mainJsPath = path.join(appPath, 'dist/main/main.js');
+
+    // Check if the app is built
+    if (!fs.existsSync(mainJsPath)) {
+      throw new Error(
+        'Application not built. Please run "npm run build" first.',
+      );
+    }
+
+    // Launch the built Electron application with TEST_MODE environment variables
     const app = await electron.launch({
       args: [appPath],
       env: {

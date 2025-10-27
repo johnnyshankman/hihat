@@ -12,8 +12,10 @@ All test fixtures are stored in `e2e/fixtures/`:
 
 ```
 e2e/fixtures/
-├── test-db.sql          # SQL schema and seed data with placeholders
+├── test-db.sql          # SQL schema and seed data with placeholders (existing user)
 ├── test-db.sqlite       # Generated SQLite database (created by tests)
+├── new-user-db.sql      # SQL schema for brand new user (empty library)
+├── new-user-db.sqlite   # Generated new user database (created by tests)
 └── test-songs/          # Test audio files (7 sample songs)
 ```
 
@@ -25,7 +27,8 @@ The application uses **environment variables** to determine which database to us
 |-------------|-------------------|-------------|
 | **Production** | `~/Library/Application Support/hihat/library.db` | Real user data |
 | **Development** | `~/Library/Application Support/hihat-dev/library.db` | Development data |
-| **E2E Tests** | `e2e/fixtures/test-db.sqlite` | Test fixture data |
+| **E2E Tests** | `e2e/fixtures/test-db.sqlite` | Test fixture data (existing user) |
+| **E2E Tests (New User)** | `e2e/fixtures/new-user-db.sqlite` | Test fixture data (brand new user) |
 
 ### 3. TEST_MODE Environment Variables
 
@@ -68,19 +71,28 @@ const DB_PATH = (() => {
 Before each test run, the test helper:
 
 1. **Deletes** the old test database if it exists
-2. **Reads** `test-db.sql` template
+2. **Reads** `test-db.sql` or `new-user-db.sql` template (depending on test type)
 3. **Replaces** `{{TEST_SONGS_PATH}}` placeholders with actual paths
 4. **Creates** a fresh SQLite database with resolved paths
 
 ```typescript
 // From e2e/helpers/test-helpers.ts
+
+// For tests with existing library data
 static async initializeTestDatabase(dbPath: string, testSongsPath: string) {
   let sqlContent = fs.readFileSync('test-db.sql', 'utf-8');
-
-  // Replace placeholders with actual test fixture paths
   sqlContent = sqlContent.replace(/\{\{TEST_SONGS_PATH\}\}/g, testSongsPath);
 
-  // Create fresh database with proper paths
+  const db = new sqlite3.Database(dbPath);
+  db.exec(sqlContent);
+  db.close();
+}
+
+// For brand new user experience tests (empty library)
+static async initializeNewUserDatabase(dbPath: string, testSongsPath: string) {
+  let sqlContent = fs.readFileSync('new-user-db.sql', 'utf-8');
+  sqlContent = sqlContent.replace(/\{\{TEST_SONGS_PATH\}\}/g, testSongsPath);
+
   const db = new sqlite3.Database(dbPath);
   db.exec(sqlContent);
   db.close();
@@ -115,28 +127,49 @@ static async initializeTestDatabase(dbPath: string, testSongsPath: string) {
 - No state carries over between test runs
 - File paths are dynamically resolved based on test environment
 
-## Test Database Schema
+## Test Database Schemas
 
-The test database includes:
+### Standard Test Database (`test-db.sql`)
 
-### Tracks (7 songs)
+Used for testing with an existing library. Includes:
+
+**Tracks (7 songs):**
 - A. G. Cook - Undying & Windows
 - Bill Evans Trio - 3 jazz songs
 - Bladee - White Meadow
 - Kendrick Lamar - King Kunta
 
-### Playlists (5 playlists)
+**Playlists (5 playlists):**
 - Test Playlist 1 (2 songs)
 - Jazz Favorites (3 songs)
 - Recently Added (smart playlist)
 - Recently Played (smart playlist)
 - Most Played (smart playlist)
 
-### Settings
+**Settings:**
 - Library path: Points to test-songs directory
 - Theme: Dark mode
 - Last played: test-7 (King Kunta)
 - Volume: 1.0
+
+### New User Database (`new-user-db.sql`)
+
+Used for testing the brand new user experience. Includes:
+
+**Tracks:** EMPTY - No songs loaded
+
+**Playlists (3 smart playlists only):**
+- Recently Added (smart playlist)
+- Recently Played (smart playlist)
+- Most Played (smart playlist)
+
+**Settings:**
+- Library path: Points to test-songs directory (but no songs scanned)
+- Theme: Dark mode
+- Last played: NULL (never played anything)
+- Volume: 1.0
+
+This simulates the first-launch experience where a user has installed the app but hasn't imported any music yet.
 
 ## Adding New Test Fixtures
 
@@ -162,6 +195,24 @@ INSERT INTO tracks (id, filePath, ...) VALUES
 INSERT INTO tracks (id, filePath, ...) VALUES
 ('test-1', '/Users/me/test-songs/song.m4a', ...);
 ```
+
+### Testing Different User States
+
+We maintain multiple database fixtures to test different user scenarios:
+
+**`test-db.sql`** - For testing existing users with library data
+- Use `TestHelpers.launchApp()` in tests
+- Simulates a user with songs, playlists, and play history
+
+**`new-user-db.sql`** - For testing brand new users with empty library
+- Use `TestHelpers.launchAppAsBrandNewUser()` in tests
+- Simulates first-launch experience with no music
+- Tests empty state UI and messaging
+
+To add a new user state:
+1. Create a new SQL fixture (e.g., `premium-user-db.sql`)
+2. Add an initialization method in `test-helpers.ts`
+3. Add a launch method that uses the new fixture
 
 ## Troubleshooting
 
@@ -207,7 +258,9 @@ npm run test:e2e:debug
 
 ## Related Files
 
-- `e2e/fixtures/test-db.sql` - Test database schema with placeholders
-- `e2e/helpers/test-helpers.ts` - Test database initialization
+- `e2e/fixtures/test-db.sql` - Test database schema with existing user data
+- `e2e/fixtures/new-user-db.sql` - Test database schema for brand new user (empty library)
+- `e2e/helpers/test-helpers.ts` - Test database initialization and app launch helpers
+- `e2e/new-user.spec.ts` - E2E tests for brand new user experience
 - `src/main/db/index.ts` - Database path resolution with TEST_MODE handling
 - `package.json` - Electron-builder config excludes `e2e/` from builds

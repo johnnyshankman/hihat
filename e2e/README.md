@@ -23,6 +23,7 @@ e2e/
 - **playback.spec.ts**: Audio playback functionality (play, pause, skip, shuffle, repeat)
 - **playlists.spec.ts**: Playlist creation and management
 - **settings.spec.ts**: Application settings and configuration
+- **new-user.spec.ts**: Brand new user experience with empty library
 
 ## Running Tests
 
@@ -52,8 +53,10 @@ Tests run automatically via GitHub Actions on:
 ## Test Environment
 
 ### Database
-- Uses a separate SQLite database for tests (`test-db.sqlite`)
-- Database is created fresh for each test run
+- Uses separate SQLite databases for different test scenarios:
+  - `test-db.sqlite` - Standard tests with existing library data (7 songs, 5 playlists)
+  - `new-user-db.sqlite` - New user tests with empty library (0 songs, 3 smart playlists)
+- Databases are created fresh for each test run
 - Located in `e2e/fixtures/` directory
 
 ### Test Songs
@@ -75,8 +78,11 @@ Tests run automatically via GitHub Actions on:
 The `TestHelpers` class provides common operations:
 
 ```typescript
-// Launch the application
+// Launch the application with existing library data
 const { app, page } = await TestHelpers.launchApp();
+
+// Launch the application as a brand new user (empty library)
+const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
 
 // Import songs
 await TestHelpers.importSongs(page);
