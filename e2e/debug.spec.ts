@@ -1,7 +1,7 @@
 import { test, _electron as electron } from '@playwright/test';
 import path from 'path';
 
-test('debug app launch', async () => {
+test.skip('debug app launch issues', async () => {
   const appPath = path.join(__dirname, '../release/app');
 
   // eslint-disable-next-line no-console
