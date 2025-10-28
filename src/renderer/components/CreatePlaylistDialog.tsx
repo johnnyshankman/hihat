@@ -51,12 +51,13 @@ function CreatePlaylistDialog({
   };
 
   return (
-    <Dialog onClose={onClose} open={open}>
+    <Dialog data-testid="create-playlist-dialog" onClose={onClose} open={open}>
       <DialogTitle>Create New Playlist</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           fullWidth
+          inputProps={{ 'data-testid': 'playlist-name-input' }}
           label="Playlist Name"
           margin="dense"
           onChange={(e) => setName(e.target.value)}
@@ -66,8 +67,10 @@ function CreatePlaylistDialog({
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button color="primary" onClick={handleCreate}>
+        <Button data-testid="cancel-playlist-button" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button color="primary" data-testid="create-playlist-button" onClick={handleCreate}>
           Create
         </Button>
       </DialogActions>

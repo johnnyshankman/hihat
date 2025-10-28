@@ -60,12 +60,13 @@ function RenamePlaylistDialog({
   };
 
   return (
-    <Dialog onClose={onClose} open={open}>
+    <Dialog data-testid="rename-playlist-dialog" onClose={onClose} open={open}>
       <DialogTitle>Rename Playlist</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           fullWidth
+          inputProps={{ 'data-testid': 'rename-playlist-input' }}
           label="New Playlist Name"
           margin="dense"
           onChange={(e) => setName(e.target.value)}
@@ -75,10 +76,10 @@ function RenamePlaylistDialog({
         />
       </DialogContent>
       <DialogActions>
-        <Button disableElevation onClick={onClose}>
+        <Button data-testid="cancel-rename-button" disableElevation onClick={onClose}>
           Cancel
         </Button>
-        <Button disableElevation onClick={handleConfirm}>
+        <Button data-testid="confirm-rename-button" disableElevation onClick={handleConfirm}>
           Rename
         </Button>
       </DialogActions>

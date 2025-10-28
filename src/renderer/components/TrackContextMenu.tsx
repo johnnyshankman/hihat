@@ -256,7 +256,7 @@ function TrackContextMenu({
           </ListItemIcon>
           <ListItemText>Play</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleAddToPlaylist}>
+        <MenuItem data-testid="add-to-playlist-menu-item" onClick={handleAddToPlaylist}>
           <ListItemIcon>
             <PlaylistAddIcon fontSize="small" />
           </ListItemIcon>
@@ -291,7 +291,7 @@ function TrackContextMenu({
           <ListItemText>Download Album Art</ListItemText>
         </MenuItem>
         {isPlaylistView && onRemoveFromPlaylist ? (
-          <MenuItem onClick={handleRemoveFromPlaylist}>
+          <MenuItem data-testid="remove-from-playlist-menu-item" onClick={handleRemoveFromPlaylist}>
             <ListItemIcon>
               <Delete fontSize="small" htmlColor="red" />
             </ListItemIcon>

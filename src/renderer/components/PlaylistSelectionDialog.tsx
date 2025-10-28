@@ -115,6 +115,8 @@ function PlaylistSelectionDialog({
             <List sx={{ maxHeight: 300, overflow: 'auto' }}>
               {userPlaylists.map((playlist) => (
                 <ListItemButton
+                  data-playlist-id={playlist.id}
+                  data-testid={`playlist-option-${playlist.id}`}
                   key={playlist.id}
                   onClick={() => handleAddToPlaylist(playlist.id)}
                 >

@@ -752,6 +752,7 @@ export default function MainLayout() {
                     Playlists
                   </Typography>
                   <IconButton
+                    data-testid="add-playlist-button"
                     onClick={handleAddPlaylistClick}
                     size="small"
                     sx={{
@@ -901,13 +902,13 @@ export default function MainLayout() {
         {/* Only show options for non-smart playlists */}
         {contextMenu && !contextMenu.isSmart ? (
           <>
-            <MenuItem onClick={handleRenamePlaylist}>
+            <MenuItem data-testid="rename-playlist-menu-item" onClick={handleRenamePlaylist}>
               <ListItemIcon>
                 <EditIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText>Rename</ListItemText>
             </MenuItem>
-            <MenuItem onClick={handleDeletePlaylist}>
+            <MenuItem data-testid="delete-playlist-menu-item" onClick={handleDeletePlaylist}>
               <ListItemIcon>
                 <DeleteIcon fontSize="small" />
               </ListItemIcon>
