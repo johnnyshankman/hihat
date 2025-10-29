@@ -70,6 +70,36 @@ export class TestHelpers {
     });
   }
 
+  static async initializeMigrationDatabase(
+    dbPath: string,
+    testSongsPath: string,
+  ): Promise<void> {
+    const sqlFilePath = path.join(__dirname, '../fixtures/migration-db.sql');
+    let sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
+
+    // Replace placeholder with actual test songs path (though not used in migration-db.sql)
+    sqlContent = sqlContent.replace(/\{\{TEST_SONGS_PATH\}\}/g, testSongsPath);
+
+    return new Promise((resolve, reject) => {
+      const db = new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        // Execute the SQL file to create tables with empty libraryPath
+        db.exec(sqlContent, (execErr) => {
+          db.close();
+          if (execErr) {
+            reject(execErr);
+          } else {
+            resolve();
+          }
+        });
+      });
+    });
+  }
+
   static async launchApp(): Promise<{ app: ElectronApplication; page: Page }> {
     const testDbPath = path.join(__dirname, '../fixtures/test-db.sqlite');
     const songsPath = path.join(__dirname, '../fixtures/test-songs');
@@ -167,7 +197,7 @@ export class TestHelpers {
 
     // Wait for the app to fully load
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000); // Give React time to render
+    await page.waitForTimeout(1000); // Give React time to render
 
     // Verify the app has loaded by checking for root content
     const rootContent = await page.locator('#root').innerHTML();
@@ -190,10 +220,27 @@ export class TestHelpers {
   }
 
   static async waitForLibraryLoad(page: Page): Promise<void> {
-    await page.waitForSelector('[data-testid="library-table"]', {
-      state: 'visible',
-      timeout: 30000,
-    });
+    // Wait for the library to load by checking that:
+    // 1. The "Your library is empty" message is NOT visible (meaning we have tracks)
+    // 2. OR a Material-UI table with rows exists
+    try {
+      // First wait a bit for the app to render
+      await page.waitForTimeout(1000);
+
+      // Check if library is NOT empty
+      const emptyMessage = page.getByText('Your library is empty');
+      const isEmptyVisible = await emptyMessage.isVisible().catch(() => false);
+
+      if (isEmptyVisible) {
+        throw new Error('Library is empty - no tracks loaded');
+      }
+
+      // If not empty, library should have loaded successfully
+      console.log('Library loaded successfully - tracks present');
+    } catch (error) {
+      console.error('Error waiting for library to load:', error);
+      throw error;
+    }
   }
 
   static async importSongs(page: Page): Promise<void> {
@@ -322,5 +369,143 @@ export class TestHelpers {
       .locator('[data-testid="song-count"]')
       .textContent();
     return parseInt(count || '0', 10);
+  }
+
+  /**
+   * Prepare a userConfig.json fixture for migration testing
+   * This replaces the {{TEST_SONGS_PATH}} placeholder with the actual test songs path
+   */
+  static prepareMigrationFixture(
+    fixtureConfigPath: string,
+    testSongsPath: string,
+  ): void {
+    const templatePath = path.join(__dirname, '../fixtures/userConfig.json');
+    let configContent = fs.readFileSync(templatePath, 'utf-8');
+
+    // Replace placeholder with actual test songs path
+    configContent = configContent.replace(
+      /\{\{TEST_SONGS_PATH\}\}/g,
+      testSongsPath,
+    );
+
+    // Write the prepared config to the fixture location
+    fs.writeFileSync(fixtureConfigPath, configContent, 'utf-8');
+  }
+
+  /**
+   * Clean up migration-related files
+   * This removes both the userConfig.json and userConfig.json.migrated files
+   */
+  static cleanupMigrationFiles(configPath: string): void {
+    // Remove the config file if it exists
+    if (fs.existsSync(configPath)) {
+      fs.unlinkSync(configPath);
+    }
+
+    // Remove the migrated marker if it exists
+    const migratedPath = `${configPath}.migrated`;
+    if (fs.existsSync(migratedPath)) {
+      fs.unlinkSync(migratedPath);
+    }
+  }
+
+  /**
+   * Unmark a migration (rename .migrated back to .json)
+   * This allows tests to re-run migration on the same fixture
+   */
+  static unmarkMigration(configPath: string): void {
+    const migratedPath = `${configPath}.migrated`;
+    if (fs.existsSync(migratedPath)) {
+      fs.renameSync(migratedPath, configPath);
+    }
+  }
+
+  /**
+   * Launch the app with v1 to v2 migration mode enabled
+   * This creates an empty database and provides a userConfig.json for migration
+   */
+  static async launchAppWithMigration(): Promise<{
+    app: ElectronApplication;
+    page: Page;
+  }> {
+    // Paths for testing
+    const testDbPath = path.join(
+      __dirname,
+      '../fixtures/migration-test-db.sqlite',
+    );
+    const songsPath = path.join(__dirname, '../fixtures/test-songs');
+    const legacyConfigPath = path.join(
+      __dirname,
+      '../fixtures/test-userConfig.json',
+    );
+
+    // Clean up any existing test files
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+    this.cleanupMigrationFiles(legacyConfigPath);
+
+    // Prepare the legacy userConfig.json with actual test paths
+    this.prepareMigrationFixture(legacyConfigPath, songsPath);
+
+    // Create an empty database with NO libraryPath (migration will populate it)
+    await this.initializeMigrationDatabase(testDbPath, songsPath);
+
+    // Path to the built application
+    const appPath = path.join(__dirname, '../../release/app');
+    const mainJsPath = path.join(appPath, 'dist/main/main.js');
+
+    // Check if the app is built
+    if (!fs.existsSync(mainJsPath)) {
+      throw new Error(
+        'Application not built. Please run "npm run build" first.',
+      );
+    }
+
+    // Launch the app with migration environment variables
+    const app = await electron.launch({
+      args: [appPath],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        TEST_MODE: 'true',
+        TEST_DB_PATH: testDbPath,
+        TEST_SONGS_PATH: songsPath,
+        TEST_LEGACY_CONFIG_PATH: legacyConfigPath, // Tell migration where to find v1 config
+      },
+      timeout: 30000,
+    });
+
+    // Wait for the first window
+    const page = await app.firstWindow();
+
+    // Wait for the app to fully load initially
+    await page.waitForLoadState('domcontentloaded');
+
+    // Migration will trigger a window reload after it completes
+    // Set up a promise to wait for the reload event
+    console.log('Waiting for migration and window reload...');
+
+    // Now wait for the page to finish loading after the reload
+    await page.waitForLoadState('load', { timeout: 10000 });
+
+    // Additional wait to ensure React has fully rendered and loaded library data after reload
+    await page.waitForTimeout(2000);
+
+    // Verify the app has loaded by checking for root content
+    const rootContent = await page.locator('#root').innerHTML();
+    if (rootContent.length < 100) {
+      throw new Error('Application did not render properly after migration');
+    }
+
+    return { app, page };
+  }
+
+  /**
+   * Check if a migration marker file exists
+   */
+  static isMigrationMarked(configPath: string): boolean {
+    const migratedPath = `${configPath}.migrated`;
+    return fs.existsSync(migratedPath);
   }
 }

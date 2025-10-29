@@ -339,6 +339,16 @@ const createWindow = async () => {
           console.warn('✅ Settings updated from hihat v1');
 
           console.warn('🎉 Migration from hihat v1 to hihat2 complete!');
+
+          // Reload the window so the renderer picks up the migrated data
+          // The renderer loads the library on startup, but migration happens after
+          // so we need to reload to show the migrated tracks and playlists
+          setTimeout(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              console.warn('Reloading window to display migrated data...');
+              mainWindow.reload();
+            }
+          }, 1000);
         } else {
           console.warn('⚠️  Migration failed or no data to migrate');
         }

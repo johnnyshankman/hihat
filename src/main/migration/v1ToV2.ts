@@ -34,12 +34,21 @@ import { Track, Playlist } from '../../types/dbTypes';
 
 /**
  * Get the path to the legacy hihat v1 userConfig.json file
+ * In TEST_MODE, uses TEST_LEGACY_CONFIG_PATH if provided
  */
 function getLegacyConfigPath(): string {
+  // TEST_MODE: Use controlled test fixture path during E2E tests
+  if (process.env.TEST_MODE === 'true' && process.env.TEST_LEGACY_CONFIG_PATH) {
+    console.warn(
+      'Using TEST legacy config path:',
+      process.env.TEST_LEGACY_CONFIG_PATH,
+    );
+    return process.env.TEST_LEGACY_CONFIG_PATH;
+  }
+
   // hihat v1 stored data in ~/Library/Application Support/hihat/userConfig.json
   const userDataPath = app.getPath('userData');
-  const v1Path = userDataPath
-    .replace('hihat-dev', 'hihat');
+  const v1Path = userDataPath.replace('hihat-dev', 'hihat');
   return path.join(v1Path, 'userConfig.json');
 }
 
@@ -49,6 +58,25 @@ function getLegacyConfigPath(): string {
 function getMigratedMarkerPath(): string {
   const legacyPath = getLegacyConfigPath();
   return `${legacyPath}.migrated`;
+}
+
+/**
+ * Unmark the migration (for testing purposes)
+ * This allows E2E tests to re-run migration tests
+ */
+export function unmarkMigration(): void {
+  const migratedPath = getMigratedMarkerPath();
+  const configPath = getLegacyConfigPath();
+
+  try {
+    // If the migrated marker exists, rename it back to the original config
+    if (fs.existsSync(migratedPath)) {
+      fs.renameSync(migratedPath, configPath);
+      console.warn('Migration unmarked (for testing):', configPath);
+    }
+  } catch (error) {
+    console.error('Error unmarking migration:', error);
+  }
 }
 
 /**

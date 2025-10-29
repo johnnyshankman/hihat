@@ -1,0 +1,207 @@
+{
+  "library": {
+    "{{TEST_SONGS_PATH}}/03 - A. G. Cook - Undying.m4a": {
+      "common": {
+        "artist": "A. G. Cook",
+        "album": "7G",
+        "title": "Undying",
+        "track": {
+          "no": 3,
+          "of": 10
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "A. G. Cook",
+        "picture": null
+      },
+      "format": {
+        "duration": 193.2
+      },
+      "additionalInfo": {
+        "playCount": 333,
+        "lastPlayed": 1698456789000,
+        "dateAdded": 1695000000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/03 - A. G. Cook - Windows.m4a": {
+      "common": {
+        "artist": "A. G. Cook",
+        "album": "7G",
+        "title": "Windows",
+        "track": {
+          "no": 3,
+          "of": 10
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "A. G. Cook",
+        "picture": null
+      },
+      "format": {
+        "duration": 201.5
+      },
+      "additionalInfo": {
+        "playCount": 8,
+        "lastPlayed": 1698356789000,
+        "dateAdded": 1695100000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/03 - Bill Evans - Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1).m4a": {
+      "common": {
+        "artist": "Bill Evans",
+        "album": "Waltz for Debby",
+        "title": "Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1)",
+        "track": {
+          "no": 3,
+          "of": 6
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Bill Evans",
+        "picture": null
+      },
+      "format": {
+        "duration": 423.8
+      },
+      "additionalInfo": {
+        "playCount": 25,
+        "lastPlayed": 1698556789000,
+        "dateAdded": 1694000000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/03 - Bill Evans - All Of You (Live At The Village Vanguard, 1961 - Take 2).m4a": {
+      "common": {
+        "artist": "Bill Evans",
+        "album": "Waltz for Debby",
+        "title": "All Of You (Live At The Village Vanguard, 1961 - Take 2)",
+        "track": {
+          "no": 3,
+          "of": 6
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Bill Evans",
+        "picture": null
+      },
+      "format": {
+        "duration": 365.4
+      },
+      "additionalInfo": {
+        "playCount": 18,
+        "lastPlayed": 1698656789000,
+        "dateAdded": 1694100000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/03 - Bill Evans - Waltz For Debby (Live At The Village Vanguard, New York - 1961 - Take 2).m4a": {
+      "common": {
+        "artist": "Bill Evans",
+        "album": "Waltz for Debby",
+        "title": "Waltz For Debby (Live At The Village Vanguard, New York - 1961 - Take 2)",
+        "track": {
+          "no": 3,
+          "of": 6
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Bill Evans",
+        "picture": null
+      },
+      "format": {
+        "duration": 402.1
+      },
+      "additionalInfo": {
+        "playCount": 32,
+        "lastPlayed": 1698756789000,
+        "dateAdded": 1694200000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/03 - Bladee - White Meadow.m4a": {
+      "common": {
+        "artist": "Bladee",
+        "album": "Icedancer",
+        "title": "White Meadow",
+        "track": {
+          "no": 3,
+          "of": 16
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Bladee",
+        "picture": null
+      },
+      "format": {
+        "duration": 168.7
+      },
+      "additionalInfo": {
+        "playCount": 5,
+        "lastPlayed": 1698256789000,
+        "dateAdded": 1695200000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/03 - Kendrick Lamar - King Kunta(Explicit).m4a": {
+      "common": {
+        "artist": "Kendrick Lamar",
+        "album": "To Pimp a Butterfly",
+        "title": "King Kunta",
+        "track": {
+          "no": 3,
+          "of": 16
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Kendrick Lamar",
+        "picture": null
+      },
+      "format": {
+        "duration": 234.5
+      },
+      "additionalInfo": {
+        "playCount": 42,
+        "lastPlayed": 1698856789000,
+        "dateAdded": 1693000000000
+      }
+    }
+  },
+  "playlists": [
+    {
+      "name": "Jazz Classics",
+      "songs": [
+        "{{TEST_SONGS_PATH}}/03 - Bill Evans - Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1).m4a",
+        "{{TEST_SONGS_PATH}}/03 - Bill Evans - All Of You (Live At The Village Vanguard, 1961 - Take 2).m4a"
+      ]
+    },
+    {
+      "name": "Electronic",
+      "songs": [
+        "{{TEST_SONGS_PATH}}/03 - A. G. Cook - Undying.m4a",
+        "{{TEST_SONGS_PATH}}/03 - A. G. Cook - Windows.m4a",
+        "{{TEST_SONGS_PATH}}/03 - Bladee - White Meadow.m4a"
+      ]
+    },
+    {
+      "name": "Most Played",
+      "songs": [
+        "{{TEST_SONGS_PATH}}/03 - Kendrick Lamar - King Kunta(Explicit).m4a",
+        "{{TEST_SONGS_PATH}}/03 - Bill Evans - Waltz For Debby (Live At The Village Vanguard, New York - 1961 - Take 2).m4a",
+        "{{TEST_SONGS_PATH}}/03 - Bill Evans - Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1).m4a"
+      ]
+    }
+  ],
+  "lastPlayedSong": "{{TEST_SONGS_PATH}}/03 - Kendrick Lamar - King Kunta(Explicit).m4a",
+  "libraryPath": "{{TEST_SONGS_PATH}}",
+  "initialized": true
+}

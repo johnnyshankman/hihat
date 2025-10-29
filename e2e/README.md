@@ -24,6 +24,7 @@ e2e/
 - **playlists.spec.ts**: Playlist creation and management
 - **settings.spec.ts**: Application settings and configuration
 - **new-user.spec.ts**: Brand new user experience with empty library
+- **migration.spec.ts**: v1 to v2 migration system (see [MIGRATION_TESTING.md](MIGRATION_TESTING.md))
 
 ## Running Tests
 
