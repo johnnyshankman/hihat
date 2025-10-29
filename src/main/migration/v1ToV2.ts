@@ -36,11 +36,10 @@ import { Track, Playlist } from '../../types/dbTypes';
  * Get the path to the legacy hihat v1 userConfig.json file
  */
 function getLegacyConfigPath(): string {
-  // hihat v1 stored data in ~/Library/Application Support/hihat
+  // hihat v1 stored data in ~/Library/Application Support/hihat/userConfig.json
   const userDataPath = app.getPath('userData');
   const v1Path = userDataPath
-    .replace('hihat-dev', 'hihat')
-    .replace('hihat-music-player', 'hihat');
+    .replace('hihat-dev', 'hihat');
   return path.join(v1Path, 'userConfig.json');
 }
 
