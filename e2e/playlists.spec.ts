@@ -32,9 +32,7 @@ test.describe('Playlist Management', () => {
     await page.waitForTimeout(1000); // Give time for the playlist to be created
 
     // Check if the playlist exists by looking for its data-playlist-id attribute
-    const playlistElement = await page.locator(
-      'text=My Test Playlist',
-    ).first();
+    const playlistElement = await page.locator('text=My Test Playlist').first();
     await playlistElement.waitFor({ state: 'visible', timeout: 5000 });
 
     await TestHelpers.closeApp(app);

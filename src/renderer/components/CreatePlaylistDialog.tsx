@@ -70,7 +70,11 @@ function CreatePlaylistDialog({
         <Button data-testid="cancel-playlist-button" onClick={onClose}>
           Cancel
         </Button>
-        <Button color="primary" data-testid="create-playlist-button" onClick={handleCreate}>
+        <Button
+          color="primary"
+          data-testid="create-playlist-button"
+          onClick={handleCreate}
+        >
           Create
         </Button>
       </DialogActions>

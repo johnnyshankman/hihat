@@ -76,10 +76,18 @@ function RenamePlaylistDialog({
         />
       </DialogContent>
       <DialogActions>
-        <Button data-testid="cancel-rename-button" disableElevation onClick={onClose}>
+        <Button
+          data-testid="cancel-rename-button"
+          disableElevation
+          onClick={onClose}
+        >
           Cancel
         </Button>
-        <Button data-testid="confirm-rename-button" disableElevation onClick={handleConfirm}>
+        <Button
+          data-testid="confirm-rename-button"
+          disableElevation
+          onClick={handleConfirm}
+        >
           Rename
         </Button>
       </DialogActions>

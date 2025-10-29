@@ -217,7 +217,10 @@ function TrackContextMenu({
       // Reload playlists to reflect any changes
       await loadPlaylists();
 
-      showNotification(`Track "${track.title}" has been deleted`, 'success');
+      showNotification(
+        `Track "${track.title}" has been removed and moved to Trash`,
+        'success',
+      );
       setDeleteDialogOpen(false);
 
       // Step 6: Scroll to the target track if it exists
@@ -256,7 +259,10 @@ function TrackContextMenu({
           </ListItemIcon>
           <ListItemText>Play</ListItemText>
         </MenuItem>
-        <MenuItem data-testid="add-to-playlist-menu-item" onClick={handleAddToPlaylist}>
+        <MenuItem
+          data-testid="add-to-playlist-menu-item"
+          onClick={handleAddToPlaylist}
+        >
           <ListItemIcon>
             <PlaylistAddIcon fontSize="small" />
           </ListItemIcon>
@@ -291,7 +297,10 @@ function TrackContextMenu({
           <ListItemText>Download Album Art</ListItemText>
         </MenuItem>
         {isPlaylistView && onRemoveFromPlaylist ? (
-          <MenuItem data-testid="remove-from-playlist-menu-item" onClick={handleRemoveFromPlaylist}>
+          <MenuItem
+            data-testid="remove-from-playlist-menu-item"
+            onClick={handleRemoveFromPlaylist}
+          >
             <ListItemIcon>
               <Delete fontSize="small" htmlColor="red" />
             </ListItemIcon>
@@ -314,7 +323,7 @@ function TrackContextMenu({
         cancelText="Cancel"
         confirmButtonColor="error"
         confirmText="Delete"
-        message="This track will be permanently deleted from both the hihat database and your file system. This action cannot be undone. Are you sure you want to continue?"
+        message="This track will be removed from the hihat database and the file will be moved to your Trash. Are you sure you want to continue?"
         onCancel={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
         open={deleteDialogOpen}

@@ -473,14 +473,15 @@ export const fileSystemHandlers = {
         };
       }
 
-      fs.unlinkSync(filePath);
+      // Move file to Trash instead of permanently deleting it
+      await shell.trashItem(filePath);
 
       return {
         success: true,
-        message: 'File deleted successfully',
+        message: 'File moved to Trash successfully',
       };
     } catch (error) {
-      console.error(`Error deleting file ${filePath}:`, error);
+      console.error(`Error moving file to Trash ${filePath}:`, error);
       return {
         success: false,
         message: `Error: ${(error as Error).message || 'Unknown error'}`,
