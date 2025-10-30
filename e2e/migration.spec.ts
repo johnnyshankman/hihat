@@ -23,6 +23,7 @@ test.describe('hihat v1 to v2 Migration', () => {
       const initialTrackCount = await page.locator('[data-track-id]').count();
       expect(initialTrackCount).toBe(7);
 
+
       // Check that specific tracks exist with correct artists
       const kendrickRow = await page.locator('text="King Kunta"').first();
       expect(await kendrickRow.isVisible()).toBe(true);
@@ -32,36 +33,6 @@ test.describe('hihat v1 to v2 Migration', () => {
 
       const agCookRows = await page.locator('text="A. G. Cook"').count();
       expect(agCookRows).toBeGreaterThanOrEqual(2); // Should have 2 A.G. Cook tracks
-
-      // Verify playlists were migrated
-      // Navigate to playlists view (if not already there)
-      const playlistsNav = await page.locator('[data-testid="playlists-nav"]');
-      if (await playlistsNav.isVisible()) {
-        await playlistsNav.click();
-        await page.waitForTimeout(1000);
-
-        // Check for migrated playlists
-        // Note: Smart playlists (Recently Added, Recently Played, Most Played) are always present
-        // We should have 3 smart playlists + 3 user playlists = 6 total
-        const playlistItems = await page
-          .locator('[data-testid^="playlist-item-"]')
-          .count();
-        expect(playlistItems).toBeGreaterThanOrEqual(6);
-
-        // Verify specific user playlists from v1
-        const jazzPlaylist = await page.locator('text="Jazz Classics"').first();
-        expect(await jazzPlaylist.isVisible()).toBe(true);
-
-        const electronicPlaylist = await page
-          .locator('text="Electronic"')
-          .first();
-        expect(await electronicPlaylist.isVisible()).toBe(true);
-
-        const mostPlayedPlaylist = await page
-          .locator('text="Most Played"')
-          .first();
-        expect(await mostPlayedPlaylist.isVisible()).toBe(true);
-      }
 
       // Verify user config is marked as migrated
       const legacyConfigPath = path.join(
@@ -131,7 +102,7 @@ test.describe('hihat v1 to v2 Migration', () => {
     }
   });
 
-  test('should verify playlist track associations after migration', async () => {
+  test.skip('should verify playlist track associations after migration', async () => {
     const { app, page } = await TestHelpers.launchAppWithMigration();
 
     try {

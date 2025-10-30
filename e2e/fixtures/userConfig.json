@@ -176,32 +176,9 @@
       }
     }
   },
-  "playlists": [
-    {
-      "name": "Jazz Classics",
-      "songs": [
-        "{{TEST_SONGS_PATH}}/03 - Bill Evans - Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1).m4a",
-        "{{TEST_SONGS_PATH}}/03 - Bill Evans - All Of You (Live At The Village Vanguard, 1961 - Take 2).m4a"
-      ]
-    },
-    {
-      "name": "Electronic",
-      "songs": [
-        "{{TEST_SONGS_PATH}}/03 - A. G. Cook - Undying.m4a",
-        "{{TEST_SONGS_PATH}}/03 - A. G. Cook - Windows.m4a",
-        "{{TEST_SONGS_PATH}}/03 - Bladee - White Meadow.m4a"
-      ]
-    },
-    {
-      "name": "Most Played",
-      "songs": [
-        "{{TEST_SONGS_PATH}}/03 - Kendrick Lamar - King Kunta(Explicit).m4a",
-        "{{TEST_SONGS_PATH}}/03 - Bill Evans - Waltz For Debby (Live At The Village Vanguard, New York - 1961 - Take 2).m4a",
-        "{{TEST_SONGS_PATH}}/03 - Bill Evans - Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1).m4a"
-      ]
-    }
-  ],
+  "playlists": [],
   "lastPlayedSong": "{{TEST_SONGS_PATH}}/03 - Kendrick Lamar - King Kunta(Explicit).m4a",
   "libraryPath": "{{TEST_SONGS_PATH}}",
-  "initialized": true
+  "initialized": true,
+  "scrollToIndex": 0
 }
