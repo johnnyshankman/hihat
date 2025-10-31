@@ -106,7 +106,12 @@ export type Channels =
   | 'player:toggleShuffle'
 
   // Album Art operations
-  | 'albumArt:get';
+  | 'albumArt:get'
+
+  // Migration operations
+  | 'migration:start'
+  | 'migration:progress'
+  | 'migration:complete';
 
 /**
  * Request types for each IPC channel
@@ -220,6 +225,17 @@ export interface IPCRequests {
 
   // Album Art operations
   'albumArt:get': string;
+
+  // Migration operations
+  'migration:start': void;
+  'migration:progress': {
+    phase: 'starting' | 'reading' | 'converting' | 'importing' | 'complete';
+    message: string;
+  };
+  'migration:complete': {
+    tracksCount: number;
+    playlistsCount: number;
+  };
 
   // New channels
   'menu-backup-library': string;
@@ -357,6 +373,11 @@ export interface IPCResponses {
   // Album Art operations
   'albumArt:get': string | null;
 
+  // Migration operations
+  'migration:start': void;
+  'migration:progress': void;
+  'migration:complete': void;
+
   // New channels
   'menu-backup-library': void;
   'backup-library-success': void;
@@ -404,7 +425,10 @@ export type IPCEvents =
   | 'miniPlayer:trackChanged'
   | 'miniPlayer:stateChanged'
   | 'miniPlayer:positionChanged'
-  | 'miniPlayer:albumArtChanged';
+  | 'miniPlayer:albumArtChanged'
+  | 'migration:start'
+  | 'migration:progress'
+  | 'migration:complete';
 
 /**
  * Union type for all IPC channels

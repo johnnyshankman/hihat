@@ -45,11 +45,14 @@ function getLegacyConfigPath(): string {
     );
     return process.env.TEST_LEGACY_CONFIG_PATH;
   }
+  const basePath = app.getPath('userData');
+  const userDataPath =
+    process.env.NODE_ENV === 'development'
+      ? path.join(basePath, '..', `${app.getName()}-dev`)
+      : basePath;
 
-  // hihat v1 stored data in ~/Library/Application Support/hihat/userConfig.json
-  const userDataPath = app.getPath('userData');
-  const v1Path = userDataPath.replace('hihat-dev', 'hihat');
-  return path.join(v1Path, 'userConfig.json');
+  // hihat stored data in ~/Library/Application Support/hihat/userConfig.json
+  return path.join(userDataPath, 'userConfig.json');
 }
 
 /**
@@ -201,10 +204,21 @@ function markAsMigrated(): void {
 }
 
 /**
+ * Progress callback for migration
+ */
+export type MigrationProgressCallback = (progress: {
+  phase: 'starting' | 'reading' | 'converting' | 'importing' | 'complete';
+  message: string;
+}) => void;
+
+/**
  * Main migration function
  * Returns the migrated data that should be inserted into the database
+ * @param onProgress - Optional callback to report migration progress
  */
-export async function migrateV1ToV2(): Promise<{
+export async function migrateV1ToV2(
+  onProgress?: MigrationProgressCallback,
+): Promise<{
   tracks: Track[];
   playlists: Playlist[];
   libraryPath: string;
@@ -212,11 +226,23 @@ export async function migrateV1ToV2(): Promise<{
 } | null> {
   console.warn('Starting migration from hihat v1 to hihat2...');
 
+  // Report starting phase
+  onProgress?.({
+    phase: 'starting',
+    message: 'Initializing migration...',
+  });
+
   // Check if migration is needed
   if (!needsMigration()) {
     console.warn('No migration needed');
     return null;
   }
+
+  // Report reading phase
+  onProgress?.({
+    phase: 'reading',
+    message: 'Reading hihat v1 library data...',
+  });
 
   // Read the legacy config
   const legacyConfig = readLegacyConfig();
@@ -225,10 +251,17 @@ export async function migrateV1ToV2(): Promise<{
     return null;
   }
 
-  console.warn(
-    `Found ${Object.keys(legacyConfig.library).length} tracks in legacy library`,
-  );
-  console.warn(`Found ${legacyConfig.playlists.length} playlists`);
+  const trackCount = Object.keys(legacyConfig.library).length;
+  const playlistCount = legacyConfig.playlists.length;
+
+  console.warn(`Found ${trackCount} tracks in legacy library`);
+  console.warn(`Found ${playlistCount} playlists`);
+
+  // Report converting phase
+  onProgress?.({
+    phase: 'converting',
+    message: `Converting ${trackCount} tracks and ${playlistCount} playlists...`,
+  });
 
   // Convert tracks
   const tracks: Track[] = [];
@@ -251,6 +284,12 @@ export async function migrateV1ToV2(): Promise<{
     lastPlayedSongId =
       filePathToTrackIdMap.get(legacyConfig.lastPlayedSong) || null;
   }
+
+  // Report importing phase
+  onProgress?.({
+    phase: 'importing',
+    message: 'Importing data into hihat v2 database...',
+  });
 
   // Mark the migration as complete
   markAsMigrated();

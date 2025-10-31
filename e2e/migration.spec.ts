@@ -15,16 +15,46 @@ test.describe('hihat v1 to v2 Migration', () => {
     const { app, page } = await TestHelpers.launchAppWithMigration();
 
     try {
-      // Wait for library to load after migration
+      // 1. Verify migration dialog appears
+      await page.waitForSelector('[data-testid="migration-dialog"]', {
+        timeout: 5000,
+      });
+      const dialog = page.locator('[data-testid="migration-dialog"]');
+      expect(await dialog.isVisible()).toBe(true);
+
+      // 2. Verify we can see the migration message
+      const messageElement = page.locator('[data-testid="migration-message"]');
+      expect(await messageElement.isVisible()).toBe(true);
+
+      // 3. Get the Continue button
+      const continueButton = page.locator(
+        '[data-testid="migration-continue-button"]',
+      );
+
+      // 4. Wait for migration to complete (button becomes enabled if not already)
+      // Note: With the small test fixture, migration may complete almost instantly
+      await page.waitForSelector(
+        '[data-testid="migration-continue-button"]:not([disabled])',
+        { timeout: 10000 },
+      );
+      expect(await continueButton.isDisabled()).toBe(false);
+
+      // 5. Verify completion message shows track and playlist counts
+      const dialogContent = await dialog.textContent();
+      expect(dialogContent).toContain('7 tracks');
+
+      // 6. Click Continue to close the dialog
+      await continueButton.click();
+
+      // 7. Wait for page reload and library to load
       await TestHelpers.waitForLibraryLoad(page);
 
-      // 1. Start in Library view - verify we see tracks
+      // 8. Verify we see tracks in Library view
       await page.waitForSelector('[data-track-id]', { timeout: 5000 });
       const initialTrackCount = await page.locator('[data-track-id]').count();
       expect(initialTrackCount).toBe(7);
 
-
-      // Check that specific tracks exist with correct artists
+      // 9. Check that specific tracks exist with correct artists
       const kendrickRow = await page.locator('text="King Kunta"').first();
       expect(await kendrickRow.isVisible()).toBe(true);
 
@@ -34,7 +64,7 @@ test.describe('hihat v1 to v2 Migration', () => {
       const agCookRows = await page.locator('text="A. G. Cook"').count();
       expect(agCookRows).toBeGreaterThanOrEqual(2); // Should have 2 A.G. Cook tracks
 
-      // Verify user config is marked as migrated
+      // 10. Verify user config is marked as migrated
       const legacyConfigPath = path.join(
         __dirname,
         'fixtures/test-userConfig.json',
@@ -51,17 +81,31 @@ test.describe('hihat v1 to v2 Migration', () => {
     const { app, page } = await TestHelpers.launchAppWithMigration();
 
     try {
-      // Wait for library to load
+      // 1. Wait for migration dialog
+      await page.waitForSelector('[data-testid="migration-dialog"]', {
+        timeout: 5000,
+      });
+
+      // 2. Wait for migration to complete
+      const continueButton = page.locator(
+        '[data-testid="migration-continue-button"]',
+      );
+      await page.waitForSelector(
+        '[data-testid="migration-continue-button"]:not([disabled])',
+        { timeout: 10000 },
+      );
+
+      // 3. Click Continue to close dialog
+      await continueButton.click();
+
+      // 4. Wait for library to load
       await TestHelpers.waitForLibraryLoad(page);
 
-      // Verify Undying by A.G. cook has 333 plays
-      const firstRow = await page
-        .locator('[data-track-id]')
-        .first();
+      // 5. Verify Undying by A.G. cook has 333 plays
+      const firstRow = await page.locator('[data-track-id]').first();
       const firstRowText = await firstRow.textContent();
       expect(firstRowText).toContain('Undying');
       expect(firstRowText).toContain('333');
-
     } finally {
       await TestHelpers.closeApp(app);
     }

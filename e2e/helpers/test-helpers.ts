@@ -482,22 +482,17 @@ export class TestHelpers {
     // Wait for the app to fully load initially
     await page.waitForLoadState('domcontentloaded');
 
-    // Migration will trigger a window reload after it completes
-    // Set up a promise to wait for the reload event
-    console.log('Waiting for migration and window reload...');
-
-    // Now wait for the page to finish loading after the reload
-    await page.waitForLoadState('load', { timeout: 10000 });
-
-    // Additional wait to ensure React has fully rendered and loaded library data after reload
+    // Give React time to render - migration dialog will appear automatically
     await page.waitForTimeout(2000);
 
     // Verify the app has loaded by checking for root content
     const rootContent = await page.locator('#root').innerHTML();
     if (rootContent.length < 100) {
-      throw new Error('Application did not render properly after migration');
+      throw new Error('Application did not render properly');
     }
 
+    // Note: The migration dialog should now be visible
+    // Tests are responsible for waiting for it and clicking Continue
     return { app, page };
   }
 

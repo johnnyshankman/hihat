@@ -1657,19 +1657,24 @@ export function resetTracks(): Promise<boolean> {
 }
 
 /**
- * Bulk import tracks into the database (used for migration)
- * This function inserts multiple tracks in a batch operation
+ * Bulk import tracks from migration (async, non-blocking version)
+ * Processes tracks in batches to avoid blocking the main thread and causing pinwheel cursor
+ * Uses INSERT OR IGNORE to skip duplicates
  * @param tracks - Array of tracks to import
- * @returns Number of tracks successfully imported
+ * @param onProgress - Optional callback for progress updates
+ * @returns Promise resolving to number of tracks successfully imported
  */
-export function bulkImportTracks(tracks: Track[]): number {
+export async function bulkImportTracksAsync(
+  tracks: Track[],
+  onProgress?: (current: number, total: number) => void,
+): Promise<number> {
   try {
     if (!db || useMockDb) {
       console.error('Database not initialized for bulk import');
       return 0;
     }
 
-    console.warn(`Starting bulk import of ${tracks.length} tracks...`);
+    console.warn(`Starting async bulk import of ${tracks.length} tracks...`);
 
     const insertStmt = db.prepare(`
       INSERT OR IGNORE INTO tracks (
@@ -1680,59 +1685,78 @@ export function bulkImportTracks(tracks: Track[]): number {
     `);
 
     let successCount = 0;
+    const batchSize = 100; // Process 100 tracks at a time to avoid blocking
 
-    tracks.forEach((track, index) => {
-      try {
-        insertStmt.run(
-          track.id,
-          track.filePath,
-          track.title,
-          track.artist,
-          track.album,
-          track.albumArtist,
-          track.genre || '',
-          track.duration,
-          track.playCount,
-          track.dateAdded,
-          track.lastPlayed,
-          track.lyrics,
-          track.trackNumber,
-        );
-        successCount += 1;
+    for (let i = 0; i < tracks.length; i += batchSize) {
+      const batch = tracks.slice(i, Math.min(i + batchSize, tracks.length));
 
-        // Log progress every 1000 tracks
-        if ((index + 1) % 1000 === 0) {
-          console.warn(`Imported ${index + 1}/${tracks.length} tracks...`);
+      // Process batch synchronously
+      batch.forEach((track) => {
+        try {
+          insertStmt.run(
+            track.id,
+            track.filePath,
+            track.title,
+            track.artist,
+            track.album,
+            track.albumArtist,
+            track.genre || '',
+            track.duration,
+            track.playCount,
+            track.dateAdded,
+            track.lastPlayed,
+            track.lyrics,
+            track.trackNumber,
+          );
+          successCount += 1;
+        } catch (error) {
+          console.error(`Failed to import track ${track.filePath}:`, error);
         }
-      } catch (error) {
-        console.error(`Failed to import track ${track.filePath}:`, error);
+      });
+
+      // Report progress
+      const currentCount = Math.min(i + batchSize, tracks.length);
+      if (currentCount % 500 === 0 || currentCount === tracks.length) {
+        console.warn(`Imported ${currentCount}/${tracks.length} tracks...`);
       }
-    });
+      onProgress?.(currentCount, tracks.length);
+
+      // Yield to event loop to prevent blocking and avoid pinwheel cursor
+      await new Promise((resolve) => {
+        setImmediate(resolve);
+      });
+    }
 
     console.warn(
-      `Bulk import complete: ${successCount}/${tracks.length} tracks imported`,
+      `Async bulk import complete: ${successCount}/${tracks.length} tracks imported`,
     );
     return successCount;
   } catch (error) {
-    console.error('Error during bulk track import:', error);
+    console.error('Error during async bulk track import:', error);
     return 0;
   }
 }
 
 /**
- * Bulk import playlists into the database (used for migration)
- * This function inserts multiple playlists in a batch operation
+ * Bulk import playlists (async, non-blocking version)
+ * Processes playlists in batches to avoid blocking the main thread
  * @param playlists - Array of playlists to import
- * @returns Number of playlists successfully imported
+ * @param onProgress - Optional callback for progress updates
+ * @returns Promise resolving to number of playlists successfully imported
  */
-export function bulkImportPlaylists(playlists: Playlist[]): number {
+export async function bulkImportPlaylistsAsync(
+  playlists: Playlist[],
+  onProgress?: (current: number, total: number) => void,
+): Promise<number> {
   try {
     if (!db || useMockDb) {
       console.error('Database not initialized for bulk import');
       return 0;
     }
 
-    console.warn(`Starting bulk import of ${playlists.length} playlists...`);
+    console.warn(
+      `Starting async bulk import of ${playlists.length} playlists...`,
+    );
 
     const insertStmt = db.prepare(`
       INSERT OR IGNORE INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds)
@@ -1740,32 +1764,47 @@ export function bulkImportPlaylists(playlists: Playlist[]): number {
     `);
 
     let successCount = 0;
+    const batchSize = 50; // Process 50 playlists at a time
 
-    playlists.forEach((playlist) => {
-      try {
-        // For smart playlists, we shouldn't store track IDs
-        const trackIdsToStore = playlist.isSmart ? [] : playlist.trackIds;
+    for (let i = 0; i < playlists.length; i += batchSize) {
+      const batch = playlists.slice(i, Math.min(i + batchSize, playlists.length));
 
-        insertStmt.run(
-          playlist.id,
-          playlist.name,
-          playlist.isSmart ? 1 : 0,
-          playlist.smartPlaylistId || null,
-          playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
-          JSON.stringify(trackIdsToStore),
-        );
-        successCount += 1;
-      } catch (error) {
-        console.error(`Failed to import playlist ${playlist.name}:`, error);
-      }
-    });
+      batch.forEach((playlist) => {
+        try {
+          // For smart playlists, we shouldn't store track IDs
+          const trackIdsToStore = playlist.isSmart ? [] : playlist.trackIds;
+
+          insertStmt.run(
+            playlist.id,
+            playlist.name,
+            playlist.isSmart ? 1 : 0,
+            playlist.smartPlaylistId || null,
+            playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
+            JSON.stringify(trackIdsToStore),
+          );
+          successCount += 1;
+        } catch (error) {
+          console.error(`Failed to import playlist ${playlist.name}:`, error);
+        }
+      });
+
+      // Report progress
+      const currentCount = Math.min(i + batchSize, playlists.length);
+      console.warn(`Imported ${currentCount}/${playlists.length} playlists...`);
+      onProgress?.(currentCount, playlists.length);
+
+      // Yield to event loop
+      await new Promise((resolve) => {
+        setImmediate(resolve);
+      });
+    }
 
     console.warn(
-      `Bulk import complete: ${successCount}/${playlists.length} playlists imported`,
+      `Async bulk import complete: ${successCount}/${playlists.length} playlists imported`,
     );
     return successCount;
   } catch (error) {
-    console.error('Error during bulk playlist import:', error);
+    console.error('Error during async bulk playlist import:', error);
     return 0;
   }
 }

@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import MainLayout from './components/MainLayout';
 import MiniPlayer from './components/MiniPlayer';
+import MigrationDialog from './components/MigrationDialog';
 import { lightTheme, darkTheme } from './styles/materialTheme';
 import { useLibraryStore, useSettingsAndPlaybackStore } from './stores';
 import './App.css';
@@ -149,6 +150,7 @@ function ThemedApp() {
   return (
     <ThemeProvider theme={themeToProvide}>
       <CssBaseline />
+      <MigrationDialog />
       <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <Routes>
           <Route element={<MainLayout />} path="/" />

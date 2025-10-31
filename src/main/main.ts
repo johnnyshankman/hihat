@@ -17,8 +17,8 @@ import { resolveHtmlPath } from './util';
 import {
   initDatabase,
   closeDatabase,
-  bulkImportTracks,
-  bulkImportPlaylists,
+  bulkImportTracksAsync,
+  bulkImportPlaylistsAsync,
   updateSettingsFromMigration,
   getSettings,
 } from './db';
@@ -244,10 +244,12 @@ const createWindow = async () => {
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
+  let windowReadyToShow = false;
   mainWindow.on('ready-to-show', () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
     }
+    windowReadyToShow = true;
     if (process.env.START_MINIMIZED) {
       mainWindow.minimize();
     } else if (!isTest) {
@@ -287,76 +289,114 @@ const createWindow = async () => {
 
   // Check and run v1 to v2 migration if needed
   if (needsMigration()) {
-    try {
-      // Wait a bit for database to be ready
-      await new Promise((resolve) => {
-        setTimeout(resolve, 500);
-      });
-
-      // Safety check: Only migrate if user doesn't already have a library configured
-      const currentSettings = getSettings();
-
-      if (currentSettings.libraryPath && currentSettings.libraryPath !== '') {
-        console.warn(
-          '⚠️  Skipping hihat v1 migration: User already has a library configured in hihat2',
-        );
-        console.warn(`   Current library path: ${currentSettings.libraryPath}`);
-        console.warn(
-          '   To prevent data loss, the v1 userConfig.json will not be imported.',
-        );
-        console.warn(
-          '   If you want to migrate your v1 data, please reset your hihat2 library first.',
-        );
-      } else {
-        console.warn(
-          '🔄 Detected hihat v1 data, starting migration to hihat2...',
-        );
-
-        const migrationData = await migrateV1ToV2();
-
-        if (migrationData) {
-          console.warn(
-            `✅ Migration data ready: ${migrationData.tracks.length} tracks, ${migrationData.playlists.length} playlists`,
-          );
-
-          // Import tracks
-          const tracksImported = bulkImportTracks(migrationData.tracks);
-          console.warn(`✅ Imported ${tracksImported} tracks from hihat v1`);
-
-          // Import playlists
-          const playlistsImported = bulkImportPlaylists(
-            migrationData.playlists,
-          );
-          console.warn(
-            `✅ Imported ${playlistsImported} playlists from hihat v1`,
-          );
-
-          // Update settings
-          updateSettingsFromMigration(
-            migrationData.libraryPath,
-            migrationData.lastPlayedSongId,
-          );
-          console.warn('✅ Settings updated from hihat v1');
-
-          console.warn('🎉 Migration from hihat v1 to hihat2 complete!');
-
-          // Reload the window so the renderer picks up the migrated data
-          // The renderer loads the library on startup, but migration happens after
-          // so we need to reload to show the migrated tracks and playlists
-          setTimeout(() => {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              console.warn('Reloading window to display migrated data...');
-              mainWindow.reload();
-            }
-          }, 1000);
-        } else {
-          console.warn('⚠️  Migration failed or no data to migrate');
+    // Run migration in background after window is ready
+    (async () => {
+      try {
+        // Wait for window to be ready and renderer to load
+        while (!windowReadyToShow) {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 100);
+          });
         }
+
+        // Wait a bit more for the renderer to fully initialize
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1000);
+        });
+
+        // Safety check: Only migrate if user doesn't already have a library configured
+        const currentSettings = getSettings();
+
+        if (
+          currentSettings.libraryPath &&
+          currentSettings.libraryPath !== ''
+        ) {
+          console.warn(
+            '⚠️  Skipping hihat v1 migration: User already has a library configured in hihat2',
+          );
+          console.warn(
+            `   Current library path: ${currentSettings.libraryPath}`,
+          );
+          console.warn(
+            '   To prevent data loss, the v1 userConfig.json will not be imported.',
+          );
+          console.warn(
+            '   If you want to migrate your v1 data, please reset your hihat2 library first.',
+          );
+        } else {
+          console.warn(
+            '🔄 Detected hihat v1 data, starting migration to hihat2...',
+          );
+
+          // Send migration start event to renderer
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('migration:start');
+          }
+
+          // Run migration with progress callbacks
+          const migrationData = await migrateV1ToV2((progress) => {
+            // Send progress updates to renderer
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('migration:progress', progress);
+            }
+          });
+
+          if (migrationData) {
+            console.warn(
+              `✅ Migration data ready: ${migrationData.tracks.length} tracks, ${migrationData.playlists.length} playlists`,
+            );
+
+            // Import tracks using async version to avoid blocking main thread
+            const tracksImported = await bulkImportTracksAsync(
+              migrationData.tracks,
+              (current, total) => {
+                // Send progress updates during import
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send('migration:progress', {
+                    phase: 'importing' as const,
+                    message: `Importing tracks: ${current}/${total}...`,
+                  });
+                }
+              },
+            );
+            console.warn(`✅ Imported ${tracksImported} tracks from hihat v1`);
+
+            // Import playlists using async version
+            const playlistsImported = await bulkImportPlaylistsAsync(
+              migrationData.playlists,
+            );
+            console.warn(
+              `✅ Imported ${playlistsImported} playlists from hihat v1`,
+            );
+
+            // Update settings
+            updateSettingsFromMigration(
+              migrationData.libraryPath,
+              migrationData.lastPlayedSongId,
+            );
+            console.warn('✅ Settings updated from hihat v1');
+
+            console.warn('🎉 Migration from hihat v1 to hihat2 complete!');
+
+            // Send migration complete event to renderer
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('migration:complete', {
+                tracksCount: tracksImported,
+                playlistsCount: playlistsImported,
+              });
+            }
+
+            // Note: Window reload is now handled by the MigrationDialog component
+            // when the user clicks the "Continue" button
+          } else {
+            console.warn('⚠️  Migration failed or no data to migrate');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error during migration:', error);
+        // Continue app startup even if migration fails
       }
-    } catch (error) {
-      console.error('❌ Error during migration:', error);
-      // Continue app startup even if migration fails
-    }
+    })();
   } else {
     console.warn('✓ No hihat v1 migration needed');
   }
