@@ -161,9 +161,10 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
   },
 
   // Layout settings
-  layoutMode: 'grid' as const,
+  columnResizeMode: 'onChange' as const,
+  columnResizeDirection: 'ltr' as const,
+  layoutMode: 'semantic' as const,
   positionToolbarAlertBanner: 'bottom' as const,
-  memoMode: 'cells' as const,
   defaultDisplayColumn: { size: 150 },
   globalFilterFn: 'contains' as const,
 
