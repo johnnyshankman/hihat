@@ -170,4 +170,112 @@ test.describe('Library Management', () => {
 
     await TestHelpers.closeApp(app);
   });
+
+  test('should not duplicate files when rescanning library', async () => {
+    const { app, page } = await TestHelpers.launchApp();
+    const fs = require('fs');
+    const path = require('path');
+
+    // Get the test songs directory path
+    const testSongsDir = path.join(__dirname, 'fixtures', 'test-songs');
+
+    // Count initial files in the test-songs directory
+    const getFileCount = (dir: string): number => {
+      let count = 0;
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+
+      for (const item of items) {
+        const itemPath = path.join(dir, item.name);
+        if (item.isFile()) {
+          count++;
+        } else if (item.isDirectory()) {
+          count += getFileCount(itemPath);
+        }
+      }
+      return count;
+    };
+
+    // Get initial file list
+    const getFileList = (dir: string): string[] => {
+      const files: string[] = [];
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+
+      for (const item of items) {
+        const itemPath = path.join(dir, item.name);
+        if (item.isFile()) {
+          files.push(path.relative(testSongsDir, itemPath));
+        } else if (item.isDirectory()) {
+          files.push(...getFileList(itemPath));
+        }
+      }
+      return files.sort();
+    };
+
+    const initialFileCount = getFileCount(testSongsDir);
+    const initialFiles = getFileList(testSongsDir);
+
+    console.log(`Initial file count: ${initialFileCount}`);
+    console.log('Initial files:', initialFiles);
+
+    // Wait for app to load
+    await page.waitForTimeout(3000);
+
+    // Navigate to Settings
+    // Look for settings button or menu item
+    const settingsButton = page.locator('button[aria-label*="Settings"], [data-testid="settings-button"], text=Settings').first();
+    await settingsButton.click();
+
+    // Wait for settings to load
+    await page.waitForTimeout(1000);
+
+    // Find and click the "Rescan Library" button
+    const rescanButton = page.locator('button:has-text("Rescan Library")');
+    await expect(rescanButton).toBeVisible({ timeout: 5000 });
+    await rescanButton.click();
+
+    // Wait for scan to start
+    await page.waitForTimeout(1000);
+
+    // Wait for scan to complete - look for completion indicators
+    // The scan might show a progress bar or status text
+    try {
+      // Wait for scan complete text or progress to reach 100%
+      await page.waitForSelector('text=Scan Complete', { timeout: 30000 });
+    } catch {
+      // Alternative: wait for the progress indicator to disappear
+      try {
+        await page.waitForSelector('[role="progressbar"]', { state: 'hidden', timeout: 30000 });
+      } catch {
+        // Fallback: just wait a reasonable amount of time
+        await page.waitForTimeout(10000);
+      }
+    }
+
+    // Count files after rescan
+    const finalFileCount = getFileCount(testSongsDir);
+    const finalFiles = getFileList(testSongsDir);
+
+    console.log(`Final file count: ${finalFileCount}`);
+    console.log('Final files:', finalFiles);
+
+    // Verify no files were duplicated
+    expect(finalFileCount).toBe(initialFileCount);
+    expect(finalFiles).toEqual(initialFiles);
+
+    // Also verify the song count in the UI hasn't changed
+    // Navigate back to library if needed
+    const libraryButton = page.locator('button[aria-label*="Library"], [data-testid="library-button"], text=Library').first();
+    if (await libraryButton.isVisible()) {
+      await libraryButton.click();
+      await page.waitForTimeout(1000);
+    }
+
+    // Count songs in the UI
+    const songCount = await page.locator('[data-track-id]').count();
+    expect(songCount).toBe(7); // We have 7 test songs
+
+    await TestHelpers.takeScreenshot(page, 'library-after-rescan');
+
+    await TestHelpers.closeApp(app);
+  });
 });
