@@ -211,6 +211,7 @@ function findDuplicateTrack(
  * @param libraryPath - Target library path
  * @param metadata - Already parsed metadata to avoid re-parsing
  * @param folderRoot - Optional root folder path to preserve relative structure
+ * @param isImport - Whether this is an import operation (true) or scan operation (false)
  * @returns New file path in the library
  */
 async function copyFileToLibrary(
@@ -218,8 +219,17 @@ async function copyFileToLibrary(
   libraryPath: string,
   metadata: mm.IAudioMetadata,
   folderRoot?: string,
+  isImport: boolean = false,
 ): Promise<string> {
   try {
+    // CRITICAL FIX: If this is a scan operation (not import) and the file
+    // is already within the library path, don't copy or move it - just return
+    // the original path to avoid creating duplicates
+    if (!isImport && sourcePath.startsWith(libraryPath)) {
+      debugLog(`Scan operation: File already in library, using original path: ${sourcePath}`);
+      return sourcePath;
+    }
+
     await ensureDirectoryExists(libraryPath);
 
     // Get file name and extension
@@ -452,6 +462,7 @@ function parseFileMetadata(
  * @param trackMap - Map of existing tracks for efficient lookup
  * @param libraryPath - Path to the library directory
  * @param folderRoot - Optional root folder path to preserve relative structure
+ * @param isImport - Whether this is an import operation (true) or scan operation (false)
  * @returns Track data if added, null if skipped
  */
 async function processFile(
@@ -460,6 +471,7 @@ async function processFile(
   trackMap: Map<string, Track>,
   libraryPath: string,
   folderRoot?: string,
+  isImport: boolean = false,
 ): Promise<Omit<Track, 'id'> | null> {
   // Skip if the file is already in the database
   if (existingFilePaths.has(filePath)) {
@@ -520,12 +532,13 @@ async function processFile(
       } as Omit<Track, 'id'> & { replaceId: string; oldPath: string };
     }
 
-    // Copy the file to the library path
+    // Copy the file to the library path (only if importing, not scanning)
     const targetFilePath = await copyFileToLibrary(
       filePath,
       libraryPath,
       metadata,
       folderRoot,
+      isImport,
     );
 
     // Update the file path to the target path in the library
@@ -549,6 +562,7 @@ async function processFile(
  * @param trackMap - Map of existing tracks for efficient lookup
  * @param libraryPath - Path to the library directory
  * @param folderRoot - Optional root folder path to preserve relative structure
+ * @param isImport - Whether this is an import operation (true) or scan operation (false)
  * @returns Array of processed track data
  */
 async function processBatch(
@@ -557,6 +571,7 @@ async function processBatch(
   trackMap: Map<string, Track>,
   libraryPath: string,
   folderRoot?: string,
+  isImport: boolean = false,
 ): Promise<(Omit<Track, 'id'> & { replaceId?: string; oldPath?: string })[]> {
   // Process files in parallel
   const results = await Promise.all(
@@ -567,6 +582,7 @@ async function processBatch(
         trackMap,
         libraryPath,
         folderRoot,
+        isImport,
       ),
     ),
   );
@@ -675,13 +691,15 @@ export async function scanLibrary(
           current: `Processing batch ${i + 1} of ${batches.length}`,
         });
 
-        // Process the batch
+        // Process the batch (this is a scan, not an import)
         // eslint-disable-next-line no-await-in-loop
         const processedTracks = await processBatch(
           batch,
           existingFilePaths,
           trackMap,
           libraryPath,
+          undefined,  // folderRoot
+          false,      // isImport=false for scan operations
         );
 
         // Collect files and tracks to delete
@@ -924,7 +942,7 @@ export async function importFiles(
           (root) => root === batchFolderRoots[0],
         );
 
-        // Process the batch
+        // Process the batch (this is an import operation)
         // eslint-disable-next-line no-await-in-loop
         const processedTracks = await processBatch(
           batch,
@@ -932,6 +950,7 @@ export async function importFiles(
           trackMap,
           libraryPath,
           allSameRoot ? batchFolderRoots[0] : undefined,
+          true,  // isImport=true for import operations
         );
 
         // Collect files and tracks to delete
