@@ -221,8 +221,8 @@ test.describe('Library Management', () => {
     await page.waitForTimeout(3000);
 
     // Navigate to Settings
-    // Look for settings button or menu item
-    const settingsButton = page.locator('button[aria-label*="Settings"], [data-testid="settings-button"], text=Settings').first();
+    // Click the settings button using its data-testid
+    const settingsButton = page.locator('[data-testid="nav-settings"]');
     await settingsButton.click();
 
     // Wait for settings to load
@@ -263,12 +263,10 @@ test.describe('Library Management', () => {
     expect(finalFiles).toEqual(initialFiles);
 
     // Also verify the song count in the UI hasn't changed
-    // Navigate back to library if needed
-    const libraryButton = page.locator('button[aria-label*="Library"], [data-testid="library-button"], text=Library').first();
-    if (await libraryButton.isVisible()) {
-      await libraryButton.click();
-      await page.waitForTimeout(1000);
-    }
+    // Navigate back to library
+    const libraryButton = page.locator('[data-testid="nav-library"]');
+    await libraryButton.click();
+    await page.waitForTimeout(1000);
 
     // Count songs in the UI
     const songCount = await page.locator('[data-track-id]').count();
