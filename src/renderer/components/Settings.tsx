@@ -712,7 +712,7 @@ export default function Settings({
               <Divider sx={{ my: 2 }} />
             </Grid>
 
-            <Grid item sm={6} xs={12}>
+            <Grid item xs={12}>
               <Typography gutterBottom variant="h2">
                 Import Music
               </Typography>
@@ -740,8 +740,12 @@ export default function Settings({
               </Box>
             </Grid>
 
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+
             {/* Library Operations Section */}
-            <Grid item sm={6} xs={12}>
+            <Grid item xs={12}>
               <Typography gutterBottom variant="h2">
                 Rescan Library
               </Typography>
