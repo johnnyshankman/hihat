@@ -1,7 +1,44 @@
 import { create } from 'zustand';
 import { Track, Playlist } from '../../types/dbTypes';
-import { LibraryStore } from './types';
+import { LibraryStore, SearchIndexData } from './types';
 import useUIStore from './uiStore';
+
+// Helper function to build indexes from tracks
+function buildIndexes(tracks: Track[]) {
+  const trackIndex = new Map<string, Track>();
+  const artistIndex = new Map<string, Set<string>>();
+  const albumIndex = new Map<string, Set<string>>();
+  const searchIndex = new Map<string, SearchIndexData>();
+
+  tracks.forEach((track) => {
+    // Build track index for O(1) lookup
+    trackIndex.set(track.id, track);
+
+    // Build artist index
+    const artist = track.albumArtist || track.artist || 'Unknown Artist';
+    if (!artistIndex.has(artist)) {
+      artistIndex.set(artist, new Set());
+    }
+    artistIndex.get(artist)!.add(track.id);
+
+    // Build album index
+    const album = track.album || 'Unknown Album';
+    if (!albumIndex.has(album)) {
+      albumIndex.set(album, new Set());
+    }
+    albumIndex.get(album)!.add(track.id);
+
+    // Build search index with pre-computed lowercase strings
+    searchIndex.set(track.id, {
+      titleLower: (track.title || '').toLowerCase(),
+      artistLower: (track.artist || '').toLowerCase(),
+      albumLower: (track.album || '').toLowerCase(),
+      genreLower: (track.genre || '').toLowerCase(),
+    });
+  });
+
+  return { trackIndex, artistIndex, albumIndex, searchIndex };
+}
 
 // Define the library store
 const useLibraryStore = create<LibraryStore>((set, get) => ({
@@ -23,6 +60,12 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     playlistId: null,
   },
   lastViewedTrackId: null,
+
+  // Initialize empty indexes
+  trackIndex: new Map(),
+  artistIndex: new Map(),
+  albumIndex: new Map(),
+  searchIndex: new Map(),
 
   // Actions
   loadLibrary: async (isInitialLoad = true) => {
@@ -59,7 +102,14 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
 
       allTracks = processedTracks;
 
-      set({ tracks: allTracks, isLoading: false });
+      // Build indexes for O(1) lookups
+      const indexes = buildIndexes(allTracks);
+
+      set({
+        tracks: allTracks,
+        isLoading: false,
+        ...indexes
+      });
     } catch (error) {
       console.error('Error loading library:', error);
       useUIStore.getState().showNotification('Failed to load library', 'error');
@@ -287,6 +337,25 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
 
   setArtistFilter: (artist: string | null) => {
     set({ artistFilter: artist });
+  },
+
+  // NEW: Efficient data access methods using indexes
+  getTrackById: (id: string) => {
+    return get().trackIndex.get(id);
+  },
+
+  getTracksByIds: (ids: string[]) => {
+    const { trackIndex } = get();
+    return ids.map((id) => trackIndex.get(id)).filter((track): track is Track => !!track);
+  },
+
+  getTracksByArtist: (artist: string) => {
+    const { trackIndex, artistIndex } = get();
+    const trackIds = artistIndex.get(artist);
+    if (!trackIds) return [];
+    return Array.from(trackIds)
+      .map((id) => trackIndex.get(id))
+      .filter((track): track is Track => !!track);
   },
 }));
 

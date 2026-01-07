@@ -24,7 +24,7 @@ interface ArtistBrowserProps {
   width?: number;
 }
 
-export default function ArtistBrowser({
+function ArtistBrowser({
   open,
   onToggle,
   selectedArtist,
@@ -32,7 +32,8 @@ export default function ArtistBrowser({
   width = 200,
 }: ArtistBrowserProps) {
   const theme = useTheme();
-  const tracks = useLibraryStore((state) => state.tracks);
+  const artistIndex = useLibraryStore((state) => state.artistIndex);
+  const totalTrackCount = useLibraryStore((state) => state.tracks.length);
   const isMobile = useMediaQuery('(max-width:768px)');
   const isSmallScreen = useMediaQuery('(max-width:900px)');
   const listRef = useRef<HTMLUListElement>(null);
@@ -45,27 +46,22 @@ export default function ArtistBrowser({
     browserWidth = 180;
   }
 
-  // Extract unique artists sorted alphabetically
-  const artists = useMemo(() => {
-    const artistSet = new Set<string>();
-    tracks.forEach((track) => {
-      const artist = track.albumArtist || track.artist || 'Unknown Artist';
-      artistSet.add(artist);
-    });
-    return Array.from(artistSet).sort((a, b) =>
-      a.toLowerCase().localeCompare(b.toLowerCase()),
-    );
-  }, [tracks]);
-
-  // Track count per artist
-  const artistTrackCounts = useMemo(() => {
+  // Extract unique artists and track counts from the pre-built index (O(1) operation)
+  const { artists, artistTrackCounts } = useMemo(() => {
+    const artistList: string[] = [];
     const counts: Record<string, number> = {};
-    tracks.forEach((track) => {
-      const artist = track.albumArtist || track.artist || 'Unknown Artist';
-      counts[artist] = (counts[artist] || 0) + 1;
+
+    // Use the pre-built artist index for efficient access
+    artistIndex.forEach((trackIds, artist) => {
+      artistList.push(artist);
+      counts[artist] = trackIds.size;
     });
-    return counts;
-  }, [tracks]);
+
+    // Sort the artist list alphabetically
+    artistList.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
+    return { artists: artistList, artistTrackCounts: counts };
+  }, [artistIndex]);
 
   const handleArtistClick = (artist: string) => {
     if (selectedArtist === artist) {
@@ -264,7 +260,7 @@ export default function ArtistBrowser({
                       ? getSelectedPrimaryColor()
                       : undefined,
                 }}
-                secondary={`${tracks.length} tracks`}
+                secondary={`${totalTrackCount} tracks`}
                 secondaryTypographyProps={{
                   fontSize: isMobile ? '10px' : '11px',
                   lineHeight: 1.2,
@@ -384,3 +380,12 @@ export default function ArtistBrowser({
     </Box>
   );
 }
+
+// Memoize ArtistBrowser to prevent unnecessary re-renders
+export default React.memo(ArtistBrowser, (prevProps, nextProps) => {
+  return prevProps.open === nextProps.open &&
+         prevProps.selectedArtist === nextProps.selectedArtist &&
+         prevProps.onToggle === nextProps.onToggle &&
+         prevProps.onArtistSelect === nextProps.onArtistSelect &&
+         prevProps.width === nextProps.width;
+});

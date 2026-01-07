@@ -41,7 +41,7 @@ interface PlaylistsProps {
   onDrawerToggle: () => void;
 }
 
-export default function Playlists({
+function Playlists({
   drawerOpen,
   onDrawerToggle,
 }: PlaylistsProps) {
@@ -113,7 +113,7 @@ export default function Playlists({
 
   // Define getPlaylistTracks as a useCallback to use it in dependencies
   const getPlaylistTracks = useCallback(() => {
-    if (!selectedPlaylistId || !playlists || !tracks) {
+    if (!selectedPlaylistId || !playlists) {
       return [];
     }
 
@@ -124,10 +124,10 @@ export default function Playlists({
 
     // If it's a smart playlist, we would apply the rules here
     // For now, just return the tracks in the playlist
-    return selectedPlaylist.trackIds
-      .map((id) => tracks.find((t) => t.id === id))
-      .filter((track: Track | undefined): track is Track => !!track);
-  }, [selectedPlaylistId, playlists, tracks]);
+    // Use the efficient getTracksByIds method for O(1) lookups instead of O(n²)
+    const getTracksByIds = useLibraryStore.getState().getTracksByIds;
+    return getTracksByIds(selectedPlaylist.trackIds);
+  }, [selectedPlaylistId, playlists]);
 
   // Memoize the playlist tracks to prevent unnecessary re-renders
   const playlistTracks = useMemo(
@@ -775,3 +775,9 @@ export default function Playlists({
     </Box>
   );
 }
+
+// Memoize Playlists component to prevent unnecessary re-renders
+export default React.memo(Playlists, (prevProps, nextProps) => {
+  return prevProps.drawerOpen === nextProps.drawerOpen &&
+         prevProps.onDrawerToggle === nextProps.onDrawerToggle;
+});

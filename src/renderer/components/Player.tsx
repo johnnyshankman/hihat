@@ -42,6 +42,7 @@ import {
   useUIStore,
   useLibraryStore,
 } from '../stores';
+import PositionDisplay from './PositionDisplay';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -166,7 +167,7 @@ function NotificationButton() {
   );
 }
 
-export default function Player() {
+function Player() {
   // Use selective state from the playback store to prevent unnecessary re-renders
   const currentTrack = useSettingsAndPlaybackStore(
     (state) => state.currentTrack,
@@ -312,18 +313,7 @@ export default function Player() {
     });
   }, [paused, duration, position, volume, repeatMode, shuffleMode]);
 
-  // Memoize formatted duration values to prevent unnecessary recalculations
-  const formattedSeekPosition = useMemo(
-    () => formatDuration(position),
-    [position],
-  );
-
-  // Calculate time left in the song with a negative sign
-  const formattedTimeLeft = useMemo(() => {
-    const timeLeftMs = duration - position;
-    if (timeLeftMs <= 0 || !currentTrack) return '-0:00';
-    return `-${formatDuration(timeLeftMs)}`;
-  }, [duration, position, currentTrack]);
+  // Position-related formatting moved to PositionDisplay component to isolate updates
 
   const toggleVolumeControls = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
@@ -1090,29 +1080,7 @@ export default function Player() {
                   px: 1,
                 }}
               >
-                <Slider
-                  disabled={!currentTrack}
-                  max={duration}
-                  onChange={(_, val) => {
-                    seekToPosition(val as number);
-                  }}
-                  size="small"
-                  sx={{
-                    width: '100%',
-                    color: (t) => t.palette.grey[500],
-                    '& .MuiSlider-thumb': {
-                      height: 6,
-                      width: 6,
-                    },
-                    '& .MuiSlider-track': {
-                      height: 2,
-                    },
-                    '& .MuiSlider-rail': {
-                      height: 2,
-                    },
-                  }}
-                  value={position}
-                />
+                <PositionDisplay isCompactLayout disabled={!currentTrack} />
               </Box>
               {/* Compact track info */}
               <Box
@@ -1129,60 +1097,9 @@ export default function Player() {
           )}
 
           {/* Seek slider for normal layout */}
-          <Box
-            sx={{
-              width: '100%',
-              display: isCompactLayout ? 'none' : 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mt: 0.0,
-              mb: 0.5,
-              maxWidth: '500px',
-            }}
-          >
-            <Typography
-              color="textSecondary"
-              sx={{
-                mr: 1,
-                minWidth: { xs: '30px', sm: '40px' },
-                textAlign: 'right',
-                fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                userSelect: 'none',
-              }}
-              variant="caption"
-            >
-              {formattedSeekPosition}
-            </Typography>
-            <Slider
-              disabled={!currentTrack}
-              max={duration}
-              onChange={(_, val) => {
-                seekToPosition(val as number);
-              }}
-              size="small"
-              sx={{
-                mx: 0.5,
-                color: (t) => t.palette.grey[500],
-                '& .MuiSlider-thumb': {
-                  height: 8,
-                  width: 8,
-                },
-              }}
-              value={position}
-            />
-            <Typography
-              color="textSecondary"
-              sx={{
-                ml: 1,
-                minWidth: { xs: '30px', sm: '40px' },
-                fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                userSelect: 'none',
-              }}
-              variant="caption"
-            >
-              {formattedTimeLeft}
-            </Typography>
-          </Box>
+          {!isCompactLayout && (
+            <PositionDisplay isCompactLayout={false} disabled={!currentTrack} />
+          )}
         </Box>
 
         {/* Volume control and notifications */}
@@ -1249,3 +1166,6 @@ export default function Player() {
     </Paper>
   );
 }
+
+// Memoize Player component to prevent unnecessary re-renders
+export default React.memo(Player);

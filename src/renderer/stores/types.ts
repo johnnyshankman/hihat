@@ -9,6 +9,14 @@ export interface Notification {
   autoHideDuration?: number;
 }
 
+// Search index data for fast text searching
+export interface SearchIndexData {
+  titleLower: string;
+  artistLower: string;
+  albumLower: string;
+  genreLower: string;
+}
+
 // Library Store Types
 export interface LibraryStore {
   tracks: Track[];
@@ -28,6 +36,12 @@ export interface LibraryStore {
     playlistId: string | null;
   };
   lastViewedTrackId: string | null;
+
+  // NEW: Indexed data structures for O(1) lookups
+  trackIndex: Map<string, Track>;              // trackId -> Track
+  artistIndex: Map<string, Set<string>>;       // artist -> Set<trackIds>
+  albumIndex: Map<string, Set<string>>;        // album -> Set<trackIds>
+  searchIndex: Map<string, SearchIndexData>;   // trackId -> pre-computed search data
 
   // Actions
   // import related actions
@@ -50,6 +64,11 @@ export interface LibraryStore {
   ) => void;
   setLastViewedTrackId: (trackId: string | null) => void;
   setArtistFilter: (artist: string | null) => void;
+
+  // NEW: Efficient data access methods
+  getTrackById: (id: string) => Track | undefined;
+  getTracksByIds: (ids: string[]) => Track[];
+  getTracksByArtist: (artist: string) => Track[];
 }
 
 // Playback Store Types

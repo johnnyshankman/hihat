@@ -23,6 +23,8 @@ import {
   type MRT_SortingState as MrtSortingState,
   type MRT_RowVirtualizer as MrtRowVirtualizer,
   type MRT_VisibilityState as MrtVisibilityState,
+  type MRT_Row,
+  type MRT_TableInstance,
   // eslint-disable-next-line camelcase
   MRT_ToggleFiltersButton,
   // eslint-disable-next-line camelcase
@@ -63,9 +65,10 @@ interface LibraryProps {
   _onDrawerToggle: () => void;
 }
 
-export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
+function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   // Get state from library store
   const tracks = useLibraryStore((state) => state.tracks);
+  const getTrackById = useLibraryStore((state) => state.getTrackById);
   const updateLibraryViewState = useLibraryStore(
     (state) => state.updateLibraryViewState,
   );
@@ -117,7 +120,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   }, [artistFilter, artistBrowserOpen]);
 
   // Handle artist browser toggle - clear selection when closing
-  const handleArtistBrowserToggle = () => {
+  const handleArtistBrowserToggle = useCallback(() => {
     const newOpenState = !artistBrowserOpen;
     setArtistBrowserOpen(newOpenState);
 
@@ -125,7 +128,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     if (!newOpenState) {
       setArtistFilter(null);
     }
-  };
+  }, [artistBrowserOpen, setArtistFilter]);
 
   // Global filter state for search
   const [globalFilter, setGlobalFilter] = useState('');
@@ -141,10 +144,10 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
 
-  const handlePlayTrack = (trackId: string) => {
+  const handlePlayTrack = useCallback((trackId: string) => {
     // Play the track with 'library' as the source
     playTrack(trackId, 'library');
-  };
+  }, [playTrack]);
 
   const handleSelectFolder = async () => {
     try {
@@ -191,14 +194,14 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   };
 
   // Context menu handlers
-  const handleContextMenu = (event: React.MouseEvent, trackId: string) => {
+  const handleContextMenu = useCallback((event: React.MouseEvent, trackId: string) => {
     event.preventDefault();
     setContextMenu({
       mouseX: event.clientX,
       mouseY: event.clientY,
     });
     setSelectedTrackId(trackId);
-  };
+  }, []);
 
   const handleCloseContextMenu = () => {
     setContextMenu(null);
@@ -351,7 +354,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       // For each selected track
       // eslint-disable-next-line no-restricted-syntax
       for (const trackId of selectedTrackIds) {
-        const track = tracks.find((t) => t.id === trackId);
+        const track = getTrackById(trackId);
         // eslint-disable-next-line no-continue
         if (!track) continue;
 
@@ -493,8 +496,12 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     });
   }, [tracks, artistFilter]);
 
+  // Memoize total hours calculation to avoid recalculating on every render
+  const totalHours = useMemo(() => calculateTotalHours(data), [data]);
+  const trackCount = useMemo(() => data.length, [data]);
+
   // Update the renderTopToolbarCustomActions function to include the SidebarToggle
-  const renderTopToolbarCustomActions = () => {
+  const renderTopToolbarCustomActions = useCallback(() => {
     return (
       <Box
         sx={{
@@ -557,7 +564,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
               }}
               variant="body2"
             >
-              {data.length.toLocaleString()}&nbsp;♫
+              {trackCount.toLocaleString()}&nbsp;♫
             </Typography>
           </Box>
           <Box
@@ -582,7 +589,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
               }}
               variant="body2"
             >
-              {calculateTotalHours(data)}&nbsp;
+              {totalHours}&nbsp;
             </Typography>
             <AccessTimeIcon
               sx={{
@@ -594,7 +601,7 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         </Box>
       </Box>
     );
-  };
+  }, [drawerOpen, _onDrawerToggle, trackCount, totalHours]);
 
   // Configure the table
   const table = useMaterialReactTable({
@@ -654,95 +661,98 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     onRowSelectionChange: () => {
       // do absolutely nothing, we handle this manually
     },
-    muiTableBodyRowProps: ({ row, table: tableInstance }) => {
-      // Get the current visible rows
-      const visibleRows = tableInstance.getRowModel().rows;
-      const currentIndex = visibleRows.findIndex(
-        (r) => r.original.id === row.original.id,
-      );
+    muiTableBodyRowProps: useCallback(
+      ({ row, table: tableInstance }: { row: MRT_Row<TableData>; table: MRT_TableInstance<TableData> }) => {
+        // Get the current visible rows
+        const visibleRows = tableInstance.getRowModel().rows;
+        const currentIndex = visibleRows.findIndex(
+          (r: MRT_Row<TableData>) => r.original.id === row.original.id,
+        );
 
-      // Use the visual index for row striping
-      const visualIndex = currentIndex !== -1 ? currentIndex : row.index;
+        // Use the visual index for row striping
+        const visualIndex = currentIndex !== -1 ? currentIndex : row.index;
 
-      return {
-        onClick: (e) => {
-          const trackId = row.original.id;
+        return {
+          onClick: (e: React.MouseEvent) => {
+            const trackId = row.original.id;
 
-          setSelectedTracks((prev) => {
-            // Cmd/Ctrl + Click: Toggle selection
-            if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
-              const newSelectedTracks = { ...prev };
-              if (newSelectedTracks[trackId]) {
-                delete newSelectedTracks[trackId];
-              } else {
-                newSelectedTracks[trackId] = true;
-              }
-              setLastClickedIndex(currentIndex);
-              return newSelectedTracks;
-            }
-
-            // Shift + Click: Range selection (always replace existing selection)
-            if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
-              // If no previous selection, treat as normal click
-              if (lastClickedIndex === null) {
-                setLastClickedIndex(currentIndex);
-                return { [trackId]: true };
-              }
-
-              const start = Math.min(lastClickedIndex, currentIndex);
-              const end = Math.max(lastClickedIndex, currentIndex);
-
-              // Create new selection with only the range
-              const rangeSelection: Record<string, boolean> = {};
-
-              // Select all tracks in range
-              for (let i = start; i <= end; i += 1) {
-                const rowData = visibleRows[i]?.original;
-                if (rowData) {
-                  rangeSelection[rowData.id] = true;
+            setSelectedTracks((prev) => {
+              // Cmd/Ctrl + Click: Toggle selection
+              if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+                const newSelectedTracks = { ...prev };
+                if (newSelectedTracks[trackId]) {
+                  delete newSelectedTracks[trackId];
+                } else {
+                  newSelectedTracks[trackId] = true;
                 }
+                setLastClickedIndex(currentIndex);
+                return newSelectedTracks;
               }
 
-              // Don't update lastClickedIndex on shift+click to maintain the anchor point
-              return rangeSelection;
+              // Shift + Click: Range selection (always replace existing selection)
+              if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
+                // If no previous selection, treat as normal click
+                if (lastClickedIndex === null) {
+                  setLastClickedIndex(currentIndex);
+                  return { [trackId]: true };
+                }
+
+                const start = Math.min(lastClickedIndex, currentIndex);
+                const end = Math.max(lastClickedIndex, currentIndex);
+
+                // Create new selection with only the range
+                const rangeSelection: Record<string, boolean> = {};
+
+                // Select all tracks in range
+                for (let i = start; i <= end; i += 1) {
+                  const rowData = visibleRows[i]?.original;
+                  if (rowData) {
+                    rangeSelection[rowData.id] = true;
+                  }
+                }
+
+                // Don't update lastClickedIndex on shift+click to maintain the anchor point
+                return rangeSelection;
+              }
+
+              // Normal click: Select only this track
+              setLastClickedIndex(currentIndex);
+              return { [trackId]: true };
+            });
+          },
+          onDoubleClick: () => {
+            // play the track
+            handlePlayTrack(row.original.id);
+            // make this the only selected track
+            setSelectedTracks({ [row.original.id]: true });
+          },
+          onContextMenu: (e: React.MouseEvent) => {
+            const trackId = row.original.id;
+
+            // If right-clicking on an already selected track, keep selection
+            if (selectedTracks[trackId]) {
+              handleContextMenu(e, trackId);
+            } else {
+              // If right-clicking on unselected track, select only that track
+              setSelectedTracks({ [trackId]: true });
+              handleContextMenu(e, trackId);
             }
-
-            // Normal click: Select only this track
-            setLastClickedIndex(currentIndex);
-            return { [trackId]: true };
-          });
-        },
-        onDoubleClick: () => {
-          // play the track
-          handlePlayTrack(row.original.id);
-          // make this the only selected track
-          setSelectedTracks({ [row.original.id]: true });
-        },
-        onContextMenu: (e) => {
-          const trackId = row.original.id;
-
-          // If right-clicking on an already selected track, keep selection
-          if (selectedTracks[trackId]) {
-            handleContextMenu(e, trackId);
-          } else {
-            // If right-clicking on unselected track, select only that track
-            setSelectedTracks({ [trackId]: true });
-            handleContextMenu(e, trackId);
-          }
-        },
-        'data-track-id': row.original.id,
-        sx: getCommonRowStyling(
-          row.original.id,
-          currentTrack?.id || undefined,
-          Object.keys(selectedTracks),
-          playbackSource || '',
-          'library',
-          undefined,
-          undefined,
-          visualIndex,
-        ),
-      };
-    },
+          },
+          'data-track-id': row.original.id,
+          sx: getCommonRowStyling(
+            row.original.id,
+            currentTrack?.id || undefined,
+            Object.keys(selectedTracks),
+            playbackSource || '',
+            'library',
+            undefined,
+            undefined,
+            visualIndex,
+          ),
+        };
+      },
+      [selectedTracks, setSelectedTracks, setLastClickedIndex, lastClickedIndex, handlePlayTrack, handleContextMenu, currentTrack?.id, playbackSource]
+    ),
     renderTopToolbarCustomActions,
     renderToolbarInternalActions: ({ table: tableInstance }) => (
       <Box
@@ -931,3 +941,10 @@ export default function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     </Box>
   );
 }
+
+// Memoize the Library component to prevent unnecessary re-renders
+export default React.memo(Library, (prevProps, nextProps) => {
+  // Only re-render if drawerOpen actually changes
+  return prevProps.drawerOpen === nextProps.drawerOpen &&
+         prevProps._onDrawerToggle === nextProps._onDrawerToggle;
+});

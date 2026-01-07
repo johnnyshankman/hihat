@@ -46,7 +46,7 @@ function TrackContextMenu({
   const selectedPlaylistId = useLibraryStore(
     (state) => state.selectedPlaylistId,
   );
-  const tracks = useLibraryStore((state) => state.tracks);
+  const getTrackById = useLibraryStore((state) => state.getTrackById);
   const loadLibrary = useLibraryStore((state) => state.loadLibrary);
   const loadPlaylists = useLibraryStore((state) => state.loadPlaylists);
 
@@ -75,7 +75,7 @@ function TrackContextMenu({
   };
 
   const handlerFindOnSpotify = () => {
-    const track = tracks.find((t) => t.id === trackId);
+    const track = getTrackById(trackId);
 
     const urlEncodedTitle = encodeURIComponent(track?.title || '');
     const urlEncodedArtist = encodeURIComponent(track?.albumArtist || '');
@@ -87,7 +87,7 @@ function TrackContextMenu({
   };
 
   const handlerFindOnAppleMusic = () => {
-    const track = tracks.find((t) => t.id === trackId);
+    const track = getTrackById(trackId);
 
     const urlEncodedTitle = encodeURIComponent(track?.title || '');
     const urlEncodedArtist = encodeURIComponent(track?.albumArtist || '');
@@ -99,7 +99,7 @@ function TrackContextMenu({
   };
 
   const handlerDownloadAlbumArt = async () => {
-    const track = tracks.find((t) => t.id === trackId);
+    const track = getTrackById(trackId);
     if (track) {
       try {
         const result = await window.electron.fileSystem.downloadAlbumArt(track);
@@ -116,7 +116,7 @@ function TrackContextMenu({
   const handleShowInFinder = async () => {
     try {
       // Find the track to get its file path
-      const track = tracks.find((t) => t.id === trackId);
+      const track = getTrackById(trackId);
 
       if (track && track.filePath) {
         // Use the electron API to show the file in Finder/Explorer
@@ -138,7 +138,7 @@ function TrackContextMenu({
 
   const handleDeleteConfirm = async () => {
     try {
-      const track = tracks.find((t) => t.id === trackId);
+      const track = getTrackById(trackId);
 
       if (!track) {
         showNotification('Track not found', 'error');
