@@ -25,6 +25,7 @@ e2e/
 - **settings.spec.ts**: Application settings and configuration
 - **new-user.spec.ts**: Brand new user experience with empty library
 - **migration.spec.ts**: v1 to v2 migration system (see [MIGRATION_TESTING.md](MIGRATION_TESTING.md))
+- **large-library.spec.ts**: Large library tests (200+ tracks) for scrolling, performance, and virtualization
 
 ## Running Tests
 
@@ -65,6 +66,16 @@ Tests run automatically via GitHub Actions on:
 - These files are committed to the repository for consistent testing
 - Songs are automatically imported during test setup
 
+### Large Test Library (200 tracks)
+For testing large library scenarios with virtualization and scrolling:
+- `e2e/fixtures/test-songs-large/` - 200 MP3 files (10 seconds of silence each, ~31MB total)
+- `e2e/fixtures/test-db-large.sql` - Database fixture for large library
+
+To regenerate the test files (if needed):
+```bash
+node e2e/scripts/generate-test-songs.js
+```
+
 ### Environment Variables
 - `TEST_MODE=true`: Enables test-specific behavior
 - `TEST_DB_PATH`: Path to test database
@@ -84,6 +95,9 @@ const { app, page } = await TestHelpers.launchApp();
 
 // Launch the application as a brand new user (empty library)
 const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
+
+// Launch with large library (200 tracks) for performance/virtualization testing
+const { app, page } = await TestHelpers.launchAppWithLargeLibrary();
 
 // Import songs
 await TestHelpers.importSongs(page);

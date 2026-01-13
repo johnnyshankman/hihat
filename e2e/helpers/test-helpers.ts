@@ -100,6 +100,39 @@ export class TestHelpers {
     });
   }
 
+  static async initializeLargeTestDatabase(
+    dbPath: string,
+    testSongsPath: string,
+  ): Promise<void> {
+    const sqlFilePath = path.join(__dirname, '../fixtures/test-db-large.sql');
+    let sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
+
+    // Replace placeholder with actual test songs path for large library
+    sqlContent = sqlContent.replace(
+      /\{\{TEST_SONGS_LARGE_PATH\}\}/g,
+      testSongsPath,
+    );
+
+    return new Promise((resolve, reject) => {
+      const db = new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        // Execute the SQL file to create tables and insert large test data
+        db.exec(sqlContent, (execErr) => {
+          db.close();
+          if (execErr) {
+            reject(execErr);
+          } else {
+            resolve();
+          }
+        });
+      });
+    });
+  }
+
   static async launchApp(): Promise<{ app: ElectronApplication; page: Page }> {
     const testDbPath = path.join(__dirname, '../fixtures/test-db.sqlite');
     const songsPath = path.join(__dirname, '../fixtures/test-songs');
@@ -143,6 +176,64 @@ export class TestHelpers {
     // Wait for the app to fully load
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000); // Give React time to render
+
+    // Verify the app has loaded by checking for root content
+    const rootContent = await page.locator('#root').innerHTML();
+    if (rootContent.length < 100) {
+      throw new Error('Application did not render properly');
+    }
+
+    return { app, page };
+  }
+
+  static async launchAppWithLargeLibrary(): Promise<{
+    app: ElectronApplication;
+    page: Page;
+  }> {
+    const testDbPath = path.join(
+      __dirname,
+      '../fixtures/test-db-large.sqlite',
+    );
+    const songsPath = path.join(__dirname, '../fixtures/test-songs-large');
+
+    // Clean test database for fresh start
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+
+    // Initialize the large test database with 200 tracks
+    await this.initializeLargeTestDatabase(testDbPath, songsPath);
+
+    // Path to the built application
+    const appPath = path.join(__dirname, '../../release/app');
+    const mainJsPath = path.join(appPath, 'dist/main/main.js');
+
+    // Check if the app is built
+    if (!fs.existsSync(mainJsPath)) {
+      throw new Error(
+        'Application not built. Please run "npm run build" first.',
+      );
+    }
+
+    // Launch the built Electron application with TEST_MODE environment variables
+    const app = await electron.launch({
+      args: [appPath],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        TEST_MODE: 'true',
+        TEST_DB_PATH: testDbPath,
+        TEST_SONGS_PATH: songsPath,
+      },
+      timeout: 30000,
+    });
+
+    // Wait for the first window
+    const page = await app.firstWindow();
+
+    // Wait for the app to fully load
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(3000); // Give more time for large library to render
 
     // Verify the app has loaded by checking for root content
     const rootContent = await page.locator('#root').innerHTML();
