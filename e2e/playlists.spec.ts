@@ -45,10 +45,31 @@ test.describe('Playlist Management', () => {
     await page.click('[data-testid="nav-library"]');
     await page.waitForTimeout(500);
 
-    // Right-click on a track that's NOT already in "Test Playlist 1"
-    // Test Playlist 1 has test-1, test-2, test-7
-    // So we'll add test-3 (Bill Evans - Alice In Wonderland)
-    const trackRow = await page.locator('[data-track-id="test-3"]');
+    // Right-click on a track that's NOT already in "Test Playlist"
+    // Test Playlist has test-large-001, test-large-002, test-large-003
+    // So we'll add test-large-004 (Electronic Pulse - Your Dream of Love)
+    // First, search for the track since virtualization may hide it
+    const searchToggle = page.locator('[aria-label="Show/Hide search"]');
+    if (await searchToggle.isVisible()) {
+      await searchToggle.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Search for the specific track - try multiple selectors
+    let searchInput = page.locator('input[type="search"]').first();
+    if (!(await searchInput.isVisible())) {
+      searchInput = page.locator('input[placeholder*="Search"]').first();
+    }
+    if (!(await searchInput.isVisible())) {
+      searchInput = page.locator('.MuiInputBase-input').first();
+    }
+
+    await searchInput.fill('Electronic Pulse');
+    await page.waitForTimeout(1000);
+
+    // Now the track should be visible
+    const trackRow = await page.locator('[data-track-id="test-large-004"]');
+    await trackRow.waitFor({ state: 'visible', timeout: 5000 });
     await trackRow.click({ button: 'right' });
 
     // Click "Add to Playlist" in the context menu
@@ -57,20 +78,27 @@ test.describe('Playlist Management', () => {
     // Wait for the playlist selection dialog to appear
     await page.waitForTimeout(500);
 
-    // Select the "Test Playlist 1" playlist (from fixture data)
-    // The fixture data has playlist-1 which is "Test Playlist 1"
+    // Select the "Test Playlist" playlist (from fixture data)
+    // The fixture data has playlist-1 which is "Test Playlist"
     await page.click('[data-testid="playlist-option-playlist-1"]');
 
     // Wait for the operation to complete
     await page.waitForTimeout(1500);
 
+    // Clear the search before navigating to playlist
+    const searchInputToClear = page.locator('input[type="search"]').first();
+    if (await searchInputToClear.isVisible()) {
+      await searchInputToClear.clear();
+      await page.waitForTimeout(500);
+    }
+
     // Now navigate to the playlist view to verify the track was added
-    // Click on "Test Playlist 1" in the sidebar
+    // Click on "Test Playlist" in the sidebar
     await page.click('[data-playlist-id="playlist-1"]');
     await page.waitForTimeout(500);
 
-    // Verify that test-3 is now in the playlist
-    const addedTrack = await page.locator('[data-track-id="test-3"]');
+    // Verify that test-large-004 is now in the playlist
+    const addedTrack = await page.locator('[data-track-id="test-large-004"]');
     await addedTrack.waitFor({ state: 'visible', timeout: 5000 });
 
     // Also count the tracks to verify we have 4 now (started with 3)
@@ -83,7 +111,7 @@ test.describe('Playlist Management', () => {
   test('should remove songs from a custom playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Navigate to the "Test Playlist 1" which has 3 tracks (test-1, test-2, test-7)
+    // Navigate to the "Test Playlist" which has 3 tracks (test-large-001, test-large-002, test-large-003)
     await page.click('[data-playlist-id="playlist-1"]');
     await page.waitForTimeout(500);
 
@@ -91,8 +119,8 @@ test.describe('Playlist Management', () => {
     let trackRows = await page.locator('[data-track-id]').count();
     expect(trackRows).toBe(3);
 
-    // Right-click on test-1 to open context menu
-    const trackRow = await page.locator('[data-track-id="test-1"]');
+    // Right-click on test-large-001 to open context menu
+    const trackRow = await page.locator('[data-track-id="test-large-001"]');
     await trackRow.click({ button: 'right' });
 
     // Set up dialog handler BEFORE clicking
@@ -104,8 +132,8 @@ test.describe('Playlist Management', () => {
     // Wait for the operation to complete
     await page.waitForTimeout(1500);
 
-    // Verify that test-1 is no longer in the playlist
-    const removedTrack = await page.locator('[data-track-id="test-1"]');
+    // Verify that test-large-001 is no longer in the playlist
+    const removedTrack = await page.locator('[data-track-id="test-large-001"]');
     await removedTrack.waitFor({ state: 'hidden', timeout: 5000 });
 
     // Also count the tracks to verify we have 2 now (started with 3)
@@ -118,7 +146,7 @@ test.describe('Playlist Management', () => {
   test('should rename a custom playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Right-click on "Test Playlist 1" to open context menu
+    // Right-click on "Test Playlist" to open context menu
     const playlistItem = await page.locator('[data-playlist-id="playlist-1"]');
     await playlistItem.click({ button: 'right' });
 

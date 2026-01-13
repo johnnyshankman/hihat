@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-Your E2E tests now automatically use fixture data (7 test songs, 5 playlists, pre-configured settings) without affecting production or development. Just run:
+Your E2E tests now automatically use fixture data (200 generated test songs, 5 playlists, pre-configured settings) without affecting production or development. Just run:
 
 ```bash
 npm run build        # Build the app
@@ -12,7 +12,7 @@ npm run test:e2e     # Run E2E tests with fixture data
 ## What Was Implemented
 
 ### ✅ Automatic Fixture Data Loading
-- Tests now start with 7 pre-loaded test songs
+- Tests now start with 200 pre-loaded generated test songs
 - 5 playlists already configured (including smart playlists)
 - Settings pre-configured (no library setup screen)
 - **No manual setup required**
@@ -53,37 +53,36 @@ npm run test:e2e:debug
 npm run test:e2e fixture-data-test.spec.ts
 ```
 
-### Add More Test Fixtures
+### Regenerate Test Fixtures
 
-1. Add song files to `e2e/fixtures/test-songs/`
-2. Update `e2e/fixtures/test-db.sql`:
-
-```sql
-INSERT INTO tracks (...) VALUES
-('test-8', '{{TEST_SONGS_PATH}}/your-new-song.m4a', 'Title', 'Artist', ...);
+To regenerate the 200 test songs:
+```bash
+node e2e/scripts/generate-test-songs.js
 ```
 
-The `{{TEST_SONGS_PATH}}` placeholder is automatically replaced with the actual path during tests.
+This creates MP3 files and updates `test-db.sql` with matching entries.
+
+The `{{TEST_SONGS_PATH}}` placeholder in SQL is automatically replaced with the actual path during tests.
 
 ## What's in the Fixture Data
 
-### 7 Test Songs
-- A. G. Cook - Undying & Windows (Electronic)
-- Bill Evans - 3 jazz tracks
-- Bladee - White Meadow (Cloud Rap)
-- Kendrick Lamar - King Kunta (Hip Hop)
+### 200 Generated Test Songs
+- Aurora Synth, The Jazz Collective, Indie Folk Band, Electronic Pulse
+- Classical Masters, Rock Titans, Hip Hop Legends, Soul Sisters
+- World Music Ensemble, Ambient Collective (and more)
+- Each song is 10 seconds of silence with unique metadata
 
 ### 5 Playlists
-- Test Playlist 1
-- Jazz Favorites
+- Test Playlist (3 tracks)
+- Jazz Favorites (2 tracks)
 - Recently Added (smart)
 - Recently Played (smart)
 - Most Played (smart)
 
 ### Pre-configured Settings
-- Library path pointing to test songs
+- Library path pointing to test-songs-large directory
 - Dark theme
-- Last played: King Kunta
+- Last played: Found Dream of Love (Hip Hop Legends)
 - Volume: 1.0
 
 ## Files Changed

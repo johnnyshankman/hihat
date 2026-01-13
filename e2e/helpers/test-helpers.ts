@@ -8,16 +8,19 @@ import path from 'path';
 import fs from 'fs';
 import sqlite3 from 'sqlite3';
 
+// All tests use the consolidated test library (200 tracks)
+const TEST_SONGS_DIR = 'test-songs-large';
+const TEST_DB_SQL = 'test-db.sql';
+
 export class TestHelpers {
   static async initializeTestDatabase(
     dbPath: string,
     testSongsPath: string,
   ): Promise<void> {
-    const sqlFilePath = path.join(__dirname, '../fixtures/test-db.sql');
+    const sqlFilePath = path.join(__dirname, `../fixtures/${TEST_DB_SQL}`);
     let sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
 
     // Replace placeholder with actual test songs path
-    // This ensures file paths in the database point to actual test fixture files
     sqlContent = sqlContent.replace(/\{\{TEST_SONGS_PATH\}\}/g, testSongsPath);
 
     return new Promise((resolve, reject) => {
@@ -27,7 +30,6 @@ export class TestHelpers {
           return;
         }
 
-        // Execute the SQL file to create tables and insert test data
         db.exec(sqlContent, (execErr) => {
           db.close();
           if (execErr) {
@@ -47,7 +49,6 @@ export class TestHelpers {
     const sqlFilePath = path.join(__dirname, '../fixtures/new-user-db.sql');
     let sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
 
-    // Replace placeholder with actual test songs path
     sqlContent = sqlContent.replace(/\{\{TEST_SONGS_PATH\}\}/g, testSongsPath);
 
     return new Promise((resolve, reject) => {
@@ -57,7 +58,6 @@ export class TestHelpers {
           return;
         }
 
-        // Execute the SQL file to create tables with empty tracks
         db.exec(sqlContent, (execErr) => {
           db.close();
           if (execErr) {
@@ -77,7 +77,6 @@ export class TestHelpers {
     const sqlFilePath = path.join(__dirname, '../fixtures/migration-db.sql');
     let sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
 
-    // Replace placeholder with actual test songs path (though not used in migration-db.sql)
     sqlContent = sqlContent.replace(/\{\{TEST_SONGS_PATH\}\}/g, testSongsPath);
 
     return new Promise((resolve, reject) => {
@@ -87,40 +86,6 @@ export class TestHelpers {
           return;
         }
 
-        // Execute the SQL file to create tables with empty libraryPath
-        db.exec(sqlContent, (execErr) => {
-          db.close();
-          if (execErr) {
-            reject(execErr);
-          } else {
-            resolve();
-          }
-        });
-      });
-    });
-  }
-
-  static async initializeLargeTestDatabase(
-    dbPath: string,
-    testSongsPath: string,
-  ): Promise<void> {
-    const sqlFilePath = path.join(__dirname, '../fixtures/test-db-large.sql');
-    let sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
-
-    // Replace placeholder with actual test songs path for large library
-    sqlContent = sqlContent.replace(
-      /\{\{TEST_SONGS_LARGE_PATH\}\}/g,
-      testSongsPath,
-    );
-
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(dbPath, (err) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-
-        // Execute the SQL file to create tables and insert large test data
         db.exec(sqlContent, (execErr) => {
           db.close();
           if (execErr) {
@@ -135,29 +100,26 @@ export class TestHelpers {
 
   static async launchApp(): Promise<{ app: ElectronApplication; page: Page }> {
     const testDbPath = path.join(__dirname, '../fixtures/test-db.sqlite');
-    const songsPath = path.join(__dirname, '../fixtures/test-songs');
+    const songsPath = path.join(__dirname, `../fixtures/${TEST_SONGS_DIR}`);
 
     // Clean test database for fresh start
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
 
-    // Initialize the test database with seed data and proper file paths
+    // Initialize the test database with seed data
     await this.initializeTestDatabase(testDbPath, songsPath);
 
     // Path to the built application
     const appPath = path.join(__dirname, '../../release/app');
     const mainJsPath = path.join(appPath, 'dist/main/main.js');
 
-    // Check if the app is built
     if (!fs.existsSync(mainJsPath)) {
       throw new Error(
         'Application not built. Please run "npm run build" first.',
       );
     }
 
-    // Launch the built Electron application with TEST_MODE environment variables
-    // These env vars ensure the app uses test fixtures instead of real user data
     const app = await electron.launch({
       args: [appPath],
       env: {
@@ -170,72 +132,10 @@ export class TestHelpers {
       timeout: 30000,
     });
 
-    // Wait for the first window
     const page = await app.firstWindow();
-
-    // Wait for the app to fully load
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000); // Give React time to render
+    await page.waitForTimeout(3000); // Give time for library to render
 
-    // Verify the app has loaded by checking for root content
-    const rootContent = await page.locator('#root').innerHTML();
-    if (rootContent.length < 100) {
-      throw new Error('Application did not render properly');
-    }
-
-    return { app, page };
-  }
-
-  static async launchAppWithLargeLibrary(): Promise<{
-    app: ElectronApplication;
-    page: Page;
-  }> {
-    const testDbPath = path.join(
-      __dirname,
-      '../fixtures/test-db-large.sqlite',
-    );
-    const songsPath = path.join(__dirname, '../fixtures/test-songs-large');
-
-    // Clean test database for fresh start
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-
-    // Initialize the large test database with 200 tracks
-    await this.initializeLargeTestDatabase(testDbPath, songsPath);
-
-    // Path to the built application
-    const appPath = path.join(__dirname, '../../release/app');
-    const mainJsPath = path.join(appPath, 'dist/main/main.js');
-
-    // Check if the app is built
-    if (!fs.existsSync(mainJsPath)) {
-      throw new Error(
-        'Application not built. Please run "npm run build" first.',
-      );
-    }
-
-    // Launch the built Electron application with TEST_MODE environment variables
-    const app = await electron.launch({
-      args: [appPath],
-      env: {
-        ...process.env,
-        NODE_ENV: 'test',
-        TEST_MODE: 'true',
-        TEST_DB_PATH: testDbPath,
-        TEST_SONGS_PATH: songsPath,
-      },
-      timeout: 30000,
-    });
-
-    // Wait for the first window
-    const page = await app.firstWindow();
-
-    // Wait for the app to fully load
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(3000); // Give more time for large library to render
-
-    // Verify the app has loaded by checking for root content
     const rootContent = await page.locator('#root').innerHTML();
     if (rootContent.length < 100) {
       throw new Error('Application did not render properly');
@@ -249,28 +149,23 @@ export class TestHelpers {
     page: Page;
   }> {
     const testDbPath = path.join(__dirname, '../fixtures/new-user-db.sqlite');
-    const songsPath = path.join(__dirname, '../fixtures/test-songs');
+    const songsPath = path.join(__dirname, `../fixtures/${TEST_SONGS_DIR}`);
 
-    // Clean test database for fresh start
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
 
-    // Initialize the new user database with empty library
     await this.initializeNewUserDatabase(testDbPath, songsPath);
 
-    // Path to the built application
     const appPath = path.join(__dirname, '../../release/app');
     const mainJsPath = path.join(appPath, 'dist/main/main.js');
 
-    // Check if the app is built
     if (!fs.existsSync(mainJsPath)) {
       throw new Error(
         'Application not built. Please run "npm run build" first.',
       );
     }
 
-    // Launch the built Electron application with TEST_MODE environment variables
     const app = await electron.launch({
       args: [appPath],
       env: {
@@ -283,14 +178,10 @@ export class TestHelpers {
       timeout: 30000,
     });
 
-    // Wait for the first window
     const page = await app.firstWindow();
-
-    // Wait for the app to fully load
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000); // Give React time to render
+    await page.waitForTimeout(1000);
 
-    // Verify the app has loaded by checking for root content
     const rootContent = await page.locator('#root').innerHTML();
     if (rootContent.length < 100) {
       throw new Error('Application did not render properly');
@@ -311,14 +202,9 @@ export class TestHelpers {
   }
 
   static async waitForLibraryLoad(page: Page): Promise<void> {
-    // Wait for the library to load by checking that:
-    // 1. The "Your library is empty" message is NOT visible (meaning we have tracks)
-    // 2. OR a Material-UI table with rows exists
     try {
-      // First wait a bit for the app to render
       await page.waitForTimeout(1000);
 
-      // Check if library is NOT empty
       const emptyMessage = page.getByText('Your library is empty');
       const isEmptyVisible = await emptyMessage.isVisible().catch(() => false);
 
@@ -326,7 +212,6 @@ export class TestHelpers {
         throw new Error('Library is empty - no tracks loaded');
       }
 
-      // If not empty, library should have loaded successfully
       console.log('Library loaded successfully - tracks present');
     } catch (error) {
       console.error('Error waiting for library to load:', error);
@@ -335,18 +220,16 @@ export class TestHelpers {
   }
 
   static async importSongs(page: Page): Promise<void> {
-    const songsPath = path.join(__dirname, '../fixtures/test-songs');
+    const songsPath = path.join(__dirname, `../fixtures/${TEST_SONGS_DIR}`);
 
-    // Use the correct API exposed by the preload script
     await page.evaluate(async (folderPath) => {
-      // The preload script exposes the API as window.electron
       if ((window as any).electron && (window as any).electron.library) {
         return (window as any).electron.library.scan(folderPath);
       }
       throw new Error('Electron API not available');
     }, songsPath);
 
-    await page.waitForTimeout(3000); // Give time for songs to be imported
+    await page.waitForTimeout(3000);
   }
 
   static async createPlaylist(page: Page, name: string): Promise<void> {
@@ -464,7 +347,6 @@ export class TestHelpers {
 
   /**
    * Prepare a userConfig.json fixture for migration testing
-   * This replaces the {{TEST_SONGS_PATH}} placeholder with the actual test songs path
    */
   static prepareMigrationFixture(
     fixtureConfigPath: string,
@@ -473,27 +355,22 @@ export class TestHelpers {
     const templatePath = path.join(__dirname, '../fixtures/userConfig.json');
     let configContent = fs.readFileSync(templatePath, 'utf-8');
 
-    // Replace placeholder with actual test songs path
     configContent = configContent.replace(
       /\{\{TEST_SONGS_PATH\}\}/g,
       testSongsPath,
     );
 
-    // Write the prepared config to the fixture location
     fs.writeFileSync(fixtureConfigPath, configContent, 'utf-8');
   }
 
   /**
    * Clean up migration-related files
-   * This removes both the userConfig.json and userConfig.json.migrated files
    */
   static cleanupMigrationFiles(configPath: string): void {
-    // Remove the config file if it exists
     if (fs.existsSync(configPath)) {
       fs.unlinkSync(configPath);
     }
 
-    // Remove the migrated marker if it exists
     const migratedPath = `${configPath}.migrated`;
     if (fs.existsSync(migratedPath)) {
       fs.unlinkSync(migratedPath);
@@ -502,7 +379,6 @@ export class TestHelpers {
 
   /**
    * Unmark a migration (rename .migrated back to .json)
-   * This allows tests to re-run migration on the same fixture
    */
   static unmarkMigration(configPath: string): void {
     const migratedPath = `${configPath}.migrated`;
@@ -513,47 +389,38 @@ export class TestHelpers {
 
   /**
    * Launch the app with v1 to v2 migration mode enabled
-   * This creates an empty database and provides a userConfig.json for migration
    */
   static async launchAppWithMigration(): Promise<{
     app: ElectronApplication;
     page: Page;
   }> {
-    // Paths for testing
     const testDbPath = path.join(
       __dirname,
       '../fixtures/migration-test-db.sqlite',
     );
-    const songsPath = path.join(__dirname, '../fixtures/test-songs');
+    const songsPath = path.join(__dirname, `../fixtures/${TEST_SONGS_DIR}`);
     const legacyConfigPath = path.join(
       __dirname,
       '../fixtures/test-userConfig.json',
     );
 
-    // Clean up any existing test files
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
     this.cleanupMigrationFiles(legacyConfigPath);
 
-    // Prepare the legacy userConfig.json with actual test paths
     this.prepareMigrationFixture(legacyConfigPath, songsPath);
-
-    // Create an empty database with NO libraryPath (migration will populate it)
     await this.initializeMigrationDatabase(testDbPath, songsPath);
 
-    // Path to the built application
     const appPath = path.join(__dirname, '../../release/app');
     const mainJsPath = path.join(appPath, 'dist/main/main.js');
 
-    // Check if the app is built
     if (!fs.existsSync(mainJsPath)) {
       throw new Error(
         'Application not built. Please run "npm run build" first.',
       );
     }
 
-    // Launch the app with migration environment variables
     const app = await electron.launch({
       args: [appPath],
       env: {
@@ -562,28 +429,20 @@ export class TestHelpers {
         TEST_MODE: 'true',
         TEST_DB_PATH: testDbPath,
         TEST_SONGS_PATH: songsPath,
-        TEST_LEGACY_CONFIG_PATH: legacyConfigPath, // Tell migration where to find v1 config
+        TEST_LEGACY_CONFIG_PATH: legacyConfigPath,
       },
       timeout: 30000,
     });
 
-    // Wait for the first window
     const page = await app.firstWindow();
-
-    // Wait for the app to fully load initially
     await page.waitForLoadState('domcontentloaded');
-
-    // Give React time to render - migration dialog will appear automatically
     await page.waitForTimeout(2000);
 
-    // Verify the app has loaded by checking for root content
     const rootContent = await page.locator('#root').innerHTML();
     if (rootContent.length < 100) {
       throw new Error('Application did not render properly');
     }
 
-    // Note: The migration dialog should now be visible
-    // Tests are responsible for waiting for it and clicking Continue
     return { app, page };
   }
 

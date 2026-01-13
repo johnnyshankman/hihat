@@ -61,7 +61,7 @@ export class ElectronHelper {
   }> {
     const rootPath = path.join(__dirname, '..');
     const testDbPath = path.join(__dirname, 'fixtures/test-db.sqlite');
-    const testSongsPath = path.join(__dirname, 'fixtures/test-songs');
+    const testSongsPath = path.join(__dirname, 'fixtures/test-songs-large');
 
     // Clean test database for fresh start
     if (fs.existsSync(testDbPath)) {

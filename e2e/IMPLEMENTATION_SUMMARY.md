@@ -169,26 +169,24 @@ if (app.isPackaged && process.env.NODE_ENV === 'production') {
 
 ## Fixture Data Contents
 
-### Test Tracks (7 songs)
-- test-1: A. G. Cook - Undying (Electronic)
-- test-2: A. G. Cook - Windows (Electronic)
-- test-3: Bill Evans - Alice In Wonderland (Jazz)
-- test-4: Bill Evans - All Of You (Jazz)
-- test-5: Bill Evans - Waltz For Debby (Jazz)
-- test-6: Bladee - White Meadow (Cloud Rap)
-- test-7: Kendrick Lamar - King Kunta (Hip Hop)
+### Test Tracks (200 generated songs)
+- Aurora Synth, The Jazz Collective, Indie Folk Band, Electronic Pulse
+- Classical Masters, Rock Titans, Hip Hop Legends, Soul Sisters
+- World Music Ensemble, Ambient Collective (and more)
+- Each song is 10 seconds of silence with unique metadata
+- Track IDs: test-large-001 through test-large-200
 
 ### Test Playlists (5 playlists)
-- Test Playlist 1: 3 tracks (custom)
-- Jazz Favorites: 3 tracks (custom)
+- Test Playlist: 3 tracks (custom)
+- Jazz Favorites: 2 tracks (custom)
 - Recently Added: Smart playlist
 - Recently Played: Smart playlist
 - Most Played: Smart playlist
 
 ### Settings
-- Library path: Points to test-songs directory
+- Library path: Points to test-songs-large directory
 - Theme: Dark mode
-- Last played: test-7 (King Kunta)
+- Last played: test-large-007 (Found Dream of Love)
 - Volume: 1.0
 - All columns visible
 
@@ -220,7 +218,7 @@ npm run test:e2e:debug fixture-data-test.spec.ts
 ### Expected Test Results
 
 All tests should pass with fixture data:
-- ✅ 7 test tracks loaded
+- ✅ 200 test tracks loaded
 - ✅ 5 playlists available
 - ✅ Settings pre-configured
 - ✅ No library setup screen shown
@@ -242,7 +240,7 @@ ls -la
 # You should NOT see:
 # ❌ e2e/ directory
 # ❌ test-db.sql
-# ❌ test-songs/
+# ❌ test-songs-large/
 
 # You should see:
 # ✅ app.asar (compiled code)
@@ -269,7 +267,7 @@ npm run test:e2e fixture-data-test.spec.ts
 # Check console output:
 # ✅ "Using TEST database: .../test-db.sqlite"
 # ✅ "Test DB: .../test-db.sqlite"
-# ✅ "Test Songs: .../test-songs"
+# ✅ "Test Songs: .../test-songs-large"
 ```
 
 ### 4. Verify Database Isolation
@@ -299,7 +297,7 @@ ls e2e/fixtures/test-db.sqlite
 
 **Cause:** File paths not resolved correctly
 
-**Fix:** Verify `TEST_SONGS_PATH` points to `e2e/fixtures/test-songs/`
+**Fix:** Verify `TEST_SONGS_PATH` points to `e2e/fixtures/test-songs-large/`
 
 ### Tests show library setup screen
 
@@ -341,9 +339,9 @@ env: {
 
 ### Adding More Test Fixtures
 
-1. **Add test songs:**
-   - Place `.m4a` files in `e2e/fixtures/test-songs/`
-   - Update `test-db.sql` with INSERT statements
+1. **Regenerate test songs:**
+   - Run `node e2e/scripts/generate-test-songs.js`
+   - This creates MP3 files and updates `test-db.sql`
 
 2. **Add test playlists:**
    - Add entries to playlists table in `test-db.sql`

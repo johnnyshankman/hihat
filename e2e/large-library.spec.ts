@@ -3,7 +3,7 @@ import { TestHelpers } from './helpers/test-helpers';
 
 test.describe('Large Library (200+ tracks)', () => {
   test('should load and display a large library with 200 tracks', async () => {
-    const { app, page } = await TestHelpers.launchAppWithLargeLibrary();
+    const { app, page } = await TestHelpers.launchApp();
 
     // Wait for app to fully load and render
     await page.waitForTimeout(3000);
@@ -24,7 +24,7 @@ test.describe('Large Library (200+ tracks)', () => {
   });
 
   test('should scroll through large library and reach the last track', async () => {
-    const { app, page } = await TestHelpers.launchAppWithLargeLibrary();
+    const { app, page } = await TestHelpers.launchApp();
 
     // Wait for app to fully load
     await page.waitForTimeout(3000);
@@ -103,7 +103,7 @@ test.describe('Large Library (200+ tracks)', () => {
   });
 
   test('should sort large library by different columns', async () => {
-    const { app, page } = await TestHelpers.launchAppWithLargeLibrary();
+    const { app, page } = await TestHelpers.launchApp();
 
     // Wait for app to load
     await page.waitForTimeout(3000);
@@ -168,7 +168,7 @@ test.describe('Large Library (200+ tracks)', () => {
   });
 
   test('should search within large library', async () => {
-    const { app, page } = await TestHelpers.launchAppWithLargeLibrary();
+    const { app, page } = await TestHelpers.launchApp();
 
     // Wait for app to load
     await page.waitForTimeout(3000);
@@ -231,7 +231,7 @@ test.describe('Large Library (200+ tracks)', () => {
   });
 
   test('should play a track from the large library', async () => {
-    const { app, page } = await TestHelpers.launchAppWithLargeLibrary();
+    const { app, page } = await TestHelpers.launchApp();
 
     // Wait for app to load
     await page.waitForTimeout(3000);
@@ -265,7 +265,7 @@ test.describe('Large Library (200+ tracks)', () => {
   });
 
   test('should handle scrolling performance with virtualization', async () => {
-    const { app, page } = await TestHelpers.launchAppWithLargeLibrary();
+    const { app, page } = await TestHelpers.launchApp();
 
     // Wait for app to load
     await page.waitForTimeout(3000);

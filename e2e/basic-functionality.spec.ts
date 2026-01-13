@@ -14,8 +14,8 @@ test.describe('Basic Functionality', () => {
     expect(initialTrackCount).toBeGreaterThan(0);
 
     // 2. Navigate to a Playlist view by clicking a playlist name
-    // Click on "Test Playlist 1" from fixture data
-    await page.getByText('Test Playlist 1', { exact: true }).click();
+    // Click on "Test Playlist" from fixture data
+    await page.getByText('Test Playlist', { exact: true }).click();
     await page.waitForTimeout(1000);
 
     // Verify we're in playlist view (tracks should still be visible but filtered)

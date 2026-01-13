@@ -6,14 +6,13 @@ This directory contains the end-to-end testing suite for the Hihat music player 
 
 ```
 e2e/
-├── fixtures/           # Test data and resources
-│   ├── test-songs/    # Sample audio files for testing
-│   └── test-db.sql    # Database initialization script
-├── helpers/           # Test utilities and helpers
-│   ├── test-helpers.ts         # Common test helper functions
-│   └── electron-test-adapter.ts # Electron-specific test adaptations
-├── screenshots/       # Test screenshots (auto-generated)
-└── *.spec.ts         # Test suites
+├── fixtures/              # Test data and resources
+│   ├── test-songs-large/  # 200 generated MP3 files for testing
+│   └── test-db.sql        # Database initialization script (200 tracks)
+├── helpers/               # Test utilities and helpers
+│   ├── test-helpers.ts    # Common test helper functions
+├── screenshots/           # Test screenshots (auto-generated)
+└── *.spec.ts              # Test suites
 ```
 
 ## Test Suites
@@ -56,20 +55,18 @@ Tests run automatically via GitHub Actions on:
 
 ### Database
 - Uses separate SQLite databases for different test scenarios:
-  - `test-db.sqlite` - Standard tests with existing library data (7 songs, 5 playlists)
+  - `test-db.sqlite` - Standard tests with existing library data (200 tracks, 5 playlists)
   - `new-user-db.sqlite` - New user tests with empty library (0 songs, 3 smart playlists)
+  - `migration-test-db.sqlite` - Migration tests for v1 to v2 upgrades
 - Databases are created fresh for each test run
 - Located in `e2e/fixtures/` directory
 
 ### Test Songs
-- Sample audio files are stored in `e2e/fixtures/test-songs/`
-- These files are committed to the repository for consistent testing
-- Songs are automatically imported during test setup
-
-### Large Test Library (200 tracks)
-For testing large library scenarios with virtualization and scrolling:
-- `e2e/fixtures/test-songs-large/` - 200 MP3 files (10 seconds of silence each, ~31MB total)
-- `e2e/fixtures/test-db-large.sql` - Database fixture for large library
+- All tests use the consolidated `e2e/fixtures/test-songs-large/` directory
+- Contains 200 generated MP3 files (10 seconds of silence each, ~31MB total)
+- Each track has unique metadata (title, artist, album, track number)
+- Artists include: Aurora Synth, The Jazz Collective, Indie Folk Band, Electronic Pulse, etc.
+- Songs are automatically loaded during test setup via `test-db.sql`
 
 To regenerate the test files (if needed):
 ```bash
@@ -90,14 +87,14 @@ node e2e/scripts/generate-test-songs.js
 The `TestHelpers` class provides common operations:
 
 ```typescript
-// Launch the application with existing library data
+// Launch the application with existing library data (200 tracks)
 const { app, page } = await TestHelpers.launchApp();
 
 // Launch the application as a brand new user (empty library)
 const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
 
-// Launch with large library (200 tracks) for performance/virtualization testing
-const { app, page } = await TestHelpers.launchAppWithLargeLibrary();
+// Launch with v1 to v2 migration enabled
+const { app, page } = await TestHelpers.launchAppWithMigration();
 
 // Import songs
 await TestHelpers.importSongs(page);
@@ -179,7 +176,7 @@ Test artifacts are uploaded:
 
 ### Updating Test Data
 
-1. Add new test songs to `e2e/fixtures/test-songs/`
+1. Regenerate test songs using `node e2e/scripts/generate-test-songs.js`
 2. Update database schema in `test-db.sql` if needed
 3. Commit changes to ensure CI has access to test data
 

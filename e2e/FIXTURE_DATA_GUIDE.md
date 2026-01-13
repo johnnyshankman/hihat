@@ -12,11 +12,11 @@ All test fixtures are stored in `e2e/fixtures/`:
 
 ```
 e2e/fixtures/
-├── test-db.sql          # SQL schema and seed data with placeholders (existing user)
+├── test-db.sql          # SQL schema and seed data with placeholders (200 tracks)
 ├── test-db.sqlite       # Generated SQLite database (created by tests)
 ├── new-user-db.sql      # SQL schema for brand new user (empty library)
 ├── new-user-db.sqlite   # Generated new user database (created by tests)
-└── test-songs/          # Test audio files (7 sample songs)
+└── test-songs-large/    # Test audio files (200 generated MP3s, 10 sec each)
 ```
 
 ### 2. Environment-Based Isolation
@@ -39,7 +39,7 @@ During E2E tests, these environment variables are set:
   NODE_ENV: 'test',
   TEST_MODE: 'true',
   TEST_DB_PATH: '/absolute/path/to/e2e/fixtures/test-db.sqlite',
-  TEST_SONGS_PATH: '/absolute/path/to/e2e/fixtures/test-songs'
+  TEST_SONGS_PATH: '/absolute/path/to/e2e/fixtures/test-songs-large'
 }
 ```
 
@@ -133,23 +133,23 @@ static async initializeNewUserDatabase(dbPath: string, testSongsPath: string) {
 
 Used for testing with an existing library. Includes:
 
-**Tracks (7 songs):**
-- A. G. Cook - Undying & Windows
-- Bill Evans Trio - 3 jazz songs
-- Bladee - White Meadow
-- Kendrick Lamar - King Kunta
+**Tracks (200 generated songs):**
+- Aurora Synth, The Jazz Collective, Indie Folk Band, Electronic Pulse, etc.
+- Each track has unique metadata (title, artist, album, track number)
+- 10 different artists, 20 albums (one per artist cycle)
+- Files are 10-second silent MP3s for fast testing
 
 **Playlists (5 playlists):**
-- Test Playlist 1 (2 songs)
-- Jazz Favorites (3 songs)
+- Test Playlist (3 tracks)
+- Jazz Favorites (2 tracks)
 - Recently Added (smart playlist)
 - Recently Played (smart playlist)
 - Most Played (smart playlist)
 
 **Settings:**
-- Library path: Points to test-songs directory
+- Library path: Points to test-songs-large directory
 - Theme: Dark mode
-- Last played: test-7 (King Kunta)
+- Last played: test-large-007 (Found Dream of Love)
 - Volume: 1.0
 
 ### New User Database (`new-user-db.sql`)
@@ -164,7 +164,7 @@ Used for testing the brand new user experience. Includes:
 - Most Played (smart playlist)
 
 **Settings:**
-- Library path: Points to test-songs directory (but no songs scanned)
+- Library path: Points to test-songs-large directory (but no songs scanned)
 - Theme: Dark mode
 - Last played: NULL (never played anything)
 - Volume: 1.0
@@ -173,14 +173,14 @@ This simulates the first-launch experience where a user has installed the app bu
 
 ## Adding New Test Fixtures
 
-### Adding Test Songs
+### Regenerating Test Songs
 
-1. Place `.m4a` files in `e2e/fixtures/test-songs/`
-2. Update `test-db.sql` with new track entries:
-   ```sql
-   INSERT INTO tracks (...) VALUES
-   ('test-8', '{{TEST_SONGS_PATH}}/new-song.m4a', 'Title', 'Artist', ...);
-   ```
+To regenerate the 200 test songs:
+```bash
+node e2e/scripts/generate-test-songs.js
+```
+
+This creates MP3 files and updates `test-db.sql` with matching entries.
 
 ### Modifying Test Data
 
@@ -218,7 +218,7 @@ To add a new user state:
 
 ### Test database is empty
 - Check that `test-db.sql` uses `{{TEST_SONGS_PATH}}` placeholders
-- Verify test songs exist in `e2e/fixtures/test-songs/`
+- Verify test songs exist in `e2e/fixtures/test-songs-large/`
 
 ### Test files not found
 - Ensure `TEST_SONGS_PATH` is passed to `initializeTestDatabase()`

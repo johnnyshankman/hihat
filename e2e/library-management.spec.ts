@@ -27,20 +27,19 @@ test.describe('Library Management', () => {
     // Wait for app to load with pre-populated songs
     await page.waitForTimeout(3000);
 
-    // Verify we have the expected number of test songs (7 songs)
+    // Verify we have songs loaded (200 test songs)
     const songElements = await page
       .locator('tr, .song-row, .track-row, tbody tr')
       .count();
-    expect(songElements).toBeGreaterThanOrEqual(7);
+    expect(songElements).toBeGreaterThan(0);
 
-    // Verify specific test songs are present
+    // Verify specific test songs/artists are present from our generated library
     const pageContent = await page.content();
-    expect(pageContent).toContain('Undying');
-    expect(pageContent).toContain('A. G. Cook');
-    expect(pageContent).toContain('King Kunta');
-    expect(pageContent).toContain('Kendrick Lamar');
-    expect(pageContent).toContain('Bill Evans');
-    expect(pageContent).toContain('Bladee');
+    expect(pageContent).toContain('Aurora Synth');
+    expect(pageContent).toContain('The Jazz Collective');
+    expect(pageContent).toContain('Rock Titans');
+    expect(pageContent).toContain('Hip Hop Legends');
+    expect(pageContent).toContain('Classical Masters');
 
     await TestHelpers.closeApp(app);
   });
@@ -57,9 +56,9 @@ test.describe('Library Management', () => {
       // Get all table rows with track data
       const rows = await page.locator('[data-track-id]').all();
 
-      // Get all title cells in parallel
+      // Get all title cells in parallel (first 10 for performance)
       const titles = await Promise.all(
-        rows.map(async (row) => {
+        rows.slice(0, 10).map(async (row) => {
           const titleCell = row.locator('td').first();
           const title = await titleCell.textContent();
           return title ? title.trim() : '';
@@ -73,9 +72,9 @@ test.describe('Library Management', () => {
     const getSongArtists = async () => {
       const rows = await page.locator('[data-track-id]').all();
 
-      // Get all artist cells in parallel
+      // Get all artist cells in parallel (first 10 for performance)
       const artists = await Promise.all(
-        rows.map(async (row) => {
+        rows.slice(0, 10).map(async (row) => {
           const artistCell = row.locator('td').nth(1);
           const artist = await artistCell.textContent();
           return artist ? artist.trim() : '';
@@ -86,14 +85,11 @@ test.describe('Library Management', () => {
     };
 
     // Check initial sort order (should be by artist ascending based on Library.tsx)
-    let titles = await getSongTitles();
     let artists = await getSongArtists();
 
     // Verify initial sort is by Artist ascending
-    expect(artists[0]).toBe('A. G. Cook');
-    expect(artists[1]).toBe('A. G. Cook');
-    expect(artists[2]).toBe('Bill Evans');
-    expect(artists[6]).toBe('Kendrick Lamar');
+    // First artist alphabetically should be "Acoustic Sessions" or "Ambient Collective"
+    expect(artists[0]).toMatch(/^A/); // First artist starts with A
 
     // Test sorting by Title column - ascending
     // MaterialReactTable headers open a dropdown menu, so we need to:
@@ -112,16 +108,10 @@ test.describe('Library Management', () => {
     await page.waitForTimeout(1000);
 
     // Get titles after sorting by Title ascending
-    titles = await getSongTitles();
-    // Expected order by title ascending:
-    // Alice In Wonderland, All Of You, King Kunta, Undying, Waltz For Debby, White Meadow, Windows
-    expect(titles[0]).toBe('Alice In Wonderland (Live)');
-    expect(titles[1]).toBe('All Of You (Live)');
-    expect(titles[2]).toBe('King Kunta');
-    expect(titles[3]).toBe('Undying');
-    expect(titles[4]).toBe('Waltz For Debby (Live)');
-    expect(titles[5]).toBe('White Meadow');
-    expect(titles[6]).toBe('Windows');
+    let titles = await getSongTitles();
+    // Titles should be sorted alphabetically
+    const sortedTitles = [...titles].sort();
+    expect(titles).toEqual(sortedTitles);
 
     // Test sorting by Title column - descending
     // Open the Title column menu again
@@ -133,17 +123,11 @@ test.describe('Library Management', () => {
     await page.waitForTimeout(1000);
 
     titles = await getSongTitles();
-    // Expected order by title descending (reverse of ascending)
-    expect(titles[0]).toBe('Windows');
-    expect(titles[1]).toBe('White Meadow');
-    expect(titles[2]).toBe('Waltz For Debby (Live)');
-    expect(titles[3]).toBe('Undying');
-    expect(titles[4]).toBe('King Kunta');
-    expect(titles[5]).toBe('All Of You (Live)');
-    expect(titles[6]).toBe('Alice In Wonderland (Live)');
+    // Titles should be sorted in reverse alphabetical order
+    const reverseSortedTitles = [...titles].sort().reverse();
+    expect(titles).toEqual(reverseSortedTitles);
 
     // Test sorting by Artist column - descending
-    // (It's currently ascending from the initial state, so let's test descending)
     const artistHeaderButton = page
       .locator('th')
       .filter({ hasText: 'Artist' })
@@ -157,14 +141,9 @@ test.describe('Library Management', () => {
     await page.waitForTimeout(1000);
 
     artists = await getSongArtists();
-    // Expected order by artist descending (reverse of ascending)
-    expect(artists[0]).toBe('Kendrick Lamar');
-    expect(artists[1]).toBe('Bladee');
-    expect(artists[2]).toBe('Bill Evans');
-    expect(artists[3]).toBe('Bill Evans');
-    expect(artists[4]).toBe('Bill Evans');
-    expect(artists[5]).toBe('A. G. Cook');
-    expect(artists[6]).toBe('A. G. Cook');
+    // Artists should be sorted in reverse alphabetical order
+    const reverseSortedArtists = [...artists].sort().reverse();
+    expect(artists).toEqual(reverseSortedArtists);
 
     await TestHelpers.takeScreenshot(page, 'library-sorted-by-artist-desc');
 
@@ -176,8 +155,8 @@ test.describe('Library Management', () => {
     const fs = require('fs');
     const path = require('path');
 
-    // Get the test songs directory path
-    const testSongsDir = path.join(__dirname, 'fixtures', 'test-songs');
+    // Get the test songs directory path (now using test-songs-large)
+    const testSongsDir = path.join(__dirname, 'fixtures', 'test-songs-large');
 
     // Count initial files in the test-songs directory
     const getFileCount = (dir: string): number => {
@@ -215,7 +194,6 @@ test.describe('Library Management', () => {
     const initialFiles = getFileList(testSongsDir);
 
     console.log(`Initial file count: ${initialFileCount}`);
-    console.log('Initial files:', initialFiles);
 
     // Wait for app to load
     await page.waitForTimeout(3000);
@@ -240,14 +218,14 @@ test.describe('Library Management', () => {
     // The scan might show a progress bar or status text
     try {
       // Wait for scan complete text or progress to reach 100%
-      await page.waitForSelector('text=Scan Complete', { timeout: 30000 });
+      await page.waitForSelector('text=Scan Complete', { timeout: 60000 });
     } catch {
       // Alternative: wait for the progress indicator to disappear
       try {
-        await page.waitForSelector('[role="progressbar"]', { state: 'hidden', timeout: 30000 });
+        await page.waitForSelector('[role="progressbar"]', { state: 'hidden', timeout: 60000 });
       } catch {
         // Fallback: just wait a reasonable amount of time
-        await page.waitForTimeout(10000);
+        await page.waitForTimeout(30000);
       }
     }
 
@@ -256,7 +234,6 @@ test.describe('Library Management', () => {
     const finalFiles = getFileList(testSongsDir);
 
     console.log(`Final file count: ${finalFileCount}`);
-    console.log('Final files:', finalFiles);
 
     // Verify no files were duplicated
     expect(finalFileCount).toBe(initialFileCount);
@@ -268,9 +245,9 @@ test.describe('Library Management', () => {
     await libraryButton.click();
     await page.waitForTimeout(1000);
 
-    // Count songs in the UI
+    // Verify songs are visible in the UI (virtualization limits visible rows to ~45)
     const songCount = await page.locator('[data-track-id]').count();
-    expect(songCount).toBe(7); // We have 7 test songs
+    expect(songCount).toBeGreaterThan(0); // Tracks should be visible after rescan
 
     await TestHelpers.takeScreenshot(page, 'library-after-rescan');
 

@@ -1,23 +1,23 @@
 {
   "library": {
-    "{{TEST_SONGS_PATH}}/03 - A. G. Cook - Undying.m4a": {
+    "{{TEST_SONGS_PATH}}/001 - Aurora Synth - Dream of Love.mp3": {
       "common": {
-        "artist": "A. G. Cook",
-        "album": "7G",
-        "title": "Undying",
+        "artist": "Aurora Synth",
+        "album": "Digital Dreams",
+        "title": "Dream of Love",
         "track": {
-          "no": 3,
-          "of": 10
+          "no": 1,
+          "of": 12
         },
         "disk": {
           "no": 1,
           "of": 1
         },
-        "albumartist": "A. G. Cook",
+        "albumartist": "Aurora Synth",
         "picture": null
       },
       "format": {
-        "duration": 193.2
+        "duration": 10.0
       },
       "additionalInfo": {
         "playCount": 333,
@@ -25,24 +25,24 @@
         "dateAdded": 1695000000000
       }
     },
-    "{{TEST_SONGS_PATH}}/03 - A. G. Cook - Windows.m4a": {
+    "{{TEST_SONGS_PATH}}/002 - The Jazz Collective - A Dream of Love.mp3": {
       "common": {
-        "artist": "A. G. Cook",
-        "album": "7G",
-        "title": "Windows",
+        "artist": "The Jazz Collective",
+        "album": "Blue Notes",
+        "title": "A Dream of Love",
         "track": {
-          "no": 3,
-          "of": 10
+          "no": 2,
+          "of": 12
         },
         "disk": {
           "no": 1,
           "of": 1
         },
-        "albumartist": "A. G. Cook",
+        "albumartist": "The Jazz Collective",
         "picture": null
       },
       "format": {
-        "duration": 201.5
+        "duration": 10.0
       },
       "additionalInfo": {
         "playCount": 8,
@@ -50,24 +50,24 @@
         "dateAdded": 1695100000000
       }
     },
-    "{{TEST_SONGS_PATH}}/03 - Bill Evans - Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1).m4a": {
+    "{{TEST_SONGS_PATH}}/003 - Indie Folk Band - My Dream of Love.mp3": {
       "common": {
-        "artist": "Bill Evans",
-        "album": "Waltz for Debby",
-        "title": "Alice In Wonderland (Live At The Village Vanguard, 1961 - Take 1)",
+        "artist": "Indie Folk Band",
+        "album": "Autumn Leaves",
+        "title": "My Dream of Love",
         "track": {
           "no": 3,
-          "of": 6
+          "of": 12
         },
         "disk": {
           "no": 1,
           "of": 1
         },
-        "albumartist": "Bill Evans",
+        "albumartist": "Indie Folk Band",
         "picture": null
       },
       "format": {
-        "duration": 423.8
+        "duration": 10.0
       },
       "additionalInfo": {
         "playCount": 25,
@@ -75,24 +75,24 @@
         "dateAdded": 1694000000000
       }
     },
-    "{{TEST_SONGS_PATH}}/03 - Bill Evans - All Of You (Live At The Village Vanguard, 1961 - Take 2).m4a": {
+    "{{TEST_SONGS_PATH}}/004 - Electronic Pulse - Your Dream of Love.mp3": {
       "common": {
-        "artist": "Bill Evans",
-        "album": "Waltz for Debby",
-        "title": "All Of You (Live At The Village Vanguard, 1961 - Take 2)",
+        "artist": "Electronic Pulse",
+        "album": "Bass Drop",
+        "title": "Your Dream of Love",
         "track": {
-          "no": 3,
-          "of": 6
+          "no": 4,
+          "of": 12
         },
         "disk": {
           "no": 1,
           "of": 1
         },
-        "albumartist": "Bill Evans",
+        "albumartist": "Electronic Pulse",
         "picture": null
       },
       "format": {
-        "duration": 365.4
+        "duration": 10.0
       },
       "additionalInfo": {
         "playCount": 18,
@@ -100,24 +100,24 @@
         "dateAdded": 1694100000000
       }
     },
-    "{{TEST_SONGS_PATH}}/03 - Bill Evans - Waltz For Debby (Live At The Village Vanguard, New York - 1961 - Take 2).m4a": {
+    "{{TEST_SONGS_PATH}}/005 - Classical Masters - Our Dream of Love.mp3": {
       "common": {
-        "artist": "Bill Evans",
-        "album": "Waltz for Debby",
-        "title": "Waltz For Debby (Live At The Village Vanguard, New York - 1961 - Take 2)",
+        "artist": "Classical Masters",
+        "album": "Symphony No. 1",
+        "title": "Our Dream of Love",
         "track": {
-          "no": 3,
-          "of": 6
+          "no": 5,
+          "of": 12
         },
         "disk": {
           "no": 1,
           "of": 1
         },
-        "albumartist": "Bill Evans",
+        "albumartist": "Classical Masters",
         "picture": null
       },
       "format": {
-        "duration": 402.1
+        "duration": 10.0
       },
       "additionalInfo": {
         "playCount": 32,
@@ -125,24 +125,24 @@
         "dateAdded": 1694200000000
       }
     },
-    "{{TEST_SONGS_PATH}}/03 - Bladee - White Meadow.m4a": {
+    "{{TEST_SONGS_PATH}}/006 - Rock Titans - Lost Dream.mp3": {
       "common": {
-        "artist": "Bladee",
-        "album": "Icedancer",
-        "title": "White Meadow",
+        "artist": "Rock Titans",
+        "album": "Thunder Road",
+        "title": "Lost Dream",
         "track": {
-          "no": 3,
-          "of": 16
+          "no": 6,
+          "of": 12
         },
         "disk": {
           "no": 1,
           "of": 1
         },
-        "albumartist": "Bladee",
+        "albumartist": "Rock Titans",
         "picture": null
       },
       "format": {
-        "duration": 168.7
+        "duration": 10.0
       },
       "additionalInfo": {
         "playCount": 5,
@@ -150,24 +150,24 @@
         "dateAdded": 1695200000000
       }
     },
-    "{{TEST_SONGS_PATH}}/03 - Kendrick Lamar - King Kunta(Explicit).m4a": {
+    "{{TEST_SONGS_PATH}}/007 - Hip Hop Legends - Found Dream of Love.mp3": {
       "common": {
-        "artist": "Kendrick Lamar",
-        "album": "To Pimp a Butterfly",
-        "title": "King Kunta",
+        "artist": "Hip Hop Legends",
+        "album": "Street Poetry",
+        "title": "Found Dream of Love",
         "track": {
-          "no": 3,
-          "of": 16
+          "no": 7,
+          "of": 12
         },
         "disk": {
           "no": 1,
           "of": 1
         },
-        "albumartist": "Kendrick Lamar",
+        "albumartist": "Hip Hop Legends",
         "picture": null
       },
       "format": {
-        "duration": 234.5
+        "duration": 10.0
       },
       "additionalInfo": {
         "playCount": 42,
@@ -177,7 +177,7 @@
     }
   },
   "playlists": [],
-  "lastPlayedSong": "{{TEST_SONGS_PATH}}/03 - Kendrick Lamar - King Kunta(Explicit).m4a",
+  "lastPlayedSong": "{{TEST_SONGS_PATH}}/007 - Hip Hop Legends - Found Dream of Love.mp3",
   "libraryPath": "{{TEST_SONGS_PATH}}",
   "initialized": true,
   "scrollToIndex": 0

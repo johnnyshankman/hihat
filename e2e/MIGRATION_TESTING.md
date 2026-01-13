@@ -94,7 +94,7 @@ Comprehensive tests verifying:
    npm run build
    ```
 
-2. Ensure test songs exist in `e2e/fixtures/test-songs/`
+2. Ensure test songs exist in `e2e/fixtures/test-songs-large/`
 
 ### Run Tests
 
@@ -114,23 +114,22 @@ npm run test:e2e:debug -- migration.spec.ts
 
 ## Test Data
 
-### Fixture Songs (7 tracks)
+### Fixture Songs (7 tracks in userConfig.json)
 
 | Artist | Album | Title | Play Count |
 |--------|-------|-------|------------|
-| Kendrick Lamar | To Pimp a Butterfly | King Kunta | 42 |
-| Bill Evans | Waltz for Debby | Waltz For Debby | 32 |
-| Bill Evans | Waltz for Debby | Alice In Wonderland | 25 |
-| Bill Evans | Waltz for Debby | All Of You | 18 |
-| A. G. Cook | 7G | Undying | 12 |
-| A. G. Cook | 7G | Windows | 8 |
-| Bladee | Icedancer | White Meadow | 5 |
+| Aurora Synth | Digital Dreams | Dream of Love | 333 |
+| The Jazz Collective | Blue Notes | A Dream of Love | 8 |
+| Indie Folk Band | Autumn Leaves | My Dream of Love | 25 |
+| Electronic Pulse | Bass Drop | Your Dream of Love | 18 |
+| Classical Masters | Symphony No. 1 | Our Dream of Love | 32 |
+| Rock Titans | Thunder Road | Lost Dream | 5 |
+| Hip Hop Legends | Street Poetry | Found Dream of Love | 42 |
 
-### Fixture Playlists (3 user playlists)
+### Fixture Playlists
 
-1. **Jazz Classics** - 3 Bill Evans tracks
-2. **Electronic** - A. G. Cook + Bladee tracks
-3. **Most Played** - Top 3 most played tracks
+The userConfig.json fixture has an empty playlists array for migration testing.
+Migration tests primarily verify track import and metadata preservation.
 
 ## How Tests Work
 
@@ -209,7 +208,7 @@ Migration tests use these environment variables:
 |----------|---------|---------|
 | `TEST_MODE` | Enable test mode | `'true'` |
 | `TEST_DB_PATH` | Path to test database | `e2e/fixtures/migration-test-db.sqlite` |
-| `TEST_SONGS_PATH` | Path to test songs | `e2e/fixtures/test-songs` |
+| `TEST_SONGS_PATH` | Path to test songs | `e2e/fixtures/test-songs-large` |
 | `TEST_LEGACY_CONFIG_PATH` | Path to userConfig.json | `e2e/fixtures/test-userConfig.json` |
 
 ## Troubleshooting
@@ -281,8 +280,8 @@ expect(trackCount).toBe(7);
 
 // ✅ Better
 expect(trackCount).toBe(7);
-const kendrick = await page.locator('text="King Kunta"');
-expect(await kendrick.isVisible()).toBe(true);
+const hipHopRow = await page.locator('text="Found Dream of Love"');
+expect(await hipHopRow.isVisible()).toBe(true);
 ```
 
 ### 4. Test Migration Timing
@@ -349,8 +348,8 @@ When v1 structure changes:
 
 ### Adding New Test Songs
 
-1. Add `.m4a` files to `e2e/fixtures/test-songs/`
-2. Add metadata to `userConfig.json` fixture
+1. Regenerate test songs using `node e2e/scripts/generate-test-songs.js`
+2. Update `userConfig.json` fixture if migration test data changes
 3. Update expected counts in tests
 4. Commit test files to repository
 
