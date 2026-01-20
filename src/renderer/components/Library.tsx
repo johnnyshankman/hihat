@@ -95,6 +95,12 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     (state) => state.selectSpecificSong,
   );
 
+  // Ref to store the table instance for scrollToTrack
+  const tableRef = useRef<MRT_TableInstance<TableData> | null>(null);
+
+  // Ref to track if the table is ready for scrolling (fully rendered with correct sorting)
+  const tableReadyRef = useRef<boolean>(false);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -110,6 +116,7 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     useState(false);
   const artistFilter = useLibraryStore((state) => state.artistFilter);
   const setArtistFilter = useLibraryStore((state) => state.setArtistFilter);
+  const libraryViewState = useLibraryStore((state) => state.libraryViewState);
   const [artistBrowserOpen, setArtistBrowserOpen] = useState(!!artistFilter);
 
   // Open artist browser when artist filter is set
@@ -130,16 +137,15 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     }
   }, [artistBrowserOpen, setArtistFilter]);
 
-  // Global filter state for search
-  const [globalFilter, setGlobalFilter] = useState('');
+  // Global filter state for search - initialize from store to persist across unmount/remount
+  const [globalFilter, setGlobalFilter] = useState(
+    () => libraryViewState.filtering || '',
+  );
 
-  // Sorting state
-  const [sorting, setSorting] = useState<MrtSortingState>([
-    {
-      id: 'artist',
-      desc: false,
-    },
-  ]);
+  // Sorting state - initialize from store to persist across unmount/remount
+  const [sorting, setSorting] = useState<MrtSortingState>(
+    () => libraryViewState.sorting || [{ id: 'artist', desc: false }],
+  );
 
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
@@ -229,18 +235,27 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     (trackId: string) => {
       if (!rowVirtualizerRef.current) return;
 
-      // Get the filtered and sorted track IDs based on current view state
-      // Include artist filter for accurate positioning
-      const trackIds = getFilteredAndSortedTrackIds('library', artistFilter);
+      // Use the table's actual row model to find the track index
+      // This ensures we use the same order as the rendered table
+      let trackIndex = -1;
 
-      // Find the index of the track in the filtered and sorted list
-      const trackIndex = trackIds.indexOf(trackId);
+      if (tableRef.current) {
+        // Get the actual sorted/filtered rows from the table
+        const rows = tableRef.current.getRowModel().rows;
+        trackIndex = rows.findIndex((row) => row.original.id === trackId);
+      }
+
+      // Fallback to calculating the index if table isn't ready yet
+      if (trackIndex === -1) {
+        const trackIds = getFilteredAndSortedTrackIds('library', artistFilter);
+        trackIndex = trackIds.indexOf(trackId);
+      }
 
       // eslint-disable-next-line no-console
       console.log('scrollToTrack called with:', {
         trackId,
         trackIndex,
-        totalTracks: trackIds.length,
+        usingTableRowModel: tableRef.current !== null,
         artistFilter,
       });
 
@@ -259,16 +274,62 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
     [artistFilter],
   );
 
+  // Function that waits for the table to be ready before scrolling
+  // This is used when navigating from another view (e.g., playlist) to library
+  const scrollToTrackWhenReady = useCallback(
+    (trackId: string, maxWaitMs: number = 2000) => {
+      const startTime = Date.now();
+      const pollInterval = 50; // Check every 50ms
+      const minWaitMs = 150; // Minimum wait time before scrolling to ensure virtualizer is stable
+
+      const attemptScroll = () => {
+        const elapsedMs = Date.now() - startTime;
+
+        // Check if table is ready (has rows and ref is set)
+        const isReady =
+          tableReadyRef.current &&
+          tableRef.current &&
+          tableRef.current.getRowModel().rows.length > 0;
+
+        // Wait at least minWaitMs before scrolling, even if table appears ready
+        // This ensures the virtualizer has time to stabilize for all library sizes
+        if (isReady && elapsedMs >= minWaitMs) {
+          // Table is ready and we've waited long enough, scroll now
+          scrollToTrack(trackId);
+          return;
+        }
+
+        // Check if we've exceeded the max wait time
+        if (elapsedMs >= maxWaitMs) {
+          // Timeout - try scrolling anyway as a fallback
+          // eslint-disable-next-line no-console
+          console.log('scrollToTrackWhenReady: timeout reached, attempting scroll anyway');
+          scrollToTrack(trackId);
+          return;
+        }
+
+        // Table not ready yet or haven't waited long enough, try again after a short delay
+        setTimeout(attemptScroll, pollInterval);
+      };
+
+      // Start polling
+      attemptScroll();
+    },
+    [scrollToTrack],
+  );
+
   // Expose the scrollToTrack function to the window object
   useEffect(() => {
     // @ts-ignore - Adding custom property to window
-    window.hihatScrollToLibraryTrack = scrollToTrack;
+    window.hihatScrollToLibraryTrack = scrollToTrackWhenReady;
 
     return () => {
       // @ts-ignore - Cleanup
       delete window.hihatScrollToLibraryTrack;
+      // Reset ready state on unmount
+      tableReadyRef.current = false;
     };
-  }, [scrollToTrack]);
+  }, [scrollToTrackWhenReady]);
 
   const handleMultiSelectDeleteTracks = async () => {
     const selectedTrackIds = Object.keys(selectedTracks);
@@ -826,6 +887,24 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       </Box>
     ),
   });
+
+  // Store table instance in ref for scrollToTrack to access
+  tableRef.current = table;
+
+  // Mark table as ready after render completes
+  // Using useEffect ensures this runs after the DOM has been updated
+  useEffect(() => {
+    // Use requestAnimationFrame to ensure the browser has painted
+    // This guarantees the table is fully rendered before we mark it as ready
+    const rafId = requestAnimationFrame(() => {
+      tableReadyRef.current = true;
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      tableReadyRef.current = false;
+    };
+  }, [sorting, globalFilter, data.length]); // Re-run when sorting, filter, or data changes
 
   return (
     <Box

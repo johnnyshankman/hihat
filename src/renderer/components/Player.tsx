@@ -650,25 +650,27 @@ function Player() {
       // Clear any active artist filter to ensure the track is visible
       setArtistFilter(null);
 
-      // Wait a short time for the view to change before scrolling
+      // Small delay to allow React to start mounting the Library component
+      // The scrollToTrackWhenReady function will poll until the table is fully ready
       setTimeout(() => {
         // @ts-ignore - Custom property added to window
         if (window.hihatScrollToLibraryTrack) {
           // @ts-ignore
           window.hihatScrollToLibraryTrack(currentTrack.id);
         }
-      }, 100);
+      }, 50);
     } else if (playbackSource === 'playlist') {
       setCurrentView('playlists');
 
-      // Wait a short time for the view to change before scrolling
+      // Small delay to allow React to start mounting the Playlists component
+      // The scrollToTrackWhenReady function will poll until the table is fully ready
       setTimeout(() => {
         // @ts-ignore - Custom property added to window
         if (window.hihatScrollToPlaylistTrack) {
           // @ts-ignore
           window.hihatScrollToPlaylistTrack(currentTrack.id);
         }
-      }, 100);
+      }, 50);
     }
   }, [currentTrack, playbackSource, setCurrentView, setArtistFilter]);
 
