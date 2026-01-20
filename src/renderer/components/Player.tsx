@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -36,7 +30,6 @@ import {
 import Marquee from 'react-fast-marquee';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import { formatDuration } from '../utils/formatters';
 import {
   useSettingsAndPlaybackStore,
   useUIStore,
@@ -1082,7 +1075,7 @@ function Player() {
                   px: 1,
                 }}
               >
-                <PositionDisplay isCompactLayout disabled={!currentTrack} />
+                <PositionDisplay disabled={!currentTrack} isCompactLayout />
               </Box>
               {/* Compact track info */}
               <Box
@@ -1100,7 +1093,7 @@ function Player() {
 
           {/* Seek slider for normal layout */}
           {!isCompactLayout && (
-            <PositionDisplay isCompactLayout={false} disabled={!currentTrack} />
+            <PositionDisplay disabled={!currentTrack} isCompactLayout={false} />
           )}
         </Box>
 

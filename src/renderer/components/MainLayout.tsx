@@ -869,7 +869,7 @@ export default function MainLayout() {
             }}
           >
             {currentView === 'library' && (
-              <Library _onDrawerToggle={handleDrawerToggle} drawerOpen={open} />
+              <Library drawerOpen={open} onDrawerToggle={handleDrawerToggle} />
             )}
             {currentView === 'playlists' && (
               <Playlists

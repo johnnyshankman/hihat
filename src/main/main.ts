@@ -294,6 +294,7 @@ const createWindow = async () => {
       try {
         // Wait for window to be ready and renderer to load
         while (!windowReadyToShow) {
+          // eslint-disable-next-line no-await-in-loop
           await new Promise((resolve) => {
             setTimeout(resolve, 100);
           });
@@ -307,10 +308,7 @@ const createWindow = async () => {
         // Safety check: Only migrate if user doesn't already have a library configured
         const currentSettings = getSettings();
 
-        if (
-          currentSettings.libraryPath &&
-          currentSettings.libraryPath !== ''
-        ) {
+        if (currentSettings.libraryPath && currentSettings.libraryPath !== '') {
           console.warn(
             '⚠️  Skipping hihat v1 migration: User already has a library configured in hihat2',
           );

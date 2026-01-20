@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { test, expect } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
 
@@ -60,7 +61,9 @@ test.describe('Scroll to Song', () => {
 
     // 5. Click on the track title in Player to scroll back to library
     // Find the song title displayed in the player (use the actual track title we captured)
-    const songTitleInPlayer = page.getByText(trackTitle!.trim(), { exact: true }).last();
+    const songTitleInPlayer = page
+      .getByText(trackTitle!.trim(), { exact: true })
+      .last();
     await expect(songTitleInPlayer).toBeVisible({ timeout: 5000 });
     await songTitleInPlayer.click();
 
@@ -108,7 +111,10 @@ test.describe('Scroll to Song', () => {
 
     // Record the track order after sorting
     const trackOrderAfterSort = await getFirstTrackIds();
-    console.log('Track order after sorting by Title desc:', trackOrderAfterSort);
+    console.log(
+      'Track order after sorting by Title desc:',
+      trackOrderAfterSort,
+    );
 
     // 2. Navigate to playlist view
     await page.click('[data-playlist-id="playlist-1"]');
@@ -120,7 +126,10 @@ test.describe('Scroll to Song', () => {
 
     // 4. Verify the sort order is maintained
     const trackOrderAfterReturn = await getFirstTrackIds();
-    console.log('Track order after returning to library:', trackOrderAfterReturn);
+    console.log(
+      'Track order after returning to library:',
+      trackOrderAfterReturn,
+    );
 
     // The order should be the same
     expect(trackOrderAfterReturn).toEqual(trackOrderAfterSort);

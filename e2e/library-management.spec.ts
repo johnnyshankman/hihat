@@ -1,3 +1,4 @@
+/* eslint-disable no-console, no-plusplus, no-restricted-syntax, global-require */
 import { test, expect } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
 
@@ -222,7 +223,10 @@ test.describe('Library Management', () => {
     } catch {
       // Alternative: wait for the progress indicator to disappear
       try {
-        await page.waitForSelector('[role="progressbar"]', { state: 'hidden', timeout: 60000 });
+        await page.waitForSelector('[role="progressbar"]', {
+          state: 'hidden',
+          timeout: 60000,
+        });
       } catch {
         // Fallback: just wait a reasonable amount of time
         await page.waitForTimeout(30000);

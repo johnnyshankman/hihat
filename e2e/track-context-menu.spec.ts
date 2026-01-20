@@ -28,13 +28,27 @@ test.describe('Track Context Menu', () => {
 
     // Verify all expected menu items are present (use exact matching)
     await expect(contextMenu.getByText('Play', { exact: true })).toBeVisible();
-    await expect(contextMenu.getByText('Add to Playlist', { exact: true })).toBeVisible();
-    await expect(contextMenu.getByText('Show in Finder', { exact: true })).toBeVisible();
-    await expect(contextMenu.getByText('Find on Spotify', { exact: true })).toBeVisible();
-    await expect(contextMenu.getByText('Find on Apple Music', { exact: true })).toBeVisible();
-    await expect(contextMenu.getByText('Find on Tidal', { exact: true })).toBeVisible();
-    await expect(contextMenu.getByText('Download Album Art', { exact: true })).toBeVisible();
-    await expect(contextMenu.getByText('Delete Track', { exact: true })).toBeVisible();
+    await expect(
+      contextMenu.getByText('Add to Playlist', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      contextMenu.getByText('Show in Finder', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      contextMenu.getByText('Find on Spotify', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      contextMenu.getByText('Find on Apple Music', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      contextMenu.getByText('Find on Tidal', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      contextMenu.getByText('Download Album Art', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      contextMenu.getByText('Delete Track', { exact: true }),
+    ).toBeVisible();
 
     // Close the context menu by pressing Escape
     await page.keyboard.press('Escape');

@@ -23,8 +23,8 @@ import {
   type MRT_SortingState as MrtSortingState,
   type MRT_RowVirtualizer as MrtRowVirtualizer,
   type MRT_VisibilityState as MrtVisibilityState,
-  type MRT_Row,
-  type MRT_TableInstance,
+  type MRT_Row as MrtRow,
+  type MRT_TableInstance as MrtTableInstance,
   // eslint-disable-next-line camelcase
   MRT_ToggleFiltersButton,
   // eslint-disable-next-line camelcase
@@ -62,10 +62,10 @@ interface DirectorySelectionResult {
 // Define props interface for Library component
 interface LibraryProps {
   drawerOpen: boolean;
-  _onDrawerToggle: () => void;
+  onDrawerToggle: () => void;
 }
 
-function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
+function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Get state from library store
   const tracks = useLibraryStore((state) => state.tracks);
   const getTrackById = useLibraryStore((state) => state.getTrackById);
@@ -96,7 +96,7 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   );
 
   // Ref to store the table instance for scrollToTrack
-  const tableRef = useRef<MRT_TableInstance<TableData> | null>(null);
+  const tableRef = useRef<MrtTableInstance<TableData> | null>(null);
 
   // Ref to track if the table is ready for scrolling (fully rendered with correct sorting)
   const tableReadyRef = useRef<boolean>(false);
@@ -150,10 +150,13 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
 
-  const handlePlayTrack = useCallback((trackId: string) => {
-    // Play the track with 'library' as the source
-    playTrack(trackId, 'library');
-  }, [playTrack]);
+  const handlePlayTrack = useCallback(
+    (trackId: string) => {
+      // Play the track with 'library' as the source
+      playTrack(trackId, 'library');
+    },
+    [playTrack],
+  );
 
   const handleSelectFolder = async () => {
     try {
@@ -200,14 +203,17 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
   };
 
   // Context menu handlers
-  const handleContextMenu = useCallback((event: React.MouseEvent, trackId: string) => {
-    event.preventDefault();
-    setContextMenu({
-      mouseX: event.clientX,
-      mouseY: event.clientY,
-    });
-    setSelectedTrackId(trackId);
-  }, []);
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent, trackId: string) => {
+      event.preventDefault();
+      setContextMenu({
+        mouseX: event.clientX,
+        mouseY: event.clientY,
+      });
+      setSelectedTrackId(trackId);
+    },
+    [],
+  );
 
   const handleCloseContextMenu = () => {
     setContextMenu(null);
@@ -241,7 +247,7 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
 
       if (tableRef.current) {
         // Get the actual sorted/filtered rows from the table
-        const rows = tableRef.current.getRowModel().rows;
+        const { rows } = tableRef.current.getRowModel();
         trackIndex = rows.findIndex((row) => row.original.id === trackId);
       }
 
@@ -303,7 +309,9 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         if (elapsedMs >= maxWaitMs) {
           // Timeout - try scrolling anyway as a fallback
           // eslint-disable-next-line no-console
-          console.log('scrollToTrackWhenReady: timeout reached, attempting scroll anyway');
+          console.log(
+            'scrollToTrackWhenReady: timeout reached, attempting scroll anyway',
+          );
           scrollToTrack(trackId);
           return;
         }
@@ -574,7 +582,7 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
           flexShrink: 0,
         }}
       >
-        <SidebarToggle isOpen={drawerOpen} onToggle={_onDrawerToggle} />
+        <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
         {/* <LibraryMusicIcon
           sx={{
             fontSize: 20,
@@ -662,7 +670,7 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
         </Box>
       </Box>
     );
-  }, [drawerOpen, _onDrawerToggle, trackCount, totalHours]);
+  }, [drawerOpen, onDrawerToggle, trackCount, totalHours]);
 
   // Configure the table
   const table = useMaterialReactTable({
@@ -723,11 +731,17 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
       // do absolutely nothing, we handle this manually
     },
     muiTableBodyRowProps: useCallback(
-      ({ row, table: tableInstance }: { row: MRT_Row<TableData>; table: MRT_TableInstance<TableData> }) => {
+      ({
+        row,
+        table: tableInstance,
+      }: {
+        row: MrtRow<TableData>;
+        table: MrtTableInstance<TableData>;
+      }) => {
         // Get the current visible rows
         const visibleRows = tableInstance.getRowModel().rows;
         const currentIndex = visibleRows.findIndex(
-          (r: MRT_Row<TableData>) => r.original.id === row.original.id,
+          (r: MrtRow<TableData>) => r.original.id === row.original.id,
         );
 
         // Use the visual index for row striping
@@ -812,7 +826,16 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
           ),
         };
       },
-      [selectedTracks, setSelectedTracks, setLastClickedIndex, lastClickedIndex, handlePlayTrack, handleContextMenu, currentTrack?.id, playbackSource]
+      [
+        selectedTracks,
+        setSelectedTracks,
+        setLastClickedIndex,
+        lastClickedIndex,
+        handlePlayTrack,
+        handleContextMenu,
+        currentTrack?.id,
+        playbackSource,
+      ],
     ),
     renderTopToolbarCustomActions,
     renderToolbarInternalActions: ({ table: tableInstance }) => (
@@ -1024,6 +1047,8 @@ function Library({ drawerOpen, _onDrawerToggle }: LibraryProps) {
 // Memoize the Library component to prevent unnecessary re-renders
 export default React.memo(Library, (prevProps, nextProps) => {
   // Only re-render if drawerOpen actually changes
-  return prevProps.drawerOpen === nextProps.drawerOpen &&
-         prevProps._onDrawerToggle === nextProps._onDrawerToggle;
+  return (
+    prevProps.drawerOpen === nextProps.drawerOpen &&
+    prevProps.onDrawerToggle === nextProps.onDrawerToggle
+  );
 });

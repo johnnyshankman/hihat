@@ -1,3 +1,4 @@
+/* eslint-disable no-console, no-plusplus, no-await-in-loop, @typescript-eslint/no-unused-vars */
 import { test, expect } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
 
@@ -38,9 +39,7 @@ test.describe('Large Library (200+ tracks)', () => {
     // Get initial visible tracks
     const initialTrackIds = await page
       .locator('[data-track-id]')
-      .evaluateAll((rows) =>
-        rows.map((r) => r.getAttribute('data-track-id')),
-      );
+      .evaluateAll((rows) => rows.map((r) => r.getAttribute('data-track-id')));
     console.log('Initial track IDs:', initialTrackIds.slice(0, 5), '...');
 
     // Scroll to the bottom of the table using keyboard navigation
@@ -58,9 +57,7 @@ test.describe('Large Library (200+ tracks)', () => {
     // Check that we've scrolled - get track IDs after scrolling
     const scrolledTrackIds = await page
       .locator('[data-track-id]')
-      .evaluateAll((rows) =>
-        rows.map((r) => r.getAttribute('data-track-id')),
-      );
+      .evaluateAll((rows) => rows.map((r) => r.getAttribute('data-track-id')));
     console.log(
       'Track IDs after first scroll:',
       scrolledTrackIds.slice(-5),
@@ -85,15 +82,16 @@ test.describe('Large Library (200+ tracks)', () => {
     // Final check for last track
     const finalTrackIds = await page
       .locator('[data-track-id]')
-      .evaluateAll((rows) =>
-        rows.map((r) => r.getAttribute('data-track-id')),
-      );
+      .evaluateAll((rows) => rows.map((r) => r.getAttribute('data-track-id')));
     console.log('Final visible track IDs:', finalTrackIds);
 
     // Verify we can see tracks near the end (track 200)
     // The last track should be test-large-200
     const hasLastTrack = finalTrackIds.some(
-      (id) => id === 'test-large-200' || id?.includes('test-large-19') || id?.includes('test-large-20'),
+      (id) =>
+        id === 'test-large-200' ||
+        id?.includes('test-large-19') ||
+        id?.includes('test-large-20'),
     );
     expect(hasLastTrack).toBe(true);
 
@@ -141,7 +139,9 @@ test.describe('Large Library (200+ tracks)', () => {
 
     // The first artist alphabetically should be something like "Acoustic Sessions" or "Ambient Collective"
     // Since we have many artists, just verify we have valid data
-    expect(initialArtists.filter((a) => a.length > 0).length).toBeGreaterThan(0);
+    expect(initialArtists.filter((a) => a.length > 0).length).toBeGreaterThan(
+      0,
+    );
 
     // Sort by Title ascending
     const titleHeaderButton = page
@@ -244,7 +244,9 @@ test.describe('Large Library (200+ tracks)', () => {
 
     // Check that the player shows the song is playing
     // Look for the play/pause button or now playing indicator
-    const playerContainer = page.locator('.player, [class*="player"], [data-testid*="player"]').first();
+    const playerContainer = page
+      .locator('.player, [class*="player"], [data-testid*="player"]')
+      .first();
 
     // The track should now be playing or at least loaded
     // Check for any indication that the track is selected/playing

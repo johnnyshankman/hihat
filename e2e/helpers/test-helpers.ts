@@ -212,6 +212,7 @@ export class TestHelpers {
         throw new Error('Library is empty - no tracks loaded');
       }
 
+      // eslint-disable-next-line no-console
       console.log('Library loaded successfully - tracks present');
     } catch (error) {
       console.error('Error waiting for library to load:', error);

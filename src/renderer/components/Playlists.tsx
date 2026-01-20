@@ -13,8 +13,7 @@ import {
   type MRT_SortingState as MrtSortingState,
   type MRT_VisibilityState as MrtVisibilityState,
   type MRT_RowVirtualizer as MrtRowVirtualizer,
-  type MRT_Row,
-  type MRT_TableInstance,
+  type MRT_TableInstance as MrtTableInstance,
 } from 'material-react-table';
 import Marquee from 'react-fast-marquee';
 import {
@@ -22,7 +21,6 @@ import {
   useSettingsAndPlaybackStore,
   useUIStore,
 } from '../stores';
-import { Track } from '../../types/dbTypes';
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
@@ -43,10 +41,7 @@ interface PlaylistsProps {
   onDrawerToggle: () => void;
 }
 
-function Playlists({
-  drawerOpen,
-  onDrawerToggle,
-}: PlaylistsProps) {
+function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   // Get state from library store
   const playlists = useLibraryStore((state) => state.playlists);
   const tracks = useLibraryStore((state) => state.tracks);
@@ -108,7 +103,7 @@ function Playlists({
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
 
   // Ref to store the table instance for scrollToTrack
-  const tableRef = useRef<MRT_TableInstance<TableData> | null>(null);
+  const tableRef = useRef<MrtTableInstance<TableData> | null>(null);
 
   // Ref to track if the table is ready for scrolling (fully rendered with correct sorting)
   const tableReadyRef = useRef<boolean>(false);
@@ -134,7 +129,7 @@ function Playlists({
     // If it's a smart playlist, we would apply the rules here
     // For now, just return the tracks in the playlist
     // Use the efficient getTracksByIds method for O(1) lookups instead of O(n²)
-    const getTracksByIds = useLibraryStore.getState().getTracksByIds;
+    const { getTracksByIds } = useLibraryStore.getState();
     return getTracksByIds(selectedPlaylist.trackIds);
   }, [selectedPlaylistId, playlists]);
 
@@ -278,7 +273,7 @@ function Playlists({
 
       if (tableRef.current) {
         // Get the actual sorted/filtered rows from the table
-        const rows = tableRef.current.getRowModel().rows;
+        const { rows } = tableRef.current.getRowModel();
         trackIndex = rows.findIndex((row) => row.original.id === trackId);
       }
 
@@ -328,7 +323,9 @@ function Playlists({
         if (elapsedMs >= maxWaitMs) {
           // Timeout - try scrolling anyway as a fallback
           // eslint-disable-next-line no-console
-          console.log('scrollToTrackWhenReady: timeout reached, attempting scroll anyway');
+          console.log(
+            'scrollToTrackWhenReady: timeout reached, attempting scroll anyway',
+          );
           scrollToTrack(trackId);
           return;
         }
@@ -861,6 +858,8 @@ function Playlists({
 
 // Memoize Playlists component to prevent unnecessary re-renders
 export default React.memo(Playlists, (prevProps, nextProps) => {
-  return prevProps.drawerOpen === nextProps.drawerOpen &&
-         prevProps.onDrawerToggle === nextProps.onDrawerToggle;
+  return (
+    prevProps.drawerOpen === nextProps.drawerOpen &&
+    prevProps.onDrawerToggle === nextProps.onDrawerToggle
+  );
 });

@@ -1691,6 +1691,7 @@ export async function bulkImportTracksAsync(
       const batch = tracks.slice(i, Math.min(i + batchSize, tracks.length));
 
       // Process batch synchronously
+      // eslint-disable-next-line no-loop-func
       batch.forEach((track) => {
         try {
           insertStmt.run(
@@ -1722,6 +1723,7 @@ export async function bulkImportTracksAsync(
       onProgress?.(currentCount, tracks.length);
 
       // Yield to event loop to prevent blocking and avoid pinwheel cursor
+      // eslint-disable-next-line no-await-in-loop
       await new Promise((resolve) => {
         setImmediate(resolve);
       });
@@ -1767,8 +1769,12 @@ export async function bulkImportPlaylistsAsync(
     const batchSize = 50; // Process 50 playlists at a time
 
     for (let i = 0; i < playlists.length; i += batchSize) {
-      const batch = playlists.slice(i, Math.min(i + batchSize, playlists.length));
+      const batch = playlists.slice(
+        i,
+        Math.min(i + batchSize, playlists.length),
+      );
 
+      // eslint-disable-next-line no-loop-func
       batch.forEach((playlist) => {
         try {
           // For smart playlists, we shouldn't store track IDs
@@ -1794,6 +1800,7 @@ export async function bulkImportPlaylistsAsync(
       onProgress?.(currentCount, playlists.length);
 
       // Yield to event loop
+      // eslint-disable-next-line no-await-in-loop
       await new Promise((resolve) => {
         setImmediate(resolve);
       });
