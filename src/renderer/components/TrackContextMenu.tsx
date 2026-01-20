@@ -4,6 +4,7 @@ import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Apple, Search, Download, Delete } from '@mui/icons-material';
 import SpotifyIcon from '../assets/spotify.svg';
+import TidalIcon from '../assets/tidal.svg';
 import {
   useSettingsAndPlaybackStore,
   useUIStore,
@@ -94,6 +95,18 @@ function TrackContextMenu({
 
     window.electron.app.openInBrowser(
       `https://music.apple.com/search?term=${urlEncodedTitle}%20${urlEncodedArtist}`,
+    );
+    onClose();
+  };
+
+  const handlerFindOnTidal = () => {
+    const track = getTrackById(trackId);
+
+    const urlEncodedArtist = encodeURIComponent(track?.albumArtist || '');
+    const urlEncodedTitle = encodeURIComponent(track?.title || '');
+
+    window.electron.app.openInBrowser(
+      `https://tidal.com/search?q=${urlEncodedArtist}%20${urlEncodedTitle}`,
     );
     onClose();
   };
@@ -289,6 +302,16 @@ function TrackContextMenu({
             <Apple fontSize="small" />
           </ListItemIcon>
           <ListItemText>Find on Apple Music</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handlerFindOnTidal}>
+          <ListItemIcon>
+            <img
+              alt="Tidal"
+              src={TidalIcon}
+              style={{ filter: 'invert(1)', width: 20, height: 20 }}
+            />
+          </ListItemIcon>
+          <ListItemText>Find on Tidal</ListItemText>
         </MenuItem>
         <MenuItem onClick={handlerDownloadAlbumArt}>
           <ListItemIcon>
