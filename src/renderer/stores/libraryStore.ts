@@ -108,7 +108,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
       set({
         tracks: allTracks,
         isLoading: false,
-        ...indexes
+        ...indexes,
       });
     } catch (error) {
       console.error('Error loading library:', error);
@@ -346,7 +346,9 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
 
   getTracksByIds: (ids: string[]) => {
     const { trackIndex } = get();
-    return ids.map((id) => trackIndex.get(id)).filter((track): track is Track => !!track);
+    return ids
+      .map((id) => trackIndex.get(id))
+      .filter((track): track is Track => !!track);
   },
 
   getTracksByArtist: (artist: string) => {

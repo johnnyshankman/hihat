@@ -104,25 +104,25 @@ export default function MigrationDialog() {
 
   return (
     <Dialog
-      open={open}
+      data-testid="migration-dialog"
       disableEscapeKeyDown
-      maxWidth="sm"
       fullWidth
+      maxWidth="sm"
+      open={open}
       PaperProps={{
         sx: {
           bgcolor: 'background.paper',
         },
       }}
-      data-testid="migration-dialog"
     >
       <DialogTitle>
-        <Typography variant="h6" component="div">
+        <Typography component="div" variant="h6">
           {isComplete ? 'Migration Complete' : 'Migrating from hihat v1'}
         </Typography>
       </DialogTitle>
       <DialogContent>
         <Box sx={{ py: 2 }}>
-          <Typography variant="body1" gutterBottom>
+          <Typography gutterBottom variant="body1">
             {getPhaseDescription()}
           </Typography>
 
@@ -134,10 +134,10 @@ export default function MigrationDialog() {
 
           {progress.message && (
             <Typography
-              variant="body2"
               color="text.secondary"
-              sx={{ mt: 2 }}
               data-testid="migration-message"
+              sx={{ mt: 2 }}
+              variant="body2"
             >
               {progress.message}
             </Typography>
@@ -145,7 +145,7 @@ export default function MigrationDialog() {
 
           {isComplete && progress.tracksCount !== undefined && (
             <Box sx={{ mt: 3 }}>
-              <Typography variant="body2" color="success.main">
+              <Typography color="success.main" variant="body2">
                 Successfully migrated {progress.tracksCount} tracks
                 {progress.playlistsCount && progress.playlistsCount > 0
                   ? ` and ${progress.playlistsCount} playlists`
@@ -157,9 +157,9 @@ export default function MigrationDialog() {
 
           {!isComplete && (
             <Typography
-              variant="caption"
               color="text.secondary"
               sx={{ mt: 2, display: 'block' }}
+              variant="caption"
             >
               Please wait while we transfer your library. This may take a few
               moments.
@@ -169,10 +169,10 @@ export default function MigrationDialog() {
       </DialogContent>
       <DialogActions>
         <Button
+          data-testid="migration-continue-button"
+          disabled={!isComplete}
           onClick={handleClose}
           variant="contained"
-          disabled={!isComplete}
-          data-testid="migration-continue-button"
         >
           {isComplete ? 'Continue' : 'Migrating...'}
         </Button>

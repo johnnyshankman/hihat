@@ -38,10 +38,10 @@ export interface LibraryStore {
   lastViewedTrackId: string | null;
 
   // NEW: Indexed data structures for O(1) lookups
-  trackIndex: Map<string, Track>;              // trackId -> Track
-  artistIndex: Map<string, Set<string>>;       // artist -> Set<trackIds>
-  albumIndex: Map<string, Set<string>>;        // album -> Set<trackIds>
-  searchIndex: Map<string, SearchIndexData>;   // trackId -> pre-computed search data
+  trackIndex: Map<string, Track>; // trackId -> Track
+  artistIndex: Map<string, Set<string>>; // artist -> Set<trackIds>
+  albumIndex: Map<string, Set<string>>; // album -> Set<trackIds>
+  searchIndex: Map<string, SearchIndexData>; // trackId -> pre-computed search data
 
   // Actions
   // import related actions

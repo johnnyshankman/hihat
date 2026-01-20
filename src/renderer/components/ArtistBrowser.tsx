@@ -383,9 +383,11 @@ function ArtistBrowser({
 
 // Memoize ArtistBrowser to prevent unnecessary re-renders
 export default React.memo(ArtistBrowser, (prevProps, nextProps) => {
-  return prevProps.open === nextProps.open &&
-         prevProps.selectedArtist === nextProps.selectedArtist &&
-         prevProps.onToggle === nextProps.onToggle &&
-         prevProps.onArtistSelect === nextProps.onArtistSelect &&
-         prevProps.width === nextProps.width;
+  return (
+    prevProps.open === nextProps.open &&
+    prevProps.selectedArtist === nextProps.selectedArtist &&
+    prevProps.onToggle === nextProps.onToggle &&
+    prevProps.onArtistSelect === nextProps.onArtistSelect &&
+    prevProps.width === nextProps.width
+  );
 });

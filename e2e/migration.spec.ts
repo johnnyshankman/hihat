@@ -55,13 +55,17 @@ test.describe('hihat v1 to v2 Migration', () => {
       expect(initialTrackCount).toBe(7);
 
       // 9. Check that specific tracks exist with correct artists
-      const hipHopRow = await page.locator('text="Found Dream of Love"').first();
+      const hipHopRow = await page
+        .locator('text="Found Dream of Love"')
+        .first();
       expect(await hipHopRow.isVisible()).toBe(true);
 
       const auroraSynthRows = await page.locator('text="Aurora Synth"').count();
       expect(auroraSynthRows).toBeGreaterThanOrEqual(1); // Should have Aurora Synth track
 
-      const jazzCollectiveRows = await page.locator('text="The Jazz Collective"').count();
+      const jazzCollectiveRows = await page
+        .locator('text="The Jazz Collective"')
+        .count();
       expect(jazzCollectiveRows).toBeGreaterThanOrEqual(1); // Should have The Jazz Collective track
 
       // 10. Verify user config is marked as migrated
@@ -153,7 +157,6 @@ test.describe('hihat v1 to v2 Migration', () => {
       await TestHelpers.waitForLibraryLoad(page);
       // Click on a playlist (no playlists in the migration fixture currently)
       // This test is skipped because userConfig.json fixture has empty playlists array
-
     } finally {
       await TestHelpers.closeApp(app);
     }

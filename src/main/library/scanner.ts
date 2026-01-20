@@ -226,7 +226,9 @@ async function copyFileToLibrary(
     // is already within the library path, don't copy or move it - just return
     // the original path to avoid creating duplicates
     if (!isImport && sourcePath.startsWith(libraryPath)) {
-      debugLog(`Scan operation: File already in library, using original path: ${sourcePath}`);
+      debugLog(
+        `Scan operation: File already in library, using original path: ${sourcePath}`,
+      );
       return sourcePath;
     }
 
@@ -698,8 +700,8 @@ export async function scanLibrary(
           existingFilePaths,
           trackMap,
           libraryPath,
-          undefined,  // folderRoot
-          false,      // isImport=false for scan operations
+          undefined, // folderRoot
+          false, // isImport=false for scan operations
         );
 
         // Collect files and tracks to delete
@@ -950,7 +952,7 @@ export async function importFiles(
           trackMap,
           libraryPath,
           allSameRoot ? batchFolderRoots[0] : undefined,
-          true,  // isImport=true for import operations
+          true, // isImport=true for import operations
         );
 
         // Collect files and tracks to delete
