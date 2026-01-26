@@ -834,9 +834,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             const shouldCountPlay = playbackTracker.updateListenTime(
               state.currentTrack.id,
               secondsPlayed,
+              state.currentTrack.duration,
             );
 
-            // If we crossed the 30-second threshold, update the play count
+            // If we crossed the play count threshold, update the play count
             if (shouldCountPlay) {
               updatePlayCount(state.currentTrack.id);
             }
@@ -919,9 +920,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               const shouldCountPlay = playbackTracker.updateListenTime(
                 currentState.currentTrack.id,
                 secondsPlayed,
+                currentState.currentTrack.duration,
               );
 
-              // If we crossed the 30-second threshold, update the play count
+              // If we crossed the play count threshold, update the play count
               if (shouldCountPlay) {
                 updatePlayCount(currentState.currentTrack.id);
               }
@@ -962,9 +964,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                   const shouldCountPlay = playbackTracker.updateListenTime(
                     currentState.currentTrack.id,
                     secondsPlayed,
+                    currentState.currentTrack.duration,
                   );
 
-                  // If we crossed the 30-second threshold, update the play count
+                  // If we crossed the play count threshold, update the play count
                   if (shouldCountPlay) {
                     updatePlayCount(currentState.currentTrack.id);
                   }
@@ -1004,9 +1007,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               const shouldCountPlay = playbackTracker.updateListenTime(
                 state.currentTrack.id,
                 secondsPlayed,
+                state.currentTrack.duration,
               );
 
-              // If we crossed the 30-second threshold, update the play count
+              // If we crossed the play count threshold, update the play count
               if (shouldCountPlay) {
                 updatePlayCount(state.currentTrack.id);
               }

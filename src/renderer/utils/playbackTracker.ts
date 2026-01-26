@@ -4,8 +4,10 @@
  * This module provides intelligence for tracking song playbacks and
  * determining when to count a song as "played" for playcount purposes.
  *
- * Following Spotify/Tidal's approach, a song is only counted as played
- * if the user listens to at least 30 seconds of it, cumulatively.
+ * Following Spotify/Tidal's approach, a song is counted as played
+ * when the user listens to min(30 seconds, 20% of track duration).
+ * This allows shorter songs to count plays faster while keeping
+ * the 30-second cap for longer tracks.
  */
 
 /**
@@ -18,8 +20,8 @@ export class PlaybackTracker {
   // Map to track accumulated listen time for each track
   private listenTimeMap: Map<string, number> = new Map();
 
-  // Threshold in seconds to count a song as played (20 seconds)
-  private readonly PLAY_COUNT_THRESHOLD = 20;
+  // Maximum threshold in seconds (cap for long songs)
+  private readonly MAX_PLAY_COUNT_THRESHOLD = 30;
 
   // Has the current track already hit the threshold and been counted?
   private hasCurrentTrackBeenCounted = false;
@@ -52,9 +54,14 @@ export class PlaybackTracker {
    * Update the accumulated listen time for a track
    * @param trackId - ID of the track
    * @param secondsListened - Additional seconds listened
+   * @param trackDuration - Duration of the track in seconds (used to calculate dynamic threshold)
    * @returns Whether this update caused the track to cross the play count threshold
    */
-  public updateListenTime(trackId: string, secondsListened: number): boolean {
+  public updateListenTime(
+    trackId: string,
+    secondsListened: number,
+    trackDuration: number,
+  ): boolean {
     // Make sure we're tracking the right track
     if (this.currentTrackId !== trackId || this.hasCurrentTrackBeenCounted) {
       return false;
@@ -67,20 +74,24 @@ export class PlaybackTracker {
     currentTime += secondsListened;
     this.listenTimeMap.set(trackId, currentTime);
 
+    // Calculate dynamic threshold: min(30 seconds, 20% of track duration)
+    // This allows shorter songs to count plays faster while keeping the 30-second cap for longer tracks
+    const threshold = Math.min(
+      this.MAX_PLAY_COUNT_THRESHOLD,
+      trackDuration * 0.2,
+    );
+
     // eslint-disable-next-line no-console
     console.log(
-      `PlaybackTracker: Track ${trackId} has been played for ${currentTime}/${this.PLAY_COUNT_THRESHOLD} seconds`,
+      `PlaybackTracker: Track ${trackId} has been played for ${currentTime}/${threshold.toFixed(1)} seconds`,
     );
 
     // Check if we've crossed the threshold
-    if (
-      currentTime >= this.PLAY_COUNT_THRESHOLD &&
-      !this.hasCurrentTrackBeenCounted
-    ) {
+    if (currentTime >= threshold && !this.hasCurrentTrackBeenCounted) {
       this.hasCurrentTrackBeenCounted = true;
       // eslint-disable-next-line no-console
       console.log(
-        `PlaybackTracker: Track ${trackId} reached the 30-second threshold!`,
+        `PlaybackTracker: Track ${trackId} reached the ${threshold.toFixed(1)}-second threshold!`,
       );
       return true;
     }
@@ -131,7 +142,7 @@ export async function updatePlayCount(trackId: string): Promise<void> {
   try {
     // eslint-disable-next-line no-console
     console.log(
-      `PlaybackTracker: 30-second threshold reached - updating play count for track ${trackId}`,
+      `PlaybackTracker: Play count threshold reached - updating play count for track ${trackId}`,
     );
 
     if (typeof window !== 'undefined' && window.electron) {

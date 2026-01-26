@@ -123,9 +123,10 @@ function ThemedApp() {
               const shouldCountPlay = playbackTracker.updateListenTime(
                 currentTrack.id,
                 secondsPlayed,
+                currentTrack.duration,
               );
 
-              // If we crossed the 30-second threshold, update the play count
+              // If we crossed the play count threshold, update the play count
               if (shouldCountPlay) {
                 // We need to return a promise that resolves after the updatePlayCount call
                 await updatePlayCount(currentTrack.id);
