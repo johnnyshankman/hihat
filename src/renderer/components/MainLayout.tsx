@@ -147,6 +147,7 @@ export default function MainLayout() {
 
   const handleViewChange = (view: View) => {
     setCurrentView(view);
+    setOpen(false); // Close sidebar after navigation
   };
 
   const handlePlaylistsClick = () => {
@@ -156,6 +157,7 @@ export default function MainLayout() {
   const handlePlaylistSelect = (playlistId: string) => {
     selectPlaylist(playlistId);
     setCurrentView('playlists');
+    setOpen(false); // Close sidebar after selecting playlist
   };
 
   const handlePlaylistContextMenu = (

@@ -17,6 +17,7 @@ function SidebarToggle({ isOpen, onToggle }: SidebarToggleProps) {
   return (
     <Tooltip title="Show Sidebar">
       <button
+        data-testid="sidebar-toggle"
         onClick={onToggle}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
