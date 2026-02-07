@@ -12,6 +12,13 @@ import * as mm from 'music-metadata';
 import fs from 'fs';
 import { resolveHtmlPath } from './util';
 
+// Detect test mode so the preload path resolves to the built preload.js
+// (same pattern as main.ts). Without this, test mode falls through to the
+// dev path which doesn't exist in the built app, leaving window.electron
+// undefined and breaking MiniPlayer IPC entirely.
+const isTest =
+  process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true';
+
 // Reference to the mini player window
 let miniPlayerWindow: BrowserWindow | null = null;
 
@@ -178,62 +185,16 @@ export function createMiniPlayerWindow(): void {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        sandbox: !isTest,
         preload: (() => {
-          // Get the preload path based on whether we're packaged or not
-          const preloadPath = app.isPackaged
-            ? path.join(__dirname, 'preload.js')
-            : path.join(__dirname, '../../.erb/dll/preload.js');
-
-          // Check if the file exists in development mode
-          if (!app.isPackaged) {
-            try {
-              if (fs.existsSync(preloadPath)) {
-                console.warn(
-                  `Development preload script exists at: ${preloadPath}`,
-                );
-              } else {
-                console.error(
-                  `Development preload script NOT found at: ${preloadPath}`,
-                );
-                // Try to find it
-                const erbPath = path.join(__dirname, '../../.erb');
-                if (fs.existsSync(erbPath)) {
-                  fs.readdirSync(erbPath).forEach((dir) => {
-                    const fullDir = path.join(erbPath, dir);
-                    if (fs.statSync(fullDir).isDirectory()) {
-                      const files = fs.readdirSync(fullDir);
-                      const preloadFile = files.find((f) =>
-                        f.includes('preload'),
-                      );
-                      if (preloadFile) {
-                        console.warn(
-                          `Found possible preload file: ${path.join(fullDir, preloadFile)}`,
-                        );
-                      }
-                    }
-                  });
-                }
-              }
-            } catch (err) {
-              console.error('Error checking preload path:', err);
-            }
-          } else {
-            // In production, check in multiple possible locations
-            try {
-              const dirnamePreload = path.join(__dirname, 'preload.js');
-              const parentPreload = path.join(__dirname, '../preload.js');
-              const mainPreload = path.join(__dirname, '../main/preload.js');
-
-              // Use the one that exists
-              if (fs.existsSync(dirnamePreload)) return dirnamePreload;
-              if (fs.existsSync(parentPreload)) return parentPreload;
-              if (fs.existsSync(mainPreload)) return mainPreload;
-            } catch (err) {
-              console.error('Error checking production preload paths:', err);
-            }
+          if (
+            app.isPackaged ||
+            process.env.NODE_ENV === 'production' ||
+            isTest
+          ) {
+            return path.join(__dirname, 'preload.js');
           }
-
-          return preloadPath;
+          return path.join(__dirname, '../../.erb/dll/preload.js');
         })(),
       },
     });

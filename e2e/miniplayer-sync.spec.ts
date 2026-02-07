@@ -45,20 +45,8 @@ async function openMiniPlayer(
   return miniPlayerPage!;
 }
 
-/**
- * MiniPlayer tests are skipped because the MiniPlayer IPC state sync
- * does not work reliably in the test environment. The MiniPlayer window
- * opens but does not receive track/playback state from the main process
- * (track title stays "---"). This is an infrastructure limitation — the
- * main process relay (player:trackUpdate → miniPlayer:trackChanged) is
- * not triggered during E2E tests since the renderer's state update events
- * aren't being forwarded to the main process in the test build.
- *
- * To enable these tests, the app would need to ensure the main process
- * MiniPlayer state relay is active when TEST_MODE=true.
- */
 test.describe('MiniPlayer Synchronization', () => {
-  test.skip('MiniPlayer position sync', async () => {
+  test('MiniPlayer position sync', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
     await page.waitForTimeout(3000);
@@ -115,7 +103,7 @@ test.describe('MiniPlayer Synchronization', () => {
     await closeMiniPlayerAndApp(page, app);
   });
 
-  test.skip('MiniPlayer play/pause sync', async () => {
+  test('MiniPlayer play/pause sync', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
     await page.waitForTimeout(3000);
