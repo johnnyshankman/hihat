@@ -120,7 +120,14 @@ test.describe('Scroll to Song', () => {
     await page.click('[data-playlist-id="playlist-1"]');
     await page.waitForTimeout(1000);
 
-    // 3. Navigate back to library view
+    // 3. Re-open sidebar (it auto-closes after clicking a nav item)
+    const sidebarToggle = page.locator('[data-testid="sidebar-toggle"]');
+    if (await sidebarToggle.isVisible()) {
+      await sidebarToggle.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Navigate back to library view
     await page.click('[data-testid="nav-library"]');
     await page.waitForTimeout(1000);
 

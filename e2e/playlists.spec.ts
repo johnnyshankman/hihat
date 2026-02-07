@@ -92,6 +92,13 @@ test.describe('Playlist Management', () => {
       await page.waitForTimeout(500);
     }
 
+    // Re-open sidebar (it auto-closes after navigation)
+    const sidebarToggle = page.locator('[data-testid="sidebar-toggle"]');
+    if (await sidebarToggle.isVisible()) {
+      await sidebarToggle.click();
+      await page.waitForTimeout(500);
+    }
+
     // Now navigate to the playlist view to verify the track was added
     // Click on "Test Playlist" in the sidebar
     await page.click('[data-playlist-id="playlist-1"]');
