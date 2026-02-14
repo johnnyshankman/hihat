@@ -149,16 +149,4 @@ test.describe('hihat v1 to v2 Migration', () => {
       TestHelpers.cleanupMigrationFiles(legacyConfigPath);
     }
   });
-
-  test.skip('should verify playlist track associations after migration', async () => {
-    const { app, page } = await TestHelpers.launchAppWithMigration();
-
-    try {
-      await TestHelpers.waitForLibraryLoad(page);
-      // Click on a playlist (no playlists in the migration fixture currently)
-      // This test is skipped because userConfig.json fixture has empty playlists array
-    } finally {
-      await TestHelpers.closeApp(app);
-    }
-  });
 });
