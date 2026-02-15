@@ -649,7 +649,7 @@ export default function Settings({ onClose }: SettingsProps) {
           alignItems: 'center',
           justifyContent: 'space-between',
           px: 2,
-          py: 1.5,
+          py: 1.35,
           borderBottom: (t) => `1px solid ${t.palette.divider}`,
           position: 'sticky',
           top: 0,
