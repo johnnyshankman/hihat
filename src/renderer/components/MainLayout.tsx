@@ -891,6 +891,8 @@ export default function MainLayout() {
           '& .MuiDrawer-paper': {
             width: 'min(480px, calc(100vw - 60px))',
             boxSizing: 'border-box',
+            borderLeft: '1px solid',
+            borderColor: (t) => t.palette.divider,
             WebkitAppRegion: 'no-drag',
           },
         }}
