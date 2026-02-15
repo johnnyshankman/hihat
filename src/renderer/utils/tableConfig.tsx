@@ -146,7 +146,7 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
   enableBottomToolbar: false,
   enableColumnResizing: true,
   enableSorting: true,
-  enableColumnFilters: true,
+  enableColumnFilters: false,
   enableGlobalFilter: true,
   enableDensityToggle: false,
   enableFullScreenToggle: false,

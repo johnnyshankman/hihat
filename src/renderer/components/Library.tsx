@@ -31,8 +31,6 @@ import {
   type MRT_Row as MrtRow,
   type MRT_TableInstance as MrtTableInstance,
   // eslint-disable-next-line camelcase
-  MRT_ToggleFiltersButton,
-  // eslint-disable-next-line camelcase
   MRT_ShowHideColumnsButton,
 } from 'material-react-table';
 import PeopleIcon from '@mui/icons-material/People';
@@ -750,8 +748,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
                 <SearchIcon />
               </IconButton>
             </Tooltip>
-            {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
-            <MRT_ToggleFiltersButton table={tableInstance} />
             {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
             <MRT_ShowHideColumnsButton table={tableInstance} />
             <Tooltip

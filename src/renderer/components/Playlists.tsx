@@ -24,8 +24,6 @@ import {
   type MRT_RowVirtualizer as MrtRowVirtualizer,
   type MRT_TableInstance as MrtTableInstance,
   // eslint-disable-next-line camelcase
-  MRT_ToggleFiltersButton,
-  // eslint-disable-next-line camelcase
   MRT_ShowHideColumnsButton,
 } from 'material-react-table';
 import Marquee from 'react-fast-marquee';
@@ -669,8 +667,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
               <SearchIcon />
             </IconButton>
           </Tooltip>
-          {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
-          <MRT_ToggleFiltersButton table={tableInstance} />
           {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
           <MRT_ShowHideColumnsButton table={tableInstance} />
         </Box>
