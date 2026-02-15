@@ -141,9 +141,10 @@ function ArtistBrowser({
           {/* Header */}
           <Box
             sx={{
-              minHeight: '64px',
+              height: '56px',
+              minHeight: '56px',
               px: 1.5,
-              py: 1,
+              py: 0,
               borderBottom: `1px solid ${theme.palette.divider}`,
               display: 'flex',
               alignItems: 'center',
