@@ -123,7 +123,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const setArtistFilter = useLibraryStore((state) => state.setArtistFilter);
   const libraryViewState = useLibraryStore((state) => state.libraryViewState);
   const [artistBrowserOpen, setArtistBrowserOpen] = useState(!!artistFilter);
-  const [showSearch, setShowSearch] = useState(false);
+  const [showSearch, setShowSearch] = useState(!!libraryViewState.filtering);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const isNarrowWindow = useMediaQuery('(max-width:768px)');
 

@@ -113,7 +113,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
 
   // Search state
-  const [showSearch, setShowSearch] = useState(false);
+  const [showSearch, setShowSearch] = useState(!!playlistViewState.filtering);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Confirmation dialog state
