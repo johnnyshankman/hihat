@@ -190,8 +190,8 @@ function ArtistBrowser({
               overflow: 'auto',
               py: 0,
               '&::-webkit-scrollbar': {
-                width: '8px',
-                height: '8px',
+                width: '12px',
+                height: '12px',
               },
               '&::-webkit-scrollbar-track': {
                 backgroundColor: 'transparent',

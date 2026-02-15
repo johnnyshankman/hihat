@@ -246,7 +246,7 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
       margin: 0,
       backgroundColor: (theme: Theme) => theme.palette.background.default,
       '&::-webkit-scrollbar': {
-        width: '8px',
+        width: '12px',
         height: '8px',
       },
       '&::-webkit-scrollbar-track': {
