@@ -13,8 +13,6 @@ import {
   IconButton,
   Snackbar,
   Alert,
-  AppBar,
-  Toolbar,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -27,9 +25,9 @@ import WarningIcon from '@mui/icons-material/Warning';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
 import BackupIcon from '@mui/icons-material/Backup';
+import CloseIcon from '@mui/icons-material/Close';
 import { useSettingsAndPlaybackStore } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
-import SidebarToggle from './SidebarToggle';
 import type { Channels } from '../../types/ipc';
 import useLibraryStore from '../stores/libraryStore';
 
@@ -41,14 +39,10 @@ interface DirectorySelectionResult {
 
 // Define the props for the Settings component
 interface SettingsProps {
-  drawerOpen: boolean;
-  onDrawerToggle: () => void;
+  onClose: () => void;
 }
 
-export default function Settings({
-  drawerOpen,
-  onDrawerToggle,
-}: SettingsProps) {
+export default function Settings({ onClose }: SettingsProps) {
   // settings store stuff
   const libraryPath = useSettingsAndPlaybackStore((state) => state.libraryPath);
   const theme = useSettingsAndPlaybackStore((state) => state.theme);
@@ -77,7 +71,7 @@ export default function Settings({
 
   // Scanning state
   const [scanProgress, setScanProgress] = useState(0);
-  const [scanStatus, setScanStatus] = useState('');
+  const [_scanStatus, setScanStatus] = useState('');
   const [scanPhase, setScanPhase] = useState('preparing');
   const [scanCurrentFile, setScanCurrentFile] = useState('');
   const [scanTransferInfo, setScanTransferInfo] = useState<{
@@ -86,11 +80,11 @@ export default function Settings({
     remaining: number;
     estimatedTimeRemaining: string;
   } | null>(null);
-  const [scanProcessedFiles, setScanProcessedFiles] = useState<string[]>([]);
+  const [_scanProcessedFiles, setScanProcessedFiles] = useState<string[]>([]);
   const scanProcessedFilesRef = useRef<string[]>([]);
   const scanStartTime = useRef<number>(0);
 
-  const [backupStatus, setBackupStatus] = useState('');
+  const [_backupStatus, setBackupStatus] = useState('');
   // Add backup progress state
   const [backupProgress, setBackupProgress] = useState(0);
   const [backupCurrentFile, setBackupCurrentFile] = useState('');
@@ -102,7 +96,7 @@ export default function Settings({
     speed: string;
   } | null>(null);
   // Track the last processed file for display in the completed log
-  const [processedFiles, setProcessedFiles] = useState<string[]>([]);
+  const [_processedFiles, setProcessedFiles] = useState<string[]>([]);
   const processedFilesRef = useRef<string[]>([]);
 
   // Add a ref to track the last time we updated the UI for scan progress
@@ -601,14 +595,10 @@ export default function Settings({
     }
   };
 
-  // Function to format file path for display
-  const formatFilePath = (filePath: string) => {
-    // Extract just the filename for cleaner display
+  // Function to extract just the filename for display
+  const getFileName = (filePath: string) => {
     const parts = filePath.split('/');
-    if (parts.length > 2) {
-      return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
-    }
-    return filePath;
+    return parts[parts.length - 1] || filePath;
   };
 
   // Helper functions for backup progress
@@ -652,28 +642,31 @@ export default function Settings({
       data-testid="settings-view"
       sx={{ height: '100%', width: '100%', overflow: 'auto' }}
     >
-      {/* Settings Header with Save Button for Library Path */}
-      <AppBar
-        elevation={0}
-        position="sticky"
+      {/* Settings Header */}
+      <Box
         sx={{
-          height: '60px',
-          backgroundColor: (t) => t.palette.background.paper,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 2,
+          py: 1.5,
           borderBottom: (t) => `1px solid ${t.palette.divider}`,
+          position: 'sticky',
+          top: 0,
+          backgroundColor: (t) => t.palette.background.paper,
+          zIndex: 1,
         }}
       >
-        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-            <Typography color="text.primary" variant="h1">
-              Settings
-            </Typography>
-          </Box>
-        </Toolbar>
-      </AppBar>
+        <Typography color="text.primary" variant="h1">
+          Settings
+        </Typography>
+        <IconButton onClick={onClose} size="small">
+          <CloseIcon />
+        </IconButton>
+      </Box>
 
       <Paper elevation={1} sx={{ WebkitAppRegion: 'no-drag', p: 2 }}>
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
           <Grid container spacing={3}>
             {/* Library Path Section */}
             <Grid item xs={12}>
@@ -805,7 +798,7 @@ export default function Settings({
           </Grid>
         </Paper>
 
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
           <Typography gutterBottom variant="h2">
             Appearance
           </Typography>
@@ -833,7 +826,7 @@ export default function Settings({
           </FormGroup>
         </Paper>
 
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
           <Typography gutterBottom variant="h2">
             Table Column Visibility
           </Typography>
@@ -930,7 +923,7 @@ export default function Settings({
           </FormGroup>
         </Paper>
 
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
           <Typography gutterBottom variant="h2">
             Danger Zone
           </Typography>
@@ -956,128 +949,83 @@ export default function Settings({
 
       {/* Scanning progress dialog */}
       <Dialog fullWidth maxWidth="sm" open={isScanning}>
-        <DialogTitle>Library Scanner</DialogTitle>
+        <DialogTitle>
+          {scanPhase === 'complete' ? 'Scan Complete' : getScanStatusText()}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
-            <Typography gutterBottom variant="body1">
-              Status: {getScanStatusText()}
-            </Typography>
             <LinearProgress
-              sx={{ mt: 2 }}
+              sx={{ mt: 1, mb: 2 }}
               value={getScanProgressValue()}
               variant={getScanProgressVariant()}
             />
 
             {scanPhase === 'processing' && scanTransferInfo && (
-              <Typography sx={{ mt: 1 }} variant="body2">
-                Progress: {scanProgress.toFixed(1)}% ({scanTransferInfo.current}
-                /{scanTransferInfo.total} files)
-                {scanTransferInfo.estimatedTimeRemaining &&
-                  ` - ETA: ${scanTransferInfo.estimatedTimeRemaining}`}
+              <Typography color="text.secondary" variant="body2">
+                {scanTransferInfo.current.toLocaleString()} of{' '}
+                {scanTransferInfo.total.toLocaleString()} songs
               </Typography>
             )}
 
-            <Typography sx={{ mt: 1, mb: 1 }} variant="body2">
-              {scanStatus}
-            </Typography>
-
             {scanPhase === 'processing' && scanCurrentFile && (
-              <Typography sx={{ mt: 1, fontStyle: 'italic' }} variant="body2">
-                Current file: {formatFilePath(scanCurrentFile)}
+              <Typography
+                color="text.secondary"
+                sx={{
+                  mt: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                variant="body2"
+              >
+                {getFileName(scanCurrentFile)}
+              </Typography>
+            )}
+
+            {scanPhase === 'complete' && scanTransferInfo && (
+              <Typography color="text.secondary" variant="body2">
+                Added {scanTransferInfo.total.toLocaleString()} songs.
               </Typography>
             )}
           </Box>
-
-          {/* Show a list of recently processed files */}
-          {scanProcessedFiles.length > 0 && (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                bgcolor: 'background.default',
-                maxHeight: '150px',
-                overflow: 'auto',
-                mb: 2,
-              }}
-            >
-              <Typography sx={{ mb: 1 }} variant="subtitle2">
-                Recently processed files:
-              </Typography>
-              {scanProcessedFiles.map((file) => (
-                <Typography
-                  key={`scan-file-${file}`}
-                  component="div"
-                  sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
-                  variant="body2"
-                >
-                  {formatFilePath(file)}
-                </Typography>
-              ))}
-            </Paper>
-          )}
         </DialogContent>
       </Dialog>
 
       {/* Backup progress dialog */}
       <Dialog fullWidth maxWidth="sm" open={backupDialogOpen}>
-        <DialogTitle>Library Backup</DialogTitle>
+        <DialogTitle>
+          {!isBackupInProgress ? 'Backup Complete' : getBackupStatusText()}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
-            <Typography gutterBottom variant="body1">
-              Status: {getBackupStatusText()}
-            </Typography>
             <LinearProgress
-              sx={{ mt: 2 }}
+              sx={{ mt: 1, mb: 2 }}
               value={getProgressValue()}
               variant={getProgressVariant()}
             />
 
             {backupPhase === 'transferring' && backupTransferInfo && (
-              <Typography sx={{ mt: 1 }} variant="body2">
-                Progress: {backupProgress}% ({backupTransferInfo.current}/
-                {backupTransferInfo.total} files)
-                {backupTransferInfo.speed && ` - ${backupTransferInfo.speed}`}
+              <Typography color="text.secondary" variant="body2">
+                {backupTransferInfo.current.toLocaleString()} of{' '}
+                {backupTransferInfo.total.toLocaleString()} files
               </Typography>
             )}
 
-            <Typography sx={{ mt: 1, mb: 1 }} variant="body2">
-              {backupStatus}
-            </Typography>
-
             {backupPhase === 'transferring' && backupCurrentFile && (
-              <Typography sx={{ mt: 1, fontStyle: 'italic' }} variant="body2">
-                Current file: {formatFilePath(backupCurrentFile)}
+              <Typography
+                color="text.secondary"
+                sx={{
+                  mt: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                variant="body2"
+              >
+                {getFileName(backupCurrentFile)}
               </Typography>
             )}
           </Box>
-
-          {/* Show a list of recently processed files */}
-          {processedFiles.length > 0 && (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                backgroundColor: (t) => t.palette.background.paper,
-                maxHeight: '150px',
-                overflow: 'auto',
-                mb: 2,
-              }}
-            >
-              <Typography sx={{ mb: 1 }} variant="subtitle2">
-                Recently processed files:
-              </Typography>
-              {processedFiles.map((file) => (
-                <Typography
-                  key={`file-${file}`}
-                  component="div"
-                  sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
-                  variant="body2"
-                >
-                  {formatFilePath(file)}
-                </Typography>
-              ))}
-            </Paper>
-          )}
         </DialogContent>
       </Dialog>
 

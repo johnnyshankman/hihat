@@ -5,8 +5,17 @@ import React, {
   useCallback,
   useEffect,
 } from 'react';
-import { Box, Typography } from '@mui/material';
+import {
+  Box,
+  IconButton,
+  InputAdornment,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -14,6 +23,10 @@ import {
   type MRT_VisibilityState as MrtVisibilityState,
   type MRT_RowVirtualizer as MrtRowVirtualizer,
   type MRT_TableInstance as MrtTableInstance,
+  // eslint-disable-next-line camelcase
+  MRT_ToggleFiltersButton,
+  // eslint-disable-next-line camelcase
+  MRT_ShowHideColumnsButton,
 } from 'material-react-table';
 import Marquee from 'react-fast-marquee';
 import {
@@ -24,6 +37,7 @@ import {
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
+import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
 import {
   getCommonTableConfig,
@@ -99,6 +113,15 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   );
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
 
+  // Search state
+  const [showSearch, setShowSearch] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Confirmation dialog state
+  const [removeTrackConfirmOpen, setRemoveTrackConfirmOpen] = useState(false);
+  const [removeTrackId, setRemoveTrackId] = useState<string | null>(null);
+  const [bulkRemoveConfirmOpen, setBulkRemoveConfirmOpen] = useState(false);
+
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
 
@@ -172,7 +195,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   };
 
   // Single track remove from playlist handler
-  const handleSingleTrackRemoveFromPlaylist = async (trackId: string) => {
+  const handleSingleTrackRemoveFromPlaylist = (trackId: string) => {
     if (!selectedPlaylistId) return;
 
     const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
@@ -180,27 +203,30 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       return;
     }
 
-    const track = tracks.find((t) => t.id === trackId);
-    const confirmMessage = `Are you sure you want to remove "${track?.title}" from "${selectedPlaylist.name}"?`;
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+    setRemoveTrackId(trackId);
+    setRemoveTrackConfirmOpen(true);
+  };
+
+  const executeSingleTrackRemove = async () => {
+    setRemoveTrackConfirmOpen(false);
+    if (!removeTrackId || !selectedPlaylistId) return;
+
+    const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
+    if (!selectedPlaylist) return;
+
+    const track = tracks.find((t) => t.id === removeTrackId);
 
     try {
-      // Get the showNotification function from the UI store
       const { showNotification } = useUIStore.getState();
 
-      // Remove the track from the playlist
       const updatedPlaylist = {
         ...selectedPlaylist,
-        trackIds: selectedPlaylist.trackIds.filter((id) => id !== trackId),
+        trackIds: selectedPlaylist.trackIds.filter(
+          (id) => id !== removeTrackId,
+        ),
       };
 
-      // Update the playlist
       await window.electron.playlists.update(updatedPlaylist);
-
-      // Reload playlists to reflect changes
       await useLibraryStore.getState().loadPlaylists();
 
       showNotification(
@@ -212,10 +238,12 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       const { showNotification } = useUIStore.getState();
       showNotification('Failed to remove track from playlist', 'error');
     }
+
+    setRemoveTrackId(null);
   };
 
   // Multi-select handlers
-  const handleMultiSelectRemoveFromPlaylist = async () => {
+  const handleMultiSelectRemoveFromPlaylist = () => {
     const selectedTrackIds = Object.keys(selectedTracks);
     if (selectedTrackIds.length === 0 || !selectedPlaylistId) return;
 
@@ -224,17 +252,20 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       return;
     }
 
-    const confirmMessage = `Are you sure you want to remove ${selectedTrackIds.length} track${selectedTrackIds.length > 1 ? 's' : ''} from "${selectedPlaylist.name}"?`;
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+    setBulkRemoveConfirmOpen(true);
+  };
+
+  const executeMultiSelectRemoveFromPlaylist = async () => {
+    setBulkRemoveConfirmOpen(false);
+    const selectedTrackIds = Object.keys(selectedTracks);
+    if (selectedTrackIds.length === 0 || !selectedPlaylistId) return;
+
+    const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
+    if (!selectedPlaylist) return;
 
     try {
-      // Get the showNotification function from the UI store
       const { showNotification } = useUIStore.getState();
 
-      // Remove the selected tracks from the playlist
       const updatedPlaylist = {
         ...selectedPlaylist,
         trackIds: selectedPlaylist.trackIds.filter(
@@ -242,13 +273,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
         ),
       };
 
-      // Update the playlist
       await window.electron.playlists.update(updatedPlaylist);
-
-      // Reload playlists to reflect changes
       await useLibraryStore.getState().loadPlaylists();
 
-      // Clear selection after removal
       setSelectedTracks({});
 
       showNotification(
@@ -430,8 +457,31 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     });
   }, [playlistTracks]);
 
-  // Create a renderTopToolbarCustomActions function for the main table
-  const renderTopToolbarCustomActions = () => {
+  // Handle search toggle
+  const handleSearchToggle = useCallback(() => {
+    setShowSearch((prev) => {
+      if (prev) {
+        // Closing search - clear the filter
+        setGlobalFilter('');
+        updatePlaylistViewState(sorting, '', selectedPlaylistId);
+      }
+      return !prev;
+    });
+  }, [sorting, updatePlaylistViewState, selectedPlaylistId]);
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
+
+  // Unified toolbar with sidebar toggle, title, badges, and MRT controls
+  const renderTopToolbarCustomActions = ({
+    table: tableInstance,
+  }: {
+    table: MrtTableInstance<TableData>;
+  }) => {
     // Get the playlist name content
     let playlistNameContent;
 
@@ -462,88 +512,167 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
           display: 'flex',
           gap: 1,
           alignItems: 'center',
-          height: '47px',
+          height: '40px',
           pl: '0',
           flexShrink: 0,
+          width: '100%',
         }}
       >
         <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
+        <Typography
+          sx={{
+            maxWidth: window.innerWidth < 768 ? '200px' : '400px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            userSelect: 'none',
+            flexShrink: showSearch ? 1 : 0,
+          }}
+          variant="h2"
+        >
+          {playlistNameContent}
+        </Typography>
+        {!showSearch && (
+          <>
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: '16px',
+                backgroundColor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? theme.palette.grey[800]
+                    : theme.palette.grey[200],
+                px: 1.5,
+                py: 0.5,
+                justifyContent: 'center',
+                userSelect: 'none',
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                sx={{
+                  color: (theme) => theme.palette.text.secondary,
+                  lineHeight: 1,
+                }}
+                variant="body2"
+              >
+                {playlistTracks.length.toLocaleString()}&nbsp;♫
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: '16px',
+                backgroundColor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? theme.palette.grey[800]
+                    : theme.palette.grey[200],
+                px: 1.5,
+                py: 0.5,
+                justifyContent: 'center',
+                userSelect: 'none',
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                sx={{
+                  color: (theme) => theme.palette.text.secondary,
+                  lineHeight: 1,
+                }}
+                variant="body2"
+              >
+                {calculateTotalHours(playlistTracks)}&nbsp;
+              </Typography>
+              <AccessTimeIcon
+                sx={{
+                  fontSize: 14,
+                  color: (theme) => theme.palette.text.secondary,
+                }}
+              />
+            </Box>
+          </>
+        )}
+        {showSearch && (
+          <TextField
+            autoFocus
+            inputRef={searchInputRef}
+            onChange={(e) => {
+              setGlobalFilter(e.target.value);
+              updatePlaylistViewState(
+                sorting,
+                e.target.value,
+                selectedPlaylistId,
+              );
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                handleSearchToggle();
+              }
+            }}
+            placeholder="Search playlist"
+            size="small"
+            slotProps={{
+              input: {
+                endAdornment: globalFilter ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      edge="end"
+                      onClick={() => {
+                        setGlobalFilter('');
+                        updatePlaylistViewState(
+                          sorting,
+                          '',
+                          selectedPlaylistId,
+                        );
+                        searchInputRef.current?.focus();
+                      }}
+                      size="small"
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              },
+            }}
+            sx={{
+              flexGrow: 1,
+              flexShrink: 1,
+              minWidth: '100px',
+              '& .MuiOutlinedInput-root': { height: '32px' },
+            }}
+            value={globalFilter}
+            variant="outlined"
+          />
+        )}
+        <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
         <Box
           sx={{
             display: 'flex',
-            flexDirection: 'row',
+            gap: '2px',
             alignItems: 'center',
-            gap: 1,
+            flexShrink: 0,
           }}
         >
-          <Typography
-            sx={{
-              maxWidth: window.innerWidth < 768 ? '200px' : '400px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              userSelect: 'none',
-            }}
-            variant="h2"
-          >
-            {playlistNameContent}
-          </Typography>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              borderRadius: '16px',
-              backgroundColor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? theme.palette.grey[800]
-                  : theme.palette.grey[200],
-              px: 1.5,
-              py: 0.5,
-              justifyContent: 'center',
-              userSelect: 'none',
-            }}
-          >
-            <Typography
+          <Tooltip title={showSearch ? 'Close search' : 'Search'}>
+            <IconButton
+              aria-label="Show/Hide search"
+              onClick={handleSearchToggle}
               sx={{
-                color: (theme) => theme.palette.text.secondary,
-                lineHeight: 1,
+                color: showSearch ? 'primary.main' : 'text.secondary',
+                '&:hover': {
+                  color: showSearch ? 'primary.dark' : 'text.primary',
+                },
               }}
-              variant="body2"
             >
-              {playlistTracks.length.toLocaleString()}&nbsp;♫
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              borderRadius: '16px',
-              backgroundColor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? theme.palette.grey[800]
-                  : theme.palette.grey[200],
-              px: 1.5,
-              py: 0.5,
-              justifyContent: 'center',
-              userSelect: 'none',
-            }}
-          >
-            <Typography
-              sx={{
-                color: (theme) => theme.palette.text.secondary,
-                lineHeight: 1,
-              }}
-              variant="body2"
-            >
-              {calculateTotalHours(playlistTracks)}&nbsp;
-            </Typography>
-            <AccessTimeIcon
-              sx={{
-                fontSize: 14,
-                color: (theme) => theme.palette.text.secondary,
-              }}
-            />
-          </Box>
+              <SearchIcon />
+            </IconButton>
+          </Tooltip>
+          {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
+          <MRT_ToggleFiltersButton table={tableInstance} />
+          {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
+          <MRT_ShowHideColumnsButton table={tableInstance} />
         </Box>
       </Box>
     );
@@ -598,10 +727,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       columnVisibility as unknown as Record<string, boolean>,
       updateColumnVisibility,
     ),
-    muiSearchTextFieldProps: {
-      ...getCommonTableConfig(drawerOpen).muiSearchTextFieldProps,
-      placeholder: 'Search playlist',
-    },
     onRowSelectionChange: () => {
       // do absolutely nothing, we handle this manually
     },
@@ -695,6 +820,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       };
     },
     renderTopToolbarCustomActions,
+    enableToolbarInternalActions: false,
     renderEmptyRowsFallback: () => (
       <Box
         sx={{
@@ -852,6 +978,33 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
           trackId={selectedTrackId}
         />
       )}
+
+      {/* Remove single track confirmation dialog */}
+      <ConfirmationDialog
+        cancelText="Cancel"
+        confirmButtonColor="error"
+        confirmText="Remove"
+        message={`Are you sure you want to remove "${tracks.find((t) => t.id === removeTrackId)?.title || 'this track'}" from "${playlists.find((p) => p.id === selectedPlaylistId)?.name || 'this playlist'}"?`}
+        onCancel={() => {
+          setRemoveTrackConfirmOpen(false);
+          setRemoveTrackId(null);
+        }}
+        onConfirm={executeSingleTrackRemove}
+        open={removeTrackConfirmOpen}
+        title="Remove from Playlist"
+      />
+
+      {/* Bulk remove confirmation dialog */}
+      <ConfirmationDialog
+        cancelText="Cancel"
+        confirmButtonColor="error"
+        confirmText="Remove"
+        message={`Are you sure you want to remove ${Object.keys(selectedTracks).length} track${Object.keys(selectedTracks).length > 1 ? 's' : ''} from "${playlists.find((p) => p.id === selectedPlaylistId)?.name || 'this playlist'}"?`}
+        onCancel={() => setBulkRemoveConfirmOpen(false)}
+        onConfirm={executeMultiSelectRemoveFromPlaylist}
+        open={bulkRemoveConfirmOpen}
+        title="Remove from Playlist"
+      />
     </Box>
   );
 }

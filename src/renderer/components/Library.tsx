@@ -14,9 +14,14 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  InputAdornment,
+  TextField,
   Tooltip,
+  useMediaQuery,
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -29,8 +34,6 @@ import {
   MRT_ToggleFiltersButton,
   // eslint-disable-next-line camelcase
   MRT_ShowHideColumnsButton,
-  // eslint-disable-next-line camelcase
-  MRT_ToggleGlobalFilterButton,
 } from 'material-react-table';
 import PeopleIcon from '@mui/icons-material/People';
 import {
@@ -41,6 +44,7 @@ import {
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
+import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
 import ArtistBrowser from './ArtistBrowser';
 import {
@@ -102,6 +106,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const tableReadyRef = useRef<boolean>(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [scanConfirmOpen, setScanConfirmOpen] = useState(false);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
@@ -118,6 +124,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const setArtistFilter = useLibraryStore((state) => state.setArtistFilter);
   const libraryViewState = useLibraryStore((state) => state.libraryViewState);
   const [artistBrowserOpen, setArtistBrowserOpen] = useState(!!artistFilter);
+  const [showSearch, setShowSearch] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const isNarrowWindow = useMediaQuery('(max-width:768px)');
 
   // Open artist browser when artist filter is set
   useEffect(() => {
@@ -183,16 +192,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       setDialogOpen(false);
 
       // Ask the user if they want to scan the library now
-      // eslint-disable-next-line no-alert
-      const shouldScan = window.confirm(
-        'Library path has been set. Would you like to scan the library now?',
-      );
-
-      if (shouldScan) {
-        // Redirect user to Settings page for scanning
-        // eslint-disable-next-line no-alert
-        window.alert('Please go to Settings page to start the scan.');
-      }
+      setScanConfirmOpen(true);
     } catch (error) {
       console.error('Error selecting folder:', error);
     }
@@ -343,11 +343,13 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     const selectedTrackIds = Object.keys(selectedTracks);
     if (selectedTrackIds.length === 0) return;
 
-    const confirmMessage = `Are you sure you want to delete ${selectedTrackIds.length} track${selectedTrackIds.length > 1 ? 's' : ''}? This will permanently delete the files from your computer.`;
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+    setBulkDeleteConfirmOpen(true);
+  };
+
+  const executeMultiSelectDeleteTracks = async () => {
+    setBulkDeleteConfirmOpen(false);
+    const selectedTrackIds = Object.keys(selectedTracks);
+    if (selectedTrackIds.length === 0) return;
 
     try {
       // Get the showNotification function from the UI store
@@ -569,108 +571,227 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const totalHours = useMemo(() => calculateTotalHours(data), [data]);
   const trackCount = useMemo(() => data.length, [data]);
 
-  // Update the renderTopToolbarCustomActions function to include the SidebarToggle
-  const renderTopToolbarCustomActions = useCallback(() => {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 1,
-          alignItems: 'center',
-          height: '47px',
-          pl: '0',
-          flexShrink: 0,
-        }}
-      >
-        <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-        {/* <LibraryMusicIcon
-          sx={{
-            fontSize: 20,
-            color: 'text.secondary',
-            ml: 1,
-            alignSelf: 'center',
-          }}
-        /> */}
+  // Handle search toggle
+  const handleSearchToggle = useCallback(() => {
+    setShowSearch((prev) => {
+      if (prev) {
+        // Closing search - clear the filter
+        setGlobalFilter('');
+        updateLibraryViewState(sorting, '');
+      }
+      return !prev;
+    });
+  }, [sorting, updateLibraryViewState]);
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
+
+  // Unified toolbar with sidebar toggle, title, badges, and MRT controls
+  const renderTopToolbarCustomActions = useCallback(
+    // eslint-disable-next-line react/no-unused-prop-types
+    ({ table: tableInstance }: { table: MrtTableInstance<TableData> }) => {
+      return (
         <Box
           sx={{
             display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
             gap: 1,
+            alignItems: 'center',
+            height: '40px',
+            pl: '0',
+            flexShrink: 0,
+            width: '100%',
           }}
         >
+          <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
           <Typography
             sx={{
-              maxWidth: window.innerWidth < 768 ? '200px' : '400px',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               userSelect: 'none',
+              flexShrink: 0,
             }}
             variant="h2"
           >
             Library
           </Typography>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              borderRadius: '16px',
-              backgroundColor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? theme.palette.grey[800]
-                  : theme.palette.grey[200],
-              px: 1.5,
-              py: 0.5,
-              justifyContent: 'center',
-              userSelect: 'none',
-            }}
-          >
-            <Typography
-              sx={{
-                color: (theme) => theme.palette.text.secondary,
-                lineHeight: 1,
+          {!showSearch && (
+            <>
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  borderRadius: '16px',
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? theme.palette.grey[800]
+                      : theme.palette.grey[200],
+                  px: 1.5,
+                  py: 0.5,
+                  justifyContent: 'center',
+                  userSelect: 'none',
+                  flexShrink: 0,
+                }}
+              >
+                <Typography
+                  sx={{
+                    color: (theme) => theme.palette.text.secondary,
+                    lineHeight: 1,
+                  }}
+                  variant="body2"
+                >
+                  {trackCount.toLocaleString()}&nbsp;♫
+                </Typography>
+              </Box>
+              {!isNarrowWindow && (
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    borderRadius: '16px',
+                    backgroundColor: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? theme.palette.grey[800]
+                        : theme.palette.grey[200],
+                    px: 1.5,
+                    py: 0.5,
+                    justifyContent: 'center',
+                    userSelect: 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: (theme) => theme.palette.text.secondary,
+                      lineHeight: 1,
+                    }}
+                    variant="body2"
+                  >
+                    {totalHours}&nbsp;
+                  </Typography>
+                  <AccessTimeIcon
+                    sx={{
+                      fontSize: 14,
+                      color: (theme) => theme.palette.text.secondary,
+                    }}
+                  />
+                </Box>
+              )}
+            </>
+          )}
+          {showSearch && (
+            <TextField
+              autoFocus
+              inputRef={searchInputRef}
+              onChange={(e) => {
+                setGlobalFilter(e.target.value);
+                updateLibraryViewState(sorting, e.target.value);
               }}
-              variant="body2"
-            >
-              {trackCount.toLocaleString()}&nbsp;♫
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              borderRadius: '16px',
-              backgroundColor: (theme) =>
-                theme.palette.mode === 'dark'
-                  ? theme.palette.grey[800]
-                  : theme.palette.grey[200],
-              px: 1.5,
-              py: 0.5,
-              justifyContent: 'center',
-              userSelect: 'none',
-            }}
-          >
-            <Typography
-              sx={{
-                color: (theme) => theme.palette.text.secondary,
-                lineHeight: 1,
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  handleSearchToggle();
+                }
               }}
-              variant="body2"
-            >
-              {totalHours}&nbsp;
-            </Typography>
-            <AccessTimeIcon
-              sx={{
-                fontSize: 14,
-                color: (theme) => theme.palette.text.secondary,
+              placeholder="Filter tracks"
+              size="small"
+              slotProps={{
+                input: {
+                  endAdornment: globalFilter ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        edge="end"
+                        onClick={() => {
+                          setGlobalFilter('');
+                          updateLibraryViewState(sorting, '');
+                          searchInputRef.current?.focus();
+                        }}
+                        size="small"
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                },
               }}
+              sx={{
+                flexGrow: 1,
+                flexShrink: 1,
+                minWidth: '100px',
+                '& .MuiOutlinedInput-root': { height: '32px' },
+              }}
+              value={globalFilter}
+              variant="outlined"
             />
+          )}
+          <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
+          <Box
+            sx={{
+              display: 'flex',
+              gap: '2px',
+              alignItems: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Tooltip title={showSearch ? 'Close search' : 'Search'}>
+              <IconButton
+                aria-label="Show/Hide search"
+                onClick={handleSearchToggle}
+                sx={{
+                  color: showSearch ? 'primary.main' : 'text.secondary',
+                  '&:hover': {
+                    color: showSearch ? 'primary.dark' : 'text.primary',
+                  },
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
+            </Tooltip>
+            {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
+            <MRT_ToggleFiltersButton table={tableInstance} />
+            {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
+            <MRT_ShowHideColumnsButton table={tableInstance} />
+            <Tooltip
+              title={
+                artistBrowserOpen
+                  ? 'Hide artist browser'
+                  : 'Show artist browser'
+              }
+            >
+              <IconButton
+                onClick={handleArtistBrowserToggle}
+                sx={{
+                  color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
+                  '&:hover': {
+                    color: artistBrowserOpen ? 'primary.dark' : 'text.primary',
+                  },
+                }}
+              >
+                <PeopleIcon />
+              </IconButton>
+            </Tooltip>
           </Box>
         </Box>
-      </Box>
-    );
-  }, [drawerOpen, onDrawerToggle, trackCount, totalHours]);
+      );
+    },
+    [
+      drawerOpen,
+      onDrawerToggle,
+      trackCount,
+      totalHours,
+      artistBrowserOpen,
+      handleArtistBrowserToggle,
+      isNarrowWindow,
+      showSearch,
+      globalFilter,
+      sorting,
+      updateLibraryViewState,
+      handleSearchToggle,
+    ],
+  );
 
   // Configure the table
   const table = useMaterialReactTable({
@@ -723,10 +844,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       columnVisibility as unknown as Record<string, boolean>,
       updateColumnVisibility,
     ),
-    muiSearchTextFieldProps: {
-      ...getCommonTableConfig(drawerOpen).muiSearchTextFieldProps,
-      placeholder: 'Filter tracks',
-    },
     onRowSelectionChange: () => {
       // do absolutely nothing, we handle this manually
     },
@@ -838,43 +955,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       ],
     ),
     renderTopToolbarCustomActions,
-    renderToolbarInternalActions: ({ table: tableInstance }) => (
-      <Box
-        sx={{
-          display: 'flex',
-          gap: '2px',
-          height: '100%',
-          marginTop: '4px',
-          alignItems: 'center',
-          justifyContent: 'center',
-          alignContent: 'center',
-        }}
-      >
-        {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
-        <MRT_ToggleGlobalFilterButton table={tableInstance} />
-        {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
-        <MRT_ToggleFiltersButton table={tableInstance} />
-        {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
-        <MRT_ShowHideColumnsButton table={tableInstance} />
-        <Tooltip
-          title={
-            artistBrowserOpen ? 'Hide artist browser' : 'Show artist browser'
-          }
-        >
-          <IconButton
-            onClick={handleArtistBrowserToggle}
-            sx={{
-              color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
-              '&:hover': {
-                color: artistBrowserOpen ? 'primary.dark' : 'text.primary',
-              },
-            }}
-          >
-            <PeopleIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
-    ),
+    enableToolbarInternalActions: false,
     renderEmptyRowsFallback: () => (
       <Box
         sx={{
@@ -1031,6 +1112,33 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             trackIds={Object.keys(selectedTracks)}
           />
         )}
+
+        {/* Scan confirmation dialog */}
+        <ConfirmationDialog
+          cancelText="Later"
+          confirmButtonColor="primary"
+          confirmText="Open Settings"
+          message="Library path has been set. Would you like to go to Settings to scan your library now?"
+          onCancel={() => setScanConfirmOpen(false)}
+          onConfirm={() => {
+            setScanConfirmOpen(false);
+            useUIStore.getState().setSettingsOpen(true);
+          }}
+          open={scanConfirmOpen}
+          title="Scan Library"
+        />
+
+        {/* Bulk delete confirmation dialog */}
+        <ConfirmationDialog
+          cancelText="Cancel"
+          confirmButtonColor="error"
+          confirmText="Delete"
+          message={`Are you sure you want to delete ${Object.keys(selectedTracks).length} track${Object.keys(selectedTracks).length > 1 ? 's' : ''}? This will permanently delete the files from your computer.`}
+          onCancel={() => setBulkDeleteConfirmOpen(false)}
+          onConfirm={executeMultiSelectDeleteTracks}
+          open={bulkDeleteConfirmOpen}
+          title="Delete Tracks"
+        />
       </Box>
 
       {/* Artist Browser */}

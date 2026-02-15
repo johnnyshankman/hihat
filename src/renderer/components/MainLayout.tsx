@@ -94,7 +94,7 @@ const PlayerWrapper = styled('div', {
   }),
 }));
 
-type View = 'library' | 'playlists' | 'settings';
+type View = 'library' | 'playlists';
 
 export default function MainLayout() {
   // Get state and actions from library store
@@ -110,6 +110,8 @@ export default function MainLayout() {
 
   const currentView = useUIStore((state) => state.currentView);
   const setCurrentView = useUIStore((state) => state.setCurrentView);
+  const settingsOpen = useUIStore((state) => state.settingsOpen);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
 
   const [open, setOpen] = useState(true);
   const [playlistsOpen, setPlaylistsOpen] = useState(true);
@@ -147,7 +149,6 @@ export default function MainLayout() {
 
   const handleViewChange = (view: View) => {
     setCurrentView(view);
-    setOpen(false); // Close sidebar after navigation
   };
 
   const handlePlaylistsClick = () => {
@@ -157,7 +158,6 @@ export default function MainLayout() {
   const handlePlaylistSelect = (playlistId: string) => {
     selectPlaylist(playlistId);
     setCurrentView('playlists');
-    setOpen(false); // Close sidebar after selecting playlist
   };
 
   const handlePlaylistContextMenu = (
@@ -241,7 +241,7 @@ export default function MainLayout() {
     const unsubOpenSettings = window.electron.ipcRenderer.on(
       'ui:openSettings',
       () => {
-        setCurrentView('settings');
+        setSettingsOpen(true);
       },
     );
 
@@ -261,15 +261,17 @@ export default function MainLayout() {
       unsubOpenSettings();
       unsubMaximizedChange();
     };
-  }, [handleDrawerToggle, checkMaximized, setCurrentView]); // Added setCurrentView to dependency array
+  }, [handleDrawerToggle, checkMaximized, setSettingsOpen]);
 
   useEffect(() => {
     // Listen for custom view change events
     const handleCustomViewChange = (event: Event) => {
-      const customEvent = event as CustomEvent<{ view: View }>;
+      const customEvent = event as CustomEvent<{ view: string }>;
       const { view } = customEvent.detail;
-      if (view === 'library' || view === 'playlists' || view === 'settings') {
+      if (view === 'library' || view === 'playlists') {
         setCurrentView(view);
+      } else if (view === 'settings') {
+        setSettingsOpen(true);
       }
     };
 
@@ -280,7 +282,7 @@ export default function MainLayout() {
     return () => {
       document.removeEventListener('hihat:viewChange', handleCustomViewChange);
     };
-  }, [setCurrentView]);
+  }, [setCurrentView, setSettingsOpen]);
 
   useEffect(() => {
     // Listen for custom playlist select events
@@ -492,9 +494,10 @@ export default function MainLayout() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '12px',
+                px: 1.5,
+                py: 1,
                 WebkitAppRegion: 'drag', // Make this area draggable
-                height: '63px',
+                height: '56px',
               }}
             >
               <Box
@@ -599,20 +602,16 @@ export default function MainLayout() {
                 <Tooltip title="Settings">
                   <IconButton
                     data-testid="nav-settings"
-                    onClick={() => handleViewChange('settings')}
+                    onClick={() => setSettingsOpen(!settingsOpen)}
                     size="small"
                     sx={{
-                      color:
-                        currentView === 'settings'
-                          ? 'text.primary'
-                          : 'text.secondary',
-                      backgroundColor:
-                        currentView === 'settings'
-                          ? (muiTheme) =>
-                              muiTheme.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.08)'
-                                : 'rgba(0, 0, 0, 0.08)'
-                          : 'transparent',
+                      color: settingsOpen ? 'text.primary' : 'text.secondary',
+                      backgroundColor: settingsOpen
+                        ? (muiTheme) =>
+                            muiTheme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(0, 0, 0, 0.08)'
+                        : 'transparent',
                       '&:hover': {
                         color: 'text.primary',
                         backgroundColor: (muiTheme) =>
@@ -879,12 +878,26 @@ export default function MainLayout() {
                 onDrawerToggle={handleDrawerToggle}
               />
             )}
-            {currentView === 'settings' && (
-              <Settings drawerOpen={open} onDrawerToggle={handleDrawerToggle} />
-            )}
           </Box>
         </Main>
       </Box>
+
+      {/* Settings slide-over panel */}
+      <Drawer
+        anchor="right"
+        onClose={() => setSettingsOpen(false)}
+        open={settingsOpen}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: 'min(480px, calc(100vw - 60px))',
+            boxSizing: 'border-box',
+            WebkitAppRegion: 'no-drag',
+          },
+        }}
+        variant="temporary"
+      >
+        <Settings onClose={() => setSettingsOpen(false)} />
+      </Drawer>
 
       <PlayerWrapper open={open} sx={{ WebkitAppRegion: 'no-drag' }}>
         <Player />

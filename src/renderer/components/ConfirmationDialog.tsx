@@ -40,6 +40,8 @@ function ConfirmationDialog({
     <Dialog
       aria-describedby="confirmation-dialog-description"
       aria-labelledby="confirmation-dialog-title"
+      fullWidth
+      maxWidth="sm"
       onClose={onCancel}
       open={open}
     >

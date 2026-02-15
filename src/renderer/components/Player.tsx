@@ -822,10 +822,10 @@ function Player() {
         sx={{
           display: 'flex',
           alignItems: 'center',
-          px: isCompactLayout ? 1 : { xs: 1, sm: 2 },
+          px: isCompactLayout ? 1 : 2,
           width: '100%',
           height: '100%',
-          py: isCompactLayout ? 0.5 : { xs: 1, sm: 2 },
+          py: isCompactLayout ? 0.5 : 1,
           borderTop: '1px solid',
           borderColor: (t) => t.palette.divider,
         }}

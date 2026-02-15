@@ -183,7 +183,7 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
       backgroundColor: (theme: Theme) => theme.palette.background.paper,
       borderBottom: '1px solid',
       borderColor: (theme: Theme) => theme.palette.divider,
-      minHeight: '64px',
+      minHeight: '56px',
       padding: '8px',
       display: 'flex',
       alignItems: 'center',

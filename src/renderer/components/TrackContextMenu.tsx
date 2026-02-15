@@ -57,10 +57,6 @@ function TrackContextMenu({
   if (!trackId) return null;
 
   const handlePlayTrack = () => {
-    if (currentView === 'settings') {
-      throw new Error('Cannot play track in settings view');
-    }
-
     if (currentView === 'playlists' && selectedPlaylistId) {
       selectSpecificSong(trackId, 'playlist', selectedPlaylistId);
     } else {

@@ -136,7 +136,8 @@ export interface SettingsStore {
 // UI Store Types
 export interface UIStore {
   notifications: Notification[];
-  currentView: 'library' | 'playlists' | 'settings';
+  currentView: 'library' | 'playlists';
+  settingsOpen: boolean;
   artistBrowserOpen: boolean;
   showNotification: (
     message: string,
@@ -145,7 +146,8 @@ export interface UIStore {
   ) => void;
   removeNotification: (id: string) => void;
   clearAllNotifications: () => void;
-  setCurrentView: (view: 'library' | 'playlists' | 'settings') => void;
+  setCurrentView: (view: 'library' | 'playlists') => void;
+  setSettingsOpen: (open: boolean) => void;
   setArtistBrowserOpen: (open: boolean) => void;
 }
 
