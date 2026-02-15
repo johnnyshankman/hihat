@@ -22,6 +22,7 @@ import {
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
+import SearchOffIcon from '@mui/icons-material/SearchOff';
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -745,7 +746,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
                   },
                 }}
               >
-                <SearchIcon />
+                {showSearch ? <SearchOffIcon /> : <SearchIcon />}
               </IconButton>
             </Tooltip>
             {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
