@@ -63,7 +63,7 @@ test.describe('UI Visual Verification', () => {
     await TestHelpers.takeScreenshot(page, 'ui-min-640x400-sidebar-open');
 
     // Close sidebar
-    await page.locator('[data-testid="sidebar-toggle"]').click();
+    await page.locator('[data-testid="sidebar-toggle-close"]').click();
     await page.waitForTimeout(500);
 
     // Screenshot with sidebar closed at minimum size

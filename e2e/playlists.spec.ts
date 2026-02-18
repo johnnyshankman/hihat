@@ -130,11 +130,11 @@ test.describe('Playlist Management', () => {
     const trackRow = await page.locator('[data-track-id="test-large-001"]');
     await trackRow.click({ button: 'right' });
 
-    // Set up dialog handler BEFORE clicking
-    page.once('dialog', (dialog) => dialog.accept());
-
     // Click "Remove from Playlist" in the context menu
     await page.click('[data-testid="remove-from-playlist-menu-item"]');
+
+    // Wait for the ConfirmationDialog to appear and click "Remove"
+    await page.getByRole('button', { name: 'Remove' }).click();
 
     // Wait for the operation to complete
     await page.waitForTimeout(1500);

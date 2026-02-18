@@ -243,15 +243,11 @@ test.describe('Library Management', () => {
     expect(finalFileCount).toBe(initialFileCount);
     expect(finalFiles).toEqual(initialFiles);
 
-    // Also verify the song count in the UI hasn't changed
-    // Re-open sidebar (it auto-closes after clicking a nav item)
-    const sidebarToggle = page.locator('[data-testid="sidebar-toggle"]');
-    if (await sidebarToggle.isVisible()) {
-      await sidebarToggle.click();
-      await page.waitForTimeout(500);
-    }
+    // Close the Settings drawer before navigating back
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
 
-    // Navigate back to library
+    // Navigate back to library (sidebar is still open)
     const libraryButton = page.locator('[data-testid="nav-library"]');
     await libraryButton.click();
     await page.waitForTimeout(1000);

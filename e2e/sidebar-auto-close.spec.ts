@@ -39,7 +39,7 @@ test.describe('Sidebar Persistence', () => {
     expect(await isSidebarOpen()).toBe(true);
 
     // 4. Explicit toggle closes sidebar
-    await page.locator('[data-testid="sidebar-toggle"]').click();
+    await page.locator('[data-testid="sidebar-toggle-close"]').click();
     await page.waitForTimeout(500);
     expect(await isSidebarOpen()).toBe(false);
 

@@ -22,14 +22,8 @@ test.describe('Basic Functionality', () => {
     const playlistTracks = await page.locator('[data-track-id]').count();
     expect(playlistTracks).toBeGreaterThan(0);
 
-    // 3. Re-open sidebar (it auto-closes after clicking a nav item)
-    const sidebarToggle = page.locator('[data-testid="sidebar-toggle"]');
-    if (await sidebarToggle.isVisible()) {
-      await sidebarToggle.click();
-      await page.waitForTimeout(500);
-    }
-
-    // Navigate to Settings by clicking the settings cog icon
+    // 3. Navigate to Settings by clicking the settings cog icon
+    // Sidebar stays open now, so no need to re-open it
     await page.getByRole('button', { name: 'Settings' }).click();
     await page.waitForTimeout(1000);
 
@@ -39,13 +33,12 @@ test.describe('Basic Functionality', () => {
     });
     await expect(settingsHeading).toBeVisible();
 
-    // 4. Re-open sidebar (it auto-closes after clicking Settings)
-    if (await sidebarToggle.isVisible()) {
-      await sidebarToggle.click();
-      await page.waitForTimeout(500);
-    }
+    // Close the Settings drawer before navigating
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
 
-    // Navigate back to Library view by clicking "All" button
+    // 4. Navigate back to Library view by clicking "All" button
+    // Sidebar is still open, so click directly
     await page.locator('[data-view="library"]').click();
     await page.waitForTimeout(1000);
 

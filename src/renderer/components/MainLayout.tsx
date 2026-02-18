@@ -627,6 +627,7 @@ export default function MainLayout() {
                 {/* Sidebar toggle button */}
                 <Tooltip title={open ? 'Hide Sidebar' : 'Show Sidebar'}>
                   <IconButton
+                    data-testid="sidebar-toggle-close"
                     onClick={handleDrawerToggle}
                     size="small"
                     sx={{
