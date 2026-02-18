@@ -1,7 +1,7 @@
 {
-  "description": "A foundation for scalable desktop apps",
+  "description": "The minimalist offline music library player for macOS",
   "license": "MIT",
-  "version": "0.0.1",
+  "version": "2.0.0",
   "name": "hihat",
   "main": "./src/main/main.ts",
   "scripts": {
@@ -191,7 +191,7 @@
   },
   "build": {
     "productName": "hihat",
-    "appId": "org.erb.hihat",
+    "appId": "com.whitelights.hihat",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
@@ -249,12 +249,9 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "electron-react-boilerplate",
-      "repo": "electron-react-boilerplate"
+      "owner": "johnnyshankman",
+      "repo": "hihat"
     }
-  },
-  "collective": {
-    "url": "https://opencollective.com/electron-react-boilerplate-594"
   },
   "devEngines": {
     "node": ">=20.x",

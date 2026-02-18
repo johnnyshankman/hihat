@@ -1,12 +1,11 @@
 {
   "name": "hihat",
-  "version": "0.0.1",
-  "description": "A foundation for scalable desktop apps",
+  "version": "2.0.0",
+  "description": "The minimalist offline music library player for macOS",
   "license": "MIT",
   "author": {
-    "name": "Electron React Boilerplate Maintainers",
-    "email": "electronreactboilerplate@gmail.com",
-    "url": "https://github.com/electron-react-boilerplate"
+    "name": "Johnny Shankman (White Lights)",
+    "url": "https://github.com/johnnyshankman"
   },
   "main": "./dist/main/main.js",
   "scripts": {
