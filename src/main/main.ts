@@ -102,6 +102,7 @@ const isDebug =
 
 const isTest =
   process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true';
+const isTestHidden = isTest && process.env.TEST_VISIBLE !== 'true';
 
 if (isDebug) {
   require('electron-debug')();
@@ -217,7 +218,7 @@ const createWindow = async () => {
 
   // Create window options
   mainWindow = new BrowserWindow({
-    show: isTest, // Show immediately in test mode
+    show: false,
     width: 1024,
     height: 728,
     minWidth: 640,
@@ -239,6 +240,7 @@ const createWindow = async () => {
       nodeIntegration: false, // Keep false for security
       contextIsolation: true, // Keep true for security
       webSecurity: true, // Keep true for security
+      backgroundThrottling: !isTest, // Disable throttling in test mode so hidden window renders normally
     },
   });
 
@@ -252,8 +254,7 @@ const createWindow = async () => {
     windowReadyToShow = true;
     if (process.env.START_MINIMIZED) {
       mainWindow.minimize();
-    } else if (!isTest) {
-      // In test mode, window is already shown
+    } else if (!isTestHidden) {
       mainWindow.show();
     }
   });

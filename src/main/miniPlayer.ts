@@ -18,6 +18,7 @@ import { resolveHtmlPath } from './util';
 // undefined and breaking MiniPlayer IPC entirely.
 const isTest =
   process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true';
+const isTestHidden = isTest && process.env.TEST_VISIBLE !== 'true';
 
 // Reference to the mini player window
 let miniPlayerWindow: BrowserWindow | null = null;
@@ -152,7 +153,9 @@ export function setMainWindow(window: BrowserWindow): void {
 export function createMiniPlayerWindow(): void {
   // Don't create multiple instances
   if (miniPlayerWindow) {
-    miniPlayerWindow.focus();
+    if (!isTestHidden) {
+      miniPlayerWindow.focus();
+    }
     return;
   }
 
@@ -186,6 +189,7 @@ export function createMiniPlayerWindow(): void {
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: !isTest,
+        backgroundThrottling: !isTest,
         preload: (() => {
           if (
             app.isPackaged ||
@@ -259,42 +263,44 @@ export function createMiniPlayerWindow(): void {
       }
     });
 
-    // Show window when ready
+    // Show window when ready (skip in test mode to avoid stealing focus)
     miniPlayerWindow.once('ready-to-show', () => {
-      if (miniPlayerWindow) {
+      if (!miniPlayerWindow) return;
+
+      if (!isTestHidden) {
         miniPlayerWindow.show();
+      }
 
-        // Immediately send current state to mini player when it's ready
-        if (currentTrack) {
-          miniPlayerWindow.webContents.send(
-            'miniPlayer:trackChanged',
-            currentTrack,
-          );
-          miniPlayerWindow.webContents.send(
-            'miniPlayer:stateChanged',
-            playbackState,
-          );
-          miniPlayerWindow.webContents.send(
-            'miniPlayer:positionChanged',
-            playbackState.position,
-          );
+      // Immediately send current state to mini player when it's ready
+      if (currentTrack) {
+        miniPlayerWindow.webContents.send(
+          'miniPlayer:trackChanged',
+          currentTrack,
+        );
+        miniPlayerWindow.webContents.send(
+          'miniPlayer:stateChanged',
+          playbackState,
+        );
+        miniPlayerWindow.webContents.send(
+          'miniPlayer:positionChanged',
+          playbackState.position,
+        );
 
-          // Extract and send album art
-          if (currentTrack.filePath) {
-            extractAlbumArt(currentTrack.filePath)
-              .then((artData) => {
-                if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
-                  miniPlayerWindow.webContents.send(
-                    'miniPlayer:albumArtChanged',
-                    artData,
-                  );
-                }
-                return null;
-              })
-              .catch((error) => {
-                console.error('Error extracting album art:', error);
-              });
-          }
+        // Extract and send album art
+        if (currentTrack.filePath) {
+          extractAlbumArt(currentTrack.filePath)
+            .then((artData) => {
+              if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
+                miniPlayerWindow.webContents.send(
+                  'miniPlayer:albumArtChanged',
+                  artData,
+                );
+              }
+              return null;
+            })
+            .catch((error) => {
+              console.error('Error extracting album art:', error);
+            });
         }
       }
     });

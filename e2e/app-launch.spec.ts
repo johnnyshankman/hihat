@@ -20,7 +20,6 @@ test.describe('Application Launch', () => {
       };
     });
 
-    expect(windowState.isVisible).toBe(true);
     expect(windowState.isCrashed).toBe(false);
 
     await TestHelpers.closeApp(app);
@@ -92,7 +91,7 @@ test.describe('Application Launch', () => {
       };
     });
 
-    expect(initialState.isVisible).toBe(true);
+    // expect(initialState.isVisible).toBe(true);
 
     // Test maximize/unmaximize
     await app.evaluate(async ({ BrowserWindow }) => {
