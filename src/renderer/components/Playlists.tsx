@@ -47,6 +47,7 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
+import { useDebouncedValue } from '../utils/hooks';
 
 // Define props interface for Playlists component
 interface PlaylistsProps {
@@ -91,10 +92,13 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     () => playlistViewState.sorting || [{ id: 'artist', desc: false }],
   );
 
-  // Global filter state for search - initialize from store to persist across unmount/remount
-  const [globalFilter, setGlobalFilter] = useState(
+  // Search input state (instant feedback) - initialize from store to persist across unmount/remount
+  const [searchInput, setSearchInput] = useState(
     () => playlistViewState.filtering || '',
   );
+
+  // Debounced filter value (drives MRT global filter) - delays filtering for typing performance
+  const debouncedFilter = useDebouncedValue(searchInput, 300);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -164,7 +168,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const handlePlayTrack = (trackId: string) => {
     // Make sure the playlist view state is updated with the current playlist ID
     if (selectedPlaylistId) {
-      updatePlaylistViewState(sorting, globalFilter, selectedPlaylistId);
+      updatePlaylistViewState(sorting, debouncedFilter, selectedPlaylistId);
     }
 
     // Play the track with 'playlist' as the source and pass the selectedPlaylistId
@@ -456,17 +460,53 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     });
   }, [playlistTracks]);
 
+  // Track previous debounced filter for detecting clears
+  const prevDebouncedFilterRef = useRef(debouncedFilter);
+
+  // Persist debounced filter to store and handle scroll-to-track on clear
+  useEffect(() => {
+    const prevFilter = prevDebouncedFilterRef.current;
+    prevDebouncedFilterRef.current = debouncedFilter;
+
+    updatePlaylistViewState(sorting, debouncedFilter, selectedPlaylistId);
+
+    // When filter is cleared (from non-empty to empty), scroll to current track
+    if (
+      prevFilter &&
+      !debouncedFilter &&
+      currentTrack &&
+      playbackSource === 'playlist' &&
+      playbackSourcePlaylistId === selectedPlaylistId
+    ) {
+      const playlistTrackIds = playlistTracks.map((t) => t.id);
+      if (playlistTrackIds.includes(currentTrack.id)) {
+        setTimeout(() => {
+          scrollToTrack(currentTrack.id);
+        }, 100);
+      }
+    }
+  }, [
+    debouncedFilter,
+    sorting,
+    updatePlaylistViewState,
+    selectedPlaylistId,
+    currentTrack,
+    playbackSource,
+    playbackSourcePlaylistId,
+    playlistTracks,
+    scrollToTrack,
+  ]);
+
   // Handle search toggle
   const handleSearchToggle = useCallback(() => {
     setShowSearch((prev) => {
       if (prev) {
         // Closing search - clear the filter
-        setGlobalFilter('');
-        updatePlaylistViewState(sorting, '', selectedPlaylistId);
+        setSearchInput('');
       }
       return !prev;
     });
-  }, [sorting, updatePlaylistViewState, selectedPlaylistId]);
+  }, []);
 
   // Focus search input when opened
   useEffect(() => {
@@ -598,12 +638,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             autoFocus
             inputRef={searchInputRef}
             onChange={(e) => {
-              setGlobalFilter(e.target.value);
-              updatePlaylistViewState(
-                sorting,
-                e.target.value,
-                selectedPlaylistId,
-              );
+              setSearchInput(e.target.value);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
@@ -614,17 +649,12 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             size="small"
             slotProps={{
               input: {
-                endAdornment: globalFilter ? (
+                endAdornment: searchInput ? (
                   <InputAdornment position="end">
                     <IconButton
                       edge="end"
                       onClick={() => {
-                        setGlobalFilter('');
-                        updatePlaylistViewState(
-                          sorting,
-                          '',
-                          selectedPlaylistId,
-                        );
+                        setSearchInput('');
                         searchInputRef.current?.focus();
                       }}
                       size="small"
@@ -641,7 +671,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
               minWidth: '100px',
               '& .MuiOutlinedInput-root': { height: '32px' },
             }}
-            value={globalFilter}
+            value={searchInput}
             variant="outlined"
           />
         )}
@@ -682,7 +712,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     data,
     rowVirtualizerInstanceRef: rowVirtualizerRef,
     state: {
-      globalFilter,
+      globalFilter: debouncedFilter,
       sorting,
       columnVisibility: {
         ...((columnVisibility as unknown as MrtVisibilityState) || {}),
@@ -693,32 +723,11 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       const newSorting =
         typeof updater === 'function' ? updater(sorting) : updater;
       setSorting(newSorting);
-      updatePlaylistViewState(sorting, globalFilter, selectedPlaylistId);
     },
     onGlobalFilterChange: (updater) => {
       const newFilter =
-        typeof updater === 'function' ? updater(globalFilter) : updater;
-      const oldFilter = globalFilter;
-      setGlobalFilter(newFilter);
-      updatePlaylistViewState(sorting, newFilter, selectedPlaylistId);
-
-      // When filter is cleared (from non-empty to empty), scroll to current track
-      if (
-        oldFilter &&
-        !newFilter &&
-        currentTrack &&
-        playbackSource === 'playlist' &&
-        playbackSourcePlaylistId === selectedPlaylistId
-      ) {
-        // Check if the current track is in this playlist
-        const playlistTrackIds = playlistTracks.map((t) => t.id);
-        if (playlistTrackIds.includes(currentTrack.id)) {
-          // Use setTimeout to ensure the table has re-rendered
-          setTimeout(() => {
-            scrollToTrack(currentTrack.id);
-          }, 100);
-        }
-      }
+        typeof updater === 'function' ? updater(debouncedFilter) : updater;
+      setSearchInput(newFilter);
     },
     onColumnVisibilityChange: getCommonColumnVisibilityHandler(
       columnVisibility as unknown as Record<string, boolean>,
@@ -871,7 +880,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       cancelAnimationFrame(rafId);
       tableReadyRef.current = false;
     };
-  }, [sorting, globalFilter, data.length]); // Re-run when sorting, filter, or data changes
+  }, [sorting, debouncedFilter, data.length]); // Re-run when sorting, filter, or data changes
 
   return (
     <Box

@@ -55,6 +55,7 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
+import { useDebouncedValue } from '../utils/hooks';
 
 // Define the type for directory selection result
 interface DirectorySelectionResult {
@@ -145,10 +146,13 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     }
   }, [artistBrowserOpen, setArtistFilter]);
 
-  // Global filter state for search - initialize from store to persist across unmount/remount
-  const [globalFilter, setGlobalFilter] = useState(
+  // Search input state (instant feedback) - initialize from store to persist across unmount/remount
+  const [searchInput, setSearchInput] = useState(
     () => libraryViewState.filtering || '',
   );
+
+  // Debounced filter value (drives MRT global filter) - delays filtering for typing performance
+  const debouncedFilter = useDebouncedValue(searchInput, 300);
 
   // Sorting state - initialize from store to persist across unmount/remount
   const [sorting, setSorting] = useState<MrtSortingState>(
@@ -570,17 +574,53 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const totalHours = useMemo(() => calculateTotalHours(data), [data]);
   const trackCount = useMemo(() => data.length, [data]);
 
+  // Track previous debounced filter for detecting clears
+  const prevDebouncedFilterRef = useRef(debouncedFilter);
+
+  // Persist debounced filter to store and handle scroll-to-track on clear
+  useEffect(() => {
+    const prevFilter = prevDebouncedFilterRef.current;
+    prevDebouncedFilterRef.current = debouncedFilter;
+
+    updateLibraryViewState(sorting, debouncedFilter);
+
+    // When filter is cleared (from non-empty to empty), scroll to current track
+    if (
+      prevFilter &&
+      !debouncedFilter &&
+      currentTrack &&
+      playbackSource === 'library'
+    ) {
+      const visibleTrackIds = getFilteredAndSortedTrackIds(
+        'library',
+        artistFilter,
+      );
+      if (visibleTrackIds.includes(currentTrack.id)) {
+        setTimeout(() => {
+          scrollToTrack(currentTrack.id);
+        }, 100);
+      }
+    }
+  }, [
+    debouncedFilter,
+    sorting,
+    updateLibraryViewState,
+    currentTrack,
+    playbackSource,
+    artistFilter,
+    scrollToTrack,
+  ]);
+
   // Handle search toggle
   const handleSearchToggle = useCallback(() => {
     setShowSearch((prev) => {
       if (prev) {
         // Closing search - clear the filter
-        setGlobalFilter('');
-        updateLibraryViewState(sorting, '');
+        setSearchInput('');
       }
       return !prev;
     });
-  }, [sorting, updateLibraryViewState]);
+  }, []);
 
   // Focus search input when opened
   useEffect(() => {
@@ -687,8 +727,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
               autoFocus
               inputRef={searchInputRef}
               onChange={(e) => {
-                setGlobalFilter(e.target.value);
-                updateLibraryViewState(sorting, e.target.value);
+                setSearchInput(e.target.value);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
@@ -699,13 +738,12 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
               size="small"
               slotProps={{
                 input: {
-                  endAdornment: globalFilter ? (
+                  endAdornment: searchInput ? (
                     <InputAdornment position="end">
                       <IconButton
                         edge="end"
                         onClick={() => {
-                          setGlobalFilter('');
-                          updateLibraryViewState(sorting, '');
+                          setSearchInput('');
                           searchInputRef.current?.focus();
                         }}
                         size="small"
@@ -722,7 +760,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
                 minWidth: '100px',
                 '& .MuiOutlinedInput-root': { height: '32px' },
               }}
-              value={globalFilter}
+              value={searchInput}
               variant="outlined"
             />
           )}
@@ -783,9 +821,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       handleArtistBrowserToggle,
       isNarrowWindow,
       showSearch,
-      globalFilter,
-      sorting,
-      updateLibraryViewState,
+      searchInput,
       handleSearchToggle,
     ],
   );
@@ -797,7 +833,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     data,
     rowVirtualizerInstanceRef: rowVirtualizerRef,
     state: {
-      globalFilter,
+      globalFilter: debouncedFilter,
       sorting,
       columnVisibility: {
         ...((columnVisibility as unknown as MrtVisibilityState) || {}),
@@ -808,34 +844,11 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       const newSorting =
         typeof updater === 'function' ? updater(sorting) : updater;
       setSorting(newSorting);
-      updateLibraryViewState(newSorting, globalFilter);
     },
     onGlobalFilterChange: (updater) => {
       const newFilter =
-        typeof updater === 'function' ? updater(globalFilter) : updater;
-      const oldFilter = globalFilter;
-      setGlobalFilter(newFilter);
-      updateLibraryViewState(sorting, newFilter);
-
-      // When filter is cleared (from non-empty to empty), scroll to current track
-      if (
-        oldFilter &&
-        !newFilter &&
-        currentTrack &&
-        playbackSource === 'library'
-      ) {
-        // Check if the current track is visible with the current artist filter
-        const visibleTrackIds = getFilteredAndSortedTrackIds(
-          'library',
-          artistFilter,
-        );
-        if (visibleTrackIds.includes(currentTrack.id)) {
-          // Use setTimeout to ensure the table has re-rendered
-          setTimeout(() => {
-            scrollToTrack(currentTrack.id);
-          }, 100);
-        }
-      }
+        typeof updater === 'function' ? updater(debouncedFilter) : updater;
+      setSearchInput(newFilter);
     },
     onColumnVisibilityChange: getCommonColumnVisibilityHandler(
       columnVisibility as unknown as Record<string, boolean>,
@@ -1005,7 +1018,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       cancelAnimationFrame(rafId);
       tableReadyRef.current = false;
     };
-  }, [sorting, globalFilter, data.length]); // Re-run when sorting, filter, or data changes
+  }, [sorting, debouncedFilter, data.length]); // Re-run when sorting, filter, or data changes
 
   return (
     <Box
