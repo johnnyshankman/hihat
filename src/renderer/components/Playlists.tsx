@@ -5,16 +5,8 @@ import React, {
   useCallback,
   useEffect,
 } from 'react';
-import {
-  Box,
-  IconButton,
-  InputAdornment,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
 import {
@@ -23,6 +15,7 @@ import {
   type MRT_SortingState as MrtSortingState,
   type MRT_VisibilityState as MrtVisibilityState,
   type MRT_RowVirtualizer as MrtRowVirtualizer,
+  type MRT_Row as MrtRow,
   type MRT_TableInstance as MrtTableInstance,
   // eslint-disable-next-line camelcase
   MRT_ShowHideColumnsButton,
@@ -38,6 +31,7 @@ import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
+import SearchBar from './SearchBar';
 import {
   getCommonTableConfig,
   getCommonColumnVisibilityHandler,
@@ -47,7 +41,6 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
-import { useDebouncedValue } from '../utils/hooks';
 
 // Define props interface for Playlists component
 interface PlaylistsProps {
@@ -92,13 +85,17 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     () => playlistViewState.sorting || [{ id: 'artist', desc: false }],
   );
 
-  // Search input state (instant feedback) - initialize from store to persist across unmount/remount
-  const [searchInput, setSearchInput] = useState(
+  // Global filter state — receives debounced values from SearchBar.
+  const [globalFilter, setGlobalFilter] = useState(
     () => playlistViewState.filtering || '',
   );
+  const globalFilterRef = useRef(globalFilter);
 
-  // Debounced filter value (drives MRT global filter) - delays filtering for typing performance
-  const debouncedFilter = useDebouncedValue(searchInput, 300);
+  // Stable callback for SearchBar — never changes identity
+  const handleDebouncedSearchChange = useCallback((value: string) => {
+    setGlobalFilter(value);
+    globalFilterRef.current = value;
+  }, []);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -118,7 +115,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Search state
   const [showSearch, setShowSearch] = useState(!!playlistViewState.filtering);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Confirmation dialog state
   const [removeTrackConfirmOpen, setRemoveTrackConfirmOpen] = useState(false);
@@ -127,6 +123,12 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
+
+  // Cache for O(1) row index lookups in muiTableBodyRowProps
+  const rowIndexCacheRef = useRef<{
+    rows: MrtRow<TableData>[];
+    map: Map<string, number>;
+  } | null>(null);
 
   // Ref to store the table instance for scrollToTrack
   const tableRef = useRef<MrtTableInstance<TableData> | null>(null);
@@ -168,7 +170,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const handlePlayTrack = (trackId: string) => {
     // Make sure the playlist view state is updated with the current playlist ID
     if (selectedPlaylistId) {
-      updatePlaylistViewState(sorting, debouncedFilter, selectedPlaylistId);
+      updatePlaylistViewState(sorting, globalFilter, selectedPlaylistId);
     }
 
     // Play the track with 'playlist' as the source and pass the selectedPlaylistId
@@ -460,20 +462,20 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     });
   }, [playlistTracks]);
 
-  // Track previous debounced filter for detecting clears
-  const prevDebouncedFilterRef = useRef(debouncedFilter);
+  // Track previous global filter for detecting clears
+  const prevGlobalFilterRef = useRef(globalFilter);
 
-  // Persist debounced filter to store and handle scroll-to-track on clear
+  // Persist global filter to store and handle scroll-to-track on clear
   useEffect(() => {
-    const prevFilter = prevDebouncedFilterRef.current;
-    prevDebouncedFilterRef.current = debouncedFilter;
+    const prevFilter = prevGlobalFilterRef.current;
+    prevGlobalFilterRef.current = globalFilter;
 
-    updatePlaylistViewState(sorting, debouncedFilter, selectedPlaylistId);
+    updatePlaylistViewState(sorting, globalFilter, selectedPlaylistId);
 
     // When filter is cleared (from non-empty to empty), scroll to current track
     if (
       prevFilter &&
-      !debouncedFilter &&
+      !globalFilter &&
       currentTrack &&
       playbackSource === 'playlist' &&
       playbackSourcePlaylistId === selectedPlaylistId
@@ -486,7 +488,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       }
     }
   }, [
-    debouncedFilter,
+    globalFilter,
     sorting,
     updatePlaylistViewState,
     selectedPlaylistId,
@@ -501,209 +503,190 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const handleSearchToggle = useCallback(() => {
     setShowSearch((prev) => {
       if (prev) {
-        // Closing search - clear the filter
-        setSearchInput('');
+        // Closing search - clear the filter immediately
+        setGlobalFilter('');
+        globalFilterRef.current = '';
       }
       return !prev;
     });
   }, []);
 
-  // Focus search input when opened
-  useEffect(() => {
-    if (showSearch && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [showSearch]);
+  // Memoize playlist track count and hours for stable toolbar deps
+  const playlistTrackCount = useMemo(
+    () => playlistTracks.length,
+    [playlistTracks],
+  );
+  const playlistTotalHours = useMemo(
+    () => calculateTotalHours(playlistTracks),
+    [playlistTracks],
+  );
 
   // Unified toolbar with sidebar toggle, title, badges, and MRT controls
-  const renderTopToolbarCustomActions = ({
-    table: tableInstance,
-  }: {
-    table: MrtTableInstance<TableData>;
-  }) => {
-    // Get the playlist name content
-    let playlistNameContent;
+  const renderTopToolbarCustomActions = useCallback(
+    // eslint-disable-next-line react/no-unused-prop-types
+    ({ table: tableInstance }: { table: MrtTableInstance<TableData> }) => {
+      // Get the playlist name content
+      let playlistNameContent;
 
-    if (!selectedPlaylistId) {
-      playlistNameContent = '----';
-    } else if (isPlaylistNameScrolling) {
-      playlistNameContent = (
-        <Marquee delay={0.5} pauseOnHover speed={10}>
-          <div ref={playlistNameRef2}>
+      if (!selectedPlaylistId) {
+        playlistNameContent = '----';
+      } else if (isPlaylistNameScrolling) {
+        playlistNameContent = (
+          <Marquee delay={0.5} pauseOnHover speed={10}>
+            <div ref={playlistNameRef2}>
+              {playlists.find((p) => p.id === selectedPlaylistId)?.name ||
+                'Playlist'}
+              &nbsp;&nbsp;-&nbsp;&nbsp;
+            </div>
+          </Marquee>
+        );
+      } else {
+        playlistNameContent = (
+          <div ref={playlistNameRef}>
             {playlists.find((p) => p.id === selectedPlaylistId)?.name ||
               'Playlist'}
-            &nbsp;&nbsp;-&nbsp;&nbsp;
           </div>
-        </Marquee>
-      );
-    } else {
-      playlistNameContent = (
-        <div ref={playlistNameRef}>
-          {playlists.find((p) => p.id === selectedPlaylistId)?.name ||
-            'Playlist'}
-        </div>
-      );
-    }
+        );
+      }
 
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 1,
-          alignItems: 'center',
-          height: '40px',
-          pl: '0',
-          flexShrink: 0,
-          width: '100%',
-        }}
-      >
-        <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-        <Typography
-          sx={{
-            maxWidth: window.innerWidth < 768 ? '200px' : '400px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            userSelect: 'none',
-            flexShrink: showSearch ? 1 : 0,
-          }}
-          variant="h2"
-        >
-          {playlistNameContent}
-        </Typography>
-        {!showSearch && (
-          <>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {playlistTracks.length.toLocaleString()}&nbsp;♫
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {calculateTotalHours(playlistTracks)}&nbsp;
-              </Typography>
-              <AccessTimeIcon
-                sx={{
-                  fontSize: 14,
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              />
-            </Box>
-          </>
-        )}
-        {showSearch && (
-          <TextField
-            autoFocus
-            inputRef={searchInputRef}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                handleSearchToggle();
-              }
-            }}
-            placeholder="Search playlist"
-            size="small"
-            slotProps={{
-              input: {
-                endAdornment: searchInput ? (
-                  <InputAdornment position="end">
-                    <IconButton
-                      edge="end"
-                      onClick={() => {
-                        setSearchInput('');
-                        searchInputRef.current?.focus();
-                      }}
-                      size="small"
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              },
-            }}
-            sx={{
-              flexGrow: 1,
-              flexShrink: 1,
-              minWidth: '100px',
-              '& .MuiOutlinedInput-root': { height: '32px' },
-            }}
-            value={searchInput}
-            variant="outlined"
-          />
-        )}
-        <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
+      return (
         <Box
           sx={{
             display: 'flex',
-            gap: '2px',
+            gap: 1,
             alignItems: 'center',
+            height: '40px',
+            pl: '0',
             flexShrink: 0,
+            width: '100%',
           }}
         >
-          <Tooltip title={showSearch ? 'Close search' : 'Search'}>
-            <IconButton
-              aria-label="Show/Hide search"
-              onClick={handleSearchToggle}
-              sx={{
-                color: showSearch ? 'primary.main' : 'text.secondary',
-                '&:hover': {
-                  color: showSearch ? 'primary.dark' : 'text.primary',
-                },
-              }}
-            >
-              {showSearch ? <SearchOffIcon /> : <SearchIcon />}
-            </IconButton>
-          </Tooltip>
-          {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
-          <MRT_ShowHideColumnsButton table={tableInstance} />
+          <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
+          <Typography
+            sx={{
+              maxWidth: window.innerWidth < 768 ? '200px' : '400px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              userSelect: 'none',
+              flexShrink: showSearch ? 1 : 0,
+            }}
+            variant="h2"
+          >
+            {playlistNameContent}
+          </Typography>
+          {!showSearch && (
+            <>
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  borderRadius: '16px',
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? theme.palette.grey[800]
+                      : theme.palette.grey[200],
+                  px: 1.5,
+                  py: 0.5,
+                  justifyContent: 'center',
+                  userSelect: 'none',
+                  flexShrink: 0,
+                }}
+              >
+                <Typography
+                  sx={{
+                    color: (theme) => theme.palette.text.secondary,
+                    lineHeight: 1,
+                  }}
+                  variant="body2"
+                >
+                  {playlistTrackCount.toLocaleString()}&nbsp;♫
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  borderRadius: '16px',
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? theme.palette.grey[800]
+                      : theme.palette.grey[200],
+                  px: 1.5,
+                  py: 0.5,
+                  justifyContent: 'center',
+                  userSelect: 'none',
+                  flexShrink: 0,
+                }}
+              >
+                <Typography
+                  sx={{
+                    color: (theme) => theme.palette.text.secondary,
+                    lineHeight: 1,
+                  }}
+                  variant="body2"
+                >
+                  {playlistTotalHours}&nbsp;
+                </Typography>
+                <AccessTimeIcon
+                  sx={{
+                    fontSize: 14,
+                    color: (theme) => theme.palette.text.secondary,
+                  }}
+                />
+              </Box>
+            </>
+          )}
+          {showSearch && (
+            <SearchBar
+              initialValue={globalFilterRef.current}
+              onClose={handleSearchToggle}
+              onDebouncedChange={handleDebouncedSearchChange}
+              placeholder="Search playlist"
+            />
+          )}
+          <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
+          <Box
+            sx={{
+              display: 'flex',
+              gap: '2px',
+              alignItems: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Tooltip title={showSearch ? 'Close search' : 'Search'}>
+              <IconButton
+                aria-label="Show/Hide search"
+                onClick={handleSearchToggle}
+                sx={{
+                  color: showSearch ? 'primary.main' : 'text.secondary',
+                  '&:hover': {
+                    color: showSearch ? 'primary.dark' : 'text.primary',
+                  },
+                }}
+              >
+                {showSearch ? <SearchOffIcon /> : <SearchIcon />}
+              </IconButton>
+            </Tooltip>
+            {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
+            <MRT_ShowHideColumnsButton table={tableInstance} />
+          </Box>
         </Box>
-      </Box>
-    );
-  };
+      );
+    },
+    [
+      drawerOpen,
+      onDrawerToggle,
+      selectedPlaylistId,
+      isPlaylistNameScrolling,
+      playlists,
+      showSearch,
+      playlistTrackCount,
+      playlistTotalHours,
+      handleSearchToggle,
+      handleDebouncedSearchChange,
+    ],
+  );
 
   // Configure the table
   const table = useMaterialReactTable({
@@ -712,7 +695,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     data,
     rowVirtualizerInstanceRef: rowVirtualizerRef,
     state: {
-      globalFilter: debouncedFilter,
+      globalFilter,
       sorting,
       columnVisibility: {
         ...((columnVisibility as unknown as MrtVisibilityState) || {}),
@@ -726,8 +709,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     },
     onGlobalFilterChange: (updater) => {
       const newFilter =
-        typeof updater === 'function' ? updater(debouncedFilter) : updater;
-      setSearchInput(newFilter);
+        typeof updater === 'function' ? updater(globalFilter) : updater;
+      setGlobalFilter(newFilter);
+      globalFilterRef.current = newFilter;
     },
     onColumnVisibilityChange: getCommonColumnVisibilityHandler(
       columnVisibility as unknown as Record<string, boolean>,
@@ -737,11 +721,20 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       // do absolutely nothing, we handle this manually
     },
     muiTableBodyRowProps: ({ row, table: tableInstance }) => {
-      // Get the current visible rows
+      // Build an O(1) index cache for visible rows, refreshed when the row array changes
       const visibleRows = tableInstance.getRowModel().rows;
-      const currentIndex = visibleRows.findIndex(
-        (r) => r.original.id === row.original.id,
-      );
+      if (
+        !rowIndexCacheRef.current ||
+        rowIndexCacheRef.current.rows !== visibleRows
+      ) {
+        const map = new Map<string, number>();
+        for (let i = 0; i < visibleRows.length; i += 1) {
+          map.set(visibleRows[i].original.id, i);
+        }
+        rowIndexCacheRef.current = { rows: visibleRows, map };
+      }
+      const currentIndex =
+        rowIndexCacheRef.current.map.get(row.original.id) ?? -1;
 
       // Use the visual index for row striping
       const visualIndex = currentIndex !== -1 ? currentIndex : row.index;
@@ -880,7 +873,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       cancelAnimationFrame(rafId);
       tableReadyRef.current = false;
     };
-  }, [sorting, debouncedFilter, data.length]); // Re-run when sorting, filter, or data changes
+  }, [sorting, globalFilter, data.length]); // Re-run when sorting, filter, or data changes
 
   return (
     <Box

@@ -14,13 +14,10 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  InputAdornment,
-  TextField,
   Tooltip,
   useMediaQuery,
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
 import {
@@ -46,6 +43,7 @@ import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
 import ArtistBrowser from './ArtistBrowser';
+import SearchBar from './SearchBar';
 import {
   getCommonTableConfig,
   getCommonColumnVisibilityHandler,
@@ -55,7 +53,6 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
-import { useDebouncedValue } from '../utils/hooks';
 
 // Define the type for directory selection result
 interface DirectorySelectionResult {
@@ -125,7 +122,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const libraryViewState = useLibraryStore((state) => state.libraryViewState);
   const [artistBrowserOpen, setArtistBrowserOpen] = useState(!!artistFilter);
   const [showSearch, setShowSearch] = useState(!!libraryViewState.filtering);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const isNarrowWindow = useMediaQuery('(max-width:768px)');
 
   // Open artist browser when artist filter is set
@@ -146,13 +142,18 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     }
   }, [artistBrowserOpen, setArtistFilter]);
 
-  // Search input state (instant feedback) - initialize from store to persist across unmount/remount
-  const [searchInput, setSearchInput] = useState(
+  // Global filter state — receives debounced values from SearchBar.
+  // This is the only filter state that triggers MRT re-renders.
+  const [globalFilter, setGlobalFilter] = useState(
     () => libraryViewState.filtering || '',
   );
+  const globalFilterRef = useRef(globalFilter);
 
-  // Debounced filter value (drives MRT global filter) - delays filtering for typing performance
-  const debouncedFilter = useDebouncedValue(searchInput, 300);
+  // Stable callback for SearchBar — never changes identity
+  const handleDebouncedSearchChange = useCallback((value: string) => {
+    setGlobalFilter(value);
+    globalFilterRef.current = value;
+  }, []);
 
   // Sorting state - initialize from store to persist across unmount/remount
   const [sorting, setSorting] = useState<MrtSortingState>(
@@ -161,6 +162,12 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
+
+  // Cache for O(1) row index lookups in muiTableBodyRowProps
+  const rowIndexCacheRef = useRef<{
+    rows: MrtRow<TableData>[];
+    map: Map<string, number>;
+  } | null>(null);
 
   const handlePlayTrack = useCallback(
     (trackId: string) => {
@@ -574,20 +581,20 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const totalHours = useMemo(() => calculateTotalHours(data), [data]);
   const trackCount = useMemo(() => data.length, [data]);
 
-  // Track previous debounced filter for detecting clears
-  const prevDebouncedFilterRef = useRef(debouncedFilter);
+  // Track previous global filter for detecting clears
+  const prevGlobalFilterRef = useRef(globalFilter);
 
-  // Persist debounced filter to store and handle scroll-to-track on clear
+  // Persist global filter to store and handle scroll-to-track on clear
   useEffect(() => {
-    const prevFilter = prevDebouncedFilterRef.current;
-    prevDebouncedFilterRef.current = debouncedFilter;
+    const prevFilter = prevGlobalFilterRef.current;
+    prevGlobalFilterRef.current = globalFilter;
 
-    updateLibraryViewState(sorting, debouncedFilter);
+    updateLibraryViewState(sorting, globalFilter);
 
     // When filter is cleared (from non-empty to empty), scroll to current track
     if (
       prevFilter &&
-      !debouncedFilter &&
+      !globalFilter &&
       currentTrack &&
       playbackSource === 'library'
     ) {
@@ -602,7 +609,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       }
     }
   }, [
-    debouncedFilter,
+    globalFilter,
     sorting,
     updateLibraryViewState,
     currentTrack,
@@ -615,19 +622,13 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const handleSearchToggle = useCallback(() => {
     setShowSearch((prev) => {
       if (prev) {
-        // Closing search - clear the filter
-        setSearchInput('');
+        // Closing search - clear the filter immediately
+        setGlobalFilter('');
+        globalFilterRef.current = '';
       }
       return !prev;
     });
   }, []);
-
-  // Focus search input when opened
-  useEffect(() => {
-    if (showSearch && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [showSearch]);
 
   // Unified toolbar with sidebar toggle, title, badges, and MRT controls
   const renderTopToolbarCustomActions = useCallback(
@@ -723,45 +724,10 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             </>
           )}
           {showSearch && (
-            <TextField
-              autoFocus
-              inputRef={searchInputRef}
-              onChange={(e) => {
-                setSearchInput(e.target.value);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  handleSearchToggle();
-                }
-              }}
-              placeholder="Filter tracks"
-              size="small"
-              slotProps={{
-                input: {
-                  endAdornment: searchInput ? (
-                    <InputAdornment position="end">
-                      <IconButton
-                        edge="end"
-                        onClick={() => {
-                          setSearchInput('');
-                          searchInputRef.current?.focus();
-                        }}
-                        size="small"
-                      >
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    </InputAdornment>
-                  ) : null,
-                },
-              }}
-              sx={{
-                flexGrow: 1,
-                flexShrink: 1,
-                minWidth: '100px',
-                '& .MuiOutlinedInput-root': { height: '32px' },
-              }}
-              value={searchInput}
-              variant="outlined"
+            <SearchBar
+              initialValue={globalFilterRef.current}
+              onClose={handleSearchToggle}
+              onDebouncedChange={handleDebouncedSearchChange}
             />
           )}
           <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
@@ -821,8 +787,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       handleArtistBrowserToggle,
       isNarrowWindow,
       showSearch,
-      searchInput,
       handleSearchToggle,
+      handleDebouncedSearchChange,
     ],
   );
 
@@ -833,7 +799,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     data,
     rowVirtualizerInstanceRef: rowVirtualizerRef,
     state: {
-      globalFilter: debouncedFilter,
+      globalFilter,
       sorting,
       columnVisibility: {
         ...((columnVisibility as unknown as MrtVisibilityState) || {}),
@@ -847,8 +813,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     },
     onGlobalFilterChange: (updater) => {
       const newFilter =
-        typeof updater === 'function' ? updater(debouncedFilter) : updater;
-      setSearchInput(newFilter);
+        typeof updater === 'function' ? updater(globalFilter) : updater;
+      setGlobalFilter(newFilter);
+      globalFilterRef.current = newFilter;
     },
     onColumnVisibilityChange: getCommonColumnVisibilityHandler(
       columnVisibility as unknown as Record<string, boolean>,
@@ -865,11 +832,20 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         row: MrtRow<TableData>;
         table: MrtTableInstance<TableData>;
       }) => {
-        // Get the current visible rows
+        // Build an O(1) index cache for visible rows, refreshed when the row array changes
         const visibleRows = tableInstance.getRowModel().rows;
-        const currentIndex = visibleRows.findIndex(
-          (r: MrtRow<TableData>) => r.original.id === row.original.id,
-        );
+        if (
+          !rowIndexCacheRef.current ||
+          rowIndexCacheRef.current.rows !== visibleRows
+        ) {
+          const map = new Map<string, number>();
+          for (let i = 0; i < visibleRows.length; i += 1) {
+            map.set(visibleRows[i].original.id, i);
+          }
+          rowIndexCacheRef.current = { rows: visibleRows, map };
+        }
+        const currentIndex =
+          rowIndexCacheRef.current.map.get(row.original.id) ?? -1;
 
         // Use the visual index for row striping
         const visualIndex = currentIndex !== -1 ? currentIndex : row.index;
@@ -1018,7 +994,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       cancelAnimationFrame(rafId);
       tableReadyRef.current = false;
     };
-  }, [sorting, debouncedFilter, data.length]); // Re-run when sorting, filter, or data changes
+  }, [sorting, globalFilter, data.length]); // Re-run when sorting, filter, or data changes
 
   return (
     <Box
