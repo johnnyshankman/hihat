@@ -255,8 +255,16 @@
     }
   },
   "devEngines": {
-    "node": ">=20.x",
-    "npm": ">=10.x"
+    "runtime": {
+      "name": "node",
+      "version": ">=20.x",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "npm",
+      "version": ">=10.x",
+      "onFail": "error"
+    }
   },
   "electronmon": {
     "patterns": [
