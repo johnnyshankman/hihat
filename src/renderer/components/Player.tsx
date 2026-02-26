@@ -230,6 +230,7 @@ function Player() {
   const artistAlbumRef2 = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const compactInfoRef = useRef<HTMLDivElement>(null);
+  const trackInfoRef = useRef<HTMLDivElement>(null);
 
   // Get the setCurrentView function from the UI store
   const setCurrentView = useUIStore((state) => state.setCurrentView);
@@ -695,10 +696,8 @@ function Player() {
     // Create a ResizeObserver to watch for size changes on the Typography parent container
     const resizeObserver = new ResizeObserver(checkTitleOverflow);
 
-    // Observe the Typography component that's always present
-    const typographyContainer =
-      titleRef.current?.parentElement ||
-      titleRef2.current?.parentElement?.parentElement?.parentElement;
+    // Observe the Track Info Box which always resizes with the window
+    const typographyContainer = trackInfoRef.current;
     if (typographyContainer) {
       resizeObserver.observe(typographyContainer);
     }
@@ -820,7 +819,8 @@ function Player() {
       <Box
         ref={containerRef}
         sx={{
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: '1fr auto 1fr',
           alignItems: 'center',
           px: isCompactLayout ? 1 : 2,
           width: '100%',
@@ -830,168 +830,181 @@ function Player() {
           borderColor: (t) => t.palette.divider,
         }}
       >
-        {/* Album Art */}
-        <Box
-          onClick={currentTrack ? openMiniPlayer : undefined}
-          sx={{
-            height: '100%',
-            mr: isCompactLayout ? 0.5 : { xs: 1, sm: 2 },
-            borderRadius: '4px',
-            aspectRatio: '1/1',
-            cursor: currentTrack ? 'pointer' : 'default',
-            position: 'relative',
-            flexShrink: 0,
-            '&:hover .overlay': {
-              opacity: 1,
-            },
-          }}
-        >
-          {albumArt ? (
-            <Box
-              alt={currentTrack?.album || 'No album'}
-              component="img"
-              src={albumArt}
-              sx={{
-                width: '100%',
-                height: '100%',
-                aspectRatio: '1/1',
-                objectFit: 'cover',
-              }}
-            />
-          ) : (
-            <AlbumArtPlaceholder />
-          )}
-          {currentTrack && (
-            <Box
-              className="overlay"
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: 0,
-                transition: 'opacity 0.2s',
-              }}
-            >
-              <OpenInNewIcon sx={{ color: 'white' }} />
-            </Box>
-          )}
-        </Box>
-
-        {/* Track info */}
+        {/* Left cell: Album Art + Track Info */}
         <Box
           sx={{
-            width: { xs: '15%', sm: '20%' },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
             overflow: 'hidden',
-            display: isCompactLayout ? 'none' : { xs: 'none', sm: 'block' },
+            minWidth: 0,
+            height: '100%',
           }}
         >
-          {currentTrack ? (
-            <>
-              <Tooltip
-                arrow
-                placement="top"
-                title={
-                  playbackSource
-                    ? `Scroll to song in ${playbackSource === 'library' ? 'library' : 'playlist'}`
-                    : ''
-                }
+          {/* Album Art */}
+          <Box
+            onClick={currentTrack ? openMiniPlayer : undefined}
+            sx={{
+              height: '100%',
+              mr: isCompactLayout ? 0.5 : { xs: 1, sm: 2 },
+              borderRadius: '4px',
+              aspectRatio: '1/1',
+              cursor: currentTrack ? 'pointer' : 'default',
+              position: 'relative',
+              flexShrink: 0,
+              '&:hover .overlay': {
+                opacity: 1,
+              },
+            }}
+          >
+            {albumArt ? (
+              <Box
+                alt={currentTrack?.album || 'No album'}
+                component="img"
+                src={albumArt}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  aspectRatio: '1/1',
+                  objectFit: 'cover',
+                }}
+              />
+            ) : (
+              <AlbumArtPlaceholder />
+            )}
+            {currentTrack && (
+              <Box
+                className="overlay"
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0,
+                  transition: 'opacity 0.2s',
+                }}
               >
+                <OpenInNewIcon sx={{ color: 'white' }} />
+              </Box>
+            )}
+          </Box>
+
+          {/* Track info */}
+          <Box
+            ref={trackInfoRef}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              display: isCompactLayout ? 'none' : { xs: 'none', sm: 'block' },
+            }}
+          >
+            {currentTrack ? (
+              <>
+                <Tooltip
+                  arrow
+                  placement="top"
+                  title={
+                    playbackSource
+                      ? `Scroll to song in ${playbackSource === 'library' ? 'library' : 'playlist'}`
+                      : ''
+                  }
+                >
+                  <Typography
+                    component="div"
+                    onClick={handleTrackTitleClick}
+                    sx={{
+                      cursor: playbackSource ? 'pointer' : 'default',
+                      '&:hover': {
+                        textDecoration: playbackSource ? 'underline' : 'none',
+                        color: playbackSource ? 'primary.main' : 'inherit',
+                      },
+                      transition: 'color 0.2s',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      width: 'fit-content',
+                      maxWidth: '100%',
+                    }}
+                    variant="body1"
+                  >
+                    {isTitleScrolling ? (
+                      <Marquee
+                        gradient
+                        gradientColor={theme.palette.background.default}
+                        gradientWidth={10}
+                        speed={10}
+                      >
+                        <div ref={titleRef2}>
+                          {currentTrack.title}&nbsp;&nbsp;•&nbsp;&nbsp;
+                        </div>
+                      </Marquee>
+                    ) : (
+                      <div ref={titleRef}>{currentTrack.title}</div>
+                    )}
+                  </Typography>
+                </Tooltip>
                 <Typography
+                  color="textSecondary"
                   component="div"
-                  onClick={handleTrackTitleClick}
                   sx={{
-                    cursor: playbackSource ? 'pointer' : 'default',
-                    '&:hover': {
-                      textDecoration: playbackSource ? 'underline' : 'none',
-                      color: playbackSource ? 'primary.main' : 'inherit',
-                    },
-                    transition: 'color 0.2s',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    width: 'fit-content',
-                    maxWidth: '100%',
+                    fontWeight: '500',
                   }}
-                  variant="body1"
+                  variant="body2"
                 >
-                  {isTitleScrolling ? (
+                  {isArtistAlbumScrolling ? (
                     <Marquee
                       gradient
                       gradientColor={theme.palette.background.default}
                       gradientWidth={10}
                       speed={10}
                     >
-                      <div ref={titleRef2}>
-                        {currentTrack.title}&nbsp;&nbsp;•&nbsp;&nbsp;
+                      <div ref={artistAlbumRef2}>
+                        {currentTrack.artist} • {currentTrack.album}
+                        &nbsp;&nbsp;•&nbsp;&nbsp;
                       </div>
                     </Marquee>
                   ) : (
-                    <div ref={titleRef}>{currentTrack.title}</div>
+                    <div ref={artistAlbumRef}>
+                      {currentTrack.artist} • {currentTrack.album}
+                    </div>
                   )}
                 </Typography>
-              </Tooltip>
-              <Typography
-                color="textSecondary"
-                component="div"
-                sx={{
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  fontWeight: '500',
-                }}
-                variant="body2"
-              >
-                {isArtistAlbumScrolling ? (
-                  <Marquee
-                    gradient
-                    gradientColor={theme.palette.background.default}
-                    gradientWidth={10}
-                    speed={10}
-                  >
-                    <div ref={artistAlbumRef2}>
-                      {currentTrack.artist} • {currentTrack.album}
-                      &nbsp;&nbsp;•&nbsp;&nbsp;
-                    </div>
-                  </Marquee>
-                ) : (
-                  <div ref={artistAlbumRef}>
-                    {currentTrack.artist} • {currentTrack.album}
-                  </div>
-                )}
+              </>
+            ) : (
+              <Typography color="textSecondary" variant="body1">
+                ---
               </Typography>
-            </>
-          ) : (
-            <Typography color="textSecondary" variant="body1">
-              ---
-            </Typography>
-          )}
+            )}
+          </Box>
         </Box>
 
-        {/* Playback controls */}
+        {/* Center cell: Playback controls */}
         <Box
           sx={{
-            width: isCompactLayout ? 'auto' : { xs: '85%', sm: '50%' },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             px: isCompactLayout ? 0.5 : { xs: 1, sm: 2 },
             py: isCompactLayout ? 0.5 : 1,
-            flexGrow: 1,
-            minWidth: 0, // Allow shrinking
+            minWidth: 0,
+            width: 'clamp(200px, 40vw, 500px)',
           }}
         >
           <Stack
             alignItems="center"
             direction="row"
             justifyContent="center"
-            spacing={isCompactLayout ? 0 : { xs: 0.25, sm: 1 }}
+            spacing="0.25"
             sx={{ mb: 0.0, width: '100%' }}
           >
             <Tooltip title={getShuffleTooltipText()}>
@@ -1099,16 +1112,15 @@ function Player() {
           )}
         </Box>
 
-        {/* Volume control and notifications */}
+        {/* Right cell: Volume control and notifications */}
         <Box
           sx={{
-            width: isCompactLayout ? 'auto' : { xs: '25%', sm: '25%' },
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
             pr: isCompactLayout ? 0.5 : { xs: 0, sm: 1 },
             gap: isCompactLayout ? 0.5 : 1,
-            flexShrink: 0,
+            minWidth: 0,
           }}
         >
           {/* Notification button */}
