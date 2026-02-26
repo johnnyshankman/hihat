@@ -67,9 +67,9 @@ const PositionDisplay = React.memo(
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          mt: 0.0,
-          mb: 0.5,
           maxWidth: '500px',
+          mx: 'auto',
+          mb: 0.5,
         }}
       >
         <Typography
