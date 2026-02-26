@@ -234,7 +234,7 @@ function VirtualTable({
                     return (
                       <th
                         key={header.id}
-                        className="vt-th"
+                        className={`vt-th${sortDir ? ' vt-th-sorted' : ''}`}
                         onClick={() => handleHeaderClick(header.column.id)}
                         style={{ width: header.getSize() }}
                       >
