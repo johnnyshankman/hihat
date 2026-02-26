@@ -69,29 +69,13 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
 }));
 
 // Create a styled component for the Player
-const PlayerWrapper = styled('div', {
-  shouldForwardProp: (prop) => prop !== 'open',
-})<{
-  open?: boolean;
-}>(({ theme, open }) => ({
+const PlayerWrapper = styled('div')(() => ({
   position: 'fixed',
   bottom: 0,
   left: 0,
   right: 0,
   zIndex: 1000,
-  height: '100px', // Increased from 80px to 100px
-  transition: theme.transitions.create(['margin', 'width'], {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.leavingScreen,
-  }),
-  ...(open && {
-    width: `calc(100% - ${drawerWidth}px)`,
-    marginLeft: `${drawerWidth}px`,
-    transition: theme.transitions.create(['margin', 'width'], {
-      easing: theme.transitions.easing.easeOut,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  }),
+  height: '100px',
 }));
 
 type View = 'library' | 'playlists';
@@ -471,6 +455,7 @@ export default function MainLayout() {
               boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
+              height: 'calc(100vh - 100px)', // Stop above the player
               WebkitAppRegion: 'drag', // Make drawer background draggable
               '& .MuiListItemButton-root, & .MuiIconButton-root, & .MuiListItemIcon-root, & .MuiListItemText-root':
                 {
@@ -486,6 +471,9 @@ export default function MainLayout() {
               borderRadius: '0px',
               height: '100%',
               backgroundColor: theme === 'dark' ? '#000000' : '#FFFFFF',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
             }}
           >
             {/* Window Controls */}
@@ -643,7 +631,15 @@ export default function MainLayout() {
               </Box>
             </Box>
 
-            <List sx={{ flexGrow: 1, paddingTop: 0, px: 1 }}>
+            <List
+              sx={{
+                flexGrow: 1,
+                paddingTop: 0,
+                px: 1,
+                overflow: 'auto',
+                minHeight: 0,
+              }}
+            >
               {/* Library section */}
               <Box sx={{ mb: 0.5 }}>
                 <Box
@@ -902,7 +898,7 @@ export default function MainLayout() {
         <Settings onClose={() => setSettingsOpen(false)} />
       </Drawer>
 
-      <PlayerWrapper open={open} sx={{ WebkitAppRegion: 'no-drag' }}>
+      <PlayerWrapper sx={{ WebkitAppRegion: 'no-drag' }}>
         <Player />
       </PlayerWrapper>
 
