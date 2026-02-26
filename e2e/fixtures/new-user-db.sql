@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS settings (
   theme TEXT NOT NULL,
   columns TEXT NOT NULL,
   lastPlayedSongId TEXT,
-  volume REAL
+  volume REAL,
+  columnWidths TEXT
 );
 
 -- No tracks inserted - empty library for new user
@@ -47,5 +48,5 @@ INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds) VA
 -- Insert default settings for new user
 -- Note: libraryPath will be replaced with actual TEST_SONGS_PATH by test initialization code
 -- No lastPlayedSongId since the user hasn't played anything yet
-INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume) VALUES
-('app-settings', '{{TEST_SONGS_PATH}}', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0);
+INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths) VALUES
+('app-settings', '{{TEST_SONGS_PATH}}', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0, NULL);

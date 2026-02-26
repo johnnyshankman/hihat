@@ -40,7 +40,9 @@ interface VirtualTableProps {
   onSortingChange: OnChangeFn<SortingState>;
   globalFilter: string;
   columnVisibility: VisibilityState;
+  initialColumnSizing?: ColumnSizingState;
   onColumnVisibilityChange: (columnId: string, visible: boolean) => void;
+  onColumnSizingPersist?: (sizing: ColumnSizingState) => void;
   virtualizerRef?: React.MutableRefObject<Virtualizer<
     HTMLDivElement,
     Element
@@ -65,7 +67,9 @@ function VirtualTable({
   onSortingChange,
   globalFilter,
   columnVisibility,
+  initialColumnSizing,
   onColumnVisibilityChange: _onColumnVisibilityChange,
+  onColumnSizingPersist,
   virtualizerRef,
   tableRef,
   onRowClick,
@@ -76,10 +80,29 @@ function VirtualTable({
   emptyState,
 }: VirtualTableProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isResizingRef = useRef(false);
   const theme = useTheme();
 
   // Column sizing state for resizing
-  const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({});
+  const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>(
+    () => initialColumnSizing || {},
+  );
+
+  // Debounced persistence of column sizing
+  const isInitialRender = useRef(true);
+  useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return undefined;
+    }
+    if (!onColumnSizingPersist) return undefined;
+
+    const timer = setTimeout(() => {
+      onColumnSizingPersist(columnSizing);
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnSizing]);
 
   // Build visibility state with trackNumber always hidden
   const visibilityState: VisibilityState = {
@@ -190,6 +213,7 @@ function VirtualTable({
   // Header sort handler
   const handleHeaderClick = useCallback(
     (columnId: string) => {
+      if (isResizingRef.current) return;
       const currentSort = sorting.find((s) => s.id === columnId);
       if (!currentSort) {
         onSortingChange([{ id: columnId, desc: false }]);
@@ -255,7 +279,19 @@ function VirtualTable({
                             header.column.getIsResizing() ? ' vt-resizing' : ''
                           }`}
                           onDoubleClick={() => header.column.resetSize()}
-                          onMouseDown={header.getResizeHandler()}
+                          onMouseDown={(e) => {
+                            isResizingRef.current = true;
+                            document.addEventListener(
+                              'mouseup',
+                              () => {
+                                setTimeout(() => {
+                                  isResizingRef.current = false;
+                                }, 0);
+                              },
+                              { once: true },
+                            );
+                            header.getResizeHandler()(e);
+                          }}
                           onTouchStart={header.getResizeHandler()}
                         />
                       </th>

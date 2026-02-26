@@ -197,6 +197,9 @@ function runMigrations(): void {
 
     // Migration 4: Migrate existing smart playlists to use stable IDs
     migrateExistingSmartPlaylists();
+
+    // Migration 5: Add columnWidths column to settings table if it doesn't exist
+    addColumnIfNotExists('settings', 'columnWidths', 'TEXT');
   } catch (error) {
     console.error('Error running database migrations:', error);
   }
@@ -341,13 +344,14 @@ function initDefaultSettings(): void {
           columns: defaultColumns,
           lastPlayedSongId: null,
           volume: 1.0,
+          columnWidths: null,
         };
 
         // Insert default settings
         db.prepare(
           `
-          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `,
         ).run(
           defaultSettings.id,
@@ -356,6 +360,7 @@ function initDefaultSettings(): void {
           JSON.stringify(defaultSettings.columns),
           defaultSettings.lastPlayedSongId,
           defaultSettings.volume,
+          defaultSettings.columnWidths,
         );
       }
     } catch (error) {
@@ -387,13 +392,14 @@ function initDefaultSettings(): void {
         columns: defaultColumns,
         lastPlayedSongId: null,
         volume: 1.0,
+        columnWidths: null,
       };
 
       // Insert default settings
       db.prepare(
         `
-        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       ).run(
         defaultSettings.id,
@@ -402,6 +408,7 @@ function initDefaultSettings(): void {
         JSON.stringify(defaultSettings.columns),
         defaultSettings.lastPlayedSongId,
         defaultSettings.volume,
+        defaultSettings.columnWidths,
       );
     }
   } catch (outerError) {
@@ -1365,6 +1372,7 @@ export function getSettings(): Settings {
         },
         lastPlayedSongId: null,
         volume: 1.0,
+        columnWidths: null,
       };
     }
 
@@ -1386,6 +1394,16 @@ export function getSettings(): Settings {
         throw new Error('Failed to initialize settings');
       }
 
+      let parsedColumnWidths: Record<string, number> | null = null;
+      try {
+        parsedColumnWidths =
+          typeof newSettings.columnWidths === 'string'
+            ? JSON.parse(newSettings.columnWidths)
+            : newSettings.columnWidths || null;
+      } catch (_e) {
+        parsedColumnWidths = null;
+      }
+
       return {
         ...newSettings,
         columns:
@@ -1394,7 +1412,18 @@ export function getSettings(): Settings {
             : newSettings.columns,
         lastPlayedSongId: newSettings.lastPlayedSongId || null,
         volume: newSettings.volume || 1.0,
+        columnWidths: parsedColumnWidths,
       };
+    }
+
+    let parsedColumnWidths: Record<string, number> | null = null;
+    try {
+      parsedColumnWidths =
+        typeof settings.columnWidths === 'string'
+          ? JSON.parse(settings.columnWidths)
+          : settings.columnWidths || null;
+    } catch (_e) {
+      parsedColumnWidths = null;
     }
 
     return {
@@ -1405,6 +1434,7 @@ export function getSettings(): Settings {
           : settings.columns,
       lastPlayedSongId: settings.lastPlayedSongId || null,
       volume: settings.volume || 1.0,
+      columnWidths: parsedColumnWidths,
     };
   } catch (error) {
     console.error('Failed to get settings:', error);
@@ -1427,6 +1457,7 @@ export function getSettings(): Settings {
       },
       lastPlayedSongId: null,
       volume: 1.0,
+      columnWidths: null,
     };
   }
 }
@@ -1449,7 +1480,8 @@ export function updateSettings(settings: Settings): boolean {
           theme = ?,
           columns = ?,
           lastPlayedSongId = ?,
-          volume = ?
+          volume = ?,
+          columnWidths = ?
         WHERE id = ?
       `,
         )
@@ -1459,6 +1491,7 @@ export function updateSettings(settings: Settings): boolean {
           JSON.stringify(settings.columns),
           settings.lastPlayedSongId,
           settings.volume,
+          settings.columnWidths ? JSON.stringify(settings.columnWidths) : null,
           settings.id,
         );
 

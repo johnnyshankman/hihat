@@ -58,6 +58,12 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const updateColumnVisibility = useSettingsAndPlaybackStore(
     (state) => state.setColumnVisibility,
   );
+  const columnWidths = useSettingsAndPlaybackStore(
+    (state) => state.columnWidths,
+  );
+  const setColumnWidths = useSettingsAndPlaybackStore(
+    (state) => state.setColumnWidths,
+  );
   const currentTrack = useSettingsAndPlaybackStore(
     (state) => state.currentTrack,
   );
@@ -589,6 +595,14 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     [updateColumnVisibility],
   );
 
+  // Column sizing persistence handler
+  const handleColumnSizingPersist = useCallback(
+    (sizing: Record<string, number>) => {
+      setColumnWidths(sizing);
+    },
+    [setColumnWidths],
+  );
+
   // Toolbar content
   const toolbarContent = useMemo(() => {
     let playlistNameContent;
@@ -834,6 +848,8 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             emptyState={emptyStateContent}
             getRowClassName={handleGetRowClassName}
             globalFilter={globalFilter}
+            initialColumnSizing={columnWidths || {}}
+            onColumnSizingPersist={handleColumnSizingPersist}
             onColumnVisibilityChange={handleColumnVisibilityToggle}
             onRowClick={handleRowClick}
             onRowContextMenu={handleRowContextMenu}

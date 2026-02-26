@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS settings (
   theme TEXT NOT NULL,
   columns TEXT NOT NULL,
   lastPlayedSongId TEXT,
-  volume REAL
+  volume REAL,
+  columnWidths TEXT
 );
 
 -- No tracks inserted - empty library awaiting migration
@@ -46,5 +47,5 @@ INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds) VA
 
 -- Insert default settings with EMPTY libraryPath to trigger migration
 -- This is the key difference from new-user-db.sql
-INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume) VALUES
-('app-settings', '', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0);
+INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths) VALUES
+('app-settings', '', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0, NULL);

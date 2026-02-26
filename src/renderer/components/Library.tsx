@@ -75,6 +75,12 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const updateColumnVisibility = useSettingsAndPlaybackStore(
     (state) => state.setColumnVisibility,
   );
+  const columnWidths = useSettingsAndPlaybackStore(
+    (state) => state.columnWidths,
+  );
+  const setColumnWidths = useSettingsAndPlaybackStore(
+    (state) => state.setColumnWidths,
+  );
 
   // Get state from playback store
   const currentTrack = useSettingsAndPlaybackStore(
@@ -645,6 +651,14 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [updateColumnVisibility],
   );
 
+  // Column sizing persistence handler
+  const handleColumnSizingPersist = useCallback(
+    (sizing: Record<string, number>) => {
+      setColumnWidths(sizing);
+    },
+    [setColumnWidths],
+  );
+
   // Toolbar content
   const toolbarContent = useMemo(
     () => (
@@ -896,6 +910,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             emptyState={emptyStateContent}
             getRowClassName={handleGetRowClassName}
             globalFilter={globalFilter}
+            initialColumnSizing={columnWidths || {}}
+            onColumnSizingPersist={handleColumnSizingPersist}
             onColumnVisibilityChange={handleColumnVisibilityToggle}
             onRowClick={handleRowClick}
             onRowContextMenu={handleRowContextMenu}

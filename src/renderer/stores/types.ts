@@ -123,10 +123,12 @@ export interface SettingsStore {
   id: Settings['id'];
   lastPlayedSongId: Settings['lastPlayedSongId'];
   volume: Settings['volume'];
+  columnWidths: Settings['columnWidths'];
 
   // Actions
   loadSettings: () => Promise<void>;
   setColumnVisibility: (column: string, isVisible: boolean) => Promise<void>;
+  setColumnWidths: (columnWidths: Record<string, number>) => Promise<void>;
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
   setLastPlayedSongId: (trackId: string | null) => Promise<void>;
@@ -159,6 +161,7 @@ export interface SettingsAndPlaybackStore {
   columns: Settings['columns'];
   id: Settings['id'];
   lastPlayedSongId: Settings['lastPlayedSongId'];
+  columnWidths: Settings['columnWidths'];
 
   // Playback state
   currentTrack: Track | null;
@@ -185,6 +188,7 @@ export interface SettingsAndPlaybackStore {
   // Settings actions
   loadSettings: () => Promise<Settings>;
   setColumnVisibility: (column: string, isVisible: boolean) => Promise<void>;
+  setColumnWidths: (columnWidths: Record<string, number>) => Promise<void>;
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
   setLastPlayedSongId: (trackId: string | null) => Promise<void>;

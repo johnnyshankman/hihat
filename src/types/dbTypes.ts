@@ -72,6 +72,7 @@ export interface Settings {
   columns: ColumnVisibility; // Visible columns in the library view
   lastPlayedSongId: string | null; // ID of the last played song for resuming playback
   volume: number | null; // Volume level (0-1) for audio playback
+  columnWidths: Record<string, number> | null; // Persisted column widths for the track table
 }
 
 /**

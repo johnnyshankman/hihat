@@ -33,6 +33,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       dateAdded: true,
       lastPlayed: false,
     },
+    columnWidths: null,
 
     // Playback state (from playbackStore)
     currentTrack: null, // the current track playing
@@ -71,6 +72,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           columns: state.columns,
           lastPlayedSongId: state.lastPlayedSongId,
           volume: state.volume,
+          columnWidths: state.columnWidths,
         };
         await window.electron.settings.update(updatedSettings);
 
@@ -93,6 +95,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           columns: appSettings.columns,
           lastPlayedSongId: appSettings.lastPlayedSongId || null,
           volume: appSettings.volume !== null ? appSettings.volume : 1.0,
+          columnWidths: appSettings.columnWidths || null,
         });
 
         // Also make sure we initialize the volume for the player if it exists
@@ -126,6 +129,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPlayed: false,
           },
           id: 'app-settings',
+          columnWidths: null,
         };
       }
     },
@@ -152,6 +156,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           columns: updatedColumns,
           lastPlayedSongId: state.lastPlayedSongId,
           volume: state.volume,
+          columnWidths: state.columnWidths,
         };
         await window.electron.settings.update(updatedSettings);
 
@@ -162,6 +167,31 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         useUIStore
           .getState()
           .showNotification('Failed to update column visibility', 'error');
+      }
+    },
+
+    setColumnWidths: async (columnWidths: Record<string, number>) => {
+      try {
+        const state = get();
+
+        if (!state.id) {
+          throw new Error('Settings not loaded');
+        }
+
+        const updatedSettings = {
+          id: state.id,
+          libraryPath: state.libraryPath,
+          theme: state.theme,
+          columns: state.columns,
+          lastPlayedSongId: state.lastPlayedSongId,
+          volume: state.volume,
+          columnWidths,
+        };
+        await window.electron.settings.update(updatedSettings);
+
+        set({ columnWidths });
+      } catch (error) {
+        console.error('Error updating column widths:', error);
       }
     },
 
@@ -181,6 +211,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           columns: state.columns,
           lastPlayedSongId: state.lastPlayedSongId,
           volume: state.volume,
+          columnWidths: state.columnWidths,
         };
         await window.electron.settings.update(updatedSettings);
 
@@ -210,6 +241,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           columns: state.columns,
           lastPlayedSongId: trackId,
           volume: state.volume,
+          columnWidths: state.columnWidths,
         };
         await window.electron.settings.update(updatedSettings);
 
@@ -243,6 +275,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             columns: state.columns,
             lastPlayedSongId: state.lastPlayedSongId,
             volume,
+            columnWidths: state.columnWidths,
           };
           window.electron.settings.update(updatedSettings);
         } catch (error) {
