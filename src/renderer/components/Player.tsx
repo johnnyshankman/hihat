@@ -915,6 +915,8 @@ function Player() {
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
+                    width: 'fit-content',
+                    maxWidth: '100%',
                   }}
                   variant="body1"
                 >
