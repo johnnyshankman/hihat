@@ -20,18 +20,9 @@ import {
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchIcon from '@mui/icons-material/Search';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
-import {
-  MaterialReactTable,
-  useMaterialReactTable,
-  type MRT_SortingState as MrtSortingState,
-  type MRT_RowVirtualizer as MrtRowVirtualizer,
-  type MRT_VisibilityState as MrtVisibilityState,
-  type MRT_Row as MrtRow,
-  type MRT_TableInstance as MrtTableInstance,
-  // eslint-disable-next-line camelcase
-  MRT_ShowHideColumnsButton,
-} from 'material-react-table';
 import PeopleIcon from '@mui/icons-material/People';
+import { type SortingState, type Row, type Table } from '@tanstack/react-table';
+import { type Virtualizer } from '@tanstack/react-virtual';
 import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
@@ -44,10 +35,10 @@ import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
 import ArtistBrowser from './ArtistBrowser';
 import SearchBar from './SearchBar';
+import VirtualTable from './VirtualTable';
+import ColumnVisibilityMenu from './ColumnVisibilityMenu';
 import {
-  getCommonTableConfig,
-  getCommonColumnVisibilityHandler,
-  getCommonRowStyling,
+  getRowClassName,
   getCommonColumnDefs,
   type TableData,
 } from '../utils/tableConfig';
@@ -97,7 +88,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
 
   // Ref to store the table instance for scrollToTrack
-  const tableRef = useRef<MrtTableInstance<TableData> | null>(null);
+  const tableRef = useRef<Table<TableData> | null>(null);
 
   // Ref to track if the table is ready for scrolling (fully rendered with correct sorting)
   const tableReadyRef = useRef<boolean>(false);
@@ -143,7 +134,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   }, [artistBrowserOpen, setArtistFilter]);
 
   // Global filter state — receives debounced values from SearchBar.
-  // This is the only filter state that triggers MRT re-renders.
   const [globalFilter, setGlobalFilter] = useState(
     () => libraryViewState.filtering || '',
   );
@@ -156,18 +146,14 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   }, []);
 
   // Sorting state - initialize from store to persist across unmount/remount
-  const [sorting, setSorting] = useState<MrtSortingState>(
+  const [sorting, setSorting] = useState<SortingState>(
     () => libraryViewState.sorting || [{ id: 'artist', desc: false }],
   );
 
   // Add row virtualizer ref
-  const rowVirtualizerRef = useRef<MrtRowVirtualizer>(null);
-
-  // Cache for O(1) row index lookups in muiTableBodyRowProps
-  const rowIndexCacheRef = useRef<{
-    rows: MrtRow<TableData>[];
-    map: Map<string, number>;
-  } | null>(null);
+  const rowVirtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(
+    null,
+  );
 
   const handlePlayTrack = useCallback(
     (trackId: string) => {
@@ -252,11 +238,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       if (!rowVirtualizerRef.current) return;
 
       // Use the table's actual row model to find the track index
-      // This ensures we use the same order as the rendered table
       let trackIndex = -1;
 
       if (tableRef.current) {
-        // Get the actual sorted/filtered rows from the table
         const { rows } = tableRef.current.getRowModel();
         trackIndex = rows.findIndex((row) => row.original.id === trackId);
       }
@@ -267,70 +251,43 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         trackIndex = trackIds.indexOf(trackId);
       }
 
-      // eslint-disable-next-line no-console
-      console.log('scrollToTrack called with:', {
-        trackId,
-        trackIndex,
-        usingTableRowModel: tableRef.current !== null,
-        artistFilter,
-      });
-
       if (trackIndex !== -1) {
-        // Scroll to the track
         rowVirtualizerRef.current.scrollToIndex(trackIndex, {
           align: 'center',
         });
-        // eslint-disable-next-line no-console
-        console.log('Scrolled to index:', trackIndex);
-      } else {
-        // eslint-disable-next-line no-console
-        console.log('Track not found in current view');
       }
     },
     [artistFilter],
   );
 
   // Function that waits for the table to be ready before scrolling
-  // This is used when navigating from another view (e.g., playlist) to library
   const scrollToTrackWhenReady = useCallback(
     (trackId: string, maxWaitMs: number = 2000) => {
       const startTime = Date.now();
-      const pollInterval = 50; // Check every 50ms
-      const minWaitMs = 150; // Minimum wait time before scrolling to ensure virtualizer is stable
+      const pollInterval = 50;
+      const minWaitMs = 150;
 
       const attemptScroll = () => {
         const elapsedMs = Date.now() - startTime;
 
-        // Check if table is ready (has rows and ref is set)
         const isReady =
           tableReadyRef.current &&
           tableRef.current &&
           tableRef.current.getRowModel().rows.length > 0;
 
-        // Wait at least minWaitMs before scrolling, even if table appears ready
-        // This ensures the virtualizer has time to stabilize for all library sizes
         if (isReady && elapsedMs >= minWaitMs) {
-          // Table is ready and we've waited long enough, scroll now
           scrollToTrack(trackId);
           return;
         }
 
-        // Check if we've exceeded the max wait time
         if (elapsedMs >= maxWaitMs) {
-          // Timeout - try scrolling anyway as a fallback
-          // eslint-disable-next-line no-console
-          console.log(
-            'scrollToTrackWhenReady: timeout reached, attempting scroll anyway',
-          );
           scrollToTrack(trackId);
           return;
         }
 
-        // Table not ready yet or haven't waited long enough, try again after a short delay
         setTimeout(attemptScroll, pollInterval);
       };
 
-      // Start polling
       attemptScroll();
     },
     [scrollToTrack],
@@ -344,7 +301,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     return () => {
       // @ts-ignore - Cleanup
       delete window.hihatScrollToLibraryTrack;
-      // Reset ready state on unmount
       tableReadyRef.current = false;
     };
   }, [scrollToTrackWhenReady]);
@@ -362,36 +318,22 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     if (selectedTrackIds.length === 0) return;
 
     try {
-      // Get the showNotification function from the UI store
       const { showNotification } = useUIStore.getState();
 
-      // Before deletion, determine which track to scroll to after deletion
-      // Get the current filtered and sorted track IDs with artist filter
       const currentTrackIds = getFilteredAndSortedTrackIds(
         'library',
         artistFilter,
       );
 
-      // Find all indices of tracks being deleted
       const deletedIndices = selectedTrackIds
         .map((trackId) => currentTrackIds.indexOf(trackId))
         .filter((index) => index !== -1)
-        .sort((a, b) => a - b); // Sort indices in ascending order
+        .sort((a, b) => a - b);
 
-      // Find the track to scroll to: the next track after the highest deleted index
       let targetTrackId: string | null = null;
       if (deletedIndices.length > 0) {
         const highestDeletedIndex = deletedIndices[deletedIndices.length - 1];
 
-        // eslint-disable-next-line no-console
-        console.log('Deletion info:', {
-          selectedTrackIds,
-          deletedIndices,
-          highestDeletedIndex,
-          totalTracks: currentTrackIds.length,
-        });
-
-        // Look for the next track that won't be deleted
         for (
           let i = highestDeletedIndex + 1;
           i < currentTrackIds.length;
@@ -400,52 +342,34 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           const candidateTrackId = currentTrackIds[i];
           if (!selectedTrackIds.includes(candidateTrackId)) {
             targetTrackId = candidateTrackId;
-            // eslint-disable-next-line no-console
-            console.log('Found next track:', candidateTrackId, 'at index', i);
             break;
           }
         }
 
-        // If no track found after the highest deleted index,
-        // look for a track before the lowest deleted index
         if (!targetTrackId && deletedIndices[0] > 0) {
           for (let i = deletedIndices[0] - 1; i >= 0; i -= 1) {
             const candidateTrackId = currentTrackIds[i];
             if (!selectedTrackIds.includes(candidateTrackId)) {
               targetTrackId = candidateTrackId;
-              // eslint-disable-next-line no-console
-              console.log(
-                'Found previous track:',
-                candidateTrackId,
-                'at index',
-                i,
-              );
               break;
             }
           }
         }
-
-        // eslint-disable-next-line no-console
-        console.log('Target track for scrolling:', targetTrackId);
       }
 
-      // Step 1: Get all playlists that might contain these tracks
       const allPlaylists = await window.electron.playlists.getAll();
 
-      // For each selected track
       // eslint-disable-next-line no-restricted-syntax
       for (const trackId of selectedTrackIds) {
         const track = getTrackById(trackId);
         // eslint-disable-next-line no-continue
         if (!track) continue;
 
-        // Step 2: Remove the track from all playlists that contain it
         const playlistsToUpdate = allPlaylists.filter(
           (playlist) =>
             !playlist.isSmart && playlist.trackIds.includes(trackId),
         );
 
-        // Update all playlists in parallel
         // eslint-disable-next-line no-await-in-loop
         await Promise.all(
           playlistsToUpdate.map((playlist) => {
@@ -457,7 +381,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           }),
         );
 
-        // Step 3: Delete the track from the database
         // eslint-disable-next-line no-await-in-loop
         const dbDeleteResult = await window.electron.tracks.delete(trackId);
 
@@ -467,7 +390,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           continue;
         }
 
-        // Step 4: Delete the actual file from the filesystem
         if (track.filePath) {
           // eslint-disable-next-line no-await-in-loop
           const fileDeleteResult = await window.electron.fileSystem.deleteFile(
@@ -483,18 +405,12 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         }
       }
 
-      // Reload the library to reflect changes
       await useLibraryStore.getState().loadLibrary(false);
 
-      // Clear selection after deletion
       setSelectedTracks({});
 
-      // Scroll to the target track if one was determined
       if (targetTrackId) {
-        // Use a longer timeout to ensure the table has re-rendered with the new data
         setTimeout(() => {
-          // eslint-disable-next-line no-console
-          console.log('Scrolling to track:', targetTrackId);
           scrollToTrack(targetTrackId);
         }, 300);
       }
@@ -512,19 +428,16 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   // Save the currently visible track on unmount
   useEffect(() => {
-    const virtualizerRef = rowVirtualizerRef.current;
+    const virtualizerRefCurrent = rowVirtualizerRef.current;
     return () => {
-      // On unmount, save the currently visible track
-      if (virtualizerRef) {
-        const visibleRange = virtualizerRef.range;
+      if (virtualizerRefCurrent) {
+        const visibleRange = virtualizerRefCurrent.range;
 
         if (visibleRange) {
-          // Get the middle visible item index
           const middleIndex = Math.floor(
             (visibleRange.startIndex + visibleRange.endIndex) / 2,
           );
 
-          // Get the filtered and sorted track IDs based on current view state
           const trackIds = getFilteredAndSortedTrackIds('library');
 
           if (trackIds[middleIndex]) {
@@ -538,7 +451,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Restore scroll position on mount
   useEffect(() => {
     if (lastViewedTrackId && rowVirtualizerRef.current && tracks.length > 0) {
-      // Use a small delay to ensure the virtualizer is ready
       setTimeout(() => {
         scrollToTrack(lastViewedTrackId);
       }, 100);
@@ -548,11 +460,10 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Get columns from shared configuration
   const columns = useMemo(() => getCommonColumnDefs(), []);
 
-  // Prepare data for Material React Table with artist filtering
+  // Prepare data for the table with artist filtering
   const data = useMemo<TableData[]>(() => {
     let filteredTracks = tracks;
 
-    // Filter by selected artist if one is selected
     if (artistFilter) {
       filteredTracks = tracks.filter((track) => {
         const artist = track.albumArtist || track.artist || 'Unknown Artist';
@@ -591,7 +502,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
     updateLibraryViewState(sorting, globalFilter);
 
-    // When filter is cleared (from non-empty to empty), scroll to current track
     if (
       prevFilter &&
       !globalFilter &&
@@ -622,7 +532,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const handleSearchToggle = useCallback(() => {
     setShowSearch((prev) => {
       if (prev) {
-        // Closing search - clear the filter immediately
         setGlobalFilter('');
         globalFilterRef.current = '';
       }
@@ -630,37 +539,168 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     });
   }, []);
 
-  // Unified toolbar with sidebar toggle, title, badges, and MRT controls
-  const renderTopToolbarCustomActions = useCallback(
-    // eslint-disable-next-line react/no-unused-prop-types
-    ({ table: tableInstance }: { table: MrtTableInstance<TableData> }) => {
-      return (
-        <Box
+  // Mark table as ready after render completes
+  useEffect(() => {
+    const rafId = requestAnimationFrame(() => {
+      tableReadyRef.current = true;
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      tableReadyRef.current = false;
+    };
+  }, [sorting, globalFilter, data.length]);
+
+  // Row event handlers
+  const handleRowClick = useCallback(
+    (row: Row<TableData>, index: number, e: React.MouseEvent) => {
+      const trackId = row.original.id;
+
+      setSelectedTracks((prev) => {
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+          const newSelectedTracks = { ...prev };
+          if (newSelectedTracks[trackId]) {
+            delete newSelectedTracks[trackId];
+          } else {
+            newSelectedTracks[trackId] = true;
+          }
+          setLastClickedIndex(index);
+          return newSelectedTracks;
+        }
+
+        if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
+          if (lastClickedIndex === null) {
+            setLastClickedIndex(index);
+            return { [trackId]: true };
+          }
+
+          const start = Math.min(lastClickedIndex, index);
+          const end = Math.max(lastClickedIndex, index);
+
+          const rangeSelection: Record<string, boolean> = {};
+
+          if (tableRef.current) {
+            const visibleRows = tableRef.current.getRowModel().rows;
+            for (let i = start; i <= end; i += 1) {
+              const rowData = visibleRows[i]?.original;
+              if (rowData) {
+                rangeSelection[rowData.id] = true;
+              }
+            }
+          }
+
+          return rangeSelection;
+        }
+
+        setLastClickedIndex(index);
+        return { [trackId]: true };
+      });
+    },
+    [lastClickedIndex],
+  );
+
+  const handleRowDoubleClick = useCallback(
+    (row: Row<TableData>, _index: number) => {
+      handlePlayTrack(row.original.id);
+      setSelectedTracks({ [row.original.id]: true });
+    },
+    [handlePlayTrack],
+  );
+
+  const handleRowContextMenu = useCallback(
+    (row: Row<TableData>, _index: number, e: React.MouseEvent) => {
+      const trackId = row.original.id;
+
+      if (selectedTracks[trackId]) {
+        handleContextMenu(e, trackId);
+      } else {
+        setSelectedTracks({ [trackId]: true });
+        handleContextMenu(e, trackId);
+      }
+    },
+    [selectedTracks, handleContextMenu],
+  );
+
+  const handleGetRowClassName = useCallback(
+    (row: Row<TableData>, index: number) => {
+      return getRowClassName(
+        row.original.id,
+        currentTrack?.id || undefined,
+        Object.keys(selectedTracks),
+        playbackSource || '',
+        'library',
+        undefined,
+        undefined,
+        index,
+      );
+    },
+    [currentTrack?.id, selectedTracks, playbackSource],
+  );
+
+  // Column visibility toggle handler
+  const handleColumnVisibilityToggle = useCallback(
+    (columnId: string, visible: boolean) => {
+      updateColumnVisibility(columnId, visible);
+    },
+    [updateColumnVisibility],
+  );
+
+  // Toolbar content
+  const toolbarContent = useMemo(
+    () => (
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1,
+          alignItems: 'center',
+          height: '32px',
+          pl: '0',
+          flexShrink: 0,
+          width: '100%',
+        }}
+      >
+        <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
+        <Typography
           sx={{
-            display: 'flex',
-            gap: 1,
-            alignItems: 'center',
-            height: '32px',
-            pl: '0',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            userSelect: 'none',
             flexShrink: 0,
-            width: '100%',
           }}
+          variant="h2"
         >
-          <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-          <Typography
-            sx={{
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              userSelect: 'none',
-              flexShrink: 0,
-            }}
-            variant="h2"
-          >
-            Library
-          </Typography>
-          {!showSearch && (
-            <>
+          Library
+        </Typography>
+        {!showSearch && (
+          <>
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: '16px',
+                backgroundColor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? theme.palette.grey[800]
+                    : theme.palette.grey[200],
+                px: 1.5,
+                py: 0.5,
+                justifyContent: 'center',
+                userSelect: 'none',
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                sx={{
+                  color: (theme) => theme.palette.text.secondary,
+                  lineHeight: 1,
+                }}
+                variant="body2"
+              >
+                {trackCount.toLocaleString()}&nbsp;&#9835;
+              </Typography>
+            </Box>
+            {!isNarrowWindow && (
               <Box
                 sx={{
                   display: 'inline-flex',
@@ -684,100 +724,75 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
                   }}
                   variant="body2"
                 >
-                  {trackCount.toLocaleString()}&nbsp;♫
+                  {totalHours}&nbsp;
                 </Typography>
-              </Box>
-              {!isNarrowWindow && (
-                <Box
+                <AccessTimeIcon
                   sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    borderRadius: '16px',
-                    backgroundColor: (theme) =>
-                      theme.palette.mode === 'dark'
-                        ? theme.palette.grey[800]
-                        : theme.palette.grey[200],
-                    px: 1.5,
-                    py: 0.5,
-                    justifyContent: 'center',
-                    userSelect: 'none',
-                    flexShrink: 0,
+                    fontSize: 14,
+                    color: (theme) => theme.palette.text.secondary,
                   }}
-                >
-                  <Typography
-                    sx={{
-                      color: (theme) => theme.palette.text.secondary,
-                      lineHeight: 1,
-                    }}
-                    variant="body2"
-                  >
-                    {totalHours}&nbsp;
-                  </Typography>
-                  <AccessTimeIcon
-                    sx={{
-                      fontSize: 14,
-                      color: (theme) => theme.palette.text.secondary,
-                    }}
-                  />
-                </Box>
-              )}
-            </>
-          )}
-          {showSearch && (
-            <SearchBar
-              initialValue={globalFilterRef.current}
-              onClose={handleSearchToggle}
-              onDebouncedChange={handleDebouncedSearchChange}
-            />
-          )}
-          <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
-          <Box
-            sx={{
-              display: 'flex',
-              gap: '2px',
-              alignItems: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Tooltip title={showSearch ? 'Close search' : 'Search'}>
-              <IconButton
-                aria-label="Show/Hide search"
-                onClick={handleSearchToggle}
-                sx={{
-                  color: showSearch ? 'primary.main' : 'text.secondary',
-                  '&:hover': {
-                    color: showSearch ? 'primary.dark' : 'text.primary',
-                  },
-                }}
-              >
-                {showSearch ? <SearchOffIcon /> : <SearchIcon />}
-              </IconButton>
-            </Tooltip>
-            {/* eslint-disable-next-line react/jsx-pascal-case, camelcase */}
-            <MRT_ShowHideColumnsButton table={tableInstance} />
-            <Tooltip
-              title={
-                artistBrowserOpen
-                  ? 'Hide artist browser'
-                  : 'Show artist browser'
-              }
+                />
+              </Box>
+            )}
+          </>
+        )}
+        {showSearch && (
+          <SearchBar
+            initialValue={globalFilterRef.current}
+            onClose={handleSearchToggle}
+            onDebouncedChange={handleDebouncedSearchChange}
+          />
+        )}
+        <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
+        <Box
+          sx={{
+            display: 'flex',
+            gap: '2px',
+            alignItems: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <Tooltip title={showSearch ? 'Close search' : 'Search'}>
+            <IconButton
+              aria-label="Show/Hide search"
+              onClick={handleSearchToggle}
+              sx={{
+                color: showSearch ? 'primary.main' : 'text.secondary',
+                '&:hover': {
+                  color: showSearch ? 'primary.dark' : 'text.primary',
+                },
+              }}
             >
-              <IconButton
-                onClick={handleArtistBrowserToggle}
-                sx={{
-                  color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
-                  '&:hover': {
-                    color: artistBrowserOpen ? 'primary.dark' : 'text.primary',
-                  },
-                }}
-              >
-                <PeopleIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
+              {showSearch ? <SearchOffIcon /> : <SearchIcon />}
+            </IconButton>
+          </Tooltip>
+          <ColumnVisibilityMenu
+            columns={columns}
+            columnVisibility={
+              (columnVisibility as unknown as Record<string, boolean>) || {}
+            }
+            onToggle={handleColumnVisibilityToggle}
+          />
+          <Tooltip
+            title={
+              artistBrowserOpen ? 'Hide artist browser' : 'Show artist browser'
+            }
+          >
+            <IconButton
+              onClick={handleArtistBrowserToggle}
+              sx={{
+                color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
+                '&:hover': {
+                  color: artistBrowserOpen ? 'primary.dark' : 'text.primary',
+                },
+              }}
+            >
+              <PeopleIcon />
+            </IconButton>
+          </Tooltip>
         </Box>
-      );
-    },
+      </Box>
+    ),
     [
       drawerOpen,
       onDrawerToggle,
@@ -789,160 +804,15 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       showSearch,
       handleSearchToggle,
       handleDebouncedSearchChange,
+      columns,
+      columnVisibility,
+      handleColumnVisibilityToggle,
     ],
   );
 
-  // Configure the table
-  const table = useMaterialReactTable({
-    ...getCommonTableConfig(drawerOpen),
-    columns,
-    data,
-    rowVirtualizerInstanceRef: rowVirtualizerRef,
-    state: {
-      globalFilter,
-      sorting,
-      columnVisibility: {
-        ...((columnVisibility as unknown as MrtVisibilityState) || {}),
-        trackNumber: false,
-      },
-    },
-    onSortingChange: (updater) => {
-      const newSorting =
-        typeof updater === 'function' ? updater(sorting) : updater;
-      setSorting(newSorting);
-    },
-    onGlobalFilterChange: (updater) => {
-      const newFilter =
-        typeof updater === 'function' ? updater(globalFilter) : updater;
-      setGlobalFilter(newFilter);
-      globalFilterRef.current = newFilter;
-    },
-    onColumnVisibilityChange: getCommonColumnVisibilityHandler(
-      columnVisibility as unknown as Record<string, boolean>,
-      updateColumnVisibility,
-    ),
-    onRowSelectionChange: () => {
-      // do absolutely nothing, we handle this manually
-    },
-    muiTableBodyRowProps: useCallback(
-      ({
-        row,
-        table: tableInstance,
-      }: {
-        row: MrtRow<TableData>;
-        table: MrtTableInstance<TableData>;
-      }) => {
-        // Build an O(1) index cache for visible rows, refreshed when the row array changes
-        const visibleRows = tableInstance.getRowModel().rows;
-        if (
-          !rowIndexCacheRef.current ||
-          rowIndexCacheRef.current.rows !== visibleRows
-        ) {
-          const map = new Map<string, number>();
-          for (let i = 0; i < visibleRows.length; i += 1) {
-            map.set(visibleRows[i].original.id, i);
-          }
-          rowIndexCacheRef.current = { rows: visibleRows, map };
-        }
-        const currentIndex =
-          rowIndexCacheRef.current.map.get(row.original.id) ?? -1;
-
-        // Use the visual index for row striping
-        const visualIndex = currentIndex !== -1 ? currentIndex : row.index;
-
-        return {
-          onClick: (e: React.MouseEvent) => {
-            const trackId = row.original.id;
-
-            setSelectedTracks((prev) => {
-              // Cmd/Ctrl + Click: Toggle selection
-              if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
-                const newSelectedTracks = { ...prev };
-                if (newSelectedTracks[trackId]) {
-                  delete newSelectedTracks[trackId];
-                } else {
-                  newSelectedTracks[trackId] = true;
-                }
-                setLastClickedIndex(currentIndex);
-                return newSelectedTracks;
-              }
-
-              // Shift + Click: Range selection (always replace existing selection)
-              if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
-                // If no previous selection, treat as normal click
-                if (lastClickedIndex === null) {
-                  setLastClickedIndex(currentIndex);
-                  return { [trackId]: true };
-                }
-
-                const start = Math.min(lastClickedIndex, currentIndex);
-                const end = Math.max(lastClickedIndex, currentIndex);
-
-                // Create new selection with only the range
-                const rangeSelection: Record<string, boolean> = {};
-
-                // Select all tracks in range
-                for (let i = start; i <= end; i += 1) {
-                  const rowData = visibleRows[i]?.original;
-                  if (rowData) {
-                    rangeSelection[rowData.id] = true;
-                  }
-                }
-
-                // Don't update lastClickedIndex on shift+click to maintain the anchor point
-                return rangeSelection;
-              }
-
-              // Normal click: Select only this track
-              setLastClickedIndex(currentIndex);
-              return { [trackId]: true };
-            });
-          },
-          onDoubleClick: () => {
-            // play the track
-            handlePlayTrack(row.original.id);
-            // make this the only selected track
-            setSelectedTracks({ [row.original.id]: true });
-          },
-          onContextMenu: (e: React.MouseEvent) => {
-            const trackId = row.original.id;
-
-            // If right-clicking on an already selected track, keep selection
-            if (selectedTracks[trackId]) {
-              handleContextMenu(e, trackId);
-            } else {
-              // If right-clicking on unselected track, select only that track
-              setSelectedTracks({ [trackId]: true });
-              handleContextMenu(e, trackId);
-            }
-          },
-          'data-track-id': row.original.id,
-          sx: getCommonRowStyling(
-            row.original.id,
-            currentTrack?.id || undefined,
-            Object.keys(selectedTracks),
-            playbackSource || '',
-            'library',
-            undefined,
-            undefined,
-            visualIndex,
-          ),
-        };
-      },
-      [
-        selectedTracks,
-        setSelectedTracks,
-        setLastClickedIndex,
-        lastClickedIndex,
-        handlePlayTrack,
-        handleContextMenu,
-        currentTrack?.id,
-        playbackSource,
-      ],
-    ),
-    renderTopToolbarCustomActions,
-    enableToolbarInternalActions: false,
-    renderEmptyRowsFallback: () => (
+  // Empty state content
+  const emptyStateContent = useMemo(
+    () => (
       <Box
         sx={{
           display: 'flex',
@@ -976,25 +846,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         </Typography>
       </Box>
     ),
-  });
-
-  // Store table instance in ref for scrollToTrack to access
-  tableRef.current = table;
-
-  // Mark table as ready after render completes
-  // Using useEffect ensures this runs after the DOM has been updated
-  useEffect(() => {
-    // Use requestAnimationFrame to ensure the browser has painted
-    // This guarantees the table is fully rendered before we mark it as ready
-    const rafId = requestAnimationFrame(() => {
-      tableReadyRef.current = true;
-    });
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      tableReadyRef.current = false;
-    };
-  }, [sorting, globalFilter, data.length]); // Re-run when sorting, filter, or data changes
+    [drawerOpen],
+  );
 
   return (
     <Box
@@ -1034,7 +887,25 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             backgroundColor: (theme) => theme.palette.background.default,
           }}
         >
-          <MaterialReactTable table={table} />
+          <VirtualTable
+            columns={columns}
+            columnVisibility={
+              (columnVisibility as unknown as Record<string, boolean>) || {}
+            }
+            data={data}
+            emptyState={emptyStateContent}
+            getRowClassName={handleGetRowClassName}
+            globalFilter={globalFilter}
+            onColumnVisibilityChange={handleColumnVisibilityToggle}
+            onRowClick={handleRowClick}
+            onRowContextMenu={handleRowContextMenu}
+            onRowDoubleClick={handleRowDoubleClick}
+            onSortingChange={setSorting}
+            sorting={sorting}
+            tableRef={tableRef}
+            toolbar={toolbarContent}
+            virtualizerRef={rowVirtualizerRef}
+          />
         </Box>
 
         {/* Library path selection dialog */}
@@ -1140,7 +1011,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
 // Memoize the Library component to prevent unnecessary re-renders
 export default React.memo(Library, (prevProps, nextProps) => {
-  // Only re-render if drawerOpen actually changes
   return (
     prevProps.drawerOpen === nextProps.drawerOpen &&
     prevProps.onDrawerToggle === nextProps.onDrawerToggle

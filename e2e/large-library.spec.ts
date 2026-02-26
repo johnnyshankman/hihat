@@ -33,7 +33,7 @@ test.describe('Large Library (200+ tracks)', () => {
 
     // Get the scrollable table container
     // MaterialReactTable uses a container with overflow for virtualization
-    const tableContainer = page.locator('.MuiTableContainer-root').first();
+    const tableContainer = page.locator('[data-testid="vt-container"]').first();
     await expect(tableContainer).toBeVisible();
 
     // Get initial visible tracks
@@ -143,16 +143,9 @@ test.describe('Large Library (200+ tracks)', () => {
       0,
     );
 
-    // Sort by Title ascending
-    const titleHeaderButton = page
-      .locator('th')
-      .filter({ hasText: 'Title' })
-      .locator('button')
-      .first();
-    await titleHeaderButton.click();
-    await page.waitForTimeout(500);
-
-    await page.locator('text=Sort by Title ascending').click();
+    // Sort by Title ascending — click the Title header directly
+    const titleHeader = page.locator('th').filter({ hasText: 'Title' }).first();
+    await titleHeader.click();
     await page.waitForTimeout(1000);
 
     const sortedTitles = await getSongTitles();
@@ -273,7 +266,7 @@ test.describe('Large Library (200+ tracks)', () => {
     await page.waitForTimeout(3000);
     await page.waitForSelector('[data-track-id]', { timeout: 10000 });
 
-    const tableContainer = page.locator('.MuiTableContainer-root').first();
+    const tableContainer = page.locator('[data-testid="vt-container"]').first();
     await expect(tableContainer).toBeVisible();
 
     // Measure scroll performance by timing scroll operations

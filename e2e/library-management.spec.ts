@@ -93,19 +93,9 @@ test.describe('Library Management', () => {
     expect(artists[0]).toMatch(/^A/); // First artist starts with A
 
     // Test sorting by Title column - ascending
-    // MaterialReactTable headers open a dropdown menu, so we need to:
-    // 1. Click the Title column header button to open the menu
-    // 2. Click "Sort by Title ascending" from the menu
-    const titleHeaderButton = page
-      .locator('th')
-      .filter({ hasText: 'Title' })
-      .locator('button')
-      .first();
-    await titleHeaderButton.click();
-    await page.waitForTimeout(500);
-
-    // Click "Sort by Title ascending" menu item
-    await page.locator('text=Sort by Title ascending').click();
+    // Click the Title column header directly to sort ascending
+    const titleHeader = page.locator('th').filter({ hasText: 'Title' }).first();
+    await titleHeader.click();
     await page.waitForTimeout(1000);
 
     // Get titles after sorting by Title ascending
@@ -115,12 +105,8 @@ test.describe('Library Management', () => {
     expect(titles).toEqual(sortedTitles);
 
     // Test sorting by Title column - descending
-    // Open the Title column menu again
-    await titleHeaderButton.click();
-    await page.waitForTimeout(500);
-
-    // Click "Sort by Title descending" menu item
-    await page.locator('text=Sort by Title descending').click();
+    // Click the Title header again to toggle to descending
+    await titleHeader.click();
     await page.waitForTimeout(1000);
 
     titles = await getSongTitles();
@@ -129,16 +115,14 @@ test.describe('Library Management', () => {
     expect(titles).toEqual(reverseSortedTitles);
 
     // Test sorting by Artist column - descending
-    const artistHeaderButton = page
+    // Click Artist header once for ascending, then again for descending
+    const artistHeader = page
       .locator('th')
       .filter({ hasText: 'Artist' })
-      .locator('button')
       .first();
-    await artistHeaderButton.click();
+    await artistHeader.click();
     await page.waitForTimeout(500);
-
-    // Click "Sort by Artist descending" menu item
-    await page.locator('text=Sort by Artist descending').click();
+    await artistHeader.click();
     await page.waitForTimeout(1000);
 
     artists = await getSongArtists();

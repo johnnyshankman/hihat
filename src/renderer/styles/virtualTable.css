@@ -1,0 +1,206 @@
+/* Virtual Table CSS — all styling uses CSS custom properties synced from MUI theme */
+
+.vt-paper {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.vt-toolbar {
+  min-height: 44px;
+  border-bottom: 1px solid var(--vt-divider);
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  gap: 8px;
+  flex-wrap: wrap;
+  overflow: visible;
+  background-color: var(--vt-bg-paper);
+  -webkit-app-region: no-drag;
+}
+
+.vt-container {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  overflow: auto;
+  padding: 0;
+  margin: 0;
+  background-color: var(--vt-bg-default);
+  -webkit-app-region: no-drag;
+}
+
+.vt-container::-webkit-scrollbar {
+  width: 12px;
+  height: 8px;
+}
+
+.vt-container::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.vt-container::-webkit-scrollbar-thumb {
+  background-color: var(--vt-scrollbar-thumb);
+  border-radius: 0;
+}
+
+.vt-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vt-scrollbar-thumb-hover);
+}
+
+.vt-container::-webkit-scrollbar-corner {
+  background-color: var(--vt-scrollbar-thumb);
+  border-radius: 0;
+}
+
+.vt-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vt-thead {
+  border-bottom: 1px solid var(--vt-divider);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--vt-bg-paper);
+}
+
+.vt-th {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  padding: 4px 8px;
+  letter-spacing: 0.01em;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: var(--vt-bg-paper);
+  color: var(--vt-text-primary);
+}
+
+.vt-th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vt-sort-indicator {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.vt-th-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.vt-th-resize-handle:hover,
+.vt-th-resize-handle.vt-resizing {
+  background-color: var(--vt-divider);
+}
+
+.vt-td {
+  font-size: 12.5px;
+  line-height: 22px;
+  padding: 0 8px;
+  height: 22px;
+  max-height: 22px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-bottom: none;
+  color: var(--vt-text-primary);
+}
+
+.vt-row {
+  height: 22px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.vt-row-even {
+  background-color: var(--vt-bg-even);
+}
+
+.vt-row-odd {
+  background-color: var(--vt-bg-default);
+}
+
+.vt-row-selected {
+  background-color: var(--vt-bg-selected) !important;
+}
+
+/* Currently playing track — animated diagonal stripes */
+.vt-row-playing {
+  position: relative;
+  overflow: hidden;
+  background-color: transparent !important;
+}
+
+.vt-row-playing::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background-image: var(--vt-stripe-playing);
+  animation: vt-moveStripes 52s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.vt-row-playing > td {
+  position: relative;
+  z-index: 1;
+}
+
+/* Playing AND selected — darker animated stripes */
+.vt-row-playing-selected {
+  position: relative;
+  overflow: hidden;
+  background-color: transparent !important;
+}
+
+.vt-row-playing-selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background-image: var(--vt-stripe-playing-selected);
+  animation: vt-moveStripes 52s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.vt-row-playing-selected > td {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes vt-moveStripes {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(50%);
+  }
+}

@@ -11,19 +11,15 @@ test.describe('Scroll to Song', () => {
     await page.waitForSelector('[data-track-id]', { timeout: 10000 });
 
     // 1. Change sort order to Title descending
-    const titleHeaderButton = page
-      .locator('th')
-      .filter({ hasText: 'Title' })
-      .locator('button')
-      .first();
-    await titleHeaderButton.click();
+    // Click Title header once for ascending, then again for descending
+    const titleHeader = page.locator('th').filter({ hasText: 'Title' }).first();
+    await titleHeader.click();
     await page.waitForTimeout(500);
-
-    await page.locator('text=Sort by Title descending').click();
+    await titleHeader.click();
     await page.waitForTimeout(1000);
 
     // 2. Scroll down to find a track about 20 rows into the library (not at the top)
-    const tableContainer = page.locator('.MuiTableContainer-root').first();
+    const tableContainer = page.locator('[data-testid="vt-container"]').first();
     await tableContainer.evaluate((c) => {
       c.scrollTop = 800; // Scroll down ~20 rows
     });
@@ -99,14 +95,14 @@ test.describe('Scroll to Song', () => {
     };
 
     // 1. Change sort order to Title descending
-    const titleHeaderButton = page
+    // Click Title header once for ascending, then again for descending
+    const titleHeader2 = page
       .locator('th')
       .filter({ hasText: 'Title' })
-      .locator('button')
       .first();
-    await titleHeaderButton.click();
+    await titleHeader2.click();
     await page.waitForTimeout(500);
-    await page.locator('text=Sort by Title descending').click();
+    await titleHeader2.click();
     await page.waitForTimeout(1000);
 
     // Record the track order after sorting
