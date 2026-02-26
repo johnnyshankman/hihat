@@ -64,7 +64,7 @@ function SearchBar({
         flexGrow: 1,
         flexShrink: 1,
         minWidth: '100px',
-        '& .MuiOutlinedInput-root': { height: '32px' },
+        '& .MuiOutlinedInput-root': { height: '28px' },
       }}
       value={value}
       variant="outlined"
