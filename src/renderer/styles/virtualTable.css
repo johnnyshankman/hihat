@@ -20,7 +20,7 @@
   flex-wrap: wrap;
   overflow: visible;
   background-color: var(--vt-bg-paper);
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag;
 }
 
 .vt-container {
