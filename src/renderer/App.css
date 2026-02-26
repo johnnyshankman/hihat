@@ -151,13 +151,13 @@ button, input, a, [role="button"],
  * Give the library/playlist table proper padding on left and right
  */
 .MuiTableCell-root:first-child {
-  padding-left: 16px;
+  padding-left: 12px;
 }
 .MuiTableCell-root:last-child {
-  padding-right: 16px;
+  padding-right: 12px;
 }
 
-.css-wsew38 {
+.MuiTableBody-root .MuiTableCell-root {
   padding-top: 0px !important;
   padding-bottom: 0px !important;
 }

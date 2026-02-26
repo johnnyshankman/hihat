@@ -181,6 +181,47 @@ test.describe('UI Visual Verification', () => {
     await TestHelpers.closeApp(app);
   });
 
+  test('compact layout - row density verification', async () => {
+    const { app, page } = await TestHelpers.launchApp();
+    await page.waitForTimeout(3000);
+
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].setSize(1280, 800);
+    });
+    await page.waitForTimeout(500);
+
+    // Verify that rows are visible (Apple Music-matched 22px rows)
+    const trackCount = await page.locator('[data-track-id]').count();
+    expect(trackCount).toBeGreaterThanOrEqual(20);
+
+    await TestHelpers.takeScreenshot(page, 'ui-compact-row-density');
+
+    await TestHelpers.closeApp(app);
+  });
+
+  test('compact layout - sidebar density verification', async () => {
+    const { app, page } = await TestHelpers.launchApp();
+    await page.waitForTimeout(3000);
+
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].setSize(1280, 800);
+    });
+    await page.waitForTimeout(500);
+
+    // Verify sidebar is visible
+    expect(await page.locator('[data-testid="nav-library"]').isVisible()).toBe(
+      true,
+    );
+
+    // Verify playlist items are present in sidebar
+    const playlistCount = await page.locator('[data-playlist-id]').count();
+    expect(playlistCount).toBeGreaterThan(0);
+
+    await TestHelpers.takeScreenshot(page, 'ui-compact-sidebar-density');
+
+    await TestHelpers.closeApp(app);
+  });
+
   test('playlist view with unified toolbar', async () => {
     const { app, page } = await TestHelpers.launchApp();
     await page.waitForTimeout(3000);

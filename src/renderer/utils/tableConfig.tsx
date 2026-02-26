@@ -16,7 +16,7 @@ import {
   sortByLastPlayed,
 } from './sortingFunctions';
 
-const STATIC_ROW_HEIGHT = 23;
+const STATIC_ROW_HEIGHT = 22;
 
 // Custom formatter for duration in seconds
 export const formatDurationFromSeconds = (seconds: number): string => {
@@ -183,8 +183,8 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
       backgroundColor: (theme: Theme) => theme.palette.background.paper,
       borderBottom: '1px solid',
       borderColor: (theme: Theme) => theme.palette.divider,
-      minHeight: '56px',
-      padding: '8px',
+      minHeight: '44px',
+      padding: '4px 8px',
       display: 'flex',
       alignItems: 'center',
       overflow: 'visible',
@@ -196,6 +196,14 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
   muiTableBodyCellProps: {
     sx: {
       borderBottom: 'none',
+      fontSize: '12.5px',
+      lineHeight: `${STATIC_ROW_HEIGHT}px`,
+      padding: '0 8px',
+      height: `${STATIC_ROW_HEIGHT}px`,
+      maxHeight: `${STATIC_ROW_HEIGHT}px`,
+      overflow: 'hidden',
+      whiteSpace: 'nowrap',
+      textOverflow: 'ellipsis',
     },
   },
 
@@ -210,6 +218,11 @@ export const getCommonTableConfig = (_drawerOpen: boolean) => ({
   muiTableHeadCellProps: {
     sx: {
       backgroundColor: (theme: Theme) => theme.palette.background.paper,
+      fontSize: '11px',
+      fontWeight: 500,
+      lineHeight: 1.3,
+      padding: '4px 8px',
+      letterSpacing: '0.01em',
     },
   },
 
@@ -393,6 +406,7 @@ export const getCommonRowStyling = (
   return {
     cursor: 'pointer', // show you can click on the row
     height: `${STATIC_ROW_HEIGHT}px`, // get the height perfectly in line with the MRT configuration
+    maxHeight: `${STATIC_ROW_HEIGHT}px`,
     userSelect: 'none', // get rid of text selection
     // set background color based on actual row index in data, not DOM position
     backgroundColor: (theme: Theme) => {

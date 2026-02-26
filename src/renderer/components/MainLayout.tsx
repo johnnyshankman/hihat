@@ -495,9 +495,9 @@ export default function MainLayout() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 px: 1.5,
-                py: 1,
+                py: 0.5,
                 WebkitAppRegion: 'drag', // Make this area draggable
-                height: '56px',
+                height: '44px',
               }}
             >
               <Box
@@ -645,13 +645,13 @@ export default function MainLayout() {
 
             <List sx={{ flexGrow: 1, paddingTop: 0, px: 1 }}>
               {/* Library section */}
-              <Box sx={{ mb: 1 }}>
+              <Box sx={{ mb: 0.5 }}>
                 <Box
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
                     px: 1.5,
-                    py: 0.75,
+                    py: 0.5,
                     WebkitAppRegion: 'no-drag',
                   }}
                 >
@@ -676,11 +676,11 @@ export default function MainLayout() {
                   onClick={() => handleViewChange('library')}
                   selected={currentView === 'library'}
                   sx={{
-                    py: 0.5,
+                    py: 0.25,
                     px: 1.5,
                     WebkitAppRegion: 'no-drag',
                     borderRadius: 1,
-                    mb: 0.25,
+                    mb: 0,
                     '&.Mui-selected': {
                       backgroundColor: (t) =>
                         t.palette.mode === 'dark'
@@ -723,14 +723,14 @@ export default function MainLayout() {
               </Box>
 
               {/* Playlists section */}
-              <Box sx={{ mt: 1, mb: 0.5 }}>
+              <Box sx={{ mt: 0.5, mb: 0.5 }}>
                 <Box
                   onClick={handlePlaylistsClick}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
                     px: 1.5,
-                    py: 0.75,
+                    py: 0.5,
                     cursor: 'pointer',
                     WebkitAppRegion: 'no-drag',
                     '&:hover .playlist-header-text': {
@@ -795,11 +795,11 @@ export default function MainLayout() {
                           selectedPlaylistId === playlist.id
                         }
                         sx={{
-                          py: 0.5,
+                          py: 0.25,
                           px: 1.5,
                           WebkitAppRegion: 'no-drag',
                           borderRadius: 1,
-                          mb: 0.25,
+                          mb: 0,
                           '&.Mui-selected': {
                             backgroundColor: (t) =>
                               t.palette.mode === 'dark'

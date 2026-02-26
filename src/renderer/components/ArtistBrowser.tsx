@@ -141,8 +141,8 @@ function ArtistBrowser({
           {/* Header */}
           <Box
             sx={{
-              height: '56px',
-              minHeight: '56px',
+              height: '44px',
+              minHeight: '44px',
               px: 1.5,
               py: 0,
               borderBottom: `1px solid ${theme.palette.divider}`,
@@ -281,9 +281,9 @@ function ArtistBrowser({
                 onClick={() => handleArtistClick(artist)}
                 selected={selectedArtist === artist}
                 sx={{
-                  py: 0.4,
+                  py: 0.25,
                   px: 1.5,
-                  minHeight: 32,
+                  minHeight: 28,
                   userSelect: 'none',
                   backgroundColor:
                     theme.palette.mode === 'dark' ? 'black' : 'transparent',

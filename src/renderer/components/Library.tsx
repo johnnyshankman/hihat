@@ -640,7 +640,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             display: 'flex',
             gap: 1,
             alignItems: 'center',
-            height: '40px',
+            height: '32px',
             pl: '0',
             flexShrink: 0,
             width: '100%',
