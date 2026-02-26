@@ -517,14 +517,14 @@ export default function MiniPlayer() {
             spacing={1}
             sx={{ mb: 0 }}
           >
-            <Tooltip title={getRepeatTooltipText()}>
+            <Tooltip title={getShuffleTooltipText()}>
               <span>
                 <IconButton
-                  onClick={toggleRepeatMode}
+                  onClick={toggleShuffleMode}
                   size="small"
                   sx={{ color: 'white' }}
                 >
-                  {renderRepeatIcon()}
+                  {renderShuffleIcon()}
                 </IconButton>
               </span>
             </Tooltip>
@@ -559,14 +559,14 @@ export default function MiniPlayer() {
             >
               <SkipNext fontSize="medium" />
             </IconButton>
-            <Tooltip title={getShuffleTooltipText()}>
+            <Tooltip title={getRepeatTooltipText()}>
               <span>
                 <IconButton
-                  onClick={toggleShuffleMode}
+                  onClick={toggleRepeatMode}
                   size="small"
                   sx={{ color: 'white' }}
                 >
-                  {renderShuffleIcon()}
+                  {renderRepeatIcon()}
                 </IconButton>
               </span>
             </Tooltip>

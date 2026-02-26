@@ -992,17 +992,17 @@ function Player() {
             spacing={isCompactLayout ? 0 : { xs: 0.25, sm: 1 }}
             sx={{ mb: 0.0, width: '100%' }}
           >
-            <Tooltip title={getRepeatTooltipText()}>
+            <Tooltip title={getShuffleTooltipText()}>
               <span>
                 <IconButton
                   disabled={!currentTrack}
-                  onClick={toggleRepeatMode}
+                  onClick={toggleShuffleMode}
                   size="small"
                   sx={{
                     padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
                   }}
                 >
-                  {renderRepeatIcon()}
+                  {renderShuffleIcon()}
                 </IconButton>
               </span>
             </Tooltip>
@@ -1045,17 +1045,17 @@ function Player() {
                 fontSize={isCompactLayout || isXsScreen ? 'small' : 'medium'}
               />
             </IconButton>
-            <Tooltip title={getShuffleTooltipText()}>
+            <Tooltip title={getRepeatTooltipText()}>
               <span>
                 <IconButton
                   disabled={!currentTrack}
-                  onClick={toggleShuffleMode}
+                  onClick={toggleRepeatMode}
                   size="small"
                   sx={{
                     padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
                   }}
                 >
-                  {renderShuffleIcon()}
+                  {renderRepeatIcon()}
                 </IconButton>
               </span>
             </Tooltip>
