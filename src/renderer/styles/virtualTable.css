@@ -148,59 +148,19 @@
 
 /* Currently playing track — animated diagonal stripes */
 .vt-row-playing {
-  position: relative;
-  overflow: hidden;
   background-color: transparent !important;
-}
-
-.vt-row-playing::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 200%;
-  height: 100%;
   background-image: var(--vt-stripe-playing);
   animation: vt-moveStripes 52s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.vt-row-playing > td {
-  position: relative;
-  z-index: 1;
 }
 
 /* Playing AND selected — darker animated stripes */
 .vt-row-playing-selected {
-  position: relative;
-  overflow: hidden;
   background-color: transparent !important;
-}
-
-.vt-row-playing-selected::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 200%;
-  height: 100%;
   background-image: var(--vt-stripe-playing-selected);
   animation: vt-moveStripes 52s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.vt-row-playing-selected > td {
-  position: relative;
-  z-index: 1;
 }
 
 @keyframes vt-moveStripes {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(50%);
-  }
+  from { background-position-x: 0; }
+  to { background-position-x: 1000px; }
 }

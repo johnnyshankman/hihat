@@ -23,7 +23,7 @@ function SearchBar({
 }: SearchBarProps) {
   const [value, setValue] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debouncedValue = useDebouncedValue(value, 300);
+  const debouncedValue = useDebouncedValue(value, 150);
 
   // Notify parent when the debounced value changes
   useEffect(() => {
