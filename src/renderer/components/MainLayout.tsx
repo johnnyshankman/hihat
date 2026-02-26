@@ -43,7 +43,7 @@ import NotificationSystem from './NotificationSystem';
 import RenamePlaylistDialog from './RenamePlaylistDialog';
 import CreatePlaylistDialog from './CreatePlaylistDialog';
 
-const drawerWidth = 230;
+const drawerWidth = 200;
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
   open?: boolean;
