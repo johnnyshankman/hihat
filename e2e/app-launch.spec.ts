@@ -82,7 +82,7 @@ test.describe('Application Launch', () => {
     const { app } = await TestHelpers.launchApp();
 
     // Get initial window state
-    const initialState = await app.evaluate(async ({ BrowserWindow }) => {
+    await app.evaluate(async ({ BrowserWindow }) => {
       const window = BrowserWindow.getAllWindows()[0];
       return {
         bounds: window.getBounds(),
@@ -90,8 +90,6 @@ test.describe('Application Launch', () => {
         isMaximized: window.isMaximized(),
       };
     });
-
-    // expect(initialState.isVisible).toBe(true);
 
     // Test maximize/unmaximize
     await app.evaluate(async ({ BrowserWindow }) => {
