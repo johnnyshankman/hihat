@@ -83,7 +83,7 @@ export const getCommonColumnDefs = (): ColumnDef<TableData>[] => [
   },
   {
     accessorKey: 'duration',
-    header: 'Duration',
+    header: 'Time',
     size: 80,
     cell: ({ cell }) => formatDurationFromSeconds(cell.getValue<number>()),
     sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>

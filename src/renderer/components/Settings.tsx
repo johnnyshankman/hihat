@@ -891,7 +891,7 @@ export default function Settings({ onClose }: SettingsProps) {
                   onChange={() => handleColumnVisibilityChange('duration')}
                 />
               }
-              label="Duration"
+              label="Time"
             />
             <FormControlLabel
               control={
