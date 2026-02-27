@@ -15,7 +15,6 @@ import {
   DialogTitle,
   IconButton,
   Tooltip,
-  useMediaQuery,
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchIcon from '@mui/icons-material/Search';
@@ -119,7 +118,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const libraryViewState = useLibraryStore((state) => state.libraryViewState);
   const [artistBrowserOpen, setArtistBrowserOpen] = useState(!!artistFilter);
   const [showSearch, setShowSearch] = useState(!!libraryViewState.filtering);
-  const isNarrowWindow = useMediaQuery('(max-width:768px)');
 
   // Open artist browser when artist filter is set
   useEffect(() => {
@@ -714,40 +712,38 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
                 {trackCount.toLocaleString()}&nbsp;&#9835;
               </Typography>
             </Box>
-            {!isNarrowWindow && (
-              <Box
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: '16px',
+                backgroundColor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? theme.palette.grey[800]
+                    : theme.palette.grey[200],
+                px: 1.5,
+                py: 0.5,
+                justifyContent: 'center',
+                userSelect: 'none',
+                flexShrink: 0,
+              }}
+            >
+              <Typography
                 sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  borderRadius: '16px',
-                  backgroundColor: (theme) =>
-                    theme.palette.mode === 'dark'
-                      ? theme.palette.grey[800]
-                      : theme.palette.grey[200],
-                  px: 1.5,
-                  py: 0.5,
-                  justifyContent: 'center',
-                  userSelect: 'none',
-                  flexShrink: 0,
+                  color: (theme) => theme.palette.text.secondary,
+                  lineHeight: 1,
                 }}
+                variant="body2"
               >
-                <Typography
-                  sx={{
-                    color: (theme) => theme.palette.text.secondary,
-                    lineHeight: 1,
-                  }}
-                  variant="body2"
-                >
-                  {totalHours}&nbsp;
-                </Typography>
-                <AccessTimeIcon
-                  sx={{
-                    fontSize: 14,
-                    color: (theme) => theme.palette.text.secondary,
-                  }}
-                />
-              </Box>
-            )}
+                {totalHours}&nbsp;
+              </Typography>
+              <AccessTimeIcon
+                sx={{
+                  fontSize: 14,
+                  color: (theme) => theme.palette.text.secondary,
+                }}
+              />
+            </Box>
           </>
         )}
         {showSearch && (
@@ -816,7 +812,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       totalHours,
       artistBrowserOpen,
       handleArtistBrowserToggle,
-      isNarrowWindow,
       showSearch,
       handleSearchToggle,
       handleDebouncedSearchChange,
