@@ -873,7 +873,7 @@ function Player() {
             alignItems="center"
             direction="row"
             justifyContent="center"
-            spacing={0.5}
+            spacing={0.75}
             sx={{ mb: 0.0, width: '100%' }}
           >
             <Tooltip title={getShuffleTooltipText()}>
@@ -907,6 +907,14 @@ function Player() {
               sx={{
                 mx: { xs: 0.25, sm: 1 },
                 padding: { xs: '4px', sm: '4px' },
+                backgroundColor: 'text.primary',
+                color: 'background.default',
+                borderRadius: '50%',
+                '&:hover': { backgroundColor: 'text.secondary' },
+                '&.Mui-disabled': {
+                  backgroundColor: 'action.disabledBackground',
+                  color: 'action.disabled',
+                },
               }}
             >
               {!paused ? (
