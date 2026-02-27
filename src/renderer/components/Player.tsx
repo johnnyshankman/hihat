@@ -890,49 +890,61 @@ function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <IconButton
-              disabled={!currentTrack}
-              onClick={skipToPreviousTrack}
-              size="medium"
-              sx={{
-                padding: { xs: '4px', sm: '4px' },
-              }}
-            >
-              <SkipPrevious fontSize={isXsScreen ? 'small' : 'medium'} />
-            </IconButton>
-            <IconButton
-              disabled={!currentTrack}
-              onClick={() => setPaused(!paused)}
-              size="large"
-              sx={{
-                mx: { xs: 0.25, sm: 1 },
-                padding: { xs: '4px', sm: '4px' },
-                backgroundColor: 'text.primary',
-                color: 'background.default',
-                borderRadius: '50%',
-                '&:hover': { backgroundColor: 'text.secondary' },
-                '&.Mui-disabled': {
-                  backgroundColor: 'action.disabledBackground',
-                  color: 'action.disabled',
-                },
-              }}
-            >
-              {!paused ? (
-                <Pause fontSize={getPlayPauseIconSize()} />
-              ) : (
-                <PlayArrow fontSize={getPlayPauseIconSize()} />
-              )}
-            </IconButton>
-            <IconButton
-              disabled={!currentTrack}
-              onClick={skipToNextTrack}
-              size="medium"
-              sx={{
-                padding: { xs: '4px', sm: '4px' },
-              }}
-            >
-              <SkipNext fontSize={isXsScreen ? 'small' : 'medium'} />
-            </IconButton>
+            <Tooltip title="Previous">
+              <span>
+                <IconButton
+                  disabled={!currentTrack}
+                  onClick={skipToPreviousTrack}
+                  size="medium"
+                  sx={{
+                    padding: { xs: '4px', sm: '4px' },
+                  }}
+                >
+                  <SkipPrevious fontSize={isXsScreen ? 'small' : 'medium'} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title={paused ? 'Play' : 'Pause'}>
+              <span>
+                <IconButton
+                  disabled={!currentTrack}
+                  onClick={() => setPaused(!paused)}
+                  size="large"
+                  sx={{
+                    mx: { xs: 0.25, sm: 1 },
+                    padding: { xs: '2px', sm: '2px' },
+                    backgroundColor: 'text.primary',
+                    color: 'background.default',
+                    borderRadius: '50%',
+                    '&:hover': { backgroundColor: 'text.secondary' },
+                    '&.Mui-disabled': {
+                      backgroundColor: 'action.disabledBackground',
+                      color: 'action.disabled',
+                    },
+                  }}
+                >
+                  {!paused ? (
+                    <Pause fontSize={getPlayPauseIconSize()} />
+                  ) : (
+                    <PlayArrow fontSize={getPlayPauseIconSize()} />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Next">
+              <span>
+                <IconButton
+                  disabled={!currentTrack}
+                  onClick={skipToNextTrack}
+                  size="medium"
+                  sx={{
+                    padding: { xs: '4px', sm: '4px' },
+                  }}
+                >
+                  <SkipNext fontSize={isXsScreen ? 'small' : 'medium'} />
+                </IconButton>
+              </span>
+            </Tooltip>
             <Tooltip title={getRepeatTooltipText()}>
               <span>
                 <IconButton
@@ -965,9 +977,11 @@ function Player() {
         >
           {/* Notification button */}
           <NotificationButton />
-          <IconButton onClick={toggleVolumeControls} size="medium">
-            {renderVolumeIcon()}
-          </IconButton>
+          <Tooltip title="Volume">
+            <IconButton onClick={toggleVolumeControls} size="medium">
+              {renderVolumeIcon()}
+            </IconButton>
+          </Tooltip>
           <Popover
             anchorEl={volumeAnchorEl}
             anchorOrigin={{
