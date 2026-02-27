@@ -83,6 +83,21 @@ function VirtualTable({
   const isResizingRef = useRef(false);
   const theme = useTheme();
 
+  // Track container width for filler column
+  const [containerWidth, setContainerWidth] = React.useState(0);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return undefined;
+    const observer = new ResizeObserver((entries) => {
+      entries.forEach((entry) => {
+        setContainerWidth(entry.contentRect.width);
+      });
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   // Column sizing state for resizing
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>(
     () => initialColumnSizing || {},
@@ -234,8 +249,12 @@ function VirtualTable({
     .getVisibleFlatColumns()
     .reduce((sum, col) => sum + col.getSize(), 0);
 
+  // Filler column width to extend row backgrounds to container edge
+  const fillerWidth = Math.max(0, containerWidth - totalColumnWidth);
+
   // Number of visible columns (for spacer colSpan)
   const visibleColumnCount = table.getVisibleFlatColumns().length;
+  const totalColSpan = visibleColumnCount + (fillerWidth > 0 ? 1 : 0);
 
   return (
     <div className="vt-paper">
@@ -248,7 +267,7 @@ function VirtualTable({
         {rows.length > 0 ? (
           <table
             className="vt-table"
-            style={{ width: Math.max(totalColumnWidth, 100) }}
+            style={{ width: Math.max(totalColumnWidth + fillerWidth, 100) }}
           >
             <thead className="vt-thead">
               {headerGroups.map((headerGroup) => (
@@ -297,6 +316,13 @@ function VirtualTable({
                       </th>
                     );
                   })}
+                  {fillerWidth > 0 && (
+                    /* eslint-disable-next-line jsx-a11y/control-has-associated-label */
+                    <th
+                      className="vt-th vt-th-filler"
+                      style={{ width: fillerWidth }}
+                    />
+                  )}
                 </tr>
               ))}
             </thead>
@@ -305,7 +331,7 @@ function VirtualTable({
                 <tr aria-hidden="true">
                   {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
                   <td
-                    colSpan={visibleColumnCount}
+                    colSpan={totalColSpan}
                     style={{ height: paddingTop, padding: 0, border: 'none' }}
                   />
                 </tr>
@@ -337,6 +363,13 @@ function VirtualTable({
                         )}
                       </td>
                     ))}
+                    {fillerWidth > 0 && (
+                      /* eslint-disable-next-line jsx-a11y/control-has-associated-label */
+                      <td
+                        className="vt-td vt-td-filler"
+                        style={{ width: fillerWidth }}
+                      />
+                    )}
                   </tr>
                 );
               })}
@@ -344,7 +377,7 @@ function VirtualTable({
                 <tr aria-hidden="true">
                   {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
                   <td
-                    colSpan={visibleColumnCount}
+                    colSpan={totalColSpan}
                     style={{
                       height: paddingBottom,
                       padding: 0,
