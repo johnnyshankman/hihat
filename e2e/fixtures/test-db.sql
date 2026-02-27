@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS playlists (
   isSmart INTEGER NOT NULL,
   smartPlaylistId TEXT,
   ruleSet TEXT,
-  trackIds TEXT
+  trackIds TEXT,
+  sortPreference TEXT
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -32,7 +33,8 @@ CREATE TABLE IF NOT EXISTS settings (
   columns TEXT NOT NULL,
   lastPlayedSongId TEXT,
   volume REAL,
-  columnWidths TEXT
+  columnWidths TEXT,
+  librarySorting TEXT
 );
 
 -- Insert test tracks
@@ -245,13 +247,13 @@ INSERT INTO tracks (id, filePath, title, artist, album, albumArtist, genre, dura
 ('test-large-200', '{{TEST_SONGS_PATH}}/200 - Orchestra Prime - Slow Ocean of Love.mp3', 'Slow Ocean of Love', 'Orchestra Prime', 'Grand Overture', 'Orchestra Prime', 'Orchestral', 10.0, 9, '2024-07-18T04:00:00.000Z', '2024-08-04T00:00:00Z', NULL, 8);
 
 -- Insert test playlists
-INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds) VALUES
-('playlist-1', 'Test Playlist', 0, NULL, NULL, '["test-large-001","test-large-002","test-large-003"]'),
-('playlist-2', 'Jazz Favorites', 0, NULL, NULL, '["test-large-002","test-large-022","test-large-042"]'),
-('playlist-3', 'Recently Added', 1, 'recently-added', '{"type":"recentlyAdded","limit":50}', '[]'),
-('playlist-4', 'Recently Played', 1, 'recently-played', '{"type":"recentlyPlayed","limit":50}', '[]'),
-('playlist-5', 'Most Played', 1, 'most-played', '{"type":"mostPlayed","limit":50}', '[]');
+INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds, sortPreference) VALUES
+('playlist-1', 'Test Playlist', 0, NULL, NULL, '["test-large-001","test-large-002","test-large-003"]', NULL),
+('playlist-2', 'Jazz Favorites', 0, NULL, NULL, '["test-large-002","test-large-022","test-large-042"]', NULL),
+('playlist-3', 'Recently Added', 1, 'recently-added', '{"type":"recentlyAdded","limit":50}', '[]', NULL),
+('playlist-4', 'Recently Played', 1, 'recently-played', '{"type":"recentlyPlayed","limit":50}', '[]', NULL),
+('playlist-5', 'Most Played', 1, 'most-played', '{"type":"mostPlayed","limit":50}', '[]', NULL);
 
 -- Insert default settings
-INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths) VALUES
-('app-settings', '{{TEST_SONGS_PATH}}', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0, NULL);
+INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting) VALUES
+('app-settings', '{{TEST_SONGS_PATH}}', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0, NULL, NULL);

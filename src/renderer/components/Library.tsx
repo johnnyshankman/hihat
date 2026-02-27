@@ -80,6 +80,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const setColumnWidths = useSettingsAndPlaybackStore(
     (state) => state.setColumnWidths,
   );
+  const setLibrarySorting = useSettingsAndPlaybackStore(
+    (state) => state.setLibrarySorting,
+  );
 
   // Get state from playback store
   const currentTrack = useSettingsAndPlaybackStore(
@@ -506,6 +509,11 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
     updateLibraryViewState(sorting, globalFilter);
 
+    // Persist library sorting preference to DB
+    if (sorting && sorting.length > 0) {
+      setLibrarySorting(sorting);
+    }
+
     if (
       prevFilter &&
       !globalFilter &&
@@ -526,6 +534,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     globalFilter,
     sorting,
     updateLibraryViewState,
+    setLibrarySorting,
     currentTrack,
     playbackSource,
     artistFilter,

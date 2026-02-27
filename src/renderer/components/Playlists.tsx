@@ -50,6 +50,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     (state) => state.updatePlaylistViewState,
   );
   const playlistViewState = useLibraryStore((state) => state.playlistViewState);
+  const setPlaylistSortPreference = useLibraryStore(
+    (state) => state.setPlaylistSortPreference,
+  );
 
   // Get state from settings store
   const columnVisibility = useSettingsAndPlaybackStore(
@@ -112,6 +115,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Search state
   const [showSearch, setShowSearch] = useState(!!playlistViewState.filtering);
+
+  // Track playlist switches to restore per-playlist sorting
+  const prevPlaylistIdRef = useRef(selectedPlaylistId);
 
   // Confirmation dialog state
   const [removeTrackConfirmOpen, setRemoveTrackConfirmOpen] = useState(false);
@@ -350,6 +356,19 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     };
   }, [scrollToTrackWhenReady]);
 
+  // Restore per-playlist sorting when switching playlists
+  useEffect(() => {
+    if (
+      selectedPlaylistId &&
+      selectedPlaylistId !== prevPlaylistIdRef.current
+    ) {
+      const prefs = useLibraryStore.getState().playlistSortPreferences;
+      const savedSorting = prefs[selectedPlaylistId];
+      setSorting(savedSorting || [{ id: 'artist', desc: false }]);
+    }
+    prevPlaylistIdRef.current = selectedPlaylistId;
+  }, [selectedPlaylistId]);
+
   // Check if playlist name text overflows its container
   useEffect(() => {
     const checkPlaylistNameOverflow = () => {
@@ -435,6 +454,11 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
     updatePlaylistViewState(sorting, globalFilter, selectedPlaylistId);
 
+    // Persist per-playlist sort preference to DB
+    if (selectedPlaylistId && sorting && sorting.length > 0) {
+      setPlaylistSortPreference(selectedPlaylistId, sorting);
+    }
+
     if (
       prevFilter &&
       !globalFilter &&
@@ -454,6 +478,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     sorting,
     updatePlaylistViewState,
     selectedPlaylistId,
+    setPlaylistSortPreference,
     currentTrack,
     playbackSource,
     playbackSourcePlaylistId,

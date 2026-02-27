@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS playlists (
   isSmart INTEGER NOT NULL,
   smartPlaylistId TEXT,
   ruleSet TEXT,
-  trackIds TEXT
+  trackIds TEXT,
+  sortPreference TEXT
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -33,20 +34,21 @@ CREATE TABLE IF NOT EXISTS settings (
   columns TEXT NOT NULL,
   lastPlayedSongId TEXT,
   volume REAL,
-  columnWidths TEXT
+  columnWidths TEXT,
+  librarySorting TEXT
 );
 
 -- No tracks inserted - empty library for new user
 
 -- Insert only the default smart playlists
 -- These are created automatically by the app's self-healing mechanism
-INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds) VALUES
-('playlist-smart-1', 'Recently Added', 1, 'recently-added', '{"type":"recentlyAdded","limit":50}', '[]'),
-('playlist-smart-2', 'Recently Played', 1, 'recently-played', '{"type":"recentlyPlayed","limit":50}', '[]'),
-('playlist-smart-3', 'Most Played', 1, 'most-played', '{"type":"mostPlayed","limit":50}', '[]');
+INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds, sortPreference) VALUES
+('playlist-smart-1', 'Recently Added', 1, 'recently-added', '{"type":"recentlyAdded","limit":50}', '[]', NULL),
+('playlist-smart-2', 'Recently Played', 1, 'recently-played', '{"type":"recentlyPlayed","limit":50}', '[]', NULL),
+('playlist-smart-3', 'Most Played', 1, 'most-played', '{"type":"mostPlayed","limit":50}', '[]', NULL);
 
 -- Insert default settings for new user
 -- Note: libraryPath will be replaced with actual TEST_SONGS_PATH by test initialization code
 -- No lastPlayedSongId since the user hasn't played anything yet
-INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths) VALUES
-('app-settings', '{{TEST_SONGS_PATH}}', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0, NULL);
+INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting) VALUES
+('app-settings', '{{TEST_SONGS_PATH}}', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0, NULL, NULL);

@@ -45,6 +45,7 @@ export interface Playlist {
   smartPlaylistId: string | null; // Stable identifier for built-in smart playlists (e.g., 'recently-added')
   ruleSet: PlaylistRule | null; // Rules for smart playlists
   trackIds: string[]; // Array of track IDs for regular playlists
+  sortPreference: Array<{ id: string; desc: boolean }> | null; // Persisted sort preference for this playlist
 }
 
 /**
@@ -73,6 +74,7 @@ export interface Settings {
   lastPlayedSongId: string | null; // ID of the last played song for resuming playback
   volume: number | null; // Volume level (0-1) for audio playback
   columnWidths: Record<string, number> | null; // Persisted column widths for the track table
+  librarySorting: Array<{ id: string; desc: boolean }> | null; // Persisted sorting preference for the library view
 }
 
 /**

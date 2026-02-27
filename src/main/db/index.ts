@@ -200,6 +200,12 @@ function runMigrations(): void {
 
     // Migration 5: Add columnWidths column to settings table if it doesn't exist
     addColumnIfNotExists('settings', 'columnWidths', 'TEXT');
+
+    // Migration 6: Add sortPreference column to playlists table if it doesn't exist
+    addColumnIfNotExists('playlists', 'sortPreference', 'TEXT');
+
+    // Migration 7: Add librarySorting column to settings table if it doesn't exist
+    addColumnIfNotExists('settings', 'librarySorting', 'TEXT');
   } catch (error) {
     console.error('Error running database migrations:', error);
   }
@@ -345,13 +351,14 @@ function initDefaultSettings(): void {
           lastPlayedSongId: null,
           volume: 1.0,
           columnWidths: null,
+          librarySorting: null,
         };
 
         // Insert default settings
         db.prepare(
           `
-          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
         ).run(
           defaultSettings.id,
@@ -361,6 +368,7 @@ function initDefaultSettings(): void {
           defaultSettings.lastPlayedSongId,
           defaultSettings.volume,
           defaultSettings.columnWidths,
+          defaultSettings.librarySorting,
         );
       }
     } catch (error) {
@@ -393,13 +401,14 @@ function initDefaultSettings(): void {
         lastPlayedSongId: null,
         volume: 1.0,
         columnWidths: null,
+        librarySorting: null,
       };
 
       // Insert default settings
       db.prepare(
         `
-        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       ).run(
         defaultSettings.id,
@@ -409,6 +418,7 @@ function initDefaultSettings(): void {
         defaultSettings.lastPlayedSongId,
         defaultSettings.volume,
         defaultSettings.columnWidths,
+        defaultSettings.librarySorting,
       );
     }
   } catch (outerError) {
@@ -1132,6 +1142,19 @@ export function getAllPlaylists(): Playlist[] {
     const playlists = db.prepare('SELECT * FROM playlists').all();
 
     const parsedPlaylists = playlists.map((playlist: any) => {
+      let parsedSortPreference: Array<{
+        id: string;
+        desc: boolean;
+      }> | null = null;
+      try {
+        parsedSortPreference =
+          typeof playlist.sortPreference === 'string'
+            ? JSON.parse(playlist.sortPreference)
+            : playlist.sortPreference || null;
+      } catch (_e) {
+        parsedSortPreference = null;
+      }
+
       const parsedPlaylist = {
         ...playlist,
         isSmart: Boolean(playlist.isSmart),
@@ -1142,6 +1165,7 @@ export function getAllPlaylists(): Playlist[] {
         trackIds: playlist.trackIds
           ? JSON.parse(playlist.trackIds as string)
           : [],
+        sortPreference: parsedSortPreference,
       };
 
       // For smart playlists, dynamically populate the trackIds
@@ -1209,6 +1233,19 @@ export function getPlaylistById(id: string): Playlist | null {
       return null;
     }
 
+    let parsedSortPreference: Array<{
+      id: string;
+      desc: boolean;
+    }> | null = null;
+    try {
+      parsedSortPreference =
+        typeof playlist.sortPreference === 'string'
+          ? JSON.parse(playlist.sortPreference)
+          : playlist.sortPreference || null;
+    } catch (_e) {
+      parsedSortPreference = null;
+    }
+
     const parsedPlaylist = {
       id: playlist.id,
       name: playlist.name,
@@ -1220,6 +1257,7 @@ export function getPlaylistById(id: string): Playlist | null {
       trackIds: playlist.trackIds
         ? (JSON.parse(playlist.trackIds as string) as string[])
         : [],
+      sortPreference: parsedSortPreference,
     };
 
     // For smart playlists, dynamically populate the trackIds
@@ -1263,8 +1301,8 @@ export function createPlaylist(playlist: Omit<Playlist, 'id'>): Playlist {
 
     db.prepare(
       `
-      INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds, sortPreference)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
     ).run(
       newPlaylist.id,
@@ -1273,6 +1311,9 @@ export function createPlaylist(playlist: Omit<Playlist, 'id'>): Playlist {
       newPlaylist.smartPlaylistId || null,
       newPlaylist.ruleSet ? JSON.stringify(newPlaylist.ruleSet) : null,
       JSON.stringify(trackIdsToStore),
+      newPlaylist.sortPreference
+        ? JSON.stringify(newPlaylist.sortPreference)
+        : null,
     );
 
     return newPlaylist;
@@ -1301,7 +1342,8 @@ export function updatePlaylist(playlist: Playlist): boolean {
         isSmart = ?,
         smartPlaylistId = ?,
         ruleSet = ?,
-        trackIds = ?
+        trackIds = ?,
+        sortPreference = ?
       WHERE id = ?
     `,
       )
@@ -1311,6 +1353,9 @@ export function updatePlaylist(playlist: Playlist): boolean {
         playlist.smartPlaylistId || null,
         playlist.ruleSet ? JSON.stringify(playlist.ruleSet) : null,
         JSON.stringify(trackIdsToStore),
+        playlist.sortPreference
+          ? JSON.stringify(playlist.sortPreference)
+          : null,
         playlist.id,
       );
 
@@ -1373,6 +1418,7 @@ export function getSettings(): Settings {
         lastPlayedSongId: null,
         volume: 1.0,
         columnWidths: null,
+        librarySorting: null,
       };
     }
 
@@ -1404,6 +1450,19 @@ export function getSettings(): Settings {
         parsedColumnWidths = null;
       }
 
+      let parsedLibrarySorting: Array<{
+        id: string;
+        desc: boolean;
+      }> | null = null;
+      try {
+        parsedLibrarySorting =
+          typeof (newSettings as any).librarySorting === 'string'
+            ? JSON.parse((newSettings as any).librarySorting)
+            : (newSettings as any).librarySorting || null;
+      } catch (_e) {
+        parsedLibrarySorting = null;
+      }
+
       return {
         ...newSettings,
         columns:
@@ -1413,6 +1472,7 @@ export function getSettings(): Settings {
         lastPlayedSongId: newSettings.lastPlayedSongId || null,
         volume: newSettings.volume || 1.0,
         columnWidths: parsedColumnWidths,
+        librarySorting: parsedLibrarySorting,
       };
     }
 
@@ -1426,6 +1486,19 @@ export function getSettings(): Settings {
       parsedColumnWidths = null;
     }
 
+    let parsedLibrarySorting: Array<{
+      id: string;
+      desc: boolean;
+    }> | null = null;
+    try {
+      parsedLibrarySorting =
+        typeof (settings as any).librarySorting === 'string'
+          ? JSON.parse((settings as any).librarySorting)
+          : (settings as any).librarySorting || null;
+    } catch (_e) {
+      parsedLibrarySorting = null;
+    }
+
     return {
       ...settings,
       columns:
@@ -1435,6 +1508,7 @@ export function getSettings(): Settings {
       lastPlayedSongId: settings.lastPlayedSongId || null,
       volume: settings.volume || 1.0,
       columnWidths: parsedColumnWidths,
+      librarySorting: parsedLibrarySorting,
     };
   } catch (error) {
     console.error('Failed to get settings:', error);
@@ -1458,6 +1532,7 @@ export function getSettings(): Settings {
       lastPlayedSongId: null,
       volume: 1.0,
       columnWidths: null,
+      librarySorting: null,
     };
   }
 }
@@ -1481,7 +1556,8 @@ export function updateSettings(settings: Settings): boolean {
           columns = ?,
           lastPlayedSongId = ?,
           volume = ?,
-          columnWidths = ?
+          columnWidths = ?,
+          librarySorting = ?
         WHERE id = ?
       `,
         )
@@ -1492,6 +1568,9 @@ export function updateSettings(settings: Settings): boolean {
           settings.lastPlayedSongId,
           settings.volume,
           settings.columnWidths ? JSON.stringify(settings.columnWidths) : null,
+          settings.librarySorting
+            ? JSON.stringify(settings.librarySorting)
+            : null,
           settings.id,
         );
 

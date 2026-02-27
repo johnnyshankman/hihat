@@ -184,6 +184,7 @@ function convertLegacyPlaylistToPlaylist(
     smartPlaylistId: null,
     ruleSet: null,
     trackIds,
+    sortPreference: null,
   };
 }
 

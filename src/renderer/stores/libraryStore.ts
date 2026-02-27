@@ -60,6 +60,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     playlistId: null,
   },
   lastViewedTrackId: null,
+  playlistSortPreferences: {},
 
   // Initialize empty indexes
   trackIndex: new Map(),
@@ -121,7 +122,19 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     try {
       const allPlaylists = await window.electron.playlists.getAll();
       console.warn('Loaded playlists from database:', allPlaylists);
-      set({ playlists: allPlaylists });
+
+      // Populate per-playlist sort preferences from DB
+      const sortPrefs: Record<
+        string,
+        Array<{ id: string; desc: boolean }>
+      > = {};
+      allPlaylists.forEach((p) => {
+        if (p.sortPreference) {
+          sortPrefs[p.id] = p.sortPreference;
+        }
+      });
+
+      set({ playlists: allPlaylists, playlistSortPreferences: sortPrefs });
     } catch (error) {
       console.error('Error loading playlists:', error);
       useUIStore
@@ -146,6 +159,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
         isSmart: false,
         smartPlaylistId: null,
         ruleSet: null,
+        sortPreference: null,
       });
 
       set((state) => ({
@@ -337,6 +351,31 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
 
   setArtistFilter: (artist: string | null) => {
     set({ artistFilter: artist });
+  },
+
+  setPlaylistSortPreference: (
+    playlistId: string,
+    sorting: Array<{ id: string; desc: boolean }>,
+  ) => {
+    // Update the session cache (do NOT update playlists array to avoid
+    // triggering re-renders that cause infinite loops in Playlists.tsx)
+    set((state) => ({
+      playlistSortPreferences: {
+        ...state.playlistSortPreferences,
+        [playlistId]: sorting,
+      },
+    }));
+
+    // Persist to DB (fire-and-forget)
+    const { playlists } = get();
+    const playlist = playlists.find((p) => p.id === playlistId);
+    if (playlist) {
+      window.electron.playlists
+        .update({ ...playlist, sortPreference: sorting })
+        .catch((err: unknown) => {
+          console.error('Error persisting playlist sort preference:', err);
+        });
+    }
   },
 
   // NEW: Efficient data access methods using indexes

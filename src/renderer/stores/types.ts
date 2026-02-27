@@ -65,6 +65,13 @@ export interface LibraryStore {
   setLastViewedTrackId: (trackId: string | null) => void;
   setArtistFilter: (artist: string | null) => void;
 
+  // Per-playlist sort preferences (session cache + DB backed)
+  playlistSortPreferences: Record<string, Array<{ id: string; desc: boolean }>>;
+  setPlaylistSortPreference: (
+    playlistId: string,
+    sorting: Array<{ id: string; desc: boolean }>,
+  ) => void;
+
   // NEW: Efficient data access methods
   getTrackById: (id: string) => Track | undefined;
   getTracksByIds: (ids: string[]) => Track[];
@@ -162,6 +169,7 @@ export interface SettingsAndPlaybackStore {
   id: Settings['id'];
   lastPlayedSongId: Settings['lastPlayedSongId'];
   columnWidths: Settings['columnWidths'];
+  librarySorting: Settings['librarySorting'];
 
   // Playback state
   currentTrack: Track | null;
@@ -189,6 +197,9 @@ export interface SettingsAndPlaybackStore {
   loadSettings: () => Promise<Settings>;
   setColumnVisibility: (column: string, isVisible: boolean) => Promise<void>;
   setColumnWidths: (columnWidths: Record<string, number>) => Promise<void>;
+  setLibrarySorting: (
+    sorting: Array<{ id: string; desc: boolean }>,
+  ) => Promise<void>;
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
   setLastPlayedSongId: (trackId: string | null) => Promise<void>;
