@@ -182,6 +182,17 @@ function calculateAudioQuality(format: mm.IFormat, extension: string): number {
 }
 
 /**
+ * Generate a composite key for track deduplication
+ * @param track - Track or partial track with metadata fields
+ * @returns Lowercase composite key string
+ */
+function getTrackKey(
+  track: Pick<Track, 'title' | 'artist' | 'albumArtist' | 'album'>,
+): string {
+  return `${track.title.toLowerCase()}|${track.artist.toLowerCase()}|${track.albumArtist.toLowerCase()}|${track.album.toLowerCase()}`;
+}
+
+/**
  * Find duplicate tracks based on metadata
  * This is optimized to use a Map for O(1) lookups instead of O(n) search
  * @param trackData - New track metadata
@@ -193,11 +204,8 @@ function findDuplicateTrack(
   trackMap: Map<string, Track>,
 ): Track | null {
   try {
-    // Create a lookup key from metadata
-    const key = `${trackData.title.toLowerCase()}|${trackData.artist.toLowerCase()}|${trackData.albumArtist.toLowerCase()}|${trackData.album.toLowerCase()}`;
-
     // Direct lookup in the map
-    return trackMap.get(key) || null;
+    return trackMap.get(getTrackKey(trackData)) || null;
   } catch (error) {
     console.error('Error finding duplicate track:', error);
     return null;
@@ -474,7 +482,7 @@ async function processFile(
   libraryPath: string,
   folderRoot?: string,
   isImport: boolean = false,
-): Promise<Omit<Track, 'id'> | null> {
+): Promise<(Omit<Track, 'id'> & { qualityScore?: number }) | null> {
   // Skip if the file is already in the database
   if (existingFilePaths.has(filePath)) {
     return null;
@@ -531,7 +539,12 @@ async function processFile(
         ...trackData,
         replaceId: duplicate.id,
         oldPath: duplicate.filePath,
-      } as Omit<Track, 'id'> & { replaceId: string; oldPath: string };
+        qualityScore: newQuality,
+      } as Omit<Track, 'id'> & {
+        replaceId: string;
+        oldPath: string;
+        qualityScore: number;
+      };
     }
 
     // Copy the file to the library path (only if importing, not scanning)
@@ -544,12 +557,16 @@ async function processFile(
     );
 
     // Update the file path to the target path in the library
+    const ext = path.extname(targetFilePath).toLowerCase();
     trackData = {
       ...trackData,
       filePath: targetFilePath,
     };
 
-    return trackData;
+    return {
+      ...trackData,
+      qualityScore: calculateAudioQuality(metadata.format, ext),
+    };
   } catch (error) {
     console.error(`Error processing file ${filePath}:`, error);
 
@@ -574,7 +591,13 @@ async function processBatch(
   libraryPath: string,
   folderRoot?: string,
   isImport: boolean = false,
-): Promise<(Omit<Track, 'id'> & { replaceId?: string; oldPath?: string })[]> {
+): Promise<
+  (Omit<Track, 'id'> & {
+    replaceId?: string;
+    oldPath?: string;
+    qualityScore?: number;
+  })[]
+> {
   // Process files in parallel
   const results = await Promise.all(
     fileBatch.map((filePath) =>
@@ -593,7 +616,57 @@ async function processBatch(
   return results.filter((result) => result !== null) as (Omit<Track, 'id'> & {
     replaceId?: string;
     oldPath?: string;
+    qualityScore?: number;
   })[];
+}
+
+/**
+ * Deduplicate tracks within a single batch result.
+ * Groups by metadata key and keeps the highest quality version.
+ * Strips qualityScore from all results before returning.
+ * @param tracks - Batch results that may contain intra-batch duplicates
+ * @returns Deduplicated tracks without qualityScore
+ */
+function deduplicateBatchResults(
+  tracks: (Omit<Track, 'id'> & {
+    replaceId?: string;
+    oldPath?: string;
+    qualityScore?: number;
+  })[],
+): (Omit<Track, 'id'> & { replaceId?: string; oldPath?: string })[] {
+  const groups = new Map<
+    string,
+    Omit<Track, 'id'> & {
+      replaceId?: string;
+      oldPath?: string;
+      qualityScore?: number;
+    }
+  >();
+
+  tracks.forEach((track) => {
+    const key = getTrackKey(
+      track as Pick<Track, 'title' | 'artist' | 'albumArtist' | 'album'>,
+    );
+    const existing = groups.get(key);
+
+    if (!existing) {
+      groups.set(key, track);
+    } else {
+      // Keep the one with the higher quality score
+      const existingScore = existing.qualityScore ?? 0;
+      const newScore = track.qualityScore ?? 0;
+      if (newScore > existingScore) {
+        groups.set(key, track);
+      }
+    }
+  });
+
+  // Strip qualityScore from results
+  return Array.from(groups.values()).map((track) => {
+    const result = { ...track };
+    delete (result as any).qualityScore;
+    return result;
+  });
 }
 
 /**
@@ -605,8 +678,7 @@ function createTrackMap(existingTracks: Track[]): Map<string, Track> {
   const trackMap = new Map<string, Track>();
 
   existingTracks.forEach((track) => {
-    const key = `${track.title.toLowerCase()}|${track.artist.toLowerCase()}|${track.albumArtist.toLowerCase()}|${track.album.toLowerCase()}`;
-    trackMap.set(key, track);
+    trackMap.set(getTrackKey(track), track);
   });
 
   // Log summary of existing tracks
@@ -695,7 +767,7 @@ export async function scanLibrary(
 
         // Process the batch (this is a scan, not an import)
         // eslint-disable-next-line no-await-in-loop
-        const processedTracks = await processBatch(
+        const rawTracks = await processBatch(
           batch,
           existingFilePaths,
           trackMap,
@@ -704,11 +776,15 @@ export async function scanLibrary(
           false, // isImport=false for scan operations
         );
 
+        // Deduplicate within the batch (parallel processing can produce dupes)
+        const processedTracks = deduplicateBatchResults(rawTracks);
+
         // Collect files and tracks to delete
         processedTracks.forEach((track) => {
           if (track.replaceId && track.oldPath) {
             tracksToDelete.push(track.replaceId);
             filesToDelete.push(track.oldPath);
+            existingFilePaths.delete(track.oldPath);
 
             // Remove these properties before adding to database
             delete track.replaceId;
@@ -722,10 +798,12 @@ export async function scanLibrary(
           for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
             const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
 
-            // Use addTrack for each track since addTracks doesn't exist
+            // Use addTrack for each track and update tracking structures
             trackBatch.forEach((track) => {
               try {
-                db.addTrack(track);
+                const addedTrack = db.addTrack(track);
+                existingFilePaths.add(addedTrack.filePath);
+                trackMap.set(getTrackKey(addedTrack), addedTrack);
               } catch (error) {
                 console.error(
                   `Error adding track to database: ${track.title}`,
@@ -946,7 +1024,7 @@ export async function importFiles(
 
         // Process the batch (this is an import operation)
         // eslint-disable-next-line no-await-in-loop
-        const processedTracks = await processBatch(
+        const rawTracks = await processBatch(
           batch,
           existingFilePaths,
           trackMap,
@@ -955,11 +1033,15 @@ export async function importFiles(
           true, // isImport=true for import operations
         );
 
+        // Deduplicate within the batch (parallel processing can produce dupes)
+        const processedTracks = deduplicateBatchResults(rawTracks);
+
         // Collect files and tracks to delete
         processedTracks.forEach((track) => {
           if (track.replaceId && track.oldPath) {
             tracksToDelete.push(track.replaceId);
             filesToDelete.push(track.oldPath);
+            existingFilePaths.delete(track.oldPath);
 
             // Remove these properties before adding to database
             delete track.replaceId;
@@ -973,10 +1055,12 @@ export async function importFiles(
           for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
             const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
 
-            // Use addTrack for each track since addTracks doesn't exist
+            // Use addTrack for each track and update tracking structures
             trackBatch.forEach((track) => {
               try {
-                db.addTrack(track);
+                const addedTrack = db.addTrack(track);
+                existingFilePaths.add(addedTrack.filePath);
+                trackMap.set(getTrackKey(addedTrack), addedTrack);
               } catch (error) {
                 console.error(
                   `Error adding track to database: ${track.title}`,
