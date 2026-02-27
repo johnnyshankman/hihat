@@ -24,12 +24,13 @@ const STATIC_ROW_HEIGHT = 22;
 // Case-insensitive "contains" filter across title, artist, album, genre
 const globalFilterFn: FilterFn<TableData> = (row, _columnId, filterValue) => {
   const search = String(filterValue).toLowerCase();
-  const { title, artist, album, genre } = row.original;
+  const { title, artist, album, genre, albumArtist } = row.original;
   return (
     title.toLowerCase().includes(search) ||
     artist.toLowerCase().includes(search) ||
     album.toLowerCase().includes(search) ||
-    genre.toLowerCase().includes(search)
+    genre.toLowerCase().includes(search) ||
+    albumArtist.toLowerCase().includes(search)
   );
 };
 

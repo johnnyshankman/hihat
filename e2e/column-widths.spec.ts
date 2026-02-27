@@ -91,7 +91,7 @@ test.describe('Column Widths Persistence', () => {
       const headers = document.querySelectorAll('th');
       const arr = Array.from(headers);
       const artistTh = arr.find((header) => {
-        return header.textContent?.includes('Artist');
+        return header.textContent?.trim() === 'Artist';
       });
       return artistTh ? (artistTh as HTMLElement).offsetWidth : null;
     });
@@ -129,8 +129,8 @@ test.describe('Column Widths Persistence', () => {
     const artistHeader = await page.evaluate(() => {
       const headers = document.querySelectorAll('th');
       const arr = Array.from(headers);
-      const artistTh = arr.find((header) =>
-        header.textContent?.includes('Artist'),
+      const artistTh = arr.find(
+        (header) => header.textContent?.trim() === 'Artist',
       );
       if (!artistTh) return null;
       const rect = artistTh.getBoundingClientRect();
@@ -161,8 +161,8 @@ test.describe('Column Widths Persistence', () => {
     const newArtistWidth = await page.evaluate(() => {
       const headers = document.querySelectorAll('th');
       const arr = Array.from(headers);
-      const artistTh = arr.find((header) =>
-        header.textContent?.includes('Artist'),
+      const artistTh = arr.find(
+        (header) => header.textContent?.trim() === 'Artist',
       );
       return artistTh ? (artistTh as HTMLElement).offsetWidth : null;
     });

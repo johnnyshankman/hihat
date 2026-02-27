@@ -26,13 +26,11 @@ export function sortByArtist(
   trackB: TrackWithOptionalFields,
   isDescending: boolean,
 ): number {
-  // Get artist values, preferring albumArtist if available
-  const artistA = trackA.albumArtist || trackA.artist;
-  const artistB = trackB.albumArtist || trackB.artist;
-
   // Normalize artist names by converting to lowercase and removing leading "the "
-  const normalizedArtistA = artistA?.toLowerCase().replace(/^the /, '') || '';
-  const normalizedArtistB = artistB?.toLowerCase().replace(/^the /, '') || '';
+  const normalizedArtistA =
+    trackA.artist?.toLowerCase().replace(/^the /, '') || '';
+  const normalizedArtistB =
+    trackB.artist?.toLowerCase().replace(/^the /, '') || '';
 
   // Get album and track values
   const albumA = trackA.album?.toLowerCase() || '';
@@ -45,6 +43,46 @@ export function sortByArtist(
   if (normalizedArtistA > normalizedArtistB) return isDescending ? -1 : 1;
 
   // If artists are the same, compare albums
+  if (albumA < albumB) return isDescending ? 1 : -1;
+  if (albumA > albumB) return isDescending ? -1 : 1;
+
+  // If albums are the same, compare track numbers
+  if (trackANum === null && trackBNum !== null) return isDescending ? 1 : -1;
+  if (trackANum !== null && trackBNum === null) return isDescending ? -1 : 1;
+  if (trackANum !== null && trackBNum !== null) {
+    if (trackANum < trackBNum) return isDescending ? 1 : -1;
+    if (trackANum > trackBNum) return isDescending ? -1 : 1;
+  }
+
+  // If everything is equal, return 0
+  return 0;
+}
+
+/**
+ * Sort tracks by album artist, then album, then track number
+ */
+export function sortByAlbumArtist(
+  trackA: TrackWithOptionalFields,
+  trackB: TrackWithOptionalFields,
+  isDescending: boolean,
+): number {
+  // Normalize album artist names by converting to lowercase and removing leading "the "
+  const normalizedArtistA =
+    trackA.albumArtist?.toLowerCase().replace(/^the /, '') || '';
+  const normalizedArtistB =
+    trackB.albumArtist?.toLowerCase().replace(/^the /, '') || '';
+
+  // Get album and track values
+  const albumA = trackA.album?.toLowerCase() || '';
+  const albumB = trackB.album?.toLowerCase() || '';
+  const trackANum = trackA.trackNumber ?? null;
+  const trackBNum = trackB.trackNumber ?? null;
+
+  // Compare album artists
+  if (normalizedArtistA < normalizedArtistB) return isDescending ? 1 : -1;
+  if (normalizedArtistA > normalizedArtistB) return isDescending ? -1 : 1;
+
+  // If album artists are the same, compare albums
   if (albumA < albumB) return isDescending ? 1 : -1;
   if (albumA > albumB) return isDescending ? -1 : 1;
 
@@ -199,6 +237,8 @@ export function getSortingFunction(
   switch (field) {
     case 'artist':
       return sortByArtist;
+    case 'albumArtist':
+      return sortByAlbumArtist;
     case 'album':
       return sortByAlbum;
     case 'title':

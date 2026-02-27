@@ -26,7 +26,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       title: true,
       artist: true,
       album: true,
-      albumArtist: false,
+      albumArtist: true,
       genre: true,
       duration: true,
       playCount: true,

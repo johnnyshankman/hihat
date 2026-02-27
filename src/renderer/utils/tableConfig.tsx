@@ -2,6 +2,7 @@ import { type ColumnDef, type Row } from '@tanstack/react-table';
 import {
   sortByTitle,
   sortByArtist,
+  sortByAlbumArtist,
   sortByAlbum,
   sortByGenre,
   sortByDuration,
@@ -59,6 +60,13 @@ export const getCommonColumnDefs = (): ColumnDef<TableData>[] => [
     size: 200,
     sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
       sortByArtist(rowA.original, rowB.original, false),
+  },
+  {
+    accessorKey: 'albumArtist',
+    header: 'Album Artist',
+    size: 200,
+    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
+      sortByAlbumArtist(rowA.original, rowB.original, false),
   },
   {
     accessorKey: 'album',
