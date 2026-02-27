@@ -41,6 +41,7 @@
 
 .vt-container::-webkit-scrollbar-track {
   background-color: transparent;
+  margin-top: 26px;
 }
 
 .vt-container::-webkit-scrollbar-thumb {
