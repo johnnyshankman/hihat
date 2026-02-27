@@ -50,12 +50,12 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   selectedPlaylistId: null,
   selectedTrackId: null,
   libraryViewState: {
-    sorting: [{ id: 'artist', desc: false }],
+    sorting: [{ id: 'albumArtist', desc: false }],
     filtering: '',
   },
   artistFilter: null,
   playlistViewState: {
-    sorting: [{ id: 'artist', desc: false }],
+    sorting: [{ id: 'albumArtist', desc: false }],
     filtering: '',
     playlistId: null,
   },

@@ -154,7 +154,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   // Sorting state - initialize from store to persist across unmount/remount
   const [sorting, setSorting] = useState<SortingState>(
-    () => libraryViewState.sorting || [{ id: 'artist', desc: false }],
+    () => libraryViewState.sorting || [{ id: 'albumArtist', desc: false }],
   );
 
   // Add row virtualizer ref

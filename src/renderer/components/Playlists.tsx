@@ -82,7 +82,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Sorting state - initialize from store to persist across unmount/remount
   const [sorting, setSorting] = useState<SortingState>(
-    () => playlistViewState.sorting || [{ id: 'artist', desc: false }],
+    () => playlistViewState.sorting || [{ id: 'albumArtist', desc: false }],
   );
 
   // Global filter state — receives debounced values from SearchBar.
@@ -364,7 +364,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     ) {
       const prefs = useLibraryStore.getState().playlistSortPreferences;
       const savedSorting = prefs[selectedPlaylistId];
-      setSorting(savedSorting || [{ id: 'artist', desc: false }]);
+      setSorting(savedSorting || [{ id: 'albumArtist', desc: false }]);
     }
     prevPlaylistIdRef.current = selectedPlaylistId;
   }, [selectedPlaylistId]);
