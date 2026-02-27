@@ -309,6 +309,10 @@ function VirtualTable({
                           setDropTargetId(header.column.id);
                         }}
                         onDragStart={(e) => {
+                          if (isResizingRef.current) {
+                            e.preventDefault();
+                            return;
+                          }
                           isDraggingRef.current = true;
                           setDragColumnId(header.column.id);
                           e.dataTransfer.effectAllowed = 'move';
