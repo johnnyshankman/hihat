@@ -1004,7 +1004,7 @@ function Player() {
             alignItems="center"
             direction="row"
             justifyContent="center"
-            spacing="0.25"
+            spacing={0.5}
             sx={{ mb: 0.0, width: '100%' }}
           >
             <Tooltip title={getShuffleTooltipText()}>
@@ -1014,7 +1014,7 @@ function Player() {
                   onClick={toggleShuffleMode}
                   size="small"
                   sx={{
-                    padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
+                    padding: isCompactLayout ? '2px' : { xs: '4px', sm: '4px' },
                   }}
                 >
                   {renderShuffleIcon()}
@@ -1026,7 +1026,7 @@ function Player() {
               onClick={skipToPreviousTrack}
               size="medium"
               sx={{
-                padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
+                padding: isCompactLayout ? '2px' : { xs: '4px', sm: '4px' },
               }}
             >
               <SkipPrevious
@@ -1039,7 +1039,7 @@ function Player() {
               size="large"
               sx={{
                 mx: isCompactLayout ? 0.25 : { xs: 0.25, sm: 1 },
-                padding: isCompactLayout ? '4px' : { xs: '8px', sm: '6px' },
+                padding: isCompactLayout ? '4px' : { xs: '4px', sm: '4px' },
               }}
             >
               {!paused ? (
@@ -1053,7 +1053,7 @@ function Player() {
               onClick={skipToNextTrack}
               size="medium"
               sx={{
-                padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
+                padding: isCompactLayout ? '2px' : { xs: '4px', sm: '4px' },
               }}
             >
               <SkipNext
@@ -1067,7 +1067,7 @@ function Player() {
                   onClick={toggleRepeatMode}
                   size="small"
                   sx={{
-                    padding: isCompactLayout ? '2px' : { xs: '4px', sm: '8px' },
+                    padding: isCompactLayout ? '2px' : { xs: '4px', sm: '4px' },
                   }}
                 >
                   {renderRepeatIcon()}

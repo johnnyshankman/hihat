@@ -49,6 +49,7 @@ function ColumnVisibilityMenu({
           aria-label="Show/Hide columns"
           onClick={handleClick}
           sx={{
+            padding: '4px',
             color: 'text.secondary',
             '&:hover': { color: 'text.primary' },
           }}

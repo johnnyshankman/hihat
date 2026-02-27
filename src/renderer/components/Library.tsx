@@ -761,7 +761,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         <Box
           sx={{
             display: 'flex',
-            gap: '2px',
+            gap: '6px',
             alignItems: 'center',
             flexShrink: 0,
           }}
@@ -771,6 +771,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
               aria-label="Show/Hide search"
               onClick={handleSearchToggle}
               sx={{
+                padding: '4px',
                 color: showSearch ? 'primary.main' : 'text.secondary',
                 '&:hover': {
                   color: showSearch ? 'primary.dark' : 'text.primary',
@@ -795,6 +796,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             <IconButton
               onClick={handleArtistBrowserToggle}
               sx={{
+                padding: '4px',
                 color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
                 '&:hover': {
                   color: artistBrowserOpen ? 'primary.dark' : 'text.primary',
