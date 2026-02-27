@@ -7,7 +7,7 @@ const useUIStore = create<UIStore>((set) => ({
   notifications: [],
   currentView: 'library',
   settingsOpen: false,
-  artistBrowserOpen: false,
+  browserOpen: false,
 
   // Actions
   setCurrentView: (view: 'library' | 'playlists') => set({ currentView: view }),
@@ -47,7 +47,16 @@ const useUIStore = create<UIStore>((set) => ({
       notifications: [],
     })),
 
-  setArtistBrowserOpen: (open: boolean) => set({ artistBrowserOpen: open }),
+  setBrowserOpen: (open: boolean) => {
+    if (!open) {
+      // Clear all browser filters when hiding
+      // Use lazy require to avoid circular dependency (uiStore <-> libraryStore)
+      // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+      const libStore = require('./libraryStore').default;
+      libStore.getState().clearAllBrowserFilters();
+    }
+    set({ browserOpen: open });
+  },
 }));
 
 export default useUIStore;

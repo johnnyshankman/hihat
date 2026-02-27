@@ -19,7 +19,6 @@ import {
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchIcon from '@mui/icons-material/Search';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
-import PeopleIcon from '@mui/icons-material/People';
 import { type SortingState, type Row, type Table } from '@tanstack/react-table';
 import { type Virtualizer } from '@tanstack/react-virtual';
 import {
@@ -32,7 +31,7 @@ import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
-import ArtistBrowser from './ArtistBrowser';
+import Browser from './Browser';
 import SearchBar from './SearchBar';
 import VirtualTable from './VirtualTable';
 import ColumnVisibilityMenu from './ColumnVisibilityMenu';
@@ -120,29 +119,34 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [multiSelectPlaylistDialogOpen, setMultiSelectPlaylistDialogOpen] =
     useState(false);
-  const artistFilter = useLibraryStore((state) => state.artistFilter);
-  const setArtistFilter = useLibraryStore((state) => state.setArtistFilter);
+  const browserFilters = useLibraryStore((state) => state.browserFilters);
+  const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
+  const browserOpen = useUIStore((state) => state.browserOpen);
   const libraryViewState = useLibraryStore((state) => state.libraryViewState);
-  const [artistBrowserOpen, setArtistBrowserOpen] = useState(!!artistFilter);
   const [showSearch, setShowSearch] = useState(!!libraryViewState.filtering);
+  const [browserHeight, setBrowserHeight] = useState(200);
 
-  // Open artist browser when artist filter is set
-  useEffect(() => {
-    if (artistFilter && !artistBrowserOpen) {
-      setArtistBrowserOpen(true);
-    }
-  }, [artistFilter, artistBrowserOpen]);
+  // Derive artist/album filter from browser filters
+  const libraryBrowserFilter = useMemo(
+    () => browserFilters.library || { artist: null, album: null },
+    [browserFilters],
+  );
+  const artistFilter = libraryBrowserFilter.artist;
+  const albumFilter = libraryBrowserFilter.album;
 
-  // Handle artist browser toggle - clear selection when closing
-  const handleArtistBrowserToggle = useCallback(() => {
-    const newOpenState = !artistBrowserOpen;
-    setArtistBrowserOpen(newOpenState);
+  const handleArtistSelect = useCallback(
+    (artist: string | null) => {
+      setBrowserFilter('library', { artist, album: null });
+    },
+    [setBrowserFilter],
+  );
 
-    // If closing the browser, reset to "All Artists"
-    if (!newOpenState) {
-      setArtistFilter(null);
-    }
-  }, [artistBrowserOpen, setArtistFilter]);
+  const handleAlbumSelect = useCallback(
+    (album: string | null) => {
+      setBrowserFilter('library', { ...libraryBrowserFilter, album });
+    },
+    [setBrowserFilter, libraryBrowserFilter],
+  );
 
   // Global filter state — receives debounced values from SearchBar.
   const [globalFilter, setGlobalFilter] = useState(
@@ -258,7 +262,11 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
       // Fallback to calculating the index if table isn't ready yet
       if (trackIndex === -1) {
-        const trackIds = getFilteredAndSortedTrackIds('library', artistFilter);
+        const trackIds = getFilteredAndSortedTrackIds(
+          'library',
+          artistFilter,
+          albumFilter,
+        );
         trackIndex = trackIds.indexOf(trackId);
       }
 
@@ -268,7 +276,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         });
       }
     },
-    [artistFilter],
+    [artistFilter, albumFilter],
   );
 
   // Function that waits for the table to be ready before scrolling
@@ -334,6 +342,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       const currentTrackIds = getFilteredAndSortedTrackIds(
         'library',
         artistFilter,
+        albumFilter,
       );
 
       const deletedIndices = selectedTrackIds
@@ -471,15 +480,21 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Get columns from shared configuration
   const columns = useMemo(() => getCommonColumnDefs(), []);
 
-  // Prepare data for the table with artist filtering
+  // Prepare data for the table with browser filtering
   const data = useMemo<TableData[]>(() => {
     let filteredTracks = tracks;
 
     if (artistFilter) {
-      filteredTracks = tracks.filter((track) => {
+      filteredTracks = filteredTracks.filter((track) => {
         const artist = track.albumArtist || track.artist || 'Unknown Artist';
         return artist === artistFilter;
       });
+    }
+
+    if (albumFilter) {
+      filteredTracks = filteredTracks.filter(
+        (track) => (track.album || 'Unknown Album') === albumFilter,
+      );
     }
 
     return filteredTracks.map((track) => {
@@ -497,7 +512,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         trackNumber: track.trackNumber || null,
       };
     });
-  }, [tracks, artistFilter]);
+  }, [tracks, artistFilter, albumFilter]);
 
   // Memoize total hours calculation to avoid recalculating on every render
   const totalHours = useMemo(() => calculateTotalHours(data), [data]);
@@ -527,6 +542,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       const visibleTrackIds = getFilteredAndSortedTrackIds(
         'library',
         artistFilter,
+        albumFilter,
       );
       if (visibleTrackIds.includes(currentTrack.id)) {
         setTimeout(() => {
@@ -542,6 +558,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     currentTrack,
     playbackSource,
     artistFilter,
+    albumFilter,
     scrollToTrack,
   ]);
 
@@ -805,24 +822,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             }
             onToggle={handleColumnVisibilityToggle}
           />
-          <Tooltip
-            title={
-              artistBrowserOpen ? 'Hide artist browser' : 'Show artist browser'
-            }
-          >
-            <IconButton
-              onClick={handleArtistBrowserToggle}
-              sx={{
-                padding: '4px',
-                color: artistBrowserOpen ? 'primary.main' : 'text.secondary',
-                '&:hover': {
-                  color: artistBrowserOpen ? 'primary.dark' : 'text.primary',
-                },
-              }}
-            >
-              <PeopleIcon />
-            </IconButton>
-          </Tooltip>
         </Box>
       </Box>
     ),
@@ -831,8 +830,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       onDrawerToggle,
       trackCount,
       totalHours,
-      artistBrowserOpen,
-      handleArtistBrowserToggle,
       showSearch,
       handleSearchToggle,
       handleDebouncedSearchChange,
@@ -881,13 +878,37 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [drawerOpen],
   );
 
+  // Browser panel to pass to VirtualTable
+  const browserPanel = useMemo(() => {
+    if (!browserOpen) return undefined;
+    return (
+      <Browser
+        height={browserHeight}
+        onAlbumSelect={handleAlbumSelect}
+        onArtistSelect={handleArtistSelect}
+        onHeightChange={setBrowserHeight}
+        selectedAlbum={albumFilter}
+        selectedArtist={artistFilter}
+        tracks={tracks}
+      />
+    );
+  }, [
+    browserOpen,
+    browserHeight,
+    handleAlbumSelect,
+    handleArtistSelect,
+    albumFilter,
+    artistFilter,
+    tracks,
+  ]);
+
   return (
     <Box
       sx={{
         height: '100%',
         width: '100%',
         display: 'flex',
-        flexDirection: 'row',
+        flexDirection: 'column',
         overflow: 'hidden',
         padding: 0,
         margin: 0,
@@ -899,147 +920,127 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         sx={{
           flexGrow: 1,
           height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
+          width: '100%',
           padding: 0,
           margin: 0,
+          display: 'flex',
+          flexDirection: 'column',
           backgroundColor: (theme) => theme.palette.background.default,
         }}
       >
-        <Box
-          sx={{
-            flexGrow: 1,
-            height: '100%',
-            width: '100%',
-            padding: 0,
-            margin: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: (theme) => theme.palette.background.default,
-          }}
-        >
-          <VirtualTable
-            columnOrder={columnOrder || undefined}
-            columns={columns}
-            columnVisibility={
-              (columnVisibility as unknown as Record<string, boolean>) || {}
-            }
-            data={data}
-            emptyState={emptyStateContent}
-            getRowClassName={handleGetRowClassName}
-            globalFilter={globalFilter}
-            initialColumnSizing={columnWidths || {}}
-            onColumnOrderChange={handleColumnOrderChange}
-            onColumnSizingPersist={handleColumnSizingPersist}
-            onColumnVisibilityChange={handleColumnVisibilityToggle}
-            onRowClick={handleRowClick}
-            onRowContextMenu={handleRowContextMenu}
-            onRowDoubleClick={handleRowDoubleClick}
-            onSortingChange={setSorting}
-            sorting={sorting}
-            tableRef={tableRef}
-            toolbar={toolbarContent}
-            virtualizerRef={rowVirtualizerRef}
-          />
-        </Box>
-
-        {/* Library path selection dialog */}
-        <Dialog onClose={handleCloseDialog} open={dialogOpen}>
-          <DialogTitle>Set Library Path</DialogTitle>
-          <DialogContent>
-            <Typography gutterBottom>
-              Please select your music library folder:
-            </Typography>
-            <Button onClick={handleSelectFolder} variant="contained">
-              Select Folder
-            </Button>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Playlist selection dialog */}
-        {selectedTrackId && (
-          <PlaylistSelectionDialog
-            onClose={handleClosePlaylistDialog}
-            open={playlistDialogOpen}
-            trackId={selectedTrackId}
-          />
-        )}
-
-        {/* Context menu - show multi-select menu if multiple tracks selected */}
-        {Object.keys(selectedTracks).length > 1 ? (
-          <MultiSelectContextMenu
-            anchorPosition={
-              contextMenu !== null
-                ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-                : null
-            }
-            onAddToPlaylist={handleMultiSelectAddToPlaylist}
-            onClose={handleCloseContextMenu}
-            onDeleteTracks={handleMultiSelectDeleteTracks}
-            open={contextMenu !== null}
-            selectedCount={Object.keys(selectedTracks).length}
-          />
-        ) : (
-          <TrackContextMenu
-            anchorPosition={
-              contextMenu !== null
-                ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-                : null
-            }
-            onAddToPlaylist={handleAddToPlaylist}
-            onClose={handleCloseContextMenu}
-            open={contextMenu !== null}
-            trackId={selectedTrackId}
-          />
-        )}
-
-        {/* Multi-select playlist selection dialog */}
-        {multiSelectPlaylistDialogOpen && (
-          <PlaylistSelectionDialog
-            onClose={handleCloseMultiSelectPlaylistDialog}
-            open={multiSelectPlaylistDialogOpen}
-            trackIds={Object.keys(selectedTracks)}
-          />
-        )}
-
-        {/* Scan confirmation dialog */}
-        <ConfirmationDialog
-          cancelText="Later"
-          confirmButtonColor="primary"
-          confirmText="Open Settings"
-          message="Library path has been set. Would you like to go to Settings to scan your library now?"
-          onCancel={() => setScanConfirmOpen(false)}
-          onConfirm={() => {
-            setScanConfirmOpen(false);
-            useUIStore.getState().setSettingsOpen(true);
-          }}
-          open={scanConfirmOpen}
-          title="Scan Library"
-        />
-
-        {/* Bulk delete confirmation dialog */}
-        <ConfirmationDialog
-          cancelText="Cancel"
-          confirmButtonColor="error"
-          confirmText="Delete"
-          message={`Are you sure you want to delete ${Object.keys(selectedTracks).length} track${Object.keys(selectedTracks).length > 1 ? 's' : ''}? This will permanently delete the files from your computer.`}
-          onCancel={() => setBulkDeleteConfirmOpen(false)}
-          onConfirm={executeMultiSelectDeleteTracks}
-          open={bulkDeleteConfirmOpen}
-          title="Delete Tracks"
+        <VirtualTable
+          browserPanel={browserPanel}
+          columnOrder={columnOrder || undefined}
+          columns={columns}
+          columnVisibility={
+            (columnVisibility as unknown as Record<string, boolean>) || {}
+          }
+          data={data}
+          emptyState={emptyStateContent}
+          getRowClassName={handleGetRowClassName}
+          globalFilter={globalFilter}
+          initialColumnSizing={columnWidths || {}}
+          onColumnOrderChange={handleColumnOrderChange}
+          onColumnSizingPersist={handleColumnSizingPersist}
+          onColumnVisibilityChange={handleColumnVisibilityToggle}
+          onRowClick={handleRowClick}
+          onRowContextMenu={handleRowContextMenu}
+          onRowDoubleClick={handleRowDoubleClick}
+          onSortingChange={setSorting}
+          sorting={sorting}
+          tableRef={tableRef}
+          toolbar={toolbarContent}
+          virtualizerRef={rowVirtualizerRef}
         />
       </Box>
 
-      {/* Artist Browser */}
-      <ArtistBrowser
-        onArtistSelect={setArtistFilter}
-        onToggle={handleArtistBrowserToggle}
-        open={artistBrowserOpen}
-        selectedArtist={artistFilter}
+      {/* Library path selection dialog */}
+      <Dialog onClose={handleCloseDialog} open={dialogOpen}>
+        <DialogTitle>Set Library Path</DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>
+            Please select your music library folder:
+          </Typography>
+          <Button onClick={handleSelectFolder} variant="contained">
+            Select Folder
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Playlist selection dialog */}
+      {selectedTrackId && (
+        <PlaylistSelectionDialog
+          onClose={handleClosePlaylistDialog}
+          open={playlistDialogOpen}
+          trackId={selectedTrackId}
+        />
+      )}
+
+      {/* Context menu - show multi-select menu if multiple tracks selected */}
+      {Object.keys(selectedTracks).length > 1 ? (
+        <MultiSelectContextMenu
+          anchorPosition={
+            contextMenu !== null
+              ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+              : null
+          }
+          onAddToPlaylist={handleMultiSelectAddToPlaylist}
+          onClose={handleCloseContextMenu}
+          onDeleteTracks={handleMultiSelectDeleteTracks}
+          open={contextMenu !== null}
+          selectedCount={Object.keys(selectedTracks).length}
+        />
+      ) : (
+        <TrackContextMenu
+          anchorPosition={
+            contextMenu !== null
+              ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+              : null
+          }
+          onAddToPlaylist={handleAddToPlaylist}
+          onClose={handleCloseContextMenu}
+          open={contextMenu !== null}
+          trackId={selectedTrackId}
+        />
+      )}
+
+      {/* Multi-select playlist selection dialog */}
+      {multiSelectPlaylistDialogOpen && (
+        <PlaylistSelectionDialog
+          onClose={handleCloseMultiSelectPlaylistDialog}
+          open={multiSelectPlaylistDialogOpen}
+          trackIds={Object.keys(selectedTracks)}
+        />
+      )}
+
+      {/* Scan confirmation dialog */}
+      <ConfirmationDialog
+        cancelText="Later"
+        confirmButtonColor="primary"
+        confirmText="Open Settings"
+        message="Library path has been set. Would you like to go to Settings to scan your library now?"
+        onCancel={() => setScanConfirmOpen(false)}
+        onConfirm={() => {
+          setScanConfirmOpen(false);
+          useUIStore.getState().setSettingsOpen(true);
+        }}
+        open={scanConfirmOpen}
+        title="Scan Library"
+      />
+
+      {/* Bulk delete confirmation dialog */}
+      <ConfirmationDialog
+        cancelText="Cancel"
+        confirmButtonColor="error"
+        confirmText="Delete"
+        message={`Are you sure you want to delete ${Object.keys(selectedTracks).length} track${Object.keys(selectedTracks).length > 1 ? 's' : ''}? This will permanently delete the files from your computer.`}
+        onCancel={() => setBulkDeleteConfirmOpen(false)}
+        onConfirm={executeMultiSelectDeleteTracks}
+        open={bulkDeleteConfirmOpen}
+        title="Delete Tracks"
       />
     </Box>
   );

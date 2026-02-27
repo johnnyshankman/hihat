@@ -53,7 +53,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     sorting: [{ id: 'albumArtist', desc: false }],
     filtering: '',
   },
-  artistFilter: null,
+  browserFilters: {},
   playlistViewState: {
     sorting: [{ id: 'albumArtist', desc: false }],
     filtering: '',
@@ -349,8 +349,30 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     set({ lastViewedTrackId: trackId });
   },
 
-  setArtistFilter: (artist: string | null) => {
-    set({ artistFilter: artist });
+  setBrowserFilter: (viewId: string, filter) => {
+    set((state) => ({
+      browserFilters: {
+        ...state.browserFilters,
+        [viewId]: filter,
+      },
+    }));
+  },
+
+  clearBrowserFilter: (viewId: string) => {
+    set((state) => {
+      const newFilters = { ...state.browserFilters };
+      delete newFilters[viewId];
+      return { browserFilters: newFilters };
+    });
+  },
+
+  clearAllBrowserFilters: () => {
+    set({ browserFilters: {} });
+  },
+
+  getBrowserFilter: (viewId: string) => {
+    const { browserFilters } = get();
+    return browserFilters[viewId] || { artist: null, album: null };
   },
 
   setPlaylistSortPreference: (
@@ -386,15 +408,6 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   getTracksByIds: (ids: string[]) => {
     const { trackIndex } = get();
     return ids
-      .map((id) => trackIndex.get(id))
-      .filter((track): track is Track => !!track);
-  },
-
-  getTracksByArtist: (artist: string) => {
-    const { trackIndex, artistIndex } = get();
-    const trackIds = artistIndex.get(artist);
-    if (!trackIds) return [];
-    return Array.from(trackIds)
       .map((id) => trackIndex.get(id))
       .filter((track): track is Track => !!track);
   },

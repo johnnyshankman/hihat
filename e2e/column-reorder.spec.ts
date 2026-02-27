@@ -65,44 +65,51 @@ test.describe('Column Reorder', () => {
     const initialOrder = await getColumnOrder(page);
     expect(initialOrder.length).toBeGreaterThan(2);
 
-    // Find the Artist and Album headers
-    const headerInfo = await page.evaluate(() => {
+    // Dispatch synthetic HTML5 drag events from browser context with
+    // async pauses so React processes state updates between events.
+    const dragResult = await page.evaluate(async () => {
       const headers = document.querySelectorAll(
         '.vt-thead th:not(.vt-th-filler)',
       );
       const arr = Array.from(headers);
-      const artistTh = arr.find((h) => h.textContent?.trim() === 'Artist');
-      const albumTh = arr.find((h) => h.textContent?.trim() === 'Album');
-      if (!artistTh || !albumTh) return null;
-      const artistRect = artistTh.getBoundingClientRect();
-      const albumRect = albumTh.getBoundingClientRect();
-      return {
-        artistCenter: {
-          x: artistRect.left + artistRect.width / 2,
-          y: artistRect.top + artistRect.height / 2,
-        },
-        albumCenter: {
-          x: albumRect.left + albumRect.width / 2,
-          y: albumRect.top + albumRect.height / 2,
-        },
-      };
+      const srcTh = arr.find((h) => h.textContent?.trim() === 'Artist');
+      const dstTh = arr.find((h) => h.textContent?.trim() === 'Album');
+      if (!srcTh || !dstTh) return false;
+
+      const wait = () =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, 100);
+        });
+
+      const dt = new DataTransfer();
+      dt.effectAllowed = 'move';
+
+      srcTh.dispatchEvent(
+        new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }),
+      );
+      await wait(); // let React update dragColumnId state
+
+      dstTh.dispatchEvent(
+        new DragEvent('dragover', {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: dt,
+        }),
+      );
+      dstTh.dispatchEvent(
+        new DragEvent('drop', {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: dt,
+        }),
+      );
+      srcTh.dispatchEvent(
+        new DragEvent('dragend', { bubbles: true, dataTransfer: dt }),
+      );
+      return true;
     });
 
-    expect(headerInfo).not.toBeNull();
-
-    // Perform drag from Artist header to Album header
-    await page.mouse.move(
-      headerInfo!.artistCenter.x,
-      headerInfo!.artistCenter.y,
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-      headerInfo!.albumCenter.x,
-      headerInfo!.albumCenter.y,
-      { steps: 10 },
-    );
-    await page.mouse.up();
-
+    expect(dragResult).toBe(true);
     await page.waitForTimeout(500);
 
     // Read new column order

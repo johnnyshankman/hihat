@@ -156,9 +156,14 @@ function TrackContextMenu({
       }
 
       // Get the target track ID before deletion (next track, or previous if we're deleting the last track)
-      // Need to get the artist filter from the library store for accurate track ordering
-      const { artistFilter } = useLibraryStore.getState();
-      const trackIds = getFilteredAndSortedTrackIds('library', artistFilter);
+      // Need to get the browser filter from the library store for accurate track ordering
+      const { browserFilters } = useLibraryStore.getState();
+      const filter = browserFilters.library || { artist: null, album: null };
+      const trackIds = getFilteredAndSortedTrackIds(
+        'library',
+        filter.artist,
+        filter.album,
+      );
       const currentIndex = trackIds.indexOf(trackId);
       let targetTrackId: string | null = null;
 

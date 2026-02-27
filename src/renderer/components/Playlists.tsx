@@ -22,6 +22,7 @@ import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
+import Browser from './Browser';
 import SearchBar from './SearchBar';
 import VirtualTable from './VirtualTable';
 import ColumnVisibilityMenu from './ColumnVisibilityMenu';
@@ -119,6 +120,44 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Search state
   const [showSearch, setShowSearch] = useState(!!playlistViewState.filtering);
+
+  // Browser state
+  const browserOpen = useUIStore((state) => state.browserOpen);
+  const browserFilters = useLibraryStore((state) => state.browserFilters);
+  const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
+  const [browserHeight, setBrowserHeight] = useState(200);
+
+  // Derive browser filter for current playlist
+  const playlistBrowserFilter = useMemo(
+    () =>
+      selectedPlaylistId
+        ? browserFilters[selectedPlaylistId] || { artist: null, album: null }
+        : { artist: null, album: null },
+    [browserFilters, selectedPlaylistId],
+  );
+  const playlistArtistFilter = playlistBrowserFilter.artist;
+  const playlistAlbumFilter = playlistBrowserFilter.album;
+
+  const handleBrowserArtistSelect = useCallback(
+    (artist: string | null) => {
+      if (selectedPlaylistId) {
+        setBrowserFilter(selectedPlaylistId, { artist, album: null });
+      }
+    },
+    [selectedPlaylistId, setBrowserFilter],
+  );
+
+  const handleBrowserAlbumSelect = useCallback(
+    (album: string | null) => {
+      if (selectedPlaylistId) {
+        setBrowserFilter(selectedPlaylistId, {
+          ...playlistBrowserFilter,
+          album,
+        });
+      }
+    },
+    [selectedPlaylistId, setBrowserFilter, playlistBrowserFilter],
+  );
 
   // Track playlist switches to restore per-playlist sorting
   const prevPlaylistIdRef = useRef(selectedPlaylistId);
@@ -360,12 +399,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     };
   }, [scrollToTrackWhenReady]);
 
-  // Restore per-playlist sorting when switching playlists
+  // Restore per-playlist sorting when switching playlists or on initial mount
   useEffect(() => {
-    if (
-      selectedPlaylistId &&
-      selectedPlaylistId !== prevPlaylistIdRef.current
-    ) {
+    if (selectedPlaylistId) {
       const prefs = useLibraryStore.getState().playlistSortPreferences;
       const savedSorting = prefs[selectedPlaylistId];
       setSorting(savedSorting || [{ id: 'albumArtist', desc: false }]);
@@ -429,9 +465,24 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   // Get columns from shared configuration
   const columns = useMemo(() => getCommonColumnDefs(), []);
 
-  // Prepare data for the table
+  // Prepare data for the table with browser filtering
   const data = useMemo<TableData[]>(() => {
-    return playlistTracks.map((track) => {
+    let filtered = playlistTracks;
+
+    if (playlistArtistFilter) {
+      filtered = filtered.filter((track) => {
+        const artist = track.albumArtist || track.artist || 'Unknown Artist';
+        return artist === playlistArtistFilter;
+      });
+    }
+
+    if (playlistAlbumFilter) {
+      filtered = filtered.filter(
+        (track) => (track.album || 'Unknown Album') === playlistAlbumFilter,
+      );
+    }
+
+    return filtered.map((track) => {
       return {
         id: track.id || '',
         title: track.title || 'Unknown Title',
@@ -446,7 +497,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
         trackNumber: track.trackNumber || null,
       };
     });
-  }, [playlistTracks]);
+  }, [playlistTracks, playlistArtistFilter, playlistAlbumFilter]);
 
   // Track previous global filter for detecting clears
   const prevGlobalFilterRef = useRef(globalFilter);
@@ -810,6 +861,31 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     handleColumnVisibilityToggle,
   ]);
 
+  // Browser panel to pass to VirtualTable
+  const browserPanel = useMemo(() => {
+    if (!browserOpen || !selectedPlaylistId) return undefined;
+    return (
+      <Browser
+        height={browserHeight}
+        onAlbumSelect={handleBrowserAlbumSelect}
+        onArtistSelect={handleBrowserArtistSelect}
+        onHeightChange={setBrowserHeight}
+        selectedAlbum={playlistAlbumFilter}
+        selectedArtist={playlistArtistFilter}
+        tracks={playlistTracks}
+      />
+    );
+  }, [
+    browserOpen,
+    selectedPlaylistId,
+    browserHeight,
+    handleBrowserAlbumSelect,
+    handleBrowserArtistSelect,
+    playlistAlbumFilter,
+    playlistArtistFilter,
+    playlistTracks,
+  ]);
+
   // Empty state content
   const emptyStateContent = useMemo(
     () => (
@@ -877,6 +953,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
           }}
         >
           <VirtualTable
+            browserPanel={browserPanel}
             columnOrder={columnOrder || undefined}
             columns={columns}
             columnVisibility={

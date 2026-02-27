@@ -60,6 +60,7 @@ interface VirtualTableProps {
   ) => void;
   getRowClassName: (row: Row<TableData>, index: number) => string;
   toolbar: React.ReactNode;
+  browserPanel?: React.ReactNode;
   emptyState: React.ReactNode;
 }
 
@@ -82,6 +83,7 @@ function VirtualTable({
   onRowContextMenu,
   getRowClassName,
   toolbar,
+  browserPanel,
   emptyState,
 }: VirtualTableProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -270,6 +272,7 @@ function VirtualTable({
   return (
     <div className="vt-paper">
       <div className="vt-toolbar">{toolbar}</div>
+      {browserPanel}
       <div
         ref={scrollContainerRef}
         className="vt-container"
@@ -289,9 +292,13 @@ function VirtualTable({
                     const isDropTarget =
                       dropTargetId === header.column.id &&
                       dragColumnId !== header.column.id;
+                    let ariaSort: 'ascending' | 'descending' | undefined;
+                    if (sortDir === 'asc') ariaSort = 'ascending';
+                    else if (sortDir === 'desc') ariaSort = 'descending';
                     return (
                       <th
                         key={header.id}
+                        aria-sort={ariaSort}
                         className={`vt-th${sortDir ? ' vt-th-sorted' : ''}${isDragging ? ' vt-th-dragging' : ''}${isDropTarget ? ' vt-th-drop-target' : ''}`}
                         draggable
                         onClick={() => handleHeaderClick(header.column.id)}

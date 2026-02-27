@@ -44,7 +44,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     duration: 0, // duration of the playing track in seconds
     playbackSource: 'library', // the source of the playback (library or playlist)
     playbackSourcePlaylistId: null, // the ID of the specific playlist if playbackSource is 'playlist'
-    playbackContextArtistFilter: null, // the artist filter that was active when playback started
+    playbackContextBrowserFilter: null, // the browser filter that was active when playback started
     repeatMode: 'off', // off, track, all
     shuffleMode: false, // shuffle mode
     shuffleHistory: [], // history of shuffled tracks
@@ -424,19 +424,21 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
         }
 
-        // Capture the current artist filter at the time of playback
-        const artistFilter =
-          playbackSource === 'library'
-            ? useLibraryStore.getState().artistFilter
-            : null;
+        // Capture the current browser filter at the time of playback
+        const viewId =
+          playbackSource === 'library' ? 'library' : playlistId || 'library';
+        const browserFilter = useLibraryStore
+          .getState()
+          .getBrowserFilter(viewId);
 
         const nextSong = findNextSong(
           trackId,
           state.shuffleMode,
           playbackSource,
           state.repeatMode,
-          artistFilter,
+          browserFilter.artist,
           state.shuffleHistory,
+          browserFilter.album,
         );
 
         state.player.pause();
@@ -474,7 +476,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackSource,
           playbackSourcePlaylistId:
             playbackSource === 'playlist' ? playlistId : null,
-          playbackContextArtistFilter: artistFilter, // Store the artist filter context
+          playbackContextBrowserFilter: browserFilter, // Store the browser filter context
         };
       });
     },
@@ -561,7 +563,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
           // We're at the tip of history, need to get a new random song
           // Use the playback context artist filter, not the current one
-          const artistFilter = state.playbackContextArtistFilter;
+          const artistFilter =
+            state.playbackContextBrowserFilter?.artist || null;
+          const albumFilter = state.playbackContextBrowserFilter?.album || null;
 
           const nextSong = findNextSong(
             state.currentTrack?.id,
@@ -570,6 +574,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             state.repeatMode,
             artistFilter,
             state.shuffleHistory,
+            albumFilter,
           );
 
           if (!nextSong) {
@@ -583,13 +588,20 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           let totalAvailableTracks = 0;
 
           if (state.playbackSource === 'library') {
-            totalAvailableTracks = artistFilter
-              ? library.filter(
-                  (t) =>
-                    (t.albumArtist || t.artist || 'Unknown Artist') ===
-                    artistFilter,
-                ).length
-              : library.length;
+            let filtered = library;
+            if (artistFilter) {
+              filtered = filtered.filter(
+                (t) =>
+                  (t.albumArtist || t.artist || 'Unknown Artist') ===
+                  artistFilter,
+              );
+            }
+            if (albumFilter) {
+              filtered = filtered.filter(
+                (t) => (t.album || 'Unknown Album') === albumFilter,
+              );
+            }
+            totalAvailableTracks = filtered.length;
           } else if (state.playbackSource === 'playlist') {
             const playlist = playlists.find(
               (p) => p.id === state.playbackSourcePlaylistId,
@@ -640,10 +652,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             state.shuffleMode,
             state.playbackSource,
             state.repeatMode,
-            state.playbackContextArtistFilter,
+            artistFilter,
             [...state.shuffleHistory, state.currentTrack, nextSong].filter(
               Boolean,
             ),
+            albumFilter,
           );
 
           // First pause current playback
@@ -686,8 +699,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
 
         // Non-shuffle mode - standard behavior
-        // Use the playback context artist filter, not the current one
-        const artistFilter = state.playbackContextArtistFilter;
+        // Use the playback context browser filter, not the current one
+        const artistFilter = state.playbackContextBrowserFilter?.artist || null;
+        const albumFilter = state.playbackContextBrowserFilter?.album || null;
 
         const nextSong = findNextSong(
           state.currentTrack?.id,
@@ -696,6 +710,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           state.repeatMode,
           artistFilter,
           state.shuffleHistory,
+          albumFilter,
         );
 
         if (!nextSong) {
@@ -710,6 +725,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           state.repeatMode,
           artistFilter,
           state.shuffleHistory,
+          albumFilter,
         );
 
         // First pause current playback
@@ -817,7 +833,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
           // Find the previous song (for non-shuffle or when at beginning of history)
           // Use the playback context artist filter, not the current one
-          const artistFilter = state.playbackContextArtistFilter;
+          const artistFilter =
+            state.playbackContextBrowserFilter?.artist || null;
+          const albumFilter = state.playbackContextBrowserFilter?.album || null;
 
           const previousSong = findPreviousSong(
             state.currentTrack.id,
@@ -826,6 +844,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             state.repeatMode,
             [], // Empty shuffle history since we handle it above
             artistFilter,
+            albumFilter,
           );
 
           if (!previousSong) {
@@ -1236,8 +1255,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
 
           // We're at the tip of history, get a new random song
-          // Use the playback context artist filter, not the current one
-          const artistFilter = state.playbackContextArtistFilter;
+          // Use the playback context browser filter, not the current one
+          const artistFilter =
+            state.playbackContextBrowserFilter?.artist || null;
+          const albumFilter = state.playbackContextBrowserFilter?.album || null;
 
           const nextSong = findNextSong(
             currentTrackThatIsAudiblyPlaying.id,
@@ -1246,6 +1267,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             state.repeatMode,
             artistFilter,
             state.shuffleHistory,
+            albumFilter,
           );
 
           if (!nextSong) {
@@ -1259,13 +1281,20 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           let totalAvailableTracks = 0;
 
           if (state.playbackSource === 'library') {
-            totalAvailableTracks = artistFilter
-              ? library.filter(
-                  (t) =>
-                    (t.albumArtist || t.artist || 'Unknown Artist') ===
-                    artistFilter,
-                ).length
-              : library.length;
+            let filtered = library;
+            if (artistFilter) {
+              filtered = filtered.filter(
+                (t) =>
+                  (t.albumArtist || t.artist || 'Unknown Artist') ===
+                  artistFilter,
+              );
+            }
+            if (albumFilter) {
+              filtered = filtered.filter(
+                (t) => (t.album || 'Unknown Album') === albumFilter,
+              );
+            }
+            totalAvailableTracks = filtered.length;
           } else if (state.playbackSource === 'playlist') {
             const playlist = playlists.find(
               (p) => p.id === state.playbackSourcePlaylistId,
@@ -1338,8 +1367,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
 
         // Non-shuffle mode - standard behavior
-        // Use the playback context artist filter, not the current one
-        const artistFilter = state.playbackContextArtistFilter;
+        // Use the playback context browser filter, not the current one
+        const artistFilter = state.playbackContextBrowserFilter?.artist || null;
+        const albumFilter = state.playbackContextBrowserFilter?.album || null;
 
         const nextSong = findNextSong(
           currentTrackThatIsAudiblyPlaying.id,
@@ -1348,6 +1378,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           state.repeatMode,
           artistFilter,
           state.shuffleHistory,
+          albumFilter,
         );
 
         if (!nextSong) {

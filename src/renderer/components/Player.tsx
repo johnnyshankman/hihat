@@ -30,6 +30,7 @@ import {
 import Marquee from 'react-fast-marquee';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import {
   useSettingsAndPlaybackStore,
   useUIStore,
@@ -230,8 +231,14 @@ function Player() {
   // Get the setCurrentView function from the UI store
   const setCurrentView = useUIStore((state) => state.setCurrentView);
 
-  // Get the setArtistFilter function from the library store
-  const setArtistFilter = useLibraryStore((state) => state.setArtistFilter);
+  // Browser toggle state
+  const browserOpen = useUIStore((state) => state.browserOpen);
+  const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
+
+  // Get the clearAllBrowserFilters function from the library store
+  const clearAllBrowserFilters = useLibraryStore(
+    (state) => state.clearAllBrowserFilters,
+  );
 
   // Use Material UI's theme breakpoints
   const theme = useTheme();
@@ -553,8 +560,8 @@ function Player() {
     if (playbackSource === 'library') {
       setCurrentView('library');
 
-      // Clear any active artist filter to ensure the track is visible
-      setArtistFilter(null);
+      // Clear any active browser filter to ensure the track is visible
+      clearAllBrowserFilters();
 
       // Small delay to allow React to start mounting the Library component
       // The scrollToTrackWhenReady function will poll until the table is fully ready
@@ -578,7 +585,7 @@ function Player() {
         }
       }, 50);
     }
-  }, [currentTrack, playbackSource, setCurrentView, setArtistFilter]);
+  }, [currentTrack, playbackSource, setCurrentView, clearAllBrowserFilters]);
 
   // Check if title text overflows its container
   useEffect(() => {
@@ -983,6 +990,25 @@ function Player() {
         >
           {/* Notification button */}
           <NotificationButton />
+          <Tooltip
+            arrow
+            placement="top"
+            title={browserOpen ? 'Hide Browser' : 'Show Browser'}
+          >
+            <IconButton
+              data-testid="browser-toggle"
+              onClick={() => setBrowserOpen(!browserOpen)}
+              size="medium"
+              sx={{
+                color: browserOpen ? 'primary.main' : 'text.secondary',
+                '&:hover': {
+                  color: browserOpen ? 'primary.dark' : 'text.primary',
+                },
+              }}
+            >
+              <ViewColumnIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip arrow placement="top" title="Volume">
             <IconButton onClick={toggleVolumeControls} size="medium">
               {renderVolumeIcon()}

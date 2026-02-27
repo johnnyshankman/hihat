@@ -29,6 +29,7 @@ export function getFilePathFromTrackUrl(trackUrl: string): string {
 export const getFilteredAndSortedTrackIds = (
   playbackSource: 'library' | 'playlist',
   artistFilter?: string | null,
+  albumFilter?: string | null,
 ): string[] => {
   // Get library state for tracks, playlists, and view states
   const libraryState = useLibraryStore.getState();
@@ -48,6 +49,13 @@ export const getFilteredAndSortedTrackIds = (
         const artist = track.albumArtist || track.artist || 'Unknown Artist';
         return artist === artistFilter;
       });
+    }
+
+    // Apply album filter if provided
+    if (albumFilter) {
+      filteredTracks = filteredTracks.filter(
+        (track) => (track.album || 'Unknown Album') === albumFilter,
+      );
     }
 
     // Apply filtering from library view
@@ -89,6 +97,21 @@ export const getFilteredAndSortedTrackIds = (
     let filteredTracks = playlistTrackIds
       .map((id) => tracks.find((t) => t.id === id))
       .filter((track): track is Track => !!track);
+
+    // Apply artist filter if provided
+    if (artistFilter) {
+      filteredTracks = filteredTracks.filter((track) => {
+        const artist = track.albumArtist || track.artist || 'Unknown Artist';
+        return artist === artistFilter;
+      });
+    }
+
+    // Apply album filter if provided
+    if (albumFilter) {
+      filteredTracks = filteredTracks.filter(
+        (track) => (track.album || 'Unknown Album') === albumFilter,
+      );
+    }
 
     // Apply filtering from playlist view
     // which matches the 'contains' globalFilterFn in the Material React Table
@@ -135,6 +158,7 @@ export const findNextSong = (
   repeatMode: 'off' | 'track' | 'all',
   artistFilter?: string | null,
   shuffleHistory?: Track[],
+  albumFilter?: string | null,
 ): Track | undefined => {
   if (!currentTrackId) return undefined;
 
@@ -143,7 +167,11 @@ export const findNextSong = (
   const { tracks } = libraryState;
 
   // Get the filtered and sorted track IDs
-  const trackIds = getFilteredAndSortedTrackIds(playbackSource, artistFilter);
+  const trackIds = getFilteredAndSortedTrackIds(
+    playbackSource,
+    artistFilter,
+    albumFilter,
+  );
 
   // if shuffle mode is on, return a random track that hasn't been played yet
   if (shuffleMode) {
@@ -241,6 +269,7 @@ export const findPreviousSong = (
   repeatMode: 'off' | 'track' | 'all',
   shuffleHistory?: Track[],
   artistFilter?: string | null,
+  albumFilter?: string | null,
 ): Track | undefined => {
   if (!currentTrackId) return undefined;
 
@@ -254,7 +283,11 @@ export const findPreviousSong = (
   const { tracks } = libraryState;
 
   // Get the filtered and sorted track IDs
-  const trackIds = getFilteredAndSortedTrackIds(playbackSource, artistFilter);
+  const trackIds = getFilteredAndSortedTrackIds(
+    playbackSource,
+    artistFilter,
+    albumFilter,
+  );
 
   // find the current index of the current track
   const currentIndex = trackIds.indexOf(currentTrackId);

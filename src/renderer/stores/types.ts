@@ -17,6 +17,12 @@ export interface SearchIndexData {
   genreLower: string;
 }
 
+// Browser filter state for the two-column browser panel
+export interface BrowserFilter {
+  artist: string | null; // selected album artist, null = "All"
+  album: string | null; // selected album, null = "All"
+}
+
 // Library Store Types
 export interface LibraryStore {
   tracks: Track[];
@@ -29,7 +35,7 @@ export interface LibraryStore {
     sorting: any;
     filtering: string;
   };
-  artistFilter: string | null;
+  browserFilters: Record<string, BrowserFilter>; // keyed by 'library' or playlist ID
   playlistViewState: {
     sorting: any;
     filtering: string;
@@ -63,7 +69,10 @@ export interface LibraryStore {
     playlistId: string | null,
   ) => void;
   setLastViewedTrackId: (trackId: string | null) => void;
-  setArtistFilter: (artist: string | null) => void;
+  setBrowserFilter: (viewId: string, filter: BrowserFilter) => void;
+  clearBrowserFilter: (viewId: string) => void;
+  clearAllBrowserFilters: () => void;
+  getBrowserFilter: (viewId: string) => BrowserFilter;
 
   // Per-playlist sort preferences (session cache + DB backed)
   playlistSortPreferences: Record<string, Array<{ id: string; desc: boolean }>>;
@@ -75,7 +84,6 @@ export interface LibraryStore {
   // NEW: Efficient data access methods
   getTrackById: (id: string) => Track | undefined;
   getTracksByIds: (ids: string[]) => Track[];
-  getTracksByArtist: (artist: string) => Track[];
 }
 
 // Playback Store Types
@@ -87,7 +95,7 @@ export interface PlaybackStore {
   volume: number; // volume of the global player
   playbackSource: 'library' | 'playlist'; // the source of the playback (library or playlist)
   playbackSourcePlaylistId: string | null; // the ID of the specific playlist if playbackSource is 'playlist'
-  playbackContextArtistFilter: string | null; // the artist filter that was active when playback started
+  playbackContextBrowserFilter: BrowserFilter | null; // the browser filter that was active when playback started
   repeatMode: 'off' | 'track' | 'all'; // off, track, all
   shuffleMode: boolean; // shuffle mode
   shuffleHistory: Track[]; // history of shuffled tracks
@@ -147,7 +155,7 @@ export interface UIStore {
   notifications: Notification[];
   currentView: 'library' | 'playlists';
   settingsOpen: boolean;
-  artistBrowserOpen: boolean;
+  browserOpen: boolean;
   showNotification: (
     message: string,
     type: 'info' | 'success' | 'warning' | 'error',
@@ -157,7 +165,7 @@ export interface UIStore {
   clearAllNotifications: () => void;
   setCurrentView: (view: 'library' | 'playlists') => void;
   setSettingsOpen: (open: boolean) => void;
-  setArtistBrowserOpen: (open: boolean) => void;
+  setBrowserOpen: (open: boolean) => void;
 }
 
 // Combined Settings and Playback Store Types
@@ -180,7 +188,7 @@ export interface SettingsAndPlaybackStore {
   volume: number; // Shared state between settings and playback
   playbackSource: 'library' | 'playlist';
   playbackSourcePlaylistId: string | null;
-  playbackContextArtistFilter: string | null;
+  playbackContextBrowserFilter: BrowserFilter | null;
   repeatMode: 'off' | 'track' | 'all';
   shuffleMode: boolean;
   shuffleHistory: Track[];

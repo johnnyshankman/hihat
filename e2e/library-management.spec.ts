@@ -27,20 +27,53 @@ test.describe('Library Management', () => {
 
     // Wait for app to load with pre-populated songs
     await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
 
-    // Verify we have songs loaded (200 test songs)
-    const songElements = await page
-      .locator('tr, .song-row, .track-row, tbody tr')
-      .count();
-    expect(songElements).toBeGreaterThan(0);
+    // Verify we have songs loaded — virtualization renders only visible rows,
+    // so check that a reasonable number are in the DOM (overscan covers ~56 rows)
+    const songElements = await page.locator('[data-track-id]').count();
+    expect(songElements).toBeGreaterThan(20);
 
-    // Verify specific test songs/artists are present from our generated library
-    const pageContent = await page.content();
-    expect(pageContent).toContain('Aurora Synth');
-    expect(pageContent).toContain('The Jazz Collective');
-    expect(pageContent).toContain('Rock Titans');
-    expect(pageContent).toContain('Hip Hop Legends');
-    expect(pageContent).toContain('Classical Masters');
+    // Collect unique artists by scrolling through the entire virtualized table.
+    // This avoids relying on page.content() which only sees the DOM slice.
+    const allArtists = await page.evaluate(async () => {
+      const artists = new Set<string>();
+      const container = document.querySelector(
+        '[data-testid="vt-container"]',
+      ) as HTMLElement;
+      if (!container) return Array.from(artists);
+
+      // Scroll through the table in steps to capture all virtualized rows
+      const { scrollHeight } = container;
+      const step = 400;
+      for (let pos = 0; pos <= scrollHeight; pos += step) {
+        container.scrollTop = pos;
+        // Allow React to re-render the virtualized rows
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => {
+          requestAnimationFrame(resolve);
+        });
+        const rows = document.querySelectorAll('[data-track-id]');
+        rows.forEach((row) => {
+          // Artist is the second td cell (index 1)
+          const artistCell = row.querySelectorAll('td')[1];
+          if (artistCell?.textContent) {
+            artists.add(artistCell.textContent.trim());
+          }
+        });
+      }
+
+      // Scroll back to top
+      container.scrollTop = 0;
+      return Array.from(artists);
+    });
+
+    // Verify specific test artists are present in the library
+    expect(allArtists).toContain('Aurora Synth');
+    expect(allArtists).toContain('The Jazz Collective');
+    expect(allArtists).toContain('Rock Titans');
+    expect(allArtists).toContain('Hip Hop Legends');
+    expect(allArtists).toContain('Classical Masters');
 
     await TestHelpers.closeApp(app);
   });

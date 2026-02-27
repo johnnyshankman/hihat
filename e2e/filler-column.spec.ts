@@ -22,7 +22,7 @@ test.describe('Filler Column', () => {
       const container = document.querySelector(
         '[data-testid="vt-container"]',
       ) as HTMLElement;
-      const containerW = container ? container.offsetWidth : 0;
+      const containerW = container ? container.clientWidth : 0;
 
       const allThs = Array.from(document.querySelectorAll('th'));
       const nonFillerThs = allThs.filter(
