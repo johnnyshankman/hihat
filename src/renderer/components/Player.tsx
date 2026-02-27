@@ -711,57 +711,63 @@ function Player() {
           }}
         >
           {/* Album Art */}
-          <Box
-            onClick={currentTrack ? openMiniPlayer : undefined}
-            sx={{
-              height: '100%',
-              mr: { xs: 1, sm: 2 },
-              borderRadius: '4px',
-              aspectRatio: '1/1',
-              cursor: currentTrack ? 'pointer' : 'default',
-              position: 'relative',
-              flexShrink: 0,
-              '&:hover .overlay': {
-                opacity: 1,
-              },
-            }}
+          <Tooltip
+            arrow
+            placement="top"
+            title={currentTrack ? 'Open MiniPlayer' : ''}
           >
-            {albumArt ? (
-              <Box
-                alt={currentTrack?.album || 'No album'}
-                component="img"
-                src={albumArt}
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  aspectRatio: '1/1',
-                  objectFit: 'cover',
-                }}
-              />
-            ) : (
-              <AlbumArtPlaceholder />
-            )}
-            {currentTrack && (
-              <Box
-                className="overlay"
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: 0,
-                  transition: 'opacity 0.2s',
-                }}
-              >
-                <OpenInNewIcon sx={{ color: 'white' }} />
-              </Box>
-            )}
-          </Box>
+            <Box
+              onClick={currentTrack ? openMiniPlayer : undefined}
+              sx={{
+                height: '100%',
+                mr: { xs: 1, sm: 2 },
+                borderRadius: '4px',
+                aspectRatio: '1/1',
+                cursor: currentTrack ? 'pointer' : 'default',
+                position: 'relative',
+                flexShrink: 0,
+                '&:hover .overlay': {
+                  opacity: 1,
+                },
+              }}
+            >
+              {albumArt ? (
+                <Box
+                  alt={currentTrack?.album || 'No album'}
+                  component="img"
+                  src={albumArt}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    aspectRatio: '1/1',
+                    objectFit: 'cover',
+                  }}
+                />
+              ) : (
+                <AlbumArtPlaceholder />
+              )}
+              {currentTrack && (
+                <Box
+                  className="overlay"
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 0,
+                    transition: 'opacity 0.2s',
+                  }}
+                >
+                  <OpenInNewIcon sx={{ color: 'white' }} />
+                </Box>
+              )}
+            </Box>
+          </Tooltip>
 
           {/* Track info */}
           <Box
@@ -876,7 +882,7 @@ function Player() {
             spacing={0.75}
             sx={{ mb: 0.0, width: '100%' }}
           >
-            <Tooltip title={getShuffleTooltipText()}>
+            <Tooltip arrow placement="top" title={getShuffleTooltipText()}>
               <span>
                 <IconButton
                   disabled={!currentTrack}
@@ -890,7 +896,7 @@ function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip title="Previous">
+            <Tooltip arrow placement="top" title="Previous">
               <span>
                 <IconButton
                   disabled={!currentTrack}
@@ -904,7 +910,7 @@ function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip title={paused ? 'Play' : 'Pause'}>
+            <Tooltip arrow placement="top" title={paused ? 'Play' : 'Pause'}>
               <span>
                 <IconButton
                   disabled={!currentTrack}
@@ -931,7 +937,7 @@ function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip title="Next">
+            <Tooltip arrow placement="top" title="Next">
               <span>
                 <IconButton
                   disabled={!currentTrack}
@@ -945,7 +951,7 @@ function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip title={getRepeatTooltipText()}>
+            <Tooltip arrow placement="top" title={getRepeatTooltipText()}>
               <span>
                 <IconButton
                   disabled={!currentTrack}
@@ -977,7 +983,7 @@ function Player() {
         >
           {/* Notification button */}
           <NotificationButton />
-          <Tooltip title="Volume">
+          <Tooltip arrow placement="top" title="Volume">
             <IconButton onClick={toggleVolumeControls} size="medium">
               {renderVolumeIcon()}
             </IconButton>
