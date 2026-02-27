@@ -170,6 +170,7 @@ export interface SettingsAndPlaybackStore {
   lastPlayedSongId: Settings['lastPlayedSongId'];
   columnWidths: Settings['columnWidths'];
   librarySorting: Settings['librarySorting'];
+  columnOrder: Settings['columnOrder'];
 
   // Playback state
   currentTrack: Track | null;
@@ -200,6 +201,7 @@ export interface SettingsAndPlaybackStore {
   setLibrarySorting: (
     sorting: Array<{ id: string; desc: boolean }>,
   ) => Promise<void>;
+  setColumnOrder: (columnOrder: string[]) => Promise<void>;
   setTheme: (theme: 'light' | 'dark') => Promise<void>;
   setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
   setLastPlayedSongId: (trackId: string | null) => Promise<void>;

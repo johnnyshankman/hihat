@@ -172,6 +172,21 @@
   to { background-position-x: 1000px; }
 }
 
+/* Draggable headers — grab cursor */
+.vt-th[draggable="true"] {
+  cursor: grab;
+}
+
+/* While dragging — reduced opacity */
+.vt-th.vt-th-dragging {
+  opacity: 0.5;
+}
+
+/* Drop target indicator — left border highlight */
+.vt-th.vt-th-drop-target {
+  box-shadow: inset 2px 0 0 0 var(--vt-text-primary);
+}
+
 .vt-th-filler {
   cursor: default;
   padding: 0;

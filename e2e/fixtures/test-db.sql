@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS settings (
   lastPlayedSongId TEXT,
   volume REAL,
   columnWidths TEXT,
-  librarySorting TEXT
+  librarySorting TEXT,
+  columnOrder TEXT
 );
 
 -- Insert test tracks
@@ -255,5 +256,5 @@ INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds, so
 ('playlist-5', 'Most Played', 1, 'most-played', '{"type":"mostPlayed","limit":50}', '[]', NULL);
 
 -- Insert default settings
-INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting) VALUES
-('app-settings', '{{TEST_SONGS_PATH}}', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0, NULL, NULL);
+INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder) VALUES
+('app-settings', '{{TEST_SONGS_PATH}}', 'dark', '{"title":true,"artist":true,"album":true,"albumArtist":true,"genre":true,"duration":true,"playCount":true,"dateAdded":true,"lastPlayed":true}', NULL, 1.0, NULL, NULL, NULL);

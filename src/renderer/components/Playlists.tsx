@@ -67,6 +67,10 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const setColumnWidths = useSettingsAndPlaybackStore(
     (state) => state.setColumnWidths,
   );
+  const columnOrder = useSettingsAndPlaybackStore((state) => state.columnOrder);
+  const setColumnOrder = useSettingsAndPlaybackStore(
+    (state) => state.setColumnOrder,
+  );
   const currentTrack = useSettingsAndPlaybackStore(
     (state) => state.currentTrack,
   );
@@ -628,6 +632,14 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     [setColumnWidths],
   );
 
+  // Column order change handler
+  const handleColumnOrderChange = useCallback(
+    (newOrder: string[]) => {
+      setColumnOrder(newOrder);
+    },
+    [setColumnOrder],
+  );
+
   // Toolbar content
   const toolbarContent = useMemo(() => {
     let playlistNameContent;
@@ -865,6 +877,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
           }}
         >
           <VirtualTable
+            columnOrder={columnOrder || undefined}
             columns={columns}
             columnVisibility={
               (columnVisibility as unknown as Record<string, boolean>) || {}
@@ -874,6 +887,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             getRowClassName={handleGetRowClassName}
             globalFilter={globalFilter}
             initialColumnSizing={columnWidths || {}}
+            onColumnOrderChange={handleColumnOrderChange}
             onColumnSizingPersist={handleColumnSizingPersist}
             onColumnVisibilityChange={handleColumnVisibilityToggle}
             onRowClick={handleRowClick}

@@ -35,6 +35,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
     columnWidths: null,
     librarySorting: null,
+    columnOrder: null,
 
     // Playback state (from playbackStore)
     currentTrack: null, // the current track playing
@@ -75,6 +76,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           volume: state.volume,
           columnWidths: state.columnWidths,
           librarySorting: state.librarySorting,
+          columnOrder: state.columnOrder,
         };
         await window.electron.settings.update(updatedSettings);
 
@@ -99,6 +101,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           volume: appSettings.volume !== null ? appSettings.volume : 1.0,
           columnWidths: appSettings.columnWidths || null,
           librarySorting: appSettings.librarySorting || null,
+          columnOrder: appSettings.columnOrder || null,
         });
 
         // Propagate persisted library sorting to libraryStore
@@ -144,6 +147,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           id: 'app-settings',
           columnWidths: null,
           librarySorting: null,
+          columnOrder: null,
         };
       }
     },
@@ -172,6 +176,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           volume: state.volume,
           columnWidths: state.columnWidths,
           librarySorting: state.librarySorting,
+          columnOrder: state.columnOrder,
         };
         await window.electron.settings.update(updatedSettings);
 
@@ -202,6 +207,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           volume: state.volume,
           columnWidths,
           librarySorting: state.librarySorting,
+          columnOrder: state.columnOrder,
         };
         await window.electron.settings.update(updatedSettings);
 
@@ -230,12 +236,40 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           volume: state.volume,
           columnWidths: state.columnWidths,
           librarySorting: sorting,
+          columnOrder: state.columnOrder,
         };
         await window.electron.settings.update(updatedSettings);
 
         set({ librarySorting: sorting });
       } catch (error) {
         console.error('Error updating library sorting:', error);
+      }
+    },
+
+    setColumnOrder: async (columnOrder: string[]) => {
+      try {
+        const state = get();
+
+        if (!state.id) {
+          throw new Error('Settings not loaded');
+        }
+
+        const updatedSettings = {
+          id: state.id,
+          libraryPath: state.libraryPath,
+          theme: state.theme,
+          columns: state.columns,
+          lastPlayedSongId: state.lastPlayedSongId,
+          volume: state.volume,
+          columnWidths: state.columnWidths,
+          librarySorting: state.librarySorting,
+          columnOrder,
+        };
+        await window.electron.settings.update(updatedSettings);
+
+        set({ columnOrder });
+      } catch (error) {
+        console.error('Error updating column order:', error);
       }
     },
 
@@ -257,6 +291,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           volume: state.volume,
           columnWidths: state.columnWidths,
           librarySorting: state.librarySorting,
+          columnOrder: state.columnOrder,
         };
         await window.electron.settings.update(updatedSettings);
 
@@ -288,6 +323,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           volume: state.volume,
           columnWidths: state.columnWidths,
           librarySorting: state.librarySorting,
+          columnOrder: state.columnOrder,
         };
         await window.electron.settings.update(updatedSettings);
 
@@ -323,6 +359,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             volume,
             columnWidths: state.columnWidths,
             librarySorting: state.librarySorting,
+            columnOrder: state.columnOrder,
           };
           window.electron.settings.update(updatedSettings);
         } catch (error) {

@@ -75,6 +75,7 @@ export interface Settings {
   volume: number | null; // Volume level (0-1) for audio playback
   columnWidths: Record<string, number> | null; // Persisted column widths for the track table
   librarySorting: Array<{ id: string; desc: boolean }> | null; // Persisted sorting preference for the library view
+  columnOrder: string[] | null; // Persisted column order for the track table
 }
 
 /**

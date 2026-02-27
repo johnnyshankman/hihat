@@ -44,6 +44,8 @@ interface VirtualTableProps {
   initialColumnSizing?: ColumnSizingState;
   onColumnVisibilityChange: (columnId: string, visible: boolean) => void;
   onColumnSizingPersist?: (sizing: ColumnSizingState) => void;
+  columnOrder?: string[];
+  onColumnOrderChange?: (newOrder: string[]) => void;
   virtualizerRef?: React.MutableRefObject<Virtualizer<
     HTMLDivElement,
     Element
@@ -71,6 +73,8 @@ function VirtualTable({
   initialColumnSizing,
   onColumnVisibilityChange: _onColumnVisibilityChange,
   onColumnSizingPersist,
+  columnOrder,
+  onColumnOrderChange,
   virtualizerRef,
   tableRef,
   onRowClick,
@@ -134,6 +138,7 @@ function VirtualTable({
       globalFilter,
       columnVisibility: visibilityState,
       columnSizing,
+      columnOrder: columnOrder || undefined,
     },
     onSortingChange,
     onColumnSizingChange: setColumnSizing,
@@ -226,10 +231,15 @@ function VirtualTable({
       ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end
       : 0;
 
+  // Drag-and-drop column reorder state
+  const [dragColumnId, setDragColumnId] = React.useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = React.useState<string | null>(null);
+  const isDraggingRef = useRef(false);
+
   // Header sort handler
   const handleHeaderClick = useCallback(
     (columnId: string) => {
-      if (isResizingRef.current) return;
+      if (isResizingRef.current || isDraggingRef.current) return;
       const currentSort = sorting.find((s) => s.id === columnId);
       if (!currentSort) {
         onSortingChange([{ id: columnId, desc: false }]);
@@ -275,11 +285,57 @@ function VirtualTable({
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     const sortDir = header.column.getIsSorted();
+                    const isDragging = dragColumnId === header.column.id;
+                    const isDropTarget =
+                      dropTargetId === header.column.id &&
+                      dragColumnId !== header.column.id;
                     return (
                       <th
                         key={header.id}
-                        className={`vt-th${sortDir ? ' vt-th-sorted' : ''}`}
+                        className={`vt-th${sortDir ? ' vt-th-sorted' : ''}${isDragging ? ' vt-th-dragging' : ''}${isDropTarget ? ' vt-th-drop-target' : ''}`}
+                        draggable
                         onClick={() => handleHeaderClick(header.column.id)}
+                        onDragEnd={() => {
+                          isDraggingRef.current = false;
+                          setDragColumnId(null);
+                          setDropTargetId(null);
+                        }}
+                        onDragLeave={() => {
+                          setDropTargetId(null);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDropTargetId(header.column.id);
+                        }}
+                        onDragStart={(e) => {
+                          isDraggingRef.current = true;
+                          setDragColumnId(header.column.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (
+                            dragColumnId &&
+                            dragColumnId !== header.column.id &&
+                            onColumnOrderChange
+                          ) {
+                            const currentOrder =
+                              columnOrder ||
+                              table.getAllLeafColumns().map((c) => c.id);
+                            const newOrder = [...currentOrder];
+                            const fromIndex = newOrder.indexOf(dragColumnId);
+                            const toIndex = newOrder.indexOf(header.column.id);
+                            newOrder.splice(
+                              toIndex,
+                              0,
+                              newOrder.splice(fromIndex, 1)[0],
+                            );
+                            onColumnOrderChange(newOrder);
+                          }
+                          setDragColumnId(null);
+                          setDropTargetId(null);
+                        }}
                         style={{ width: header.getSize() }}
                       >
                         <span className="vt-th-content">
@@ -298,7 +354,9 @@ function VirtualTable({
                           className={`vt-th-resize-handle${
                             header.column.getIsResizing() ? ' vt-resizing' : ''
                           }`}
+                          draggable={false}
                           onDoubleClick={() => header.column.resetSize()}
+                          onDragStart={(e) => e.preventDefault()}
                           onMouseDown={(e) => {
                             isResizingRef.current = true;
                             document.addEventListener(

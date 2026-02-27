@@ -206,6 +206,9 @@ function runMigrations(): void {
 
     // Migration 7: Add librarySorting column to settings table if it doesn't exist
     addColumnIfNotExists('settings', 'librarySorting', 'TEXT');
+
+    // Migration 8: Add columnOrder column to settings table if it doesn't exist
+    addColumnIfNotExists('settings', 'columnOrder', 'TEXT');
   } catch (error) {
     console.error('Error running database migrations:', error);
   }
@@ -352,13 +355,14 @@ function initDefaultSettings(): void {
           volume: 1.0,
           columnWidths: null,
           librarySorting: null,
+          columnOrder: null,
         };
 
         // Insert default settings
         db.prepare(
           `
-          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         ).run(
           defaultSettings.id,
@@ -369,6 +373,7 @@ function initDefaultSettings(): void {
           defaultSettings.volume,
           defaultSettings.columnWidths,
           defaultSettings.librarySorting,
+          defaultSettings.columnOrder,
         );
       }
     } catch (error) {
@@ -402,13 +407,14 @@ function initDefaultSettings(): void {
         volume: 1.0,
         columnWidths: null,
         librarySorting: null,
+        columnOrder: null,
       };
 
       // Insert default settings
       db.prepare(
         `
-        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       ).run(
         defaultSettings.id,
@@ -419,6 +425,7 @@ function initDefaultSettings(): void {
         defaultSettings.volume,
         defaultSettings.columnWidths,
         defaultSettings.librarySorting,
+        defaultSettings.columnOrder,
       );
     }
   } catch (outerError) {
@@ -1419,6 +1426,7 @@ export function getSettings(): Settings {
         volume: 1.0,
         columnWidths: null,
         librarySorting: null,
+        columnOrder: null,
       };
     }
 
@@ -1463,6 +1471,16 @@ export function getSettings(): Settings {
         parsedLibrarySorting = null;
       }
 
+      let parsedColumnOrder2: string[] | null = null;
+      try {
+        parsedColumnOrder2 =
+          typeof (newSettings as any).columnOrder === 'string'
+            ? JSON.parse((newSettings as any).columnOrder)
+            : (newSettings as any).columnOrder || null;
+      } catch (_e) {
+        parsedColumnOrder2 = null;
+      }
+
       return {
         ...newSettings,
         columns:
@@ -1473,6 +1491,7 @@ export function getSettings(): Settings {
         volume: newSettings.volume || 1.0,
         columnWidths: parsedColumnWidths,
         librarySorting: parsedLibrarySorting,
+        columnOrder: parsedColumnOrder2,
       };
     }
 
@@ -1499,6 +1518,16 @@ export function getSettings(): Settings {
       parsedLibrarySorting = null;
     }
 
+    let parsedColumnOrder: string[] | null = null;
+    try {
+      parsedColumnOrder =
+        typeof (settings as any).columnOrder === 'string'
+          ? JSON.parse((settings as any).columnOrder)
+          : (settings as any).columnOrder || null;
+    } catch (_e) {
+      parsedColumnOrder = null;
+    }
+
     return {
       ...settings,
       columns:
@@ -1509,6 +1538,7 @@ export function getSettings(): Settings {
       volume: settings.volume || 1.0,
       columnWidths: parsedColumnWidths,
       librarySorting: parsedLibrarySorting,
+      columnOrder: parsedColumnOrder,
     };
   } catch (error) {
     console.error('Failed to get settings:', error);
@@ -1533,6 +1563,7 @@ export function getSettings(): Settings {
       volume: 1.0,
       columnWidths: null,
       librarySorting: null,
+      columnOrder: null,
     };
   }
 }
@@ -1557,7 +1588,8 @@ export function updateSettings(settings: Settings): boolean {
           lastPlayedSongId = ?,
           volume = ?,
           columnWidths = ?,
-          librarySorting = ?
+          librarySorting = ?,
+          columnOrder = ?
         WHERE id = ?
       `,
         )
@@ -1571,6 +1603,7 @@ export function updateSettings(settings: Settings): boolean {
           settings.librarySorting
             ? JSON.stringify(settings.librarySorting)
             : null,
+          settings.columnOrder ? JSON.stringify(settings.columnOrder) : null,
           settings.id,
         );
 

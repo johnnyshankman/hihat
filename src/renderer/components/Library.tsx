@@ -83,6 +83,10 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const setLibrarySorting = useSettingsAndPlaybackStore(
     (state) => state.setLibrarySorting,
   );
+  const columnOrder = useSettingsAndPlaybackStore((state) => state.columnOrder);
+  const setColumnOrder = useSettingsAndPlaybackStore(
+    (state) => state.setColumnOrder,
+  );
 
   // Get state from playback store
   const currentTrack = useSettingsAndPlaybackStore(
@@ -666,6 +670,14 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [setColumnWidths],
   );
 
+  // Column order change handler
+  const handleColumnOrderChange = useCallback(
+    (newOrder: string[]) => {
+      setColumnOrder(newOrder);
+    },
+    [setColumnOrder],
+  );
+
   // Toolbar content
   const toolbarContent = useMemo(
     () => (
@@ -908,6 +920,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           }}
         >
           <VirtualTable
+            columnOrder={columnOrder || undefined}
             columns={columns}
             columnVisibility={
               (columnVisibility as unknown as Record<string, boolean>) || {}
@@ -917,6 +930,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             getRowClassName={handleGetRowClassName}
             globalFilter={globalFilter}
             initialColumnSizing={columnWidths || {}}
+            onColumnOrderChange={handleColumnOrderChange}
             onColumnSizingPersist={handleColumnSizingPersist}
             onColumnVisibilityChange={handleColumnVisibilityToggle}
             onRowClick={handleRowClick}
