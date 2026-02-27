@@ -150,7 +150,9 @@ function Browser({
               className={`browser-item${selectedArtist === artist ? ' browser-item-selected' : ''}`}
               data-artist={artist}
               data-testid="browser-artist-item"
-              onClick={() => onArtistSelect(artist)}
+              onClick={() =>
+                onArtistSelect(selectedArtist === artist ? null : artist)
+              }
               role="option"
             >
               {artist}
@@ -183,7 +185,9 @@ function Browser({
               className={`browser-item${selectedAlbum === album ? ' browser-item-selected' : ''}`}
               data-album={album}
               data-testid="browser-album-item"
-              onClick={() => onAlbumSelect(album)}
+              onClick={() =>
+                onAlbumSelect(selectedAlbum === album ? null : album)
+              }
               role="option"
             >
               {album}
