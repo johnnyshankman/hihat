@@ -101,6 +101,9 @@ export default function MainLayout() {
   const [playlistsOpen, setPlaylistsOpen] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [dragOverPlaylistId, setDragOverPlaylistId] = useState<string | null>(
+    null,
+  );
 
   // Rename dialog state - simplified to only track open/close and playlist ID
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
@@ -210,6 +213,103 @@ export default function MainLayout() {
   const closeCreateDialog = () => {
     setCreateDialogOpen(false);
   };
+
+  // Drag-and-drop handlers for playlist sidebar items
+  const handlePlaylistDragOver = useCallback(
+    (e: React.DragEvent, playlistId: string, isSmart: boolean) => {
+      if (
+        isSmart ||
+        !e.dataTransfer.types.includes('application/x-hihat-tracks')
+      ) {
+        e.dataTransfer.dropEffect = 'none';
+        return;
+      }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setDragOverPlaylistId(playlistId);
+    },
+    [],
+  );
+
+  const handlePlaylistDragLeave = useCallback((e: React.DragEvent) => {
+    const related = e.relatedTarget as Node | null;
+    if (related && (e.currentTarget as Node).contains(related)) {
+      return;
+    }
+    setDragOverPlaylistId(null);
+  }, []);
+
+  const handlePlaylistDrop = useCallback(
+    async (e: React.DragEvent, playlistId: string, isSmart: boolean) => {
+      setDragOverPlaylistId(null);
+      if (isSmart) return;
+
+      const raw = e.dataTransfer.getData('application/x-hihat-tracks');
+      if (!raw) return;
+      e.preventDefault();
+
+      let trackIds: string[];
+      try {
+        trackIds = JSON.parse(raw);
+      } catch {
+        return;
+      }
+
+      if (!Array.isArray(trackIds) || trackIds.length === 0) return;
+
+      const { showNotification } = useUIStore.getState();
+      const { addTrackToPlaylist } = useLibraryStore.getState();
+
+      if (trackIds.length === 1) {
+        await addTrackToPlaylist(trackIds[0], playlistId);
+        return;
+      }
+
+      // Batch multi-track add
+      const currentPlaylists = useLibraryStore.getState().playlists;
+      const playlist = currentPlaylists.find((p) => p.id === playlistId);
+      if (!playlist) return;
+
+      const existingSet = new Set(playlist.trackIds);
+      const newTrackIds = trackIds.filter((id) => !existingSet.has(id));
+      const dupeCount = trackIds.length - newTrackIds.length;
+
+      if (newTrackIds.length === 0) {
+        showNotification(
+          `All ${trackIds.length} tracks are already in "${playlist.name}"`,
+          'info',
+        );
+        return;
+      }
+
+      const updatedPlaylist = {
+        ...playlist,
+        trackIds: [...playlist.trackIds, ...newTrackIds],
+      };
+
+      await window.electron.playlists.update(updatedPlaylist);
+      useLibraryStore.setState((state) => ({
+        playlists: state.playlists.map((p) =>
+          p.id === playlistId ? updatedPlaylist : p,
+        ),
+      }));
+
+      const dupeMsg =
+        dupeCount > 0 ? ` (${dupeCount} already in playlist)` : '';
+      showNotification(
+        `Added ${newTrackIds.length} track${newTrackIds.length > 1 ? 's' : ''} to "${playlist.name}"${dupeMsg}`,
+        'success',
+      );
+    },
+    [],
+  );
+
+  // Clean up drag state on dragend (global)
+  useEffect(() => {
+    const handleDragEnd = () => setDragOverPlaylistId(null);
+    document.addEventListener('dragend', handleDragEnd);
+    return () => document.removeEventListener('dragend', handleDragEnd);
+  }, []);
 
   // Add keyboard shortcut handler
   useEffect(() => {
@@ -786,6 +886,17 @@ export default function MainLayout() {
                         onContextMenu={(e) =>
                           handlePlaylistContextMenu(e, playlist.id)
                         }
+                        onDragLeave={handlePlaylistDragLeave}
+                        onDragOver={(e) =>
+                          handlePlaylistDragOver(
+                            e,
+                            playlist.id,
+                            !!playlist.isSmart,
+                          )
+                        }
+                        onDrop={(e) =>
+                          handlePlaylistDrop(e, playlist.id, !!playlist.isSmart)
+                        }
                         selected={
                           currentView === 'playlists' &&
                           selectedPlaylistId === playlist.id
@@ -796,6 +907,16 @@ export default function MainLayout() {
                           WebkitAppRegion: 'no-drag',
                           borderRadius: 1,
                           mb: 0,
+                          transition: 'background-color 0.1s, outline 0.1s',
+                          ...(dragOverPlaylistId === playlist.id &&
+                            !playlist.isSmart && {
+                              backgroundColor: (t) =>
+                                t.palette.mode === 'dark'
+                                  ? 'rgba(66, 165, 245, 0.15)'
+                                  : 'rgba(33, 150, 243, 0.12)',
+                              outline: (t) =>
+                                `1px solid ${t.palette.mode === 'dark' ? 'rgba(66, 165, 245, 0.5)' : 'rgba(33, 150, 243, 0.5)'}`,
+                            }),
                           '&.Mui-selected': {
                             backgroundColor: (t) =>
                               t.palette.mode === 'dark'

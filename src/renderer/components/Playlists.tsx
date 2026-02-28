@@ -719,6 +719,23 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     [setColumnOrder],
   );
 
+  // Drag-and-drop: compute selected track IDs list
+  const selectedTrackIdsList = useMemo(
+    () => Object.keys(selectedTracks),
+    [selectedTracks],
+  );
+
+  // Drag-and-drop: handle row drag start
+  const handleRowDragStart = useCallback(
+    (trackId: string, selectedIds: string[]): string[] => {
+      if (selectedIds.includes(trackId)) {
+        return selectedIds;
+      }
+      return [trackId];
+    },
+    [],
+  );
+
   // Toolbar content
   const toolbarContent = useMemo(() => {
     let playlistNameContent;
@@ -989,7 +1006,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             onRowClick={handleRowClick}
             onRowContextMenu={handleRowContextMenu}
             onRowDoubleClick={handleRowDoubleClick}
+            onRowDragStart={handleRowDragStart}
             onSortingChange={setSorting}
+            selectedTrackIds={selectedTrackIdsList}
             sorting={sorting}
             tableRef={tableRef}
             toolbar={toolbarContent}

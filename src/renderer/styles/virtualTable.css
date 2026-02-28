@@ -177,6 +177,11 @@
   cursor: grab;
 }
 
+/* Draggable rows — grab cursor */
+tr[draggable="true"] {
+  cursor: grab;
+}
+
 /* While dragging — reduced opacity */
 .vt-th.vt-th-dragging {
   opacity: 0.5;

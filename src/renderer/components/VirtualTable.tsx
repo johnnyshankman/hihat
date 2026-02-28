@@ -39,56 +39,60 @@ const globalFilterFn: FilterFn<TableData> = (row, _columnId, filterValue) => {
 };
 
 interface VirtualTableProps {
-  data: TableData[];
-  columns: ColumnDef<TableData>[];
-  sorting: SortingState;
-  onSortingChange: OnChangeFn<SortingState>;
-  globalFilter: string;
-  columnVisibility: VisibilityState;
-  initialColumnSizing?: ColumnSizingState;
-  onColumnVisibilityChange: (columnId: string, visible: boolean) => void;
-  onColumnSizingPersist?: (sizing: ColumnSizingState) => void;
+  browserPanel?: React.ReactNode;
   columnOrder?: string[];
+  columns: ColumnDef<TableData>[];
+  columnVisibility: VisibilityState;
+  data: TableData[];
+  emptyState: React.ReactNode;
+  getRowClassName: (row: Row<TableData>, index: number) => string;
+  globalFilter: string;
+  initialColumnSizing?: ColumnSizingState;
   onColumnOrderChange?: (newOrder: string[]) => void;
-  virtualizerRef?: React.MutableRefObject<Virtualizer<
-    HTMLDivElement,
-    Element
-  > | null>;
-  tableRef?: React.MutableRefObject<Table<TableData> | null>;
+  onColumnSizingPersist?: (sizing: ColumnSizingState) => void;
+  onColumnVisibilityChange: (columnId: string, visible: boolean) => void;
   onRowClick: (row: Row<TableData>, index: number, e: React.MouseEvent) => void;
-  onRowDoubleClick: (row: Row<TableData>, index: number) => void;
   onRowContextMenu: (
     row: Row<TableData>,
     index: number,
     e: React.MouseEvent,
   ) => void;
-  getRowClassName: (row: Row<TableData>, index: number) => string;
+  onRowDoubleClick: (row: Row<TableData>, index: number) => void;
+  onRowDragStart?: (trackId: string, selectedIds: string[]) => string[];
+  onSortingChange: OnChangeFn<SortingState>;
+  selectedTrackIds?: string[];
+  sorting: SortingState;
+  tableRef?: React.MutableRefObject<Table<TableData> | null>;
   toolbar: React.ReactNode;
-  browserPanel?: React.ReactNode;
-  emptyState: React.ReactNode;
+  virtualizerRef?: React.MutableRefObject<Virtualizer<
+    HTMLDivElement,
+    Element
+  > | null>;
 }
 
 function VirtualTable({
-  data,
-  columns,
-  sorting,
-  onSortingChange,
-  globalFilter,
-  columnVisibility,
-  initialColumnSizing,
-  onColumnVisibilityChange,
-  onColumnSizingPersist,
-  columnOrder,
-  onColumnOrderChange,
-  virtualizerRef,
-  tableRef,
-  onRowClick,
-  onRowDoubleClick,
-  onRowContextMenu,
-  getRowClassName,
-  toolbar,
   browserPanel,
+  columnOrder,
+  columns,
+  columnVisibility,
+  data,
   emptyState,
+  getRowClassName,
+  globalFilter,
+  initialColumnSizing,
+  onColumnOrderChange,
+  onColumnSizingPersist,
+  onColumnVisibilityChange,
+  onRowClick,
+  onRowContextMenu,
+  onRowDoubleClick,
+  onRowDragStart,
+  onSortingChange,
+  selectedTrackIds,
+  sorting,
+  tableRef,
+  toolbar,
+  virtualizerRef,
 }: VirtualTableProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isResizingRef = useRef(false);
@@ -302,6 +306,9 @@ function VirtualTable({
   const visibleColumnCount = table.getVisibleFlatColumns().length;
   const totalColSpan = visibleColumnCount + (fillerWidth > 0 ? 1 : 0);
 
+  // Row drag-and-drop (constant for all rows)
+  const isDraggable = !!onRowDragStart;
+
   return (
     <div className="vt-paper">
       <div className="vt-toolbar">{toolbar}</div>
@@ -447,12 +454,39 @@ function VirtualTable({
                     key={row.id}
                     className={getRowClassName(row, virtualRow.index)}
                     data-track-id={row.original.id}
+                    draggable={isDraggable || undefined}
                     onClick={(e) => onRowClick(row, virtualRow.index, e)}
                     onContextMenu={(e) =>
                       onRowContextMenu(row, virtualRow.index, e)
                     }
                     onDoubleClick={() =>
                       onRowDoubleClick(row, virtualRow.index)
+                    }
+                    onDragStart={
+                      isDraggable
+                        ? (e) => {
+                            const ids = onRowDragStart!(
+                              row.original.id,
+                              selectedTrackIds || [],
+                            );
+                            e.dataTransfer.setData(
+                              'application/x-hihat-tracks',
+                              JSON.stringify(ids),
+                            );
+                            e.dataTransfer.effectAllowed = 'copy';
+                            // Create drag preview
+                            const preview = document.createElement('div');
+                            preview.style.cssText =
+                              'position:absolute;top:-1000px;padding:4px 8px;background:#333;color:#fff;border-radius:4px;font-size:12px;white-space:nowrap;';
+                            preview.textContent =
+                              ids.length > 1
+                                ? `${ids.length} tracks`
+                                : row.original.title;
+                            document.body.appendChild(preview);
+                            e.dataTransfer.setDragImage(preview, 0, 0);
+                            requestAnimationFrame(() => preview.remove());
+                          }
+                        : undefined
                     }
                   >
                     {row.getVisibleCells().map((cell) => (
