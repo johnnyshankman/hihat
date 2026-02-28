@@ -512,38 +512,50 @@ export default function MiniPlayer() {
                 </IconButton>
               </span>
             </Tooltip>
-            <IconButton
-              disabled={!currentTrack}
-              onClick={handlePreviousTrack}
-              size="medium"
-              sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
-            >
-              <SkipPrevious fontSize="medium" />
-            </IconButton>
-            <IconButton
-              disabled={!currentTrack}
-              onClick={handlePlayPause}
-              size="large"
-              sx={{
-                mx: { xs: 0.25, sm: 1 },
-                padding: { xs: '2px', sm: '2px' },
-                color: 'white',
-              }}
-            >
-              {!paused ? (
-                <Pause fontSize="large" />
-              ) : (
-                <PlayArrow fontSize="large" />
-              )}
-            </IconButton>
-            <IconButton
-              disabled={!currentTrack}
-              onClick={handleNextTrack}
-              size="medium"
-              sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
-            >
-              <SkipNext fontSize="medium" />
-            </IconButton>
+            <Tooltip title="Previous">
+              <span>
+                <IconButton
+                  disabled={!currentTrack}
+                  onClick={handlePreviousTrack}
+                  size="medium"
+                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                >
+                  <SkipPrevious fontSize="medium" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title={paused ? 'Play' : 'Pause'}>
+              <span>
+                <IconButton
+                  disabled={!currentTrack}
+                  onClick={handlePlayPause}
+                  size="large"
+                  sx={{
+                    mx: { xs: 0.25, sm: 1 },
+                    padding: { xs: '2px', sm: '2px' },
+                    color: 'white',
+                  }}
+                >
+                  {!paused ? (
+                    <Pause fontSize="large" />
+                  ) : (
+                    <PlayArrow fontSize="large" />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Next">
+              <span>
+                <IconButton
+                  disabled={!currentTrack}
+                  onClick={handleNextTrack}
+                  size="medium"
+                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                >
+                  <SkipNext fontSize="medium" />
+                </IconButton>
+              </span>
+            </Tooltip>
             <Tooltip title={getRepeatTooltipText()}>
               <span>
                 <IconButton
