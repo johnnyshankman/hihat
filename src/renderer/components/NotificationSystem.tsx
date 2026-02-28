@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import {
   Close as CloseIcon,
-  ClearAll as ClearAllIcon,
+  DeleteForever as DeleteForeverIcon,
 } from '@mui/icons-material';
 import { useUIStore } from '../stores';
 
@@ -112,7 +112,7 @@ export default function NotificationSystem() {
                       disableElevation
                       onClick={handleClearAll}
                       size="small"
-                      startIcon={<ClearAllIcon />}
+                      startIcon={<DeleteForeverIcon />}
                       variant="text"
                     >
                       Clear All

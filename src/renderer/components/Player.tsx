@@ -30,7 +30,7 @@ import {
 import Marquee from 'react-fast-marquee';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import ViewColumnIcon from '@mui/icons-material/ViewColumn';
+import MaterialSymbolIcon from './MaterialSymbolIcon';
 import {
   useSettingsAndPlaybackStore,
   useUIStore,
@@ -124,7 +124,7 @@ function NotificationButton() {
   return (
     <IconButton
       onClick={handleClick}
-      size="small"
+      size="medium"
       sx={{
         color: 'text.primary',
         animation: hasNewNotifications
@@ -155,7 +155,7 @@ function NotificationButton() {
           },
         }}
       >
-        <NotificationsIcon fontSize="small" />
+        <NotificationsIcon />
       </Badge>
     </IconButton>
   );
@@ -1006,7 +1006,7 @@ function Player() {
                 },
               }}
             >
-              <ViewColumnIcon />
+              <MaterialSymbolIcon icon="top_panel_open" />
             </IconButton>
           </Tooltip>
           <Tooltip arrow placement="top" title="Volume">
