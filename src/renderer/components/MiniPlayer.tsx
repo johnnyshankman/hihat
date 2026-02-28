@@ -399,8 +399,8 @@ export default function MiniPlayer() {
           left: 0,
           right: 0,
           background:
-            'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0) 100%)',
-          height: '50%',
+            'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 30%, rgba(0,0,0,0.35) 65%, rgba(0,0,0,0) 100%)',
+          height: '55%',
           zIndex: 1,
           WebkitAppRegion: 'drag', // Make this area draggable
         }}
@@ -415,7 +415,7 @@ export default function MiniPlayer() {
           right: 0,
           zIndex: 2,
           padding: '16px',
-          paddingBottom: '12px',
+          paddingBottom: '20px',
         }}
       >
         {/* Track Info - at the bottom of the image - draggable area */}
@@ -456,7 +456,7 @@ export default function MiniPlayer() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              mb: 2,
+              mb: 0.5,
             }}
           >
             <Typography
@@ -498,15 +498,15 @@ export default function MiniPlayer() {
             alignItems="center"
             direction="row"
             justifyContent="center"
-            spacing={1}
-            sx={{ mb: 0 }}
+            spacing={0.75}
+            sx={{ mb: 0, width: '100%' }}
           >
             <Tooltip title={getShuffleTooltipText()}>
               <span>
                 <IconButton
                   onClick={toggleShuffleMode}
                   size="small"
-                  sx={{ color: 'white' }}
+                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
                 >
                   {renderShuffleIcon()}
                 </IconButton>
@@ -516,7 +516,7 @@ export default function MiniPlayer() {
               disabled={!currentTrack}
               onClick={handlePreviousTrack}
               size="medium"
-              sx={{ color: 'white' }}
+              sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
             >
               <SkipPrevious fontSize="medium" />
             </IconButton>
@@ -525,7 +525,8 @@ export default function MiniPlayer() {
               onClick={handlePlayPause}
               size="large"
               sx={{
-                mx: 1,
+                mx: { xs: 0.25, sm: 1 },
+                padding: { xs: '2px', sm: '2px' },
                 color: 'white',
               }}
             >
@@ -539,7 +540,7 @@ export default function MiniPlayer() {
               disabled={!currentTrack}
               onClick={handleNextTrack}
               size="medium"
-              sx={{ color: 'white' }}
+              sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
             >
               <SkipNext fontSize="medium" />
             </IconButton>
@@ -548,7 +549,7 @@ export default function MiniPlayer() {
                 <IconButton
                   onClick={toggleRepeatMode}
                   size="small"
-                  sx={{ color: 'white' }}
+                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
                 >
                   {renderRepeatIcon()}
                 </IconButton>
