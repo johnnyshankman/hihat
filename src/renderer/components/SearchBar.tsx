@@ -25,6 +25,11 @@ function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const debouncedValue = useDebouncedValue(value, 150);
 
+  // Sync internal value when initialValue changes (e.g. playlist switch)
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
   // Notify parent when the debounced value changes
   useEffect(() => {
     onDebouncedChange(debouncedValue);
@@ -50,6 +55,7 @@ function SearchBar({
       placeholder={placeholder}
       size="small"
       slotProps={{
+        htmlInput: { 'data-testid': 'search-input' },
         input: {
           endAdornment: value ? (
             <InputAdornment position="end">

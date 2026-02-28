@@ -53,6 +53,8 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const setPlaylistSortPreference = useLibraryStore(
     (state) => state.setPlaylistSortPreference,
   );
+  const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
+  const getSearchFilter = useLibraryStore((state) => state.getSearchFilter);
 
   // Get state from settings store
   const columnVisibility = useSettingsAndPlaybackStore(
@@ -90,8 +92,8 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   );
 
   // Global filter state — receives debounced values from SearchBar.
-  const [globalFilter, setGlobalFilter] = useState(
-    () => playlistViewState.filtering || '',
+  const [globalFilter, setGlobalFilter] = useState(() =>
+    selectedPlaylistId ? getSearchFilter(selectedPlaylistId) : '',
   );
   const globalFilterRef = useRef(globalFilter);
 
@@ -118,7 +120,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
 
   // Search state
-  const [showSearch, setShowSearch] = useState(!!playlistViewState.filtering);
+  const [showSearch, setShowSearch] = useState(() =>
+    selectedPlaylistId ? !!getSearchFilter(selectedPlaylistId) : false,
+  );
 
   // Browser state
   const browserOpen = useUIStore((state) => state.browserOpen);
@@ -160,6 +164,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Track playlist switches to restore per-playlist sorting
   const prevPlaylistIdRef = useRef(selectedPlaylistId);
+  const justSwitchedPlaylistRef = useRef(false);
 
   // Confirmation dialog state
   const [removeTrackConfirmOpen, setRemoveTrackConfirmOpen] = useState(false);
@@ -398,15 +403,31 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     };
   }, [scrollToTrackWhenReady]);
 
-  // Restore per-playlist sorting when switching playlists or on initial mount
+  // Restore per-playlist sorting and search when switching playlists
   useEffect(() => {
+    const prevId = prevPlaylistIdRef.current;
     if (selectedPlaylistId) {
+      // Restore sorting
       const prefs = useLibraryStore.getState().playlistSortPreferences;
       const savedSorting = prefs[selectedPlaylistId];
       setSorting(savedSorting || [{ id: 'albumArtist', desc: false }]);
+
+      // Save outgoing search, restore incoming search
+      if (prevId && prevId !== selectedPlaylistId) {
+        setSearchFilter(prevId, globalFilterRef.current);
+        justSwitchedPlaylistRef.current = true;
+      }
+      const savedFilter = getSearchFilter(selectedPlaylistId);
+      setGlobalFilter(savedFilter);
+      globalFilterRef.current = savedFilter;
+      setShowSearch(!!savedFilter);
+    } else {
+      setGlobalFilter('');
+      globalFilterRef.current = '';
+      setShowSearch(false);
     }
     prevPlaylistIdRef.current = selectedPlaylistId;
-  }, [selectedPlaylistId]);
+  }, [selectedPlaylistId, setSearchFilter, getSearchFilter]);
 
   // Check if playlist name text overflows its container
   useEffect(() => {
@@ -507,6 +528,10 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     prevGlobalFilterRef.current = globalFilter;
 
     updatePlaylistViewState(sorting, globalFilter, selectedPlaylistId);
+    if (selectedPlaylistId && !justSwitchedPlaylistRef.current) {
+      setSearchFilter(selectedPlaylistId, globalFilter);
+    }
+    justSwitchedPlaylistRef.current = false;
 
     // Persist per-playlist sort preference to DB
     if (selectedPlaylistId && sorting && sorting.length > 0) {
@@ -532,6 +557,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     sorting,
     updatePlaylistViewState,
     selectedPlaylistId,
+    setSearchFilter,
     setPlaylistSortPreference,
     currentTrack,
     playbackSource,
@@ -546,10 +572,13 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       if (prev) {
         setGlobalFilter('');
         globalFilterRef.current = '';
+        if (selectedPlaylistId) {
+          setSearchFilter(selectedPlaylistId, '');
+        }
       }
       return !prev;
     });
-  }, []);
+  }, [selectedPlaylistId, setSearchFilter]);
 
   // Memoize playlist track count and hours for stable toolbar deps
   const playlistTrackCount = useMemo(
@@ -805,7 +834,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
         )}
         {showSearch && (
           <SearchBar
-            initialValue={globalFilterRef.current}
+            initialValue={globalFilter}
             onClose={handleSearchToggle}
             onDebouncedChange={handleDebouncedSearchChange}
             placeholder="Search playlist"
@@ -844,6 +873,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     isPlaylistNameScrolling,
     playlists,
     showSearch,
+    globalFilter,
     playlistTrackCount,
     playlistTotalHours,
     handleSearchToggle,

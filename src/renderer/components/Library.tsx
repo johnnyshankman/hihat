@@ -120,9 +120,13 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     useState(false);
   const browserFilters = useLibraryStore((state) => state.browserFilters);
   const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
+  const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
+  const getSearchFilter = useLibraryStore((state) => state.getSearchFilter);
   const browserOpen = useUIStore((state) => state.browserOpen);
   const libraryViewState = useLibraryStore((state) => state.libraryViewState);
-  const [showSearch, setShowSearch] = useState(!!libraryViewState.filtering);
+  const [showSearch, setShowSearch] = useState(() =>
+    Boolean(getSearchFilter('library')),
+  );
   const [browserHeight, setBrowserHeight] = useState(200);
 
   // Derive artist/album filter from browser filters
@@ -148,8 +152,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
 
   // Global filter state — receives debounced values from SearchBar.
-  const [globalFilter, setGlobalFilter] = useState(
-    () => libraryViewState.filtering || '',
+  const [globalFilter, setGlobalFilter] = useState(() =>
+    getSearchFilter('library'),
   );
   const globalFilterRef = useRef(globalFilter);
 
@@ -526,6 +530,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     prevGlobalFilterRef.current = globalFilter;
 
     updateLibraryViewState(sorting, globalFilter);
+    setSearchFilter('library', globalFilter);
 
     // Persist library sorting preference to DB
     if (sorting && sorting.length > 0) {
@@ -553,6 +558,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     globalFilter,
     sorting,
     updateLibraryViewState,
+    setSearchFilter,
     setLibrarySorting,
     currentTrack,
     playbackSource,
@@ -567,10 +573,11 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       if (prev) {
         setGlobalFilter('');
         globalFilterRef.current = '';
+        setSearchFilter('library', '');
       }
       return !prev;
     });
-  }, []);
+  }, [setSearchFilter]);
 
   // Mark table as ready after render completes
   useEffect(() => {

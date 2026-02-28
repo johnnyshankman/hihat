@@ -74,6 +74,11 @@ export interface LibraryStore {
   clearAllBrowserFilters: () => void;
   getBrowserFilter: (viewId: string) => BrowserFilter;
 
+  // Per-view search filters (keyed by 'library' or playlist ID)
+  searchFilters: Record<string, string>;
+  setSearchFilter: (viewId: string, filter: string) => void;
+  getSearchFilter: (viewId: string) => string;
+
   // Per-playlist sort preferences (session cache + DB backed)
   playlistSortPreferences: Record<string, Array<{ id: string; desc: boolean }>>;
   setPlaylistSortPreference: (

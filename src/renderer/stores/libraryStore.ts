@@ -54,6 +54,7 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     filtering: '',
   },
   browserFilters: {},
+  searchFilters: {},
   playlistViewState: {
     sorting: [{ id: 'albumArtist', desc: false }],
     filtering: '',
@@ -373,6 +374,20 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   getBrowserFilter: (viewId: string) => {
     const { browserFilters } = get();
     return browserFilters[viewId] || { artist: null, album: null };
+  },
+
+  setSearchFilter: (viewId: string, filter: string) => {
+    set((state) => ({
+      searchFilters: {
+        ...state.searchFilters,
+        [viewId]: filter,
+      },
+    }));
+  },
+
+  getSearchFilter: (viewId: string) => {
+    const { searchFilters } = get();
+    return searchFilters[viewId] || '';
   },
 
   setPlaylistSortPreference: (
