@@ -30,7 +30,6 @@ import {
   RepeatOn,
   Shuffle,
   ShuffleOn,
-  DragIndicator,
   MusicNote,
 } from '@mui/icons-material';
 
@@ -388,21 +387,6 @@ export default function MiniPlayer() {
               {renderVolumeIcon()}
             </IconButton>
           </span>
-        </Tooltip>
-        <Tooltip placement="bottom" title="Drag to move window">
-          <Box
-            sx={{
-              color: 'rgba(255, 255, 255, 0.5)',
-              WebkitAppRegion: 'drag',
-              display: 'flex',
-              padding: '4px',
-              '&:hover': {
-                color: 'rgba(255, 255, 255, 1)',
-              },
-            }}
-          >
-            <DragIndicator fontSize="small" />
-          </Box>
         </Tooltip>
       </Box>
 
