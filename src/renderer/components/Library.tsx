@@ -34,7 +34,6 @@ import SidebarToggle from './SidebarToggle';
 import Browser from './Browser';
 import SearchBar from './SearchBar';
 import VirtualTable from './VirtualTable';
-import ColumnVisibilityMenu from './ColumnVisibilityMenu';
 import {
   getRowClassName,
   getCommonColumnDefs,
@@ -815,13 +814,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
               {showSearch ? <SearchOffIcon /> : <SearchIcon />}
             </IconButton>
           </Tooltip>
-          <ColumnVisibilityMenu
-            columns={columns}
-            columnVisibility={
-              (columnVisibility as unknown as Record<string, boolean>) || {}
-            }
-            onToggle={handleColumnVisibilityToggle}
-          />
         </Box>
       </Box>
     ),
@@ -833,9 +825,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       showSearch,
       handleSearchToggle,
       handleDebouncedSearchChange,
-      columns,
-      columnVisibility,
-      handleColumnVisibilityToggle,
     ],
   );
 

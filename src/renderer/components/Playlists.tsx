@@ -25,7 +25,6 @@ import SidebarToggle from './SidebarToggle';
 import Browser from './Browser';
 import SearchBar from './SearchBar';
 import VirtualTable from './VirtualTable';
-import ColumnVisibilityMenu from './ColumnVisibilityMenu';
 import {
   getRowClassName,
   getCommonColumnDefs,
@@ -835,13 +834,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
               {showSearch ? <SearchOffIcon /> : <SearchIcon />}
             </IconButton>
           </Tooltip>
-          <ColumnVisibilityMenu
-            columns={columns}
-            columnVisibility={
-              (columnVisibility as unknown as Record<string, boolean>) || {}
-            }
-            onToggle={handleColumnVisibilityToggle}
-          />
         </Box>
       </Box>
     );
@@ -856,9 +848,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     playlistTotalHours,
     handleSearchToggle,
     handleDebouncedSearchChange,
-    columns,
-    columnVisibility,
-    handleColumnVisibilityToggle,
   ]);
 
   // Browser panel to pass to VirtualTable

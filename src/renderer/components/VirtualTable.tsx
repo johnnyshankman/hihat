@@ -16,6 +16,10 @@ import {
 } from '@tanstack/react-table';
 import { useVirtualizer, type Virtualizer } from '@tanstack/react-virtual';
 import { useTheme } from '@mui/material/styles';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
+import ListItemText from '@mui/material/ListItemText';
 import { type TableData } from '../utils/tableConfig';
 import '../styles/virtualTable.css';
 
@@ -72,7 +76,7 @@ function VirtualTable({
   globalFilter,
   columnVisibility,
   initialColumnSizing,
-  onColumnVisibilityChange: _onColumnVisibilityChange,
+  onColumnVisibilityChange,
   onColumnSizingPersist,
   columnOrder,
   onColumnOrderChange,
@@ -238,6 +242,12 @@ function VirtualTable({
   const [dropTargetId, setDropTargetId] = React.useState<string | null>(null);
   const isDraggingRef = useRef(false);
 
+  // Header right-click context menu for column visibility
+  const [headerMenuPos, setHeaderMenuPos] = React.useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
   // Header sort handler
   const handleHeaderClick = useCallback(
     (columnId: string) => {
@@ -252,6 +262,29 @@ function VirtualTable({
       }
     },
     [sorting, onSortingChange],
+  );
+
+  // Header right-click handler for column visibility menu
+  const handleHeaderContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setHeaderMenuPos({ top: e.clientY, left: e.clientX });
+  }, []);
+
+  const handleCloseHeaderMenu = useCallback(() => {
+    setHeaderMenuPos(null);
+  }, []);
+
+  // Columns available for visibility toggling (exclude trackNumber)
+  const hideableColumns = React.useMemo(
+    () =>
+      columns.filter((col) => {
+        const id =
+          (col as { accessorKey?: string }).accessorKey ||
+          (col as { id?: string }).id ||
+          '';
+        return id !== 'trackNumber';
+      }),
+    [columns],
   );
 
   // Get all header groups
@@ -302,6 +335,7 @@ function VirtualTable({
                         className={`vt-th${sortDir ? ' vt-th-sorted' : ''}${isDragging ? ' vt-th-dragging' : ''}${isDropTarget ? ' vt-th-drop-target' : ''}`}
                         draggable
                         onClick={() => handleHeaderClick(header.column.id)}
+                        onContextMenu={handleHeaderContextMenu}
                         onDragEnd={() => {
                           isDraggingRef.current = false;
                           setDragColumnId(null);
@@ -462,6 +496,34 @@ function VirtualTable({
           emptyState
         )}
       </div>
+      <Menu
+        anchorPosition={
+          headerMenuPos
+            ? { top: headerMenuPos.top, left: headerMenuPos.left }
+            : undefined
+        }
+        anchorReference="anchorPosition"
+        onClose={handleCloseHeaderMenu}
+        open={headerMenuPos !== null}
+      >
+        {hideableColumns.map((col) => {
+          const id =
+            (col as { accessorKey?: string }).accessorKey ||
+            (col as { id?: string }).id ||
+            '';
+          const isVisible = columnVisibility[id] !== false;
+          return (
+            <MenuItem
+              key={id}
+              dense
+              onClick={() => onColumnVisibilityChange(id, !isVisible)}
+            >
+              <Checkbox checked={isVisible} size="small" />
+              <ListItemText>{col.header as string}</ListItemText>
+            </MenuItem>
+          );
+        })}
+      </Menu>
     </div>
   );
 }
