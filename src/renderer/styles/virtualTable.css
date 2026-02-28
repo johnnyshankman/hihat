@@ -260,13 +260,11 @@
 }
 
 .browser-item-selected {
-  background-color: #0060df;
-  color: white;
+  background-color: var(--vt-bg-selected);
 }
 
 .browser-item-selected:hover {
-  background-color: #0060df;
-  color: white;
+  background-color: var(--vt-bg-selected);
 }
 
 .browser-resize-handle {
