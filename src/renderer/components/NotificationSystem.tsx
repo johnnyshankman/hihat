@@ -1,24 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Alert,
-  Box,
-  Paper,
-  Typography,
-  Button,
-  Collapse,
-  IconButton,
-} from '@mui/material';
-import {
-  Close as CloseIcon,
-  DeleteForever as DeleteForeverIcon,
-} from '@mui/icons-material';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Box, Typography, IconButton } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import { useUIStore } from '../stores';
+
+const ACCENT_COLORS: Record<string, string> = {
+  success: '#28c940',
+  error: '#ff5f57',
+  warning: '#ffbd2e',
+  info: 'rgba(255,255,255,0.4)',
+};
 
 /**
  * NotificationSystem component
  *
- * Displays notifications in a collapsible panel with a badge counter
- * Handles large amounts of notifications elegantly with scrolling
+ * Compact notification panel anchored above the player bar.
+ * Uses colored left-border accents instead of MUI Alert.
  */
 export default function NotificationSystem() {
   const notifications = useUIStore((state) => state.notifications);
@@ -28,10 +24,11 @@ export default function NotificationSystem() {
   );
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
+  const panelRef = useRef<HTMLDivElement>(null);
   const previousCountRef = useRef(notifications.length);
 
-  // Auto-expand when first notification arrives, but not for subsequent ones
+  // Auto-expand when first notification arrives
   useEffect(() => {
     if (notifications.length > 0 && previousCountRef.current === 0) {
       setIsExpanded(true);
@@ -58,137 +55,233 @@ export default function NotificationSystem() {
     };
   }, []);
 
-  const handleClearAll = () => {
+  // Click-outside-to-close
+  useEffect(() => {
+    if (!isExpanded) return undefined;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    // Delay listener to avoid closing immediately from the same click
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExpanded]);
+
+  const handleClearAll = useCallback(() => {
     clearAllNotifications();
     setIsExpanded(false);
-  };
+  }, [clearAllNotifications]);
+
+  const handleDismiss = useCallback(
+    (id: string) => {
+      setDismissingIds((prev) => new Set(prev).add(id));
+      setTimeout(() => {
+        removeNotification(id);
+        setDismissingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, 200);
+    },
+    [removeNotification],
+  );
 
   if (notifications.length === 0 && !isExpanded) {
     return null;
   }
 
+  if (!isExpanded) {
+    return null;
+  }
+
   return (
-    <>
-      {/* Notification Panel */}
-      {isExpanded && (
-        <Box
+    <Box
+      ref={panelRef}
+      data-testid="notification-panel"
+      sx={{
+        position: 'fixed',
+        bottom: 60,
+        right: 24,
+        zIndex: 2001,
+        width: '320px',
+        maxHeight: '400px',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#1a1a1a',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        animation: 'panelSlideIn 0.3s ease-out',
+        '@keyframes panelSlideIn': {
+          from: {
+            transform: 'translateX(20px)',
+            opacity: 0,
+          },
+          to: {
+            transform: 'translateX(0)',
+            opacity: 1,
+          },
+        },
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          px: '10px',
+          py: '6px',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minHeight: '32px',
+        }}
+      >
+        <Typography
           sx={{
-            position: 'fixed',
-            bottom: 60,
-            right: 24,
-            zIndex: 2001,
+            fontSize: '13px',
+            color: 'text.secondary',
+            fontWeight: 500,
+            userSelect: 'none',
           }}
+          variant="body2"
         >
-          <Collapse in={isExpanded}>
-            <Paper
-              elevation={8}
+          {notifications.length} notification
+          {notifications.length !== 1 ? 's' : ''}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {notifications.length > 0 && (
+            <Typography
+              component="span"
+              data-testid="notification-clear-all"
+              onClick={handleClearAll}
               sx={{
-                width: '400px',
-                maxHeight: '400px',
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundColor: (theme) => theme.palette.background.paper,
-                borderRadius: 2,
+                fontSize: '12px',
+                color: 'text.secondary',
+                cursor: 'pointer',
+                userSelect: 'none',
+                '&:hover': {
+                  color: 'text.primary',
+                },
+              }}
+              variant="body2"
+            >
+              Clear
+            </Typography>
+          )}
+          <IconButton
+            data-testid="notification-close"
+            onClick={() => setIsExpanded(false)}
+            size="small"
+            sx={{
+              color: 'text.secondary',
+              padding: '2px',
+              '&:hover': { color: 'text.primary' },
+            }}
+          >
+            <CloseIcon sx={{ fontSize: '16px' }} />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* Notification list */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          overflowY: 'auto',
+          p: '6px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          maxHeight: '340px',
+          '&::-webkit-scrollbar': {
+            width: '6px',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            borderRadius: '3px',
+            '&:hover': {
+              backgroundColor: 'rgba(255,255,255,0.25)',
+            },
+          },
+        }}
+      >
+        {notifications.map((notification) => (
+          <Box
+            key={notification.id}
+            data-testid="notification-item"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              px: '8px',
+              py: '6px',
+              borderLeft: `3px solid ${ACCENT_COLORS[notification.type] || ACCENT_COLORS.info}`,
+              borderBottom: '1px solid rgba(255,255,255,0.04)',
+              borderRadius: '4px',
+              minHeight: '32px',
+              opacity: dismissingIds.has(notification.id) ? 0 : 1,
+              transition: 'opacity 0.2s ease-out',
+              animation: 'rowSlideIn 0.3s ease-out',
+              '@keyframes rowSlideIn': {
+                from: {
+                  transform: 'translateX(30px)',
+                  opacity: 0,
+                },
+                to: {
+                  transform: 'translateX(0)',
+                  opacity: 1,
+                },
+              },
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: '13px',
+                color: 'text.primary',
+                flex: 1,
                 overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              title={notification.message}
+              variant="body2"
+            >
+              {notification.message}
+            </Typography>
+            <IconButton
+              data-testid="notification-dismiss"
+              onClick={() => handleDismiss(notification.id)}
+              size="small"
+              sx={{
+                color: 'text.secondary',
+                padding: '2px',
+                opacity: 0.4,
+                flexShrink: 0,
+                '&:hover': {
+                  opacity: 1,
+                  color: 'text.primary',
+                },
               }}
             >
-              {/* Header */}
-              <Box
-                sx={{
-                  p: 2,
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Typography variant="h6">
-                  Notifications ({notifications.length})
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  {notifications.length > 0 && (
-                    <Button
-                      disableElevation
-                      onClick={handleClearAll}
-                      size="small"
-                      startIcon={<DeleteForeverIcon />}
-                      variant="text"
-                    >
-                      Clear All
-                    </Button>
-                  )}
-                  <IconButton onClick={() => setIsExpanded(false)} size="small">
-                    <CloseIcon />
-                  </IconButton>
-                </Box>
-              </Box>
-
-              {/* Scrollable Notification List */}
-              <Box
-                ref={scrollContainerRef}
-                sx={{
-                  flexGrow: 1,
-                  overflowY: 'auto',
-                  p: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1,
-                  maxHeight: '320px',
-                  '&::-webkit-scrollbar': {
-                    width: '8px',
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'action.hover',
-                    borderRadius: '4px',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: 'action.selected',
-                    borderRadius: '4px',
-                    '&:hover': {
-                      backgroundColor: 'action.disabled',
-                    },
-                  },
-                }}
-              >
-                {notifications.length === 0 ? (
-                  <Typography
-                    color="text.secondary"
-                    sx={{ textAlign: 'center', py: 4 }}
-                    variant="body2"
-                  >
-                    No notifications
-                  </Typography>
-                ) : (
-                  notifications.map((notification) => (
-                    <Alert
-                      key={notification.id}
-                      onClose={() => removeNotification(notification.id)}
-                      severity={notification.type}
-                      sx={{
-                        width: '100%',
-                        animation: 'slideIn 0.3s ease-out',
-                        '@keyframes slideIn': {
-                          from: {
-                            transform: 'translateX(50px)',
-                            opacity: 0,
-                          },
-                          to: {
-                            transform: 'translateX(0)',
-                            opacity: 1,
-                          },
-                        },
-                      }}
-                    >
-                      {notification.message}
-                    </Alert>
-                  ))
-                )}
-              </Box>
-            </Paper>
-          </Collapse>
-        </Box>
-      )}
-    </>
+              <CloseIcon sx={{ fontSize: '14px' }} />
+            </IconButton>
+          </Box>
+        ))}
+      </Box>
+    </Box>
   );
 }
