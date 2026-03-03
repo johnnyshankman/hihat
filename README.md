@@ -77,10 +77,15 @@
 **Organization**
 * User-created playlists — create, rename, delete, and add or remove tracks
 * Smart playlists: Recently Added, Recently Played, and Most Played (top 50 each, updated automatically)
-* Artist Browser panel for quick filtering by artist
-* Sort by any column: Title, Artist, Album, Album Artist, Genre, Duration, Play Count, Date Added, Last Played
+* Browser panel for filtering by album artist and album
+* Sort by any column: Title, Artist, Album, Album Artist, Genre, Time, Play Count, Date Added, Last Played
 * Quick search bar — filter by title, artist, album, or genre
-* Customizable column visibility
+* Customizable column visibility — right-click any column header
+* Drag-and-drop column reordering
+* Drag and drop tracks to sidebar playlists
+* Per-view search filters preserved across navigation
+* Persistent sorting preferences per playlist
+* Persistent column widths
 
 **Interface**
 * Dark and Light themes
@@ -99,7 +104,7 @@
 * Download album art from any track
 * Show any track's file in Finder
 
-![hihat in light theme with artist browser panel open on the right side](screenshots/features-light-theme-artist-browser.png)
+![hihat in light theme with Browser panel open on the right side](screenshots/features-light-theme-artist-browser.png)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -141,7 +146,7 @@ For detailed format information, see:
 
 1. Open hihat
 2. Click the **Settings** icon (gear) in the top-right corner of the sidebar
-3. Under **Library Location**, click the folder icon to select the folder where you store your music
+3. Under **Music Folder**, click the folder icon to select the folder where you store your music
 4. Confirm you want to scan the folder
 5. Wait for the import to complete (about 1 minute per 10,000 songs)
 6. Your library is ready — start playing!
@@ -187,7 +192,7 @@ The sidebar on the left is your main navigation:
 Click the **+** icon next to the "Playlists" header in the sidebar, type a name, and hit Create.
 
 **Adding tracks to a playlist:**
-Right-click any track and select **Add to Playlist**, then choose which playlist. You can also multi-select tracks (Cmd+Click or Shift+Click), right-click, and choose **Add All to Playlist**.
+Right-click any track and select **Add to Playlist**, then choose which playlist. You can also multi-select tracks (Cmd+Click or Shift+Click), right-click, and choose **Add All to Playlist**. Alternatively, drag and drop tracks directly onto any playlist in the sidebar.
 
 **Smart playlists:**
 Three built-in smart playlists update automatically:
@@ -204,13 +209,13 @@ Right-click any user-created playlist in the sidebar to **Rename** or **Delete**
 
 **Search:** Click the search icon in the toolbar (or just start typing when focused on the library) to filter tracks by title, artist, album, or genre.
 
-**Artist Browser:** Click the people icon in the toolbar to open the Artist Browser panel on the right. Click any artist to filter the library to just their tracks. Click "All Artists" to clear the filter.
+**Browser:** Click the people icon in the toolbar to open the Browser panel on the right. It has two columns — Album Artist and Album — so you can drill down by artist and then by album. Click any item to filter; click it again to deselect.
 
 **Sorting:** Click any column header to sort ascending or descending.
 
-**Column visibility:** Use the columns dropdown in the toolbar to show or hide columns (Title, Artist, Album, Album Artist, Genre, Duration, Play Count, Date Added, Last Played).
+**Column visibility:** Right-click any column header to show or hide columns (Title, Artist, Album, Album Artist, Genre, Time, Play Count, Date Added, Last Played).
 
-![hihat library with search bar active and Artist Browser panel open on the right](screenshots/usage-search-artist-browser.png)
+![hihat library with search bar active and Browser panel open on the right](screenshots/usage-search-artist-browser.png)
 
 ### Mini Player
 
@@ -229,13 +234,13 @@ Right-click any track to access:
 * **Find on Apple Music** — search for this track on Apple Music
 * **Find on Tidal** — search for this track on Tidal
 * **Download Album Art** — save the embedded album art as an image
-* **Delete Track** — remove from the library and move the file to Trash
+* **Remove from Library** — remove the track from hihat and move the file to Trash
 
 When viewing a playlist, the delete option becomes **Remove from Playlist** (the file stays in your library).
 
 When multiple tracks are selected (Cmd+Click or Shift+Click), right-click to:
 * **Add All to Playlist** — bulk add selected tracks
-* **Delete Tracks** — bulk delete selected tracks
+* **Remove from Library** — bulk remove selected tracks
 
 ![hihat right-click context menu on a track showing Play, Add to Playlist, Find on Spotify, and other options](screenshots/usage-right-click-menu.png)
 
@@ -243,13 +248,13 @@ When multiple tracks are selected (Cmd+Click or Shift+Click), right-click to:
 
 Click the gear icon in the sidebar to open the Settings drawer:
 
-* **Library Location** — change your music folder (triggers a full rescan)
+* **Music Folder** — change where hihat looks for your music (triggers a full rescan)
 * **Import Music** — add new songs or folders to your library
 * **Rescan Library** — scan your existing library folder for new or changed files
-* **Library Backup** — incremental backup to any external drive (only copies new and updated files)
+* **Backup Library** — incremental backup to any external drive (only copies new and changed files)
 * **Appearance** — toggle between Dark and Light themes
-* **Column Visibility** — show or hide any of the 9 available table columns
-* **Reset Database** — clear all hihat data (play counts, playlists, track database). Your music files are never deleted.
+* **Column Visibility** — show or hide table columns (also available by right-clicking any column header)
+* **Reset** — start fresh by clearing play counts, playlists, and settings. Your music files are never touched.
 
 ![hihat Settings drawer showing library operations, theme toggle, and column visibility options](screenshots/usage-settings-drawer.png)
 
@@ -300,6 +305,7 @@ See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full
 * [![zustand][zustand.js]][zustand-url]
 * [![Tailwind][Tailwind.js]][Tailwind-url]
 * [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
+* [![TanStack Table][TanStackTable.js]][TanStackTable-url]
 * [![Gapless 5][Gapless5.js]][Gapless5-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -408,5 +414,7 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [Typescript-url]: https://typescriptlang.org
 [zustand.js]: https://img.shields.io/badge/Zustand-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
 [zustand-url]: https://github.com/pmndrs/zustand
+[TanStackTable.js]: https://img.shields.io/badge/TanStack_Table-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
+[TanStackTable-url]: https://tanstack.com/table
 [Gapless5.js]: https://img.shields.io/badge/Gapless5-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
 [Gapless5-url]: https://github.com/regosen/Gapless-5
