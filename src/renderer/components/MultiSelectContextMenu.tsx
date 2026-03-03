@@ -81,7 +81,7 @@ export default function MultiSelectContextMenu({
             <ListItemIcon>
               <Delete fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Delete Tracks ({selectedCount} tracks)</ListItemText>
+            <ListItemText>Remove From Library ({selectedCount} tracks)</ListItemText>
           </MenuItem>
         </>
       )}

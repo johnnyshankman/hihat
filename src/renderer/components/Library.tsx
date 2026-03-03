@@ -1051,7 +1051,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         cancelText="Cancel"
         confirmButtonColor="error"
         confirmText="Delete"
-        message={`Are you sure you want to delete ${Object.keys(selectedTracks).length} track${Object.keys(selectedTracks).length > 1 ? 's' : ''}? This will permanently delete the files from your computer.`}
+        message={`Are you sure you want to delete ${Object.keys(selectedTracks).length} track${Object.keys(selectedTracks).length > 1 ? 's' : ''}? This will remove the track from hihat and move the file to your Trash. You can always add it back from there later.`}
         onCancel={() => setBulkDeleteConfirmOpen(false)}
         onConfirm={executeMultiSelectDeleteTracks}
         open={bulkDeleteConfirmOpen}
