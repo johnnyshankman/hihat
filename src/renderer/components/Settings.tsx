@@ -671,14 +671,15 @@ export default function Settings({ onClose }: SettingsProps) {
             {/* Library Path Section */}
             <Grid item xs={12}>
               <Typography gutterBottom variant="h2">
-                Library Location
+                Music Folder
               </Typography>
               <Typography
                 color="text.secondary"
                 sx={{ display: 'block', mb: 2 }}
                 variant="caption"
               >
-                Where hihat looks for your music library.
+                The folder on your computer where your music files live. hihat
+                scans this folder and all its subfolders.
               </Typography>
               <FormControl fullWidth sx={{ mb: 2, mt: 1 }}>
                 <TextField
@@ -715,10 +716,9 @@ export default function Settings({ onClose }: SettingsProps) {
                   color="text.secondary"
                   sx={{ display: 'block', fontSize: '0.75rem' }}
                 >
-                  Select music files or folders to import directly into your
-                  hihat library. Folders will be recursively scanned for music
-                  files while preserving their structure. hihat will deduplicate
-                  songs automatically.
+                  Add new songs or entire folders to your library. Files are
+                  copied into your Music Folder, so the originals stay right
+                  where they are. Duplicates are skipped automatically.
                 </Typography>
                 <Button
                   color="primary"
@@ -747,8 +747,8 @@ export default function Settings({ onClose }: SettingsProps) {
                   color="text.secondary"
                   sx={{ display: 'block', fontSize: '0.75rem' }}
                 >
-                  Scans your existing Library Location for any new changes then
-                  updates your hihat library accordingly.
+                  Check your music folder for any new, changed, or removed files
+                  and update your library to match.
                 </Typography>
                 <Button
                   color="primary"
@@ -770,18 +770,17 @@ export default function Settings({ onClose }: SettingsProps) {
             {/* Backup Section */}
             <Grid item xs={12}>
               <Typography gutterBottom variant="h2">
-                Library Backup / Copy
+                Backup Library
               </Typography>
               <Typography
                 color="text.secondary"
                 sx={{ display: 'block', mb: 2 }}
                 variant="caption"
               >
-                Saves your entire music library to any external drive or
-                location. Uses rsync to do this efficiently while preserving
-                file structure and metadata, just like iTunes with iPods
-                back-in-the-day. Will only copy over new or updated files and
-                will never delete data already in the location for the backup.
+                Copy your music library to an external drive or another folder.
+                Only new and changed files are copied each time, so backups
+                after the first one are fast. Your existing backup files are
+                never removed.
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Button
@@ -807,9 +806,8 @@ export default function Settings({ onClose }: SettingsProps) {
             sx={{ display: 'block', mb: 2 }}
             variant="caption"
           >
-            We recommend using the dark theme for better readability and lower
-            eye strain, though our light theme is modeled after the original
-            iTunes.
+            Switch between dark and light themes. The dark theme is easier on
+            the eyes, and the light theme has a classic iTunes feel.
           </Typography>
 
           <FormGroup>
@@ -828,15 +826,15 @@ export default function Settings({ onClose }: SettingsProps) {
 
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
           <Typography gutterBottom variant="h2">
-            Table Column Visibility
+            Column Visibility
           </Typography>
           <Typography
             color="text.secondary"
             sx={{ display: 'block', mb: 2 }}
             variant="caption"
           >
-            The default visibility of columns in the Library and Playlists
-            views.
+            Choose which columns appear in your library and playlist tables. You
+            can also right-click any column header to toggle visibility.
           </Typography>
           <FormGroup>
             <FormControlLabel
@@ -925,7 +923,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
           <Typography gutterBottom variant="h2">
-            Danger Zone
+            Reset
           </Typography>
           <Box sx={{ mt: 2 }}>
             <Button
@@ -938,10 +936,9 @@ export default function Settings({ onClose }: SettingsProps) {
               Reset Database
             </Button>
             <Typography color="text.secondary" variant="body2">
-              This will delete all data and reset the application to its initial
-              state. Use this only if you are okay with losing all of your
-              playcounts and playlists, as these are solely tracked by hihat
-              itself. Your music library will not be affected.
+              Start fresh by clearing your hihat database — play counts,
+              playlists, and settings will be removed. Your actual music files
+              are never touched.
             </Typography>
           </Box>
         </Paper>
@@ -1049,12 +1046,12 @@ export default function Settings({ onClose }: SettingsProps) {
       <ConfirmationDialog
         cancelText="Cancel"
         confirmButtonColor="primary"
-        confirmText="Save and Scan"
-        message="Changing your library folder will reset your current music library. All existing songs will be removed from your library before scanning the new location. This action cannot be undone and may take some time depending on the size of your new library. Do you want to continue?"
+        confirmText="Scan New Folder"
+        message="Switching your music folder will clear your current library and scan the new location. This may take a few minutes for large collections. Your play counts and playlists will be kept."
         onCancel={handleCancelPathChange}
         onConfirm={handleConfirmPathChange}
         open={pathDialogOpen}
-        title="Update Library Folder"
+        title="Change Music Folder"
       />
 
       {/* Reset database confirmation dialog */}
@@ -1062,11 +1059,11 @@ export default function Settings({ onClose }: SettingsProps) {
         cancelText="Cancel"
         confirmButtonColor="error"
         confirmText="Reset Database"
-        message="This will delete all data and reset the application to its initial state. This action cannot be undone. Are you sure you want to continue?"
+        message="This will clear your play counts, playlists, and settings, and restart hihat with a clean slate. Your music files will not be deleted."
         onCancel={handleCancelReset}
         onConfirm={handleConfirmReset}
         open={resetDialogOpen}
-        title="Reset Database"
+        title="Reset hihat"
       />
     </Box>
   );
