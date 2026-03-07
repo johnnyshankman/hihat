@@ -50,7 +50,6 @@ export default function Settings({ onClose }: SettingsProps) {
   const updateColumnVisibility = useSettingsAndPlaybackStore(
     (state) => state.setColumnVisibility,
   );
-  const loadLibrary = useLibraryStore((state) => state.loadLibrary);
   const setLibraryPath = useSettingsAndPlaybackStore(
     (state) => state.setLibraryPath,
   );
@@ -500,9 +499,6 @@ export default function Settings({ onClose }: SettingsProps) {
         }
 
         await scanLibrary(libraryPath);
-
-        // Reload the library to clear out old tracks in the UI with new ones
-        await loadLibrary(false);
       } catch (error) {
         console.error('Error scanning library:', error);
         setScanStatus('Failed');
