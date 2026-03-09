@@ -337,7 +337,9 @@ function TrackContextMenu({
             <ListItemIcon>
               <Delete fontSize="small" htmlColor="red" />
             </ListItemIcon>
-            <ListItemText style={{ color: 'red' }}>Remove from Library</ListItemText>
+            <ListItemText style={{ color: 'red' }}>
+              Remove from Library
+            </ListItemText>
           </MenuItem>
         )}
       </Menu>
