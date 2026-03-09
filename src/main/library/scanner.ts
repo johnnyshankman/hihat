@@ -755,75 +755,83 @@ export async function scanLibrary(
 
     // Process batches in sequence to avoid overwhelming resources
     const processBatches = async (): Promise<void> => {
-      for (let i = 0; i < batches.length; i += 1) {
-        const batch = batches[i];
+      db.beginBatchMode();
+      try {
+        for (let i = 0; i < batches.length; i += 1) {
+          const batch = batches[i];
 
-        // Send progress event for the batch
-        sendProgressEvent('library:scanProgress', {
-          total: totalFiles,
-          processed: processedCount,
-          current: `Processing batch ${i + 1} of ${batches.length}`,
-        });
+          // Send progress event for the batch
+          sendProgressEvent('library:scanProgress', {
+            total: totalFiles,
+            processed: processedCount,
+            current: `Processing batch ${i + 1} of ${batches.length}`,
+          });
 
-        // Process the batch (this is a scan, not an import)
-        // eslint-disable-next-line no-await-in-loop
-        const rawTracks = await processBatch(
-          batch,
-          existingFilePaths,
-          trackMap,
-          libraryPath,
-          undefined, // folderRoot
-          false, // isImport=false for scan operations
-        );
+          // Process the batch (this is a scan, not an import)
+          // eslint-disable-next-line no-await-in-loop
+          const rawTracks = await processBatch(
+            batch,
+            existingFilePaths,
+            trackMap,
+            libraryPath,
+            undefined, // folderRoot
+            false, // isImport=false for scan operations
+          );
 
-        // Deduplicate within the batch (parallel processing can produce dupes)
-        const processedTracks = deduplicateBatchResults(rawTracks);
+          // Deduplicate within the batch (parallel processing can produce dupes)
+          const processedTracks = deduplicateBatchResults(rawTracks);
 
-        // Collect files and tracks to delete
-        processedTracks.forEach((track) => {
-          if (track.replaceId && track.oldPath) {
-            tracksToDelete.push(track.replaceId);
-            filesToDelete.push(track.oldPath);
-            existingFilePaths.delete(track.oldPath);
+          // Collect files and tracks to delete
+          processedTracks.forEach((track) => {
+            if (track.replaceId && track.oldPath) {
+              tracksToDelete.push(track.replaceId);
+              filesToDelete.push(track.oldPath);
+              existingFilePaths.delete(track.oldPath);
 
-            // Remove these properties before adding to database
-            delete track.replaceId;
-            delete track.oldPath;
+              // Remove these properties before adding to database
+              delete track.replaceId;
+              delete track.oldPath;
+            }
+          });
+
+          // Add tracks to database in batches
+          if (processedTracks.length > 0) {
+            // Add tracks in smaller batches to avoid overwhelming the database
+            for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
+              const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
+
+              // Use addTrack for each track and update tracking structures
+              trackBatch.forEach((track) => {
+                try {
+                  const addedTrack = db.addTrack(track);
+                  existingFilePaths.add(addedTrack.filePath);
+                  trackMap.set(getTrackKey(addedTrack), addedTrack);
+                } catch (error) {
+                  console.error(
+                    `Error adding track to database: ${track.title}`,
+                    error,
+                  );
+                }
+              });
+
+              // Persist once per sub-batch instead of once per track
+              db.persistNow();
+            }
+
+            tracksAdded += processedTracks.length;
           }
-        });
 
-        // Add tracks to database in batches
-        if (processedTracks.length > 0) {
-          // Add tracks in smaller batches to avoid overwhelming the database
-          for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
-            const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
+          processedCount += batch.length;
 
-            // Use addTrack for each track and update tracking structures
-            trackBatch.forEach((track) => {
-              try {
-                const addedTrack = db.addTrack(track);
-                existingFilePaths.add(addedTrack.filePath);
-                trackMap.set(getTrackKey(addedTrack), addedTrack);
-              } catch (error) {
-                console.error(
-                  `Error adding track to database: ${track.title}`,
-                  error,
-                );
-              }
-            });
-          }
-
-          tracksAdded += processedTracks.length;
+          // Send progress event
+          sendProgressEvent('library:scanProgress', {
+            total: totalFiles,
+            processed: processedCount,
+            current: `Processed ${processedCount} of ${totalFiles} files`,
+          });
         }
-
-        processedCount += batch.length;
-
-        // Send progress event
-        sendProgressEvent('library:scanProgress', {
-          total: totalFiles,
-          processed: processedCount,
-          current: `Processed ${processedCount} of ${totalFiles} files`,
-        });
+      } finally {
+        db.endBatchMode();
       }
     };
 
@@ -832,8 +840,14 @@ export async function scanLibrary(
 
     // Delete replaced tracks from database
     if (tracksToDelete.length > 0) {
-      // Process deletions with Promise.all instead of a for loop
-      await Promise.all(tracksToDelete.map((id) => db.deleteTrack(id)));
+      db.beginBatchMode();
+      try {
+        tracksToDelete.forEach((id) => {
+          db.deleteTrack(id);
+        });
+      } finally {
+        db.endBatchMode();
+      }
     }
 
     // Delete replaced files - process file deletions in parallel
@@ -1012,75 +1026,83 @@ export async function importFiles(
 
     // Process batches in sequence to avoid overwhelming resources
     const processBatches = async (): Promise<void> => {
-      for (let i = 0; i < batches.length; i += 1) {
-        const { files: batch } = batches[i];
+      db.beginBatchMode();
+      try {
+        for (let i = 0; i < batches.length; i += 1) {
+          const { files: batch } = batches[i];
 
-        // Determine folder root for this batch
-        // If batch has mixed sources, process each file individually with its own root
-        const batchFolderRoots = batch.map((f) => fileToFolderRoot.get(f));
-        const allSameRoot = batchFolderRoots.every(
-          (root) => root === batchFolderRoots[0],
-        );
+          // Determine folder root for this batch
+          // If batch has mixed sources, process each file individually with its own root
+          const batchFolderRoots = batch.map((f) => fileToFolderRoot.get(f));
+          const allSameRoot = batchFolderRoots.every(
+            (root) => root === batchFolderRoots[0],
+          );
 
-        // Process the batch (this is an import operation)
-        // eslint-disable-next-line no-await-in-loop
-        const rawTracks = await processBatch(
-          batch,
-          existingFilePaths,
-          trackMap,
-          libraryPath,
-          allSameRoot ? batchFolderRoots[0] : undefined,
-          true, // isImport=true for import operations
-        );
+          // Process the batch (this is an import operation)
+          // eslint-disable-next-line no-await-in-loop
+          const rawTracks = await processBatch(
+            batch,
+            existingFilePaths,
+            trackMap,
+            libraryPath,
+            allSameRoot ? batchFolderRoots[0] : undefined,
+            true, // isImport=true for import operations
+          );
 
-        // Deduplicate within the batch (parallel processing can produce dupes)
-        const processedTracks = deduplicateBatchResults(rawTracks);
+          // Deduplicate within the batch (parallel processing can produce dupes)
+          const processedTracks = deduplicateBatchResults(rawTracks);
 
-        // Collect files and tracks to delete
-        processedTracks.forEach((track) => {
-          if (track.replaceId && track.oldPath) {
-            tracksToDelete.push(track.replaceId);
-            filesToDelete.push(track.oldPath);
-            existingFilePaths.delete(track.oldPath);
+          // Collect files and tracks to delete
+          processedTracks.forEach((track) => {
+            if (track.replaceId && track.oldPath) {
+              tracksToDelete.push(track.replaceId);
+              filesToDelete.push(track.oldPath);
+              existingFilePaths.delete(track.oldPath);
 
-            // Remove these properties before adding to database
-            delete track.replaceId;
-            delete track.oldPath;
+              // Remove these properties before adding to database
+              delete track.replaceId;
+              delete track.oldPath;
+            }
+          });
+
+          // Add tracks to database in batches
+          if (processedTracks.length > 0) {
+            // Add tracks in smaller batches to avoid overwhelming the database
+            for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
+              const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
+
+              // Use addTrack for each track and update tracking structures
+              trackBatch.forEach((track) => {
+                try {
+                  const addedTrack = db.addTrack(track);
+                  existingFilePaths.add(addedTrack.filePath);
+                  trackMap.set(getTrackKey(addedTrack), addedTrack);
+                } catch (error) {
+                  console.error(
+                    `Error adding track to database: ${track.title}`,
+                    error,
+                  );
+                }
+              });
+
+              // Persist once per sub-batch instead of once per track
+              db.persistNow();
+            }
+
+            tracksAdded += processedTracks.length;
           }
-        });
 
-        // Add tracks to database in batches
-        if (processedTracks.length > 0) {
-          // Add tracks in smaller batches to avoid overwhelming the database
-          for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
-            const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
+          processedCount += batch.length;
 
-            // Use addTrack for each track and update tracking structures
-            trackBatch.forEach((track) => {
-              try {
-                const addedTrack = db.addTrack(track);
-                existingFilePaths.add(addedTrack.filePath);
-                trackMap.set(getTrackKey(addedTrack), addedTrack);
-              } catch (error) {
-                console.error(
-                  `Error adding track to database: ${track.title}`,
-                  error,
-                );
-              }
-            });
-          }
-
-          tracksAdded += processedTracks.length;
+          // Send progress event
+          sendProgressEvent('library:scanProgress', {
+            total: totalFiles,
+            processed: processedCount,
+            current: `Processed ${processedCount} of ${totalFiles} files`,
+          });
         }
-
-        processedCount += batch.length;
-
-        // Send progress event
-        sendProgressEvent('library:scanProgress', {
-          total: totalFiles,
-          processed: processedCount,
-          current: `Processed ${processedCount} of ${totalFiles} files`,
-        });
+      } finally {
+        db.endBatchMode();
       }
     };
 
@@ -1089,8 +1111,14 @@ export async function importFiles(
 
     // Delete replaced tracks from database
     if (tracksToDelete.length > 0) {
-      // Process deletions with Promise.all instead of a for loop
-      await Promise.all(tracksToDelete.map((id) => db.deleteTrack(id)));
+      db.beginBatchMode();
+      try {
+        tracksToDelete.forEach((id) => {
+          db.deleteTrack(id);
+        });
+      } finally {
+        db.endBatchMode();
+      }
     }
 
     // Delete replaced files - process file deletions in parallel

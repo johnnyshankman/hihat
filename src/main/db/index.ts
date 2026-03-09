@@ -59,6 +59,7 @@ const DB_PATH = (() => {
 // Database instance
 let db: any;
 let useMockDb = false;
+let batchMode = false;
 
 // Mock database for development when SQLite fails to load
 const mockDb = {
@@ -649,10 +650,12 @@ export function initDatabase(): void {
             exec: (sql: string) => {
               try {
                 const result = originalDb.exec(sql);
-                // Save changes to disk
-                const data = originalDb.export();
-                const buffer = Buffer.from(data);
-                fs.writeFileSync(DB_PATH, buffer);
+                // Save changes to disk (skip in batch mode)
+                if (!batchMode) {
+                  const data = originalDb.export();
+                  const buffer = Buffer.from(data);
+                  fs.writeFileSync(DB_PATH, buffer);
+                }
                 return result;
               } catch (error) {
                 console.error('Error executing SQL:', error, 'SQL:', sql);
@@ -751,10 +754,12 @@ export function initDatabase(): void {
                     stmt.step();
                     stmt.free();
 
-                    // Save changes to disk
-                    const data = originalDb.export();
-                    const buffer = Buffer.from(data);
-                    fs.writeFileSync(DB_PATH, buffer);
+                    // Save changes to disk (skip in batch mode)
+                    if (!batchMode) {
+                      const data = originalDb.export();
+                      const buffer = Buffer.from(data);
+                      fs.writeFileSync(DB_PATH, buffer);
+                    }
 
                     return { changes: 1 };
                   } catch (error) {
@@ -1996,4 +2001,37 @@ export function updateSettingsFromMigration(
   } catch (error) {
     console.error('Error updating settings from migration:', error);
   }
+}
+
+/**
+ * Explicitly persist the in-memory database to disk.
+ * Use this during batch mode to checkpoint at desired intervals.
+ */
+export function persistNow(): void {
+  if (useMockDb || !db) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-underscore-dangle
+    const originalDb = (db as any)._originalDb || db;
+    const data = originalDb.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(DB_PATH, buffer);
+  } catch (error) {
+    console.error('Error persisting database to disk:', error);
+  }
+}
+
+/**
+ * Enable batch mode: suppresses automatic disk persistence on every write.
+ * Call persistNow() at desired checkpoints and endBatchMode() when done.
+ */
+export function beginBatchMode(): void {
+  batchMode = true;
+}
+
+/**
+ * Disable batch mode and persist the database to disk.
+ */
+export function endBatchMode(): void {
+  batchMode = false;
+  persistNow();
 }
