@@ -242,6 +242,10 @@ tr[draggable="true"] {
   background-color: var(--vt-scrollbar-thumb-hover);
 }
 
+.browser-column-focused {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vt-text-primary) 15%, transparent);
+}
+
 .browser-column + .browser-column {
   border-left: 1px solid var(--vt-divider);
 }

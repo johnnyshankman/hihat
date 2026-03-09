@@ -1,4 +1,10 @@
-import React, { useMemo, useRef, useEffect, useCallback } from 'react';
+import React, {
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+} from 'react';
 import { Track } from '../../types/dbTypes';
 
 interface BrowserProps {
@@ -31,7 +37,15 @@ function Browser({
 }: BrowserProps) {
   const artistColumnRef = useRef<HTMLDivElement>(null);
   const albumColumnRef = useRef<HTMLDivElement>(null);
+  const browserPanelRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ startY: number; startHeight: number } | null>(
+    null,
+  );
+  const [focusedColumn, setFocusedColumn] = useState<'artist' | 'album' | null>(
+    null,
+  );
+  const typeAheadBufferRef = useRef('');
+  const typeAheadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
@@ -90,6 +104,67 @@ function Browser({
     }
   }, [selectedAlbum]);
 
+  // Clear focus and type-ahead buffer when clicking outside the browser panel
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      if (
+        browserPanelRef.current &&
+        !browserPanelRef.current.contains(e.target as Node)
+      ) {
+        setFocusedColumn(null);
+        typeAheadBufferRef.current = '';
+      }
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, []);
+
+  // Type-ahead keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!focusedColumn) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.length !== 1) return;
+
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')
+      ) {
+        return;
+      }
+
+      // Don't respond if browser panel is hidden
+      if (!browserPanelRef.current?.offsetParent) return;
+
+      e.preventDefault();
+
+      typeAheadBufferRef.current += e.key.toLowerCase();
+
+      if (typeAheadTimeoutRef.current) {
+        clearTimeout(typeAheadTimeoutRef.current);
+      }
+      typeAheadTimeoutRef.current = setTimeout(() => {
+        typeAheadBufferRef.current = '';
+      }, 600);
+
+      const buffer = typeAheadBufferRef.current;
+      const list = focusedColumn === 'artist' ? artists : albums;
+      const match = list.find((item) => sortKey(item).startsWith(buffer));
+
+      if (match) {
+        if (focusedColumn === 'artist') {
+          onArtistSelect(match);
+        } else {
+          onAlbumSelect(match);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [focusedColumn, artists, albums, onArtistSelect, onAlbumSelect]);
+
   // Resize handle logic
   const handleResizeMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -120,16 +195,22 @@ function Browser({
 
   return (
     <div
+      ref={browserPanelRef}
       className="browser-panel"
       data-testid="browser-panel"
       style={{ height }}
     >
       <div className="browser-columns">
         {/* Album Artist column */}
+        {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
         <div
           ref={artistColumnRef}
-          className="browser-column"
+          className={`browser-column${focusedColumn === 'artist' ? ' browser-column-focused' : ''}`}
           data-testid="browser-artist-column"
+          onMouseDown={() => {
+            setFocusedColumn('artist');
+            typeAheadBufferRef.current = '';
+          }}
           role="listbox"
         >
           {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus */}
@@ -161,10 +242,15 @@ function Browser({
         </div>
 
         {/* Album column */}
+        {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
         <div
           ref={albumColumnRef}
-          className="browser-column"
+          className={`browser-column${focusedColumn === 'album' ? ' browser-column-focused' : ''}`}
           data-testid="browser-album-column"
+          onMouseDown={() => {
+            setFocusedColumn('album');
+            typeAheadBufferRef.current = '';
+          }}
           role="listbox"
         >
           {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus */}
