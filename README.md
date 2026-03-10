@@ -40,6 +40,7 @@
     - [Playlists](#playlists)
     - [Browsing and Filtering](#browsing-and-filtering)
     - [Mini Player](#mini-player)
+    - [Editing Metadata](#editing-metadata)
     - [Right-Click Actions](#right-click-actions)
     - [Settings and Preferences](#settings-and-preferences)
     - [Keyboard Shortcuts](#keyboard-shortcuts)
@@ -64,6 +65,7 @@
 * Import any folder structure — hihat finds all music files recursively
 * Smart deduplication on import (prefers higher-quality files)
 * Fast library scanning (~1 minute per 10,000 songs)
+* Edit metadata for any track — changes are written back to the audio file tags
 * Library stats: total songs, size in GB, total plays, and total hours (via the hihat menu)
 * Incremental library backup to any external drive
 
@@ -223,12 +225,27 @@ Click the album art in the player bar to open the Mini Player — a compact floa
 
 ![hihat Mini Player floating window showing album art with playback controls overlay](screenshots/usage-mini-player.png)
 
+### Editing Metadata
+
+Right-click any track and select **Edit Metadata** to open the metadata editor. You can edit 13 fields:
+
+* **Title**, **Artist**, **Album**, **Album Artist**, **Genre**
+* **Track Number**, **Total Tracks**, **Disc Number**, **Total Discs**
+* **Year**, **BPM**, **Composer**, **Comment**
+
+When you click **Save**, hihat updates both its database and the actual audio file tags. This means your edits persist even if you re-scan your library or use the files in another music player.
+
+**Supported formats for file tag writing:** MP3 (ID3), M4A/AAC (MP4 atoms), FLAC (Vorbis Comment), and OGG. Album art and any tags you don't edit are always preserved.
+
+> **Note:** If hihat cannot write to the file (e.g. the file is on a read-only drive, or is in an unsupported format like WAV), your edits are still saved to the hihat database. You'll see a warning notification letting you know the file tags could not be updated.
+
 ### Right-Click Actions
 
 Right-click any track to access:
 
 * **Play** — play this track immediately
 * **Add to Playlist** — add to any of your playlists
+* **Edit Metadata** — edit track metadata and write changes back to the audio file
 * **Show in Finder** — reveal the audio file in macOS Finder
 * **Find on Spotify** — search for this track on Spotify
 * **Find on Apple Music** — search for this track on Apple Music
@@ -289,7 +306,7 @@ hihat also responds to **media keys** on your keyboard and **Bluetooth headphone
 
 ## Roadmap
 
-- [ ] Edit song metadata
+- [x] Edit song metadata
 - [ ] Queue a next-up song
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features and known issues.
