@@ -210,6 +210,15 @@ function runMigrations(): void {
 
     // Migration 8: Add columnOrder column to settings table if it doesn't exist
     addColumnIfNotExists('settings', 'columnOrder', 'TEXT');
+
+    // Migration 9: Add new metadata columns to tracks table
+    addColumnIfNotExists('tracks', 'totalTracks', 'INTEGER');
+    addColumnIfNotExists('tracks', 'discNumber', 'INTEGER');
+    addColumnIfNotExists('tracks', 'totalDiscs', 'INTEGER');
+    addColumnIfNotExists('tracks', 'year', 'INTEGER');
+    addColumnIfNotExists('tracks', 'bpm', 'INTEGER');
+    addColumnIfNotExists('tracks', 'composer', 'TEXT');
+    addColumnIfNotExists('tracks', 'comment', 'TEXT');
   } catch (error) {
     console.error('Error running database migrations:', error);
   }
@@ -1010,9 +1019,10 @@ export function addTrack(track: Omit<Track, 'id'>): Track {
       `
       INSERT INTO tracks (
         id, filePath, title, artist, album, albumArtist,
-        genre, duration, playCount, dateAdded, lastPlayed, lyrics, trackNumber
+        genre, duration, playCount, dateAdded, lastPlayed, lyrics, trackNumber,
+        totalTracks, discNumber, totalDiscs, year, bpm, composer, comment
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     );
 
@@ -1046,6 +1056,13 @@ export function addTrack(track: Omit<Track, 'id'>): Track {
       newTrack.lastPlayed,
       newTrack.lyrics,
       newTrack.trackNumber,
+      newTrack.totalTracks ?? null,
+      newTrack.discNumber ?? null,
+      newTrack.totalDiscs ?? null,
+      newTrack.year ?? null,
+      newTrack.bpm ?? null,
+      newTrack.composer ?? null,
+      newTrack.comment ?? null,
     );
 
     console.warn('Track added successfully:', newTrack.id);
@@ -1075,7 +1092,14 @@ export function updateTrack(track: Track): boolean {
         albumArtist = ?,
         genre = ?,
         lyrics = ?,
-        trackNumber = ?
+        trackNumber = ?,
+        totalTracks = ?,
+        discNumber = ?,
+        totalDiscs = ?,
+        year = ?,
+        bpm = ?,
+        composer = ?,
+        comment = ?
       WHERE id = ?
     `,
       )
@@ -1087,6 +1111,13 @@ export function updateTrack(track: Track): boolean {
         track.genre,
         track.lyrics,
         track.trackNumber,
+        track.totalTracks ?? null,
+        track.discNumber ?? null,
+        track.totalDiscs ?? null,
+        track.year ?? null,
+        track.bpm ?? null,
+        track.composer ?? null,
+        track.comment ?? null,
         track.id,
       );
 

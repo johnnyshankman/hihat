@@ -161,6 +161,13 @@ function convertLegacyTrackToTrack(
     lastPlayed,
     lyrics: null, // v1 didn't track lyrics
     trackNumber: common.track?.no || null,
+    totalTracks: common.track?.of || null,
+    discNumber: common.disk?.no || null,
+    totalDiscs: common.disk?.of || null,
+    year: null, // v1 didn't track year
+    bpm: null, // v1 didn't track bpm
+    composer: null, // v1 didn't track composer
+    comment: null, // v1 didn't track comment
   };
 }
 

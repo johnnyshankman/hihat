@@ -29,6 +29,7 @@ import {
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
+import EditMetadataDialog from './EditMetadataDialog';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
 import Browser from './Browser';
@@ -112,6 +113,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     mouseY: number;
   } | null>(null);
   const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
+  const [editMetadataTrackId, setEditMetadataTrackId] = useState<string | null>(
+    null,
+  );
   const [selectedTracks, setSelectedTracks] = useState<Record<string, boolean>>(
     {},
   );
@@ -235,6 +239,10 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   const handleAddToPlaylist = () => {
     setPlaylistDialogOpen(true);
+  };
+
+  const handleEditMetadata = (trackId: string) => {
+    setEditMetadataTrackId(trackId);
   };
 
   const handleClosePlaylistDialog = () => {
@@ -994,6 +1002,13 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         />
       )}
 
+      {/* Edit Metadata dialog */}
+      <EditMetadataDialog
+        onClose={() => setEditMetadataTrackId(null)}
+        open={editMetadataTrackId !== null}
+        trackId={editMetadataTrackId}
+      />
+
       {/* Context menu - show multi-select menu if multiple tracks selected */}
       {Object.keys(selectedTracks).length > 1 ? (
         <MultiSelectContextMenu
@@ -1017,6 +1032,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           }
           onAddToPlaylist={handleAddToPlaylist}
           onClose={handleCloseContextMenu}
+          onEditMetadata={handleEditMetadata}
           open={contextMenu !== null}
           trackId={selectedTrackId}
         />

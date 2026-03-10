@@ -13,6 +13,7 @@ import log from 'electron-log';
 import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
 import { scanLibrary, importFiles } from '../library/scanner';
+import { writeMetadataToFile } from '../library/tagWriter';
 import playbackHandlers from './playbackHandlers';
 
 /**
@@ -94,6 +95,66 @@ export const trackHandlers = {
       return false;
     }
   }) as IPCHandler<'tracks:delete'>,
+
+  'tracks:updateMetadata': (async ({ id, metadata }) => {
+    try {
+      const existingTrack = db.getTrackById(id);
+      if (!existingTrack) {
+        return {
+          success: false,
+          fileWriteSuccess: false,
+          message: 'Track not found',
+        };
+      }
+
+      const updatedTrack = {
+        ...existingTrack,
+        title: metadata.title,
+        artist: metadata.artist,
+        album: metadata.album,
+        albumArtist: metadata.albumArtist,
+        genre: metadata.genre,
+        trackNumber: metadata.trackNumber,
+        totalTracks: metadata.totalTracks,
+        discNumber: metadata.discNumber,
+        totalDiscs: metadata.totalDiscs,
+        year: metadata.year,
+        bpm: metadata.bpm,
+        composer: metadata.composer,
+        comment: metadata.comment,
+      };
+
+      const dbResult = db.updateTrack(updatedTrack);
+
+      if (!dbResult) {
+        return {
+          success: false,
+          fileWriteSuccess: false,
+          message: 'Failed to update database',
+        };
+      }
+
+      const fileResult = await writeMetadataToFile(
+        existingTrack.filePath,
+        metadata,
+      );
+
+      return {
+        success: true,
+        fileWriteSuccess: fileResult.success,
+        message: fileResult.success
+          ? undefined
+          : `Database updated but file tags could not be written: ${fileResult.message}`,
+      };
+    } catch (error) {
+      console.error(`Error updating metadata for track ${id}:`, error);
+      return {
+        success: false,
+        fileWriteSuccess: false,
+        message: (error as Error).message || 'Unknown error',
+      };
+    }
+  }) as IPCHandler<'tracks:updateMetadata'>,
 };
 
 /**

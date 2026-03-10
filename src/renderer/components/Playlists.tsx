@@ -20,6 +20,7 @@ import {
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
+import EditMetadataDialog from './EditMetadataDialog';
 import ConfirmationDialog from './ConfirmationDialog';
 import SidebarToggle from './SidebarToggle';
 import Browser from './Browser';
@@ -112,6 +113,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Playlist selection dialog state
   const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
+  const [editMetadataTrackId, setEditMetadataTrackId] = useState<string | null>(
+    null,
+  );
 
   // Multi-select state
   const [selectedTracks, setSelectedTracks] = useState<Record<string, boolean>>(
@@ -234,6 +238,10 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   const handleAddToPlaylist = () => {
     setPlaylistDialogOpen(true);
+  };
+
+  const handleEditMetadata = (trackId: string) => {
+    setEditMetadataTrackId(trackId);
   };
 
   const handleClosePlaylistDialog = () => {
@@ -1075,6 +1083,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
           isPlaylistView
           onAddToPlaylist={handleAddToPlaylist}
           onClose={handleCloseContextMenu}
+          onEditMetadata={handleEditMetadata}
           onRemoveFromPlaylist={handleSingleTrackRemoveFromPlaylist}
           open={contextMenu !== null}
           trackId={selectedTrackId}
@@ -1089,6 +1098,13 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
           trackId={selectedTrackId}
         />
       )}
+
+      {/* Edit Metadata dialog */}
+      <EditMetadataDialog
+        onClose={() => setEditMetadataTrackId(null)}
+        open={editMetadataTrackId !== null}
+        trackId={editMetadataTrackId}
+      />
 
       {/* Remove single track confirmation dialog */}
       <ConfirmationDialog

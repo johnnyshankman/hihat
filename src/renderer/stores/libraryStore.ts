@@ -421,6 +421,14 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
       .map((id) => trackIndex.get(id))
       .filter((track): track is Track => !!track);
   },
+
+  updateTrackInPlace: (updatedTrack: Track) => {
+    const newTracks = get().tracks.map((t) =>
+      t.id === updatedTrack.id ? updatedTrack : t,
+    );
+    const indexes = buildIndexes(newTracks);
+    set({ tracks: newTracks, ...indexes });
+  },
 }));
 
 // Set up event listener for library scan completion

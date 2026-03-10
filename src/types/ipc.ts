@@ -5,7 +5,7 @@
  * between the main Electron process and the renderer process.
  */
 
-import { Track, Playlist, Settings } from './dbTypes';
+import { Track, Playlist, Settings, MetadataToWrite } from './dbTypes';
 
 /**
  * All available IPC channels for the application
@@ -30,6 +30,7 @@ export type Channels =
   | 'tracks:getById'
   | 'tracks:add'
   | 'tracks:update'
+  | 'tracks:updateMetadata'
   | 'tracks:updatePlayCount'
   | 'tracks:delete'
 
@@ -136,6 +137,10 @@ export interface IPCRequests {
   'tracks:getById': { id: string };
   'tracks:add': Omit<Track, 'id'>;
   'tracks:update': Track;
+  'tracks:updateMetadata': {
+    id: string;
+    metadata: MetadataToWrite;
+  };
   'tracks:updatePlayCount': { id: string; date: string };
   'tracks:delete': { id: string };
 
@@ -278,6 +283,11 @@ export interface IPCResponses {
   'tracks:getById': Track | null;
   'tracks:add': Track;
   'tracks:update': boolean;
+  'tracks:updateMetadata': {
+    success: boolean;
+    fileWriteSuccess: boolean;
+    message?: string;
+  };
   'tracks:updatePlayCount': boolean;
   'tracks:delete': boolean;
 

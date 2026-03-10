@@ -23,6 +23,13 @@ export interface libraryStoreTrack {
   lastPlayed: string | null; // ISO date string when the track was last played
   lyrics: string | null; // Track lyrics
   trackNumber: number | null; // Track number within album
+  totalTracks: number | null; // Total tracks in album
+  discNumber: number | null; // Disc number
+  totalDiscs: number | null; // Total discs
+  year: number | null; // Release year
+  bpm: number | null; // Beats per minute
+  composer: string | null; // Composer
+  comment: string | null; // Comment
 }
 
 export type Track = libraryStoreTrack;
@@ -76,6 +83,26 @@ export interface Settings {
   columnWidths: Record<string, number> | null; // Persisted column widths for the track table
   librarySorting: Array<{ id: string; desc: boolean }> | null; // Persisted sorting preference for the library view
   columnOrder: string[] | null; // Persisted column order for the track table
+}
+
+/**
+ * Metadata fields that can be written to audio file tags.
+ * Used by the tag writer, IPC layer, and edit metadata dialog.
+ */
+export interface MetadataToWrite {
+  title: string;
+  artist: string;
+  album: string;
+  trackNumber: number | null;
+  totalTracks: number | null;
+  discNumber: number | null;
+  totalDiscs: number | null;
+  year: number | null;
+  bpm: number | null;
+  genre: string;
+  albumArtist: string;
+  composer: string | null;
+  comment: string | null;
 }
 
 /**

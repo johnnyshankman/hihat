@@ -14,7 +14,14 @@ CREATE TABLE IF NOT EXISTS tracks (
   dateAdded TEXT NOT NULL,
   lastPlayed TEXT,
   lyrics TEXT,
-  trackNumber INTEGER
+  trackNumber INTEGER,
+  totalTracks INTEGER,
+  discNumber INTEGER,
+  totalDiscs INTEGER,
+  year INTEGER,
+  bpm INTEGER,
+  composer TEXT,
+  comment TEXT
 );
 
 CREATE TABLE IF NOT EXISTS playlists (

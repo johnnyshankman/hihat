@@ -47,7 +47,10 @@ test.describe('Track Context Menu', () => {
       contextMenu.getByText('Download Album Art', { exact: true }),
     ).toBeVisible();
     await expect(
-      contextMenu.getByText('Delete Track', { exact: true }),
+      contextMenu.getByText('Edit Metadata', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      contextMenu.getByText('Remove from Library', { exact: true }),
     ).toBeVisible();
 
     // Close the context menu by pressing Escape

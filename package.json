@@ -163,7 +163,6 @@
     "jest-environment-jsdom": "^29.7.0",
     "mini-css-extract-plugin": "^2.7.6",
     "music-metadata": "^7.13.5",
-    "node-id3": "^0.2.6",
     "playwright": "^1.54.2",
     "postcss-loader": "^7.3.3",
     "prettier": "^3.0.3",

@@ -89,6 +89,7 @@ export interface LibraryStore {
   // NEW: Efficient data access methods
   getTrackById: (id: string) => Track | undefined;
   getTracksByIds: (ids: string[]) => Track[];
+  updateTrackInPlace: (updatedTrack: Track) => void;
 }
 
 // Playback Store Types

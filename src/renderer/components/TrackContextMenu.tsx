@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import { Apple, Search, Download, Delete } from '@mui/icons-material';
+import { Apple, Search, Download, Delete, Edit } from '@mui/icons-material';
 import SpotifyIcon from '../assets/spotify.svg';
 import TidalIcon from '../assets/tidal.svg';
 import {
@@ -22,6 +22,7 @@ interface TrackContextMenuProps {
   onClose: () => void;
   trackId: string | null;
   onAddToPlaylist: (trackId: string) => void;
+  onEditMetadata?: (trackId: string) => void;
   isPlaylistView?: boolean;
   onRemoveFromPlaylist?: (trackId: string) => void;
 }
@@ -32,6 +33,7 @@ function TrackContextMenu({
   onClose,
   trackId,
   onAddToPlaylist,
+  onEditMetadata,
   isPlaylistView = false,
   onRemoveFromPlaylist = undefined,
 }: TrackContextMenuProps) {
@@ -68,6 +70,13 @@ function TrackContextMenu({
 
   const handleAddToPlaylist = () => {
     onAddToPlaylist(trackId);
+    onClose();
+  };
+
+  const handleEditMetadata = () => {
+    if (onEditMetadata) {
+      onEditMetadata(trackId);
+    }
     onClose();
   };
 
@@ -281,6 +290,15 @@ function TrackContextMenu({
             <PlaylistAddIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Add to Playlist</ListItemText>
+        </MenuItem>
+        <MenuItem
+          data-testid="edit-metadata-menu-item"
+          onClick={handleEditMetadata}
+        >
+          <ListItemIcon>
+            <Edit fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit Metadata</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleShowInFinder}>
           <ListItemIcon>

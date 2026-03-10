@@ -8,6 +8,7 @@
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import { Channels, IPCRequests, IPCResponses } from '../types/ipc';
+import { MetadataToWrite } from '../types/dbTypes';
 
 /**
  * Exposes IPC functions to the renderer process
@@ -194,6 +195,15 @@ const electronHandler = {
      */
     updatePlayCount(id: string, date: string) {
       return ipcRenderer.invoke('tracks:updatePlayCount', { id, date });
+    },
+
+    /**
+     * Update a track's metadata (DB + file tags)
+     * @param id - ID of the track
+     * @param metadata - New metadata values
+     */
+    updateMetadata(id: string, metadata: MetadataToWrite) {
+      return ipcRenderer.invoke('tracks:updateMetadata', { id, metadata });
     },
 
     /**

@@ -427,6 +427,49 @@ function parseFileMetadata(
       }
     }
 
+    // Extract additional metadata fields
+    let totalTracks: number | null = null;
+    if (common.track && common.track.of) {
+      totalTracks =
+        typeof common.track.of === 'number'
+          ? common.track.of
+          : parseInt(String(common.track.of), 10);
+      if (Number.isNaN(totalTracks)) totalTracks = null;
+    }
+
+    let discNumber: number | null = null;
+    if (common.disk && common.disk.no) {
+      discNumber =
+        typeof common.disk.no === 'number'
+          ? common.disk.no
+          : parseInt(String(common.disk.no), 10);
+      if (Number.isNaN(discNumber)) discNumber = null;
+    }
+
+    let totalDiscs: number | null = null;
+    if (common.disk && common.disk.of) {
+      totalDiscs =
+        typeof common.disk.of === 'number'
+          ? common.disk.of
+          : parseInt(String(common.disk.of), 10);
+      if (Number.isNaN(totalDiscs)) totalDiscs = null;
+    }
+
+    const year = common.year ?? null;
+    const bpm = common.bpm ?? null;
+    const composer = common.composer?.[0] ?? null;
+
+    let comment: string | null = null;
+    if (common.comment && common.comment.length > 0) {
+      const rawComment = common.comment[0];
+      comment =
+        typeof rawComment === 'object' &&
+        rawComment !== null &&
+        'text' in rawComment
+          ? (rawComment as { text: string }).text
+          : String(rawComment);
+    }
+
     return {
       filePath,
       title: common.title || path.basename(filePath, path.extname(filePath)),
@@ -443,6 +486,13 @@ function parseFileMetadata(
           ? String(common.lyrics[0])
           : null,
       trackNumber,
+      totalTracks,
+      discNumber,
+      totalDiscs,
+      year,
+      bpm,
+      composer,
+      comment,
     };
   } catch (error) {
     console.error(`Error parsing metadata for ${filePath}:`, error);
@@ -461,6 +511,13 @@ function parseFileMetadata(
       lastPlayed: null,
       lyrics: null,
       trackNumber: null,
+      totalTracks: null,
+      discNumber: null,
+      totalDiscs: null,
+      year: null,
+      bpm: null,
+      composer: null,
+      comment: null,
     };
   }
 }
