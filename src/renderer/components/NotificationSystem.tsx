@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useUIStore } from '../stores';
@@ -22,63 +22,29 @@ export default function NotificationSystem() {
   const clearAllNotifications = useUIStore(
     (state) => state.clearAllNotifications,
   );
+  const isExpanded = useUIStore((state) => state.notificationPanelOpen);
+  const setIsExpanded = useUIStore((state) => state.setNotificationPanelOpen);
 
-  const [isExpanded, setIsExpanded] = useState(false);
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
-  const panelRef = useRef<HTMLDivElement>(null);
   const previousCountRef = useRef(notifications.length);
 
-  // Auto-expand when first notification arrives
+  // Auto-expand when a new notification arrives
   useEffect(() => {
-    if (notifications.length > 0 && previousCountRef.current === 0) {
+    if (notifications.length > previousCountRef.current) {
       setIsExpanded(true);
     }
     previousCountRef.current = notifications.length;
-  }, [notifications.length]);
+  }, [notifications.length, setIsExpanded]);
 
   // Auto-collapse when all notifications are cleared
   useEffect(() => {
     if (notifications.length === 0) {
       setIsExpanded(false);
     }
-  }, [notifications.length]);
-
-  // Listen for toggle events from the Player component
-  useEffect(() => {
-    const handleToggleEvent = () => {
-      setIsExpanded((prev) => !prev);
-    };
-
-    window.addEventListener('toggleNotificationPanel', handleToggleEvent);
-    return () => {
-      window.removeEventListener('toggleNotificationPanel', handleToggleEvent);
-    };
-  }, []);
-
-  // Click-outside-to-close
-  useEffect(() => {
-    if (!isExpanded) return undefined;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setIsExpanded(false);
-      }
-    };
-
-    // Delay listener to avoid closing immediately from the same click
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isExpanded]);
+  }, [notifications.length, setIsExpanded]);
 
   const handleClearAll = useCallback(() => {
     clearAllNotifications();
-    setIsExpanded(false);
   }, [clearAllNotifications]);
 
   const handleDismiss = useCallback(
@@ -96,21 +62,16 @@ export default function NotificationSystem() {
     [removeNotification],
   );
 
-  if (notifications.length === 0 && !isExpanded) {
-    return null;
-  }
-
   if (!isExpanded) {
     return null;
   }
 
   return (
     <Box
-      ref={panelRef}
       data-testid="notification-panel"
       sx={{
         position: 'fixed',
-        bottom: 60,
+        bottom: 80,
         right: 24,
         zIndex: 2001,
         width: '320px',

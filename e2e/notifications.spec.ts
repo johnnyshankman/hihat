@@ -2,6 +2,34 @@ import { test, expect } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
 
 test.describe('Notification System', () => {
+  test('should always show notification bell icon', async () => {
+    const { app, page } = await TestHelpers.launchApp();
+
+    // Wait for app to fully load
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+
+    // Bell icon should be visible immediately, before any notifications
+    const bell = page.locator('[data-testid="notification-button"]');
+    await bell.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Badge should have the invisible class (no notifications yet)
+    const badge = bell.locator('.MuiBadge-badge');
+    await expect(badge).toHaveClass(/MuiBadge-invisible/);
+
+    // Trigger a notification by adding a track to a playlist
+    const trackRow = page.locator('[data-track-id]').first();
+    await trackRow.click({ button: 'right' });
+    await page.click('[data-testid="add-to-playlist-menu-item"]');
+    await page.waitForTimeout(500);
+    await page.click('[data-testid="playlist-option-playlist-1"]');
+    await page.waitForTimeout(1000);
+
+    // Badge should no longer have the invisible class
+    await expect(badge).not.toHaveClass(/MuiBadge-invisible/);
+
+    await TestHelpers.closeApp(app);
+  });
+
   test('should show notification when adding a track to a playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
@@ -60,13 +88,7 @@ test.describe('Notification System', () => {
     await page.click('[data-testid="playlist-option-playlist-2"]');
     await page.waitForTimeout(1000);
 
-    // Re-open the panel via the toggle event since click-outside closed it
-    await page.evaluate(() => {
-      window.dispatchEvent(new Event('toggleNotificationPanel'));
-    });
-    await page.waitForTimeout(500);
-
-    // Verify multiple items in the panel
+    // Panel should still be open (no click-outside-to-close)
     await panel.waitFor({ state: 'visible', timeout: 5000 });
     const items = panel.locator('[data-testid="notification-item"]');
     const count = await items.count();
@@ -134,27 +156,20 @@ test.describe('Notification System', () => {
     await page.click('[data-testid="playlist-option-playlist-2"]');
     await page.waitForTimeout(1000);
 
-    // Re-open the panel via the toggle event since click-outside closed it
-    await page.evaluate(() => {
-      window.dispatchEvent(new Event('toggleNotificationPanel'));
-    });
-    await page.waitForTimeout(500);
+    // Panel should still be open (no click-outside-to-close)
     await panel.waitFor({ state: 'visible', timeout: 5000 });
 
     // Click Clear
     await page.click('[data-testid="notification-clear-all"]');
-    await page.waitForTimeout(500);
-
-    // Panel should auto-collapse (not visible)
-    await expect(panel).not.toBeVisible();
+    await panel.waitFor({ state: 'hidden', timeout: 5000 });
 
     await TestHelpers.closeApp(app);
   });
 
-  test('should close panel when clicking outside', async () => {
+  test('should toggle panel open and closed via bell icon', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Trigger a notification so panel opens
+    // Trigger a notification so panel auto-opens
     await page.waitForSelector('[data-track-id]', { timeout: 5000 });
     const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
@@ -166,12 +181,13 @@ test.describe('Notification System', () => {
     const panel = page.locator('[data-testid="notification-panel"]');
     await panel.waitFor({ state: 'visible', timeout: 5000 });
 
-    // Click outside the panel (top-left area of the page)
-    await page.mouse.click(50, 50);
-    await page.waitForTimeout(500);
+    // Click bell icon to close the panel
+    await page.click('[data-testid="notification-button"]');
+    await panel.waitFor({ state: 'hidden', timeout: 5000 });
 
-    // Panel should be closed
-    await expect(panel).not.toBeVisible();
+    // Click bell icon again to re-open the panel
+    await page.click('[data-testid="notification-button"]');
+    await panel.waitFor({ state: 'visible', timeout: 5000 });
 
     await TestHelpers.closeApp(app);
   });
@@ -193,10 +209,7 @@ test.describe('Notification System', () => {
 
     // Click the close button
     await page.click('[data-testid="notification-close"]');
-    await page.waitForTimeout(500);
-
-    // Panel should be hidden
-    await expect(panel).not.toBeVisible();
+    await panel.waitFor({ state: 'hidden', timeout: 5000 });
 
     await TestHelpers.closeApp(app);
   });

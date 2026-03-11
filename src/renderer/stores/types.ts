@@ -6,7 +6,6 @@ export interface Notification {
   id: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
-  autoHideDuration?: number;
 }
 
 // Search index data for fast text searching
@@ -165,10 +164,11 @@ export interface UIStore {
   showNotification: (
     message: string,
     type: 'info' | 'success' | 'warning' | 'error',
-    autoHideDuration?: number,
   ) => void;
   removeNotification: (id: string) => void;
   clearAllNotifications: () => void;
+  notificationPanelOpen: boolean;
+  setNotificationPanelOpen: (open: boolean) => void;
   setCurrentView: (view: 'library' | 'playlists') => void;
   setSettingsOpen: (open: boolean) => void;
   setBrowserOpen: (open: boolean) => void;

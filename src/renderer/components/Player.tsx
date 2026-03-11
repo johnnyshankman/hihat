@@ -88,76 +88,43 @@ function AlbumArtPlaceholder() {
 // Notification button component
 function NotificationButton() {
   const notifications = useUIStore((state) => state.notifications);
-  const [hasNewNotifications, setHasNewNotifications] = useState(false);
-  const previousCountRef = useRef(notifications.length);
-
-  // Track when new notifications arrive
-  useEffect(() => {
-    if (notifications.length > previousCountRef.current) {
-      setHasNewNotifications(true);
-    }
-    previousCountRef.current = notifications.length;
-  }, [notifications.length]);
-
-  // Clear "new" indicator after a short delay
-  useEffect(() => {
-    if (hasNewNotifications) {
-      const timer = setTimeout(() => {
-        setHasNewNotifications(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [hasNewNotifications]);
-
-  const handleClick = () => {
-    // Toggle the notification panel in NotificationSystem
-    const event = new CustomEvent('toggleNotificationPanel');
-    window.dispatchEvent(event);
-    setHasNewNotifications(false);
-  };
-
-  if (notifications.length === 0) {
-    return null;
-  }
+  const panelOpen = useUIStore((state) => state.notificationPanelOpen);
+  const setPanelOpen = useUIStore((state) => state.setNotificationPanelOpen);
 
   return (
-    <IconButton
-      onClick={handleClick}
-      size="medium"
-      sx={{
-        color: 'text.primary',
-        animation: hasNewNotifications
-          ? 'pulse 1s ease-in-out infinite'
-          : 'none',
-        '@keyframes pulse': {
-          '0%': {
-            transform: 'scale(1)',
-          },
-          '50%': {
-            transform: 'scale(1.1)',
-          },
-          '100%': {
-            transform: 'scale(1)',
-          },
-        },
-      }}
+    <Tooltip
+      arrow
+      placement="top"
+      title={panelOpen ? 'Hide Notifications' : 'Show Notifications'}
     >
-      <Badge
-        badgeContent={notifications.length}
-        color="error"
+      <IconButton
+        data-testid="notification-button"
+        onClick={() => setPanelOpen(!panelOpen)}
+        size="medium"
         sx={{
-          '& .MuiBadge-badge': {
-            fontSize: '0.65rem',
-            height: '16px',
-            minWidth: '16px',
-            padding: '0 4px',
+          color: panelOpen ? 'primary.main' : 'text.secondary',
+          '&:hover': {
+            color: panelOpen ? 'primary.dark' : 'text.primary',
           },
         }}
       >
-        <NotificationsIcon />
-      </Badge>
-    </IconButton>
+        <Badge
+          badgeContent={notifications.length}
+          color="error"
+          invisible={notifications.length === 0}
+          sx={{
+            '& .MuiBadge-badge': {
+              fontSize: '0.65rem',
+              height: '16px',
+              minWidth: '16px',
+              padding: '0 4px',
+            },
+          }}
+        >
+          <NotificationsIcon />
+        </Badge>
+      </IconButton>
+    </Tooltip>
   );
 }
 

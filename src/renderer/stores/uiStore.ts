@@ -8,6 +8,7 @@ const useUIStore = create<UIStore>((set) => ({
   currentView: 'library',
   settingsOpen: false,
   browserOpen: false,
+  notificationPanelOpen: false,
 
   // Actions
   setCurrentView: (view: 'library' | 'playlists') => set({ currentView: view }),
@@ -15,24 +16,17 @@ const useUIStore = create<UIStore>((set) => ({
   showNotification: (
     message: string,
     type: 'info' | 'success' | 'warning' | 'error',
-    autoHideDuration = 5000,
   ) => {
-    // Generate a unique ID
     const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const newNotification: Notification = {
       id,
       message,
       type,
-      autoHideDuration,
     };
 
-    // Add new notification without limiting (we'll handle display limits in the UI)
     set((state) => ({
       notifications: [...state.notifications, newNotification],
     }));
-
-    // Don't auto-remove notifications anymore - let the user manage them
-    // This prevents notifications from disappearing while the user is reading them
   },
 
   removeNotification: (id: string) =>
@@ -46,6 +40,9 @@ const useUIStore = create<UIStore>((set) => ({
     set(() => ({
       notifications: [],
     })),
+
+  setNotificationPanelOpen: (open: boolean) =>
+    set({ notificationPanelOpen: open }),
 
   setBrowserOpen: (open: boolean) => {
     if (!open) {
