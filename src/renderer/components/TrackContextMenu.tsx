@@ -248,7 +248,6 @@ function TrackContextMenu({
 
       // Step 6: Scroll to the target track if it exists
       if (targetTrackId) {
-        // @ts-ignore - Using custom property we added to window
         window.hihatScrollToLibraryTrack?.(targetTrackId);
       }
     } catch (error) {

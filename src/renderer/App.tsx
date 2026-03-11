@@ -88,8 +88,7 @@ function ThemedApp() {
           selectSpecificSong(lastPlayedSongId, 'library');
           setPaused(true);
           // scroll to the song in the library
-          // @ts-ignore - custom property on window needs shimming in ts
-          window.hihatScrollToLibraryTrack(lastPlayedSongId);
+          window.hihatScrollToLibraryTrack?.(lastPlayedSongId);
         } catch (error) {
           console.error('Failed to load last played song:', error);
         }

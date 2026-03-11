@@ -345,19 +345,17 @@ export const libraryHandlers = {
  * Dialog-related IPC handlers
  */
 export const dialogHandlers = {
-  'dialog:select-directory':
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (async (_args) => {
-      try {
-        const result = await dialog.showOpenDialog({
-          properties: ['openDirectory'],
-        });
-        return result;
-      } catch (error: unknown) {
-        console.error('Error showing directory selection dialog:', error);
-        return { error: (error as Error).message || 'Unknown error' };
-      }
-    }) as IPCHandler<'dialog:select-directory'>,
+  'dialog:select-directory': (async (_args) => {
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openDirectory'],
+      });
+      return result;
+    } catch (error: unknown) {
+      console.error('Error showing directory selection dialog:', error);
+      return { error: (error as Error).message || 'Unknown error' };
+    }
+  }) as IPCHandler<'dialog:select-directory'>,
 
   'dialog:select-files': (async () => {
     try {

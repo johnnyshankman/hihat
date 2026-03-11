@@ -325,11 +325,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   // Expose the scrollToTrack function to the window object
   useEffect(() => {
-    // @ts-ignore - Adding custom property to window
     window.hihatScrollToLibraryTrack = scrollToTrackWhenReady;
 
     return () => {
-      // @ts-ignore - Cleanup
       delete window.hihatScrollToLibraryTrack;
       tableReadyRef.current = false;
     };

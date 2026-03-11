@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
  * Returns a debounced version of the provided value.
  * The returned value only updates after `delay` ms of no changes to the input.
  */
-// eslint-disable-next-line import/prefer-default-export
 export function useDebouncedValue<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
 

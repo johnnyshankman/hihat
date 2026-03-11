@@ -63,7 +63,6 @@ function writeTagsViaTaglib(
   }
 }
 
-// eslint-disable-next-line import/prefer-default-export
 export async function writeMetadataToFile(
   filePath: string,
   metadata: MetadataToWrite,

@@ -43,8 +43,7 @@ export class PlaybackTracker {
         this.listenTimeMap.set(trackId, 0);
       }
 
-      // eslint-disable-next-line no-console
-      console.log(
+      console.warn(
         `PlaybackTracker: Started tracking playback for track ${trackId}`,
       );
     }
@@ -81,16 +80,14 @@ export class PlaybackTracker {
       trackDuration * 0.2,
     );
 
-    // eslint-disable-next-line no-console
-    console.log(
+    console.warn(
       `PlaybackTracker: Track ${trackId} has been played for ${currentTime}/${threshold.toFixed(1)} seconds`,
     );
 
     // Check if we've crossed the threshold
     if (currentTime >= threshold && !this.hasCurrentTrackBeenCounted) {
       this.hasCurrentTrackBeenCounted = true;
-      // eslint-disable-next-line no-console
-      console.log(
+      console.warn(
         `PlaybackTracker: Track ${trackId} reached the ${threshold.toFixed(1)}-second threshold!`,
       );
       return true;
@@ -109,8 +106,7 @@ export class PlaybackTracker {
     }
     this.listenTimeMap.set(trackId, 0);
 
-    // eslint-disable-next-line no-console
-    console.log(`PlaybackTracker: Reset tracking for track ${trackId}`);
+    console.warn(`PlaybackTracker: Reset tracking for track ${trackId}`);
   }
 }
 
@@ -123,8 +119,7 @@ export const playbackTracker = new PlaybackTracker();
  */
 export async function updatePlayCount(trackId: string): Promise<void> {
   try {
-    // eslint-disable-next-line no-console
-    console.log(
+    console.warn(
       `PlaybackTracker: Play count threshold reached - updating play count for track ${trackId}`,
     );
 
@@ -165,8 +160,7 @@ export async function updatePlayCount(trackId: string): Promise<void> {
         // This will cause smart playlists to be refreshed with the new play count data
         useLibraryStore.getState().loadPlaylists();
 
-        // eslint-disable-next-line no-console
-        console.log(
+        console.warn(
           `PlaybackTracker: Updated track in LibraryStore - new play count: ${updatedTracks[trackIndex].playCount}`,
         );
       }

@@ -161,9 +161,7 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
       return;
     }
 
-    // For logging only, can be removed in production
-    // eslint-disable-next-line no-console
-    console.log('backupLibrary called');
+    console.warn('backupLibrary called');
 
     // Set up rsync
     const rsync = new Rsync();
@@ -182,14 +180,11 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
       .destination(backupPath);
 
     // Execute the command
-    // eslint-disable-next-line no-console
     rsync.execute(
       (error, _code, cmd) => {
-        // eslint-disable-next-line no-console
-        console.log('rsync command:', cmd);
+        console.warn('rsync command:', cmd);
 
         if (error) {
-          // eslint-disable-next-line no-console
           console.error('rsync error:', error);
           event.reply('backup-library-error', error.message || 'Unknown error');
           return;
@@ -201,9 +196,7 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
       (stdout) => {
         const output = stdout.toString();
 
-        // Log for debugging
-        // eslint-disable-next-line no-console
-        console.log('rsync stdout:', output);
+        console.warn('rsync stdout:', output);
 
         // Parse output
         const parsedOutput = parseRsyncOutput(output);
@@ -284,8 +277,7 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
         }
       },
       (stderr) => {
-        // eslint-disable-next-line no-console
-        console.log('rsync stderr:', stderr.toString());
+        console.warn('rsync stderr:', stderr.toString());
         // Send error information to renderer if needed
         event.reply('backup-library-progress', {
           phase: 'error',
@@ -294,7 +286,6 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
       },
     );
   } catch (error: unknown) {
-    // eslint-disable-next-line no-console
     console.error('Error in backupLibrary:', error);
     event.reply(
       'backup-library-error',

@@ -2,7 +2,6 @@ import React from 'react';
 import { Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { PlaylistAdd, Delete, PlaylistRemove } from '@mui/icons-material';
 
-/* eslint-disable react/require-default-props */
 interface MultiSelectContextMenuProps {
   open: boolean;
   anchorPosition: { top: number; left: number } | null;
@@ -13,7 +12,6 @@ interface MultiSelectContextMenuProps {
   selectedCount: number;
   isPlaylistView?: boolean;
 }
-/* eslint-enable react/require-default-props */
 
 export default function MultiSelectContextMenu({
   open,

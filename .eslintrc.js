@@ -22,6 +22,8 @@ module.exports = {
     'no-console': ['error', { allow: ['error', 'warn'] }],
     // Disable require-default-props since we're using TypeScript default parameters
     'react/require-default-props': 'off',
+    // Named exports are standard in TypeScript
+    'import/prefer-default-export': 'off',
   },
   parserOptions: {
     ecmaVersion: 2022,

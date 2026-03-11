@@ -533,9 +533,7 @@ function Player() {
       // Small delay to allow React to start mounting the Library component
       // The scrollToTrackWhenReady function will poll until the table is fully ready
       setTimeout(() => {
-        // @ts-ignore - Custom property added to window
         if (window.hihatScrollToLibraryTrack) {
-          // @ts-ignore
           window.hihatScrollToLibraryTrack(currentTrack.id);
         }
       }, 50);
@@ -545,9 +543,7 @@ function Player() {
       // Small delay to allow React to start mounting the Playlists component
       // The scrollToTrackWhenReady function will poll until the table is fully ready
       setTimeout(() => {
-        // @ts-ignore - Custom property added to window
         if (window.hihatScrollToPlaylistTrack) {
-          // @ts-ignore
           window.hihatScrollToPlaylistTrack(currentTrack.id);
         }
       }, 50);

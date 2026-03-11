@@ -19,11 +19,9 @@ function debugLog(message: string, data?: any): void {
   const formattedMessage = `[DEBUG ${timestamp}] ${message}`;
 
   if (data) {
-    // eslint-disable-next-line no-console
-    console.log(formattedMessage, data);
+    console.warn(formattedMessage, data);
   } else {
-    // eslint-disable-next-line no-console
-    console.log(formattedMessage);
+    console.warn(formattedMessage);
   }
 }
 

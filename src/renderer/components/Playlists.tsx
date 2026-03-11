@@ -401,11 +401,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Expose the scrollToTrack function to the window object
   useEffect(() => {
-    // @ts-ignore - Adding custom property to window
     window.hihatScrollToPlaylistTrack = scrollToTrackWhenReady;
 
     return () => {
-      // @ts-ignore - Cleanup
       delete window.hihatScrollToPlaylistTrack;
       tableReadyRef.current = false;
     };

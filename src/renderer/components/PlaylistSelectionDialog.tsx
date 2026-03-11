@@ -15,14 +15,12 @@ import {
 } from '@mui/material';
 import { useLibraryStore } from '../stores';
 
-/* eslint-disable react/require-default-props */
 interface PlaylistSelectionDialogProps {
   open: boolean;
   onClose: () => void;
   trackId?: string;
   trackIds?: string[];
 }
-/* eslint-enable react/require-default-props */
 
 function PlaylistSelectionDialog({
   open,

@@ -8,7 +8,7 @@
 
 import path from 'path';
 import fs from 'fs';
-import { app, BrowserWindow } from 'electron';
+import { app } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
 import {
   Track,
@@ -73,23 +73,18 @@ const mockDb = {
   close: () => {},
 };
 
-/**
- * Send an event to the renderer process
- * This function is currently not used but kept for potential future use.
- * @param event - Event name
- * @param data - Event data
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function sendEventToRenderer(event: string, data: any): void {
-  try {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(event, data);
-    }
-  } catch (error) {
-    console.error(`Failed to send ${event} event:`, error);
-    // Continue execution even if event sending fails
+/** Access the underlying sql.js database for export operations */
+function getExportableDb(): { export(): Uint8Array } {
+  const dbRecord = db as unknown as Record<string, unknown>;
+  // eslint-disable-next-line no-underscore-dangle
+  const original = dbRecord._originalDb;
+  if (
+    original &&
+    typeof (original as { export?: unknown }).export === 'function'
+  ) {
+    return original as { export(): Uint8Array };
   }
+  return db as unknown as { export(): Uint8Array };
 }
 
 /**
@@ -523,9 +518,7 @@ function initDefaultPlaylists(): void {
           'Smart playlists were updated, saving database to disk...',
         );
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-underscore-dangle
-          const originalDb = (db as any)._originalDb || db;
-          const data = originalDb.export();
+          const data = getExportableDb().export();
           const buffer = Buffer.from(data);
           fs.writeFileSync(DB_PATH, buffer);
           console.warn('Database saved to disk after updating smart playlists');
@@ -573,9 +566,7 @@ function initDefaultPlaylists(): void {
             'Saving database after creating playlists table and adding defaults...',
           );
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-underscore-dangle
-            const originalDb = (db as any)._originalDb || db;
-            const data = originalDb.export();
+            const data = getExportableDb().export();
             const buffer = Buffer.from(data);
             fs.writeFileSync(DB_PATH, buffer);
             console.warn('Database saved after creating playlists table');
@@ -2041,9 +2032,7 @@ export function updateSettingsFromMigration(
 export function persistNow(): void {
   if (useMockDb || !db) return;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-underscore-dangle
-    const originalDb = (db as any)._originalDb || db;
-    const data = originalDb.export();
+    const data = getExportableDb().export();
     const buffer = Buffer.from(data);
     fs.writeFileSync(DB_PATH, buffer);
   } catch (error) {
