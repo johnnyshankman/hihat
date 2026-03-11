@@ -40,7 +40,7 @@ The frameless window (`frame: false`) works on all platforms, but the custom tit
 
 #### 3. Replace rsync backup with cross-platform alternative
 
-`src/main/ipc/backupHandlers.ts` uses the `rsync` npm package which wraps the native `rsync` binary — not available on Windows without WSL2.
+`src/main/ipc/backupHandlers.ts` uses the `rsync` npm package. Despite being an npm package, it is **not** a JS implementation of rsync — it's a command builder that calls `child_process.spawn('rsync', [...])` under the hood. This works on macOS because `rsync` ships preinstalled as part of the BSD userland (included since Mac OS X 10.4 Tiger). Windows has no such equivalent — it doesn't ship with `rsync`, so the spawn call fails with `ENOENT`.
 
 Options (pick one):
 - **Option A**: Rewrite backup using Node.js `fs.cp()` (recursive copy, available in Node 20+). Simplest, no external dependencies.
