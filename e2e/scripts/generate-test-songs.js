@@ -389,6 +389,73 @@ INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume)
   return sql;
 }
 
+function generateExtraFormats() {
+  console.log('\nGenerating extra format test files...');
+
+  const formats = [
+    {
+      filename: '202 - Test Artist - Test FLAC Song.flac',
+      codecFlags: '-c:a flac',
+      metadata: true,
+    },
+    {
+      filename: '203 - Test Artist - Test WAV Song.wav',
+      codecFlags: '-c:a pcm_s16le',
+      metadata: true,
+    },
+    {
+      filename: '204 - Test Artist - Test OGG Song.ogg',
+      codecFlags: '-c:a libopus -b:a 128k',
+      metadata: true,
+    },
+    {
+      filename: '205 - Test Artist - Test AAC Song.aac',
+      codecFlags: '-c:a aac -b:a 128k -f adts',
+      metadata: false, // ADTS doesn't support tags
+    },
+  ];
+
+  formats.forEach((fmt) => {
+    const outputPath = path.join(OUTPUT_DIR, fmt.filename);
+
+    if (fs.existsSync(outputPath)) {
+      console.log(`Skipping (exists): ${fmt.filename}`);
+      return;
+    }
+
+    const metadataFlags = fmt.metadata
+      ? [
+          '-metadata title="Test Song"',
+          '-metadata artist="Test Artist"',
+          '-metadata album="Test Album"',
+          '-metadata genre="Electronic"',
+          '-metadata track="1"',
+          '-metadata date="2024"',
+        ].join(' ')
+      : '';
+
+    const cmd = [
+      'ffmpeg',
+      '-f lavfi',
+      '-i anullsrc=r=44100:cl=stereo',
+      `-t ${DURATION_SECONDS}`,
+      fmt.codecFlags,
+      metadataFlags,
+      '-y',
+      `"${outputPath}"`,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    try {
+      execSync(cmd, { stdio: 'pipe' });
+      console.log(`Created: ${fmt.filename}`);
+    } catch (error) {
+      console.error(`Failed to create ${fmt.filename}: ${error.message}`);
+    }
+  });
+}
+
 async function main() {
   console.log(`Generating ${NUM_SONGS} test MP3 files...`);
   console.log(`Output directory: ${OUTPUT_DIR}`);
@@ -411,6 +478,9 @@ async function main() {
       console.log(`Progress: ${i + 1}/${NUM_SONGS}`);
     }
   }
+
+  // Generate extra format test files (FLAC, WAV, OGG, AAC)
+  generateExtraFormats();
 
   // Generate SQL fixture file
   const sqlContent = generateSqlFixture(tracks);
