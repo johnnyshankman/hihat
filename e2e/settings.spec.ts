@@ -20,7 +20,7 @@ test.describe('Settings', () => {
 
     // Verify key settings sections are visible (use getByRole for headings)
     await expect(
-      page.getByRole('heading', { name: 'Library Location' }),
+      page.getByRole('heading', { name: 'Music Folder' }),
     ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'Appearance' }),

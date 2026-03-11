@@ -50,19 +50,3 @@ export const SMART_PLAYLISTS: SmartPlaylistDefinition[] = [
     },
   },
 ];
-
-/**
- * Get a smart playlist definition by its stable ID
- */
-export function getSmartPlaylistById(
-  smartPlaylistId: string,
-): SmartPlaylistDefinition | undefined {
-  return SMART_PLAYLISTS.find((sp) => sp.smartPlaylistId === smartPlaylistId);
-}
-
-/**
- * Check if a smartPlaylistId is valid
- */
-export function isValidSmartPlaylistId(smartPlaylistId: string): boolean {
-  return SMART_PLAYLISTS.some((sp) => sp.smartPlaylistId === smartPlaylistId);
-}

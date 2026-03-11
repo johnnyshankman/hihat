@@ -5,8 +5,9 @@ test.describe('Notification System', () => {
   test('should show notification when adding a track to a playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Right-click on a track in the library to open context menu
-    const trackRow = page.locator('[data-track-id="test-large-004"]');
+    // Right-click on the first visible track in the library to open context menu
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
 
     // Click "Add to Playlist" then select "Test Playlist"
@@ -31,26 +32,42 @@ test.describe('Notification System', () => {
   test('should stack multiple notifications', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Add a track to a playlist (first notification)
-    const trackRow4 = page.locator('[data-track-id="test-large-004"]');
-    await trackRow4.click({ button: 'right' });
+    // Add a track to playlist-1 (first notification)
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    const trackRow = page.locator('[data-track-id]').first();
+    await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
     await page.waitForTimeout(500);
     await page.click('[data-testid="playlist-option-playlist-1"]');
     await page.waitForTimeout(1000);
 
-    // Add another track to a playlist (second notification)
-    const trackRow5 = page.locator('[data-track-id="test-large-005"]');
-    await trackRow5.click({ button: 'right' });
-    await page.click('[data-testid="add-to-playlist-menu-item"]');
-    await page.waitForTimeout(500);
-    await page.click('[data-testid="playlist-option-playlist-1"]');
-    await page.waitForTimeout(1000);
-
-    // Verify multiple items in the panel
+    // Verify first notification in the auto-expanded panel
     const panel = page.locator('[data-testid="notification-panel"]');
     await panel.waitFor({ state: 'visible', timeout: 5000 });
+    const itemsAfterFirst = panel.locator('[data-testid="notification-item"]');
+    expect(await itemsAfterFirst.count()).toBe(1);
 
+    // Add same track to playlist-2 (second notification) using force click
+    // since panel overlay is present. Panel stays expanded because it's already open.
+    await trackRow.click({ button: 'right', force: true });
+    await page.waitForSelector('[data-testid="add-to-playlist-menu-item"]', {
+      timeout: 5000,
+    });
+    await page.click('[data-testid="add-to-playlist-menu-item"]');
+    await page.waitForSelector('[data-testid="playlist-option-playlist-2"]', {
+      timeout: 5000,
+    });
+    await page.click('[data-testid="playlist-option-playlist-2"]');
+    await page.waitForTimeout(1000);
+
+    // Re-open the panel via the toggle event since click-outside closed it
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('toggleNotificationPanel'));
+    });
+    await page.waitForTimeout(500);
+
+    // Verify multiple items in the panel
+    await panel.waitFor({ state: 'visible', timeout: 5000 });
     const items = panel.locator('[data-testid="notification-item"]');
     const count = await items.count();
     expect(count).toBeGreaterThanOrEqual(2);
@@ -62,7 +79,8 @@ test.describe('Notification System', () => {
     const { app, page } = await TestHelpers.launchApp();
 
     // Trigger a notification
-    const trackRow = page.locator('[data-track-id="test-large-004"]');
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
     await page.waitForTimeout(500);
@@ -91,22 +109,36 @@ test.describe('Notification System', () => {
   test('should clear all notifications', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Trigger two notifications
-    const trackRow4 = page.locator('[data-track-id="test-large-004"]');
-    await trackRow4.click({ button: 'right' });
+    // Add a track to playlist-1 (first notification)
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    const trackRow = page.locator('[data-track-id]').first();
+    await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
     await page.waitForTimeout(500);
     await page.click('[data-testid="playlist-option-playlist-1"]');
     await page.waitForTimeout(1000);
 
-    const trackRow5 = page.locator('[data-track-id="test-large-005"]');
-    await trackRow5.click({ button: 'right' });
-    await page.click('[data-testid="add-to-playlist-menu-item"]');
-    await page.waitForTimeout(500);
-    await page.click('[data-testid="playlist-option-playlist-1"]');
-    await page.waitForTimeout(1000);
-
+    // Verify first notification in the auto-expanded panel
     const panel = page.locator('[data-testid="notification-panel"]');
+    await panel.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Add same track to playlist-2 (second notification)
+    await trackRow.click({ button: 'right', force: true });
+    await page.waitForSelector('[data-testid="add-to-playlist-menu-item"]', {
+      timeout: 5000,
+    });
+    await page.click('[data-testid="add-to-playlist-menu-item"]');
+    await page.waitForSelector('[data-testid="playlist-option-playlist-2"]', {
+      timeout: 5000,
+    });
+    await page.click('[data-testid="playlist-option-playlist-2"]');
+    await page.waitForTimeout(1000);
+
+    // Re-open the panel via the toggle event since click-outside closed it
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('toggleNotificationPanel'));
+    });
+    await page.waitForTimeout(500);
     await panel.waitFor({ state: 'visible', timeout: 5000 });
 
     // Click Clear
@@ -123,7 +155,8 @@ test.describe('Notification System', () => {
     const { app, page } = await TestHelpers.launchApp();
 
     // Trigger a notification so panel opens
-    const trackRow = page.locator('[data-track-id="test-large-004"]');
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
     await page.waitForTimeout(500);
@@ -147,7 +180,8 @@ test.describe('Notification System', () => {
     const { app, page } = await TestHelpers.launchApp();
 
     // Trigger a notification
-    const trackRow = page.locator('[data-track-id="test-large-004"]');
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
     await page.waitForTimeout(500);
@@ -171,7 +205,8 @@ test.describe('Notification System', () => {
     const { app, page } = await TestHelpers.launchApp();
 
     // Trigger a notification via a real action
-    const trackRow = page.locator('[data-track-id="test-large-004"]');
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
     await page.waitForTimeout(500);

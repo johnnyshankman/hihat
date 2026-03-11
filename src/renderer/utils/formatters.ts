@@ -24,39 +24,6 @@ export function formatDuration(seconds: number): string {
 }
 
 /**
- * Format a date string to a human-readable string
- * @param dateString - ISO date string
- * @returns Formatted date string
- */
-export function formatDate(dateString: string | null): string {
-  if (!dateString) {
-    return 'Never';
-  }
-
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  } catch (error) {
-    return 'Invalid date';
-  }
-}
-
-/**
- * Format a file size in bytes to a human-readable string
- * @param bytes - File size in bytes
- * @returns Formatted file size string
- */
-export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
-
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-}
-
-/**
  * Calculate total duration in decimal format from an array of tracks
  * @param tracks - Array of tracks with duration in seconds
  * @returns Total duration formatted as "X.Y mins", "X.Y hours", or "X.Y days"

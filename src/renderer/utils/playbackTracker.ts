@@ -112,23 +112,6 @@ export class PlaybackTracker {
     // eslint-disable-next-line no-console
     console.log(`PlaybackTracker: Reset tracking for track ${trackId}`);
   }
-
-  /**
-   * Get the current accumulated listen time for a track
-   * @param trackId - ID of the track
-   * @returns Accumulated listen time in seconds
-   */
-  public getListenTime(trackId: string): number {
-    return this.listenTimeMap.get(trackId) || 0;
-  }
-
-  /**
-   * Check if the current track has been counted for play count
-   * @returns True if the current track has been counted
-   */
-  public isCurrentTrackCounted(): boolean {
-    return this.hasCurrentTrackBeenCounted;
-  }
 }
 
 // Create a singleton instance of the tracker
