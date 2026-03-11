@@ -77,5 +77,4 @@ test.describe('Application Launch', () => {
 
     await TestHelpers.closeApp(app);
   });
-
 });
