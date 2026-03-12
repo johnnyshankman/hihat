@@ -68,7 +68,8 @@
     },
     "testPathIgnorePatterns": [
       "release/app/dist",
-      ".erb/dll"
+      ".erb/dll",
+      "e2e/"
     ],
     "transform": {
       "\\.(ts|tsx|js|jsx)$": "ts-jest"

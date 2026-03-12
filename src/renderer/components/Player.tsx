@@ -142,6 +142,9 @@ function Player() {
   );
   const repeatMode = useSettingsAndPlaybackStore((state) => state.repeatMode);
   const shuffleMode = useSettingsAndPlaybackStore((state) => state.shuffleMode);
+  const skipInProgress = useSettingsAndPlaybackStore(
+    (state) => state.skipInProgress,
+  );
 
   // Get actions from the store
   const setPaused = useSettingsAndPlaybackStore((state) => state.setPaused);
@@ -869,7 +872,7 @@ function Player() {
             <Tooltip arrow placement="top" title="Previous">
               <span>
                 <IconButton
-                  disabled={!currentTrack}
+                  disabled={!currentTrack || skipInProgress}
                   onClick={skipToPreviousTrack}
                   size="medium"
                   sx={{
@@ -910,7 +913,7 @@ function Player() {
             <Tooltip arrow placement="top" title="Next">
               <span>
                 <IconButton
-                  disabled={!currentTrack}
+                  disabled={!currentTrack || skipInProgress}
                   onClick={skipToNextTrack}
                   size="medium"
                   sx={{

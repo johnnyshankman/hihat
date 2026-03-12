@@ -13,6 +13,29 @@ import {
 } from '../utils/trackSelectionUtils';
 import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
 
+/**
+ * Flush accumulated play-count tracking before a skip operation.
+ * This replaces the work that onpause was doing, so we can remove
+ * the pause() call from skip paths (which was causing UI flicker).
+ */
+function flushPlaybackTracking(state: SettingsAndPlaybackStore) {
+  if (!state.paused && state.currentTrack) {
+    const now = Date.now();
+    const lastUpdate = state.lastPlaybackTimeUpdateRef;
+    const secondsPlayed = Math.floor((now - lastUpdate) / 1000);
+    if (secondsPlayed > 0) {
+      const shouldCountPlay = playbackTracker.updateListenTime(
+        state.currentTrack.id,
+        secondsPlayed,
+        state.currentTrack.duration,
+      );
+      if (shouldCountPlay) {
+        updatePlayCount(state.currentTrack.id);
+      }
+    }
+  }
+}
+
 // Define the settings and playback store
 const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
   (set, get) => ({
@@ -40,6 +63,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     // Playback state (from playbackStore)
     currentTrack: null, // the current track playing
     paused: true, // play pause state
+    skipInProgress: false, // true while a skip operation is in-flight
     position: 0, // current position of the playing track in seconds
     duration: 0, // duration of the playing track in seconds
     playbackSource: 'library', // the source of the playback (library or playlist)
@@ -487,6 +511,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           throw new Error('No player found while skipping to next song');
         }
 
+        // Guard against rapid skip clicks while a skip is still loading
+        if (state.skipInProgress) {
+          return {};
+        }
+
         if (state.repeatMode === 'track') {
           // For repeat track mode, start from the beginning
           state.player.setPosition(0);
@@ -522,8 +551,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               // Calculate the song after this one in history
               const futureNextSong = state.shuffleHistory[newPosition + 1];
 
-              // First pause current playback
-              state.player.pause();
+              flushPlaybackTracking(state);
               state.player.removeAllTracks();
 
               // Add the next song and future next song if it exists
@@ -557,6 +585,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: nextSong.duration,
                 shuffleHistoryPosition: newPosition,
+                skipInProgress: !state.paused,
               };
             }
           }
@@ -659,8 +688,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             albumFilter,
           );
 
-          // First pause current playback
-          state.player.pause();
+          flushPlaybackTracking(state);
           state.player.removeAllTracks();
 
           // Add the next song and future next song
@@ -695,6 +723,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             duration: nextSong.duration,
             shuffleHistory,
             shuffleHistoryPosition: shuffleHistory.length - 1, // Now at the new tip
+            skipInProgress: !state.paused,
           };
         }
 
@@ -728,24 +757,47 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           albumFilter,
         );
 
-        // First pause current playback
-        state.player.pause();
-        state.player.removeAllTracks();
+        flushPlaybackTracking(state);
 
-        // Add the next song and future next song
-        state.player.addTrack(getTrackUrl(nextSong.filePath));
-        if (futureNextSong) {
-          state.player.addTrack(getTrackUrl(futureNextSong.filePath));
+        // Check if next track is already pre-loaded at queue index 1
+        const queuedTracks = state.player.getTracks();
+        const preloadedUrl = queuedTracks.length > 1 ? queuedTracks[1] : null;
+        const nextSongUrl = getTrackUrl(nextSong.filePath);
+
+        // Only use the fast path if the pre-loaded source has finished loading.
+        // If still loading, gotoTrack's internal stopAllTracks transitions the
+        // source from Loading to Stop, causing play() to fail silently because
+        // it tries playAudioFile() with no loaded data instead of queuing.
+        // Gapless5State: None=0, Loading=1, Starting=2, Play=3, Stop=4, Error=5
+        const GAPLESS5_LOADING = 1;
+        const preloadedSource =
+          queuedTracks.length > 1 ? state.player.playlist.sources[1] : null;
+        const isPreloadReady =
+          preloadedSource && preloadedSource.getState() !== GAPLESS5_LOADING;
+
+        if (preloadedUrl === nextSongUrl && isPreloadReady) {
+          // FAST PATH: switch to already-buffered track (no load delay)
+          state.player.gotoTrack(1);
+          state.player.removeTrack(0);
+          if (futureNextSong) {
+            state.player.addTrack(getTrackUrl(futureNextSong.filePath));
+          }
+        } else {
+          // SLOW PATH: queue doesn't match, rebuild
+          state.player.removeAllTracks();
+          state.player.addTrack(nextSongUrl);
+          if (futureNextSong) {
+            state.player.addTrack(getTrackUrl(futureNextSong.filePath));
+          }
+          if (!state.paused) {
+            state.player.play();
+          }
         }
 
-        if (!state.paused) {
-          state.player.play();
-          // Play the silent audio for MediaSession
-          if (state.silentAudioRef) {
-            state.silentAudioRef.play().catch((error) => {
-              console.error('Error playing silent audio:', error);
-            });
-          }
+        if (!state.paused && state.silentAudioRef) {
+          state.silentAudioRef.play().catch((error) => {
+            console.error('Error playing silent audio:', error);
+          });
         }
 
         updateMediaSession(nextSong);
@@ -762,6 +814,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPosition: 0,
           lastPlaybackTimeUpdateRef: Date.now(),
           duration: nextSong.duration,
+          skipInProgress: !state.paused,
         };
       });
     },
@@ -770,6 +823,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       return set((state) => {
         if (!state.player) {
           throw new Error('No player found while skipping to previous song');
+        }
+
+        // Guard against rapid skip clicks while a skip is still loading
+        if (state.skipInProgress) {
+          return {};
         }
 
         // If we're less than 3 seconds into the song, go to previous track
@@ -792,8 +850,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               const futureNextSong =
                 state.shuffleHistory[state.shuffleHistoryPosition];
 
-              // First pause current playback
-              state.player.pause();
+              flushPlaybackTracking(state);
               state.player.removeAllTracks();
 
               // Add the previous song and the current song (as the next track)
@@ -827,6 +884,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: previousSong.duration,
                 shuffleHistoryPosition: newPosition,
+                skipInProgress: !state.paused,
               };
             }
           }
@@ -866,8 +924,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           // Calculate the song to play after this one (which is the current track)
           const futureNextSong = state.currentTrack;
 
-          // First pause current playback
-          state.player.pause();
+          flushPlaybackTracking(state);
           state.player.removeAllTracks();
 
           // Add the previous song and the current song (as the next track)
@@ -898,6 +955,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPosition: 0,
             lastPlaybackTimeUpdateRef: Date.now(),
             duration: previousSong.duration,
+            skipInProgress: !state.paused,
           };
         }
         // Restart the current track
@@ -1038,6 +1096,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         player.onplay = () => {
           set({
             paused: false,
+            skipInProgress: false,
             lastPlaybackTimeUpdateRef: Date.now(),
             lastPosition: get().position,
           });

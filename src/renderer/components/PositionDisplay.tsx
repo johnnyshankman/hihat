@@ -43,6 +43,7 @@ const PositionDisplay = React.memo(
       >
         <Typography
           color="textSecondary"
+          data-testid="player-elapsed-time"
           sx={{
             mr: 1,
             minWidth: { xs: '30px', sm: '40px' },

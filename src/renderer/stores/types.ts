@@ -202,6 +202,7 @@ export interface SettingsAndPlaybackStore {
 
   // Internal state
   player: Gapless5 | null;
+  skipInProgress: boolean;
   lastPositionUpdateRef: number;
   lastPlaybackTimeUpdateRef: number;
   lastPosition: number;
