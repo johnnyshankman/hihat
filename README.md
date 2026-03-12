@@ -106,7 +106,7 @@
 * Download album art from any track
 * Show any track's file in Finder
 
-![hihat in light theme with Browser panel open on the right side](screenshots/features-light-theme-artist-browser.png)
+![hihat in light theme with Browser panel open at the top](screenshots/features-light-theme-artist-browser.png)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -211,13 +211,13 @@ Right-click any user-created playlist in the sidebar to **Rename** or **Delete**
 
 **Search:** Click the search icon in the toolbar (or just start typing when focused on the library) to filter tracks by title, artist, album, or genre.
 
-**Browser:** Click the people icon in the toolbar to open the Browser panel on the right. It has two columns — Album Artist and Album — so you can drill down by artist and then by album. Click any item to filter; click it again to deselect.
+**Browser:** Click the people icon in the toolbar to open the Browser panel at the top. It has two columns — Album Artist and Album — so you can drill down by artist and then by album. Click any item to filter; click it again to deselect.
 
 **Sorting:** Click any column header to sort ascending or descending.
 
 **Column visibility:** Right-click any column header to show or hide columns (Title, Artist, Album, Album Artist, Genre, Time, Play Count, Date Added, Last Played).
 
-![hihat library with search bar active and Browser panel open on the right](screenshots/usage-search-artist-browser.png)
+![hihat library with search bar active and Browser panel open at the top](screenshots/usage-search-artist-browser.png)
 
 ### Mini Player
 
