@@ -128,7 +128,7 @@ export interface IPCRequests {
     total: number;
     currentFile: string;
   };
-  'library:scanComplete': { tracksAdded: number };
+  'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
   'library:resetDatabase': void;
   'library:resetTracks': void;
 
@@ -265,7 +265,12 @@ export interface IPCRequests {
  */
 export interface IPCResponses {
   // Library operations
-  'library:scan': { success: boolean; message: string; tracksAdded: number };
+  'library:scan': {
+    success: boolean;
+    message: string;
+    tracksAdded: number;
+    tracksRemoved: number;
+  };
   'library:import': { success: boolean; message: string; tracksAdded: number };
   'library:backup': { success: boolean } | { error: string };
   'library:restore': { success: boolean } | { error: string };
@@ -274,7 +279,7 @@ export interface IPCResponses {
     total: number;
     currentFile: string;
   };
-  'library:scanComplete': { tracksAdded: number };
+  'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
   'library:resetDatabase': { success: boolean; message: string };
   'library:resetTracks': { success: boolean; message: string };
 

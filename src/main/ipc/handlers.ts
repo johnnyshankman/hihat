@@ -255,6 +255,7 @@ export const libraryHandlers = {
         success: true,
         message: `Successfully scanned library at ${libraryPath}`,
         tracksAdded: result.tracksAdded,
+        tracksRemoved: result.tracksRemoved,
       };
     } catch (error: unknown) {
       console.error(`Error scanning library at ${libraryPath}:`, error);
@@ -262,6 +263,7 @@ export const libraryHandlers = {
         success: false,
         message: `Failed to scan library: ${(error as Error).message || 'Unknown error'}`,
         tracksAdded: 0,
+        tracksRemoved: 0,
       };
     }
   }) as IPCHandler<'library:scan'>,

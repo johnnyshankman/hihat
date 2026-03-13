@@ -434,13 +434,25 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
 // Set up event listener for library scan completion
 if (typeof window !== 'undefined') {
   window.electron.ipcRenderer.on('library:scanComplete', (data: any) => {
-    console.warn(`Library scan complete: ${data.tracksAdded} new tracks added`);
-    useUIStore
-      .getState()
-      .showNotification(
-        `Library scan complete: ${data.tracksAdded} new tracks added`,
-        'success',
-      );
+    if (data.error) {
+      console.warn(`Library scan failed: ${data.error}`);
+      useUIStore.getState().showNotification(data.error, 'error');
+      return;
+    }
+
+    const added = data.tracksAdded || 0;
+    const removed = data.tracksRemoved || 0;
+
+    let message = 'Library scan complete: ';
+    const parts: string[] = [];
+    if (added > 0)
+      parts.push(`${added} new track${added !== 1 ? 's' : ''} added`);
+    if (removed > 0)
+      parts.push(`${removed} stale track${removed !== 1 ? 's' : ''} removed`);
+    message += parts.length > 0 ? parts.join(', ') : 'No changes';
+
+    console.warn(message);
+    useUIStore.getState().showNotification(message, 'success');
 
     // Reload the library to get the updated tracks
     // Pass false to avoid showing loading screen during refresh

@@ -750,10 +750,22 @@ function createTrackMap(existingTracks: Track[]): Map<string, Track> {
  */
 export async function scanLibrary(
   dirPath: string,
-): Promise<{ tracksAdded: number }> {
+): Promise<{ tracksAdded: number; tracksRemoved: number }> {
   debugLog(`Beginning library scan of directory: ${dirPath}`);
 
   try {
+    // Verify the scan directory is accessible before proceeding
+    if (!fs.existsSync(dirPath)) {
+      const errMsg = `Library path is not accessible: ${dirPath}`;
+      debugLog(errMsg);
+      sendProgressEvent('library:scanComplete', {
+        tracksAdded: 0,
+        tracksRemoved: 0,
+        error: errMsg,
+      });
+      return { tracksAdded: 0, tracksRemoved: 0 };
+    }
+
     // Get all music files in the directory
     const files = getMusicFiles(dirPath);
     const totalFiles = files.length;
@@ -919,17 +931,60 @@ export async function scanLibrary(
 
     await Promise.all(fileDeletionPromises);
 
-    // Count tracks in final database
-    const finalTracks = db.getAllTracks();
+    // Remove stale tracks whose files no longer exist on disk
+    let tracksRemoved = 0;
+    const currentTracks = db.getAllTracks();
 
-    debugLog(`Final database contains ${finalTracks.length} total tracks`);
+    const staleCheckResults = await Promise.all(
+      currentTracks.map(async (track) => {
+        const fileExists = await exists(track.filePath);
+        return fileExists ? null : track.id;
+      }),
+    );
+    const staleTrackIds = staleCheckResults.filter(
+      (id): id is string => id !== null,
+    );
+
+    if (staleTrackIds.length > 0) {
+      debugLog(`Found ${staleTrackIds.length} stale tracks to remove`);
+
+      // Remove stale track IDs from playlists
+      const allPlaylists = db.getAllPlaylists();
+      const staleIdSet = new Set(staleTrackIds);
+
+      db.beginBatchMode();
+      try {
+        allPlaylists.forEach((playlist) => {
+          if (playlist.isSmart) return;
+          const filtered = playlist.trackIds.filter(
+            (id) => !staleIdSet.has(id),
+          );
+          if (filtered.length !== playlist.trackIds.length) {
+            db.updatePlaylist({ ...playlist, trackIds: filtered });
+          }
+        });
+
+        staleTrackIds.forEach((id) => {
+          db.deleteTrack(id);
+        });
+      } finally {
+        db.endBatchMode();
+      }
+
+      tracksRemoved = staleTrackIds.length;
+    }
+
+    debugLog(
+      `Final database contains ${currentTracks.length - tracksRemoved} total tracks`,
+    );
 
     // Send completion event
     sendProgressEvent('library:scanComplete', {
       tracksAdded,
+      tracksRemoved,
     });
 
-    return { tracksAdded };
+    return { tracksAdded, tracksRemoved };
   } catch (error) {
     debugLog(`ERROR: Library scan failed:`, error);
     console.error(`Error scanning library at ${dirPath}:`, error);
@@ -1198,6 +1253,7 @@ export async function importFiles(
     // Send completion event
     sendProgressEvent('library:scanComplete', {
       tracksAdded,
+      tracksRemoved: 0,
     });
 
     return { tracksAdded };
