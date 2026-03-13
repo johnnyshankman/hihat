@@ -1,417 +1,306 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { List } from 'react-virtualized';
-import Draggable from 'react-draggable';
-import { IconButton } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import useMainStore from '../store/main';
-import { LightweightAudioMetadata } from '../../common/common';
-import { useWindowDimensions } from '../hooks/useWindowDimensions';
+import React, {
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+} from 'react';
+import { Track } from '../../types/dbTypes';
 
 interface BrowserProps {
-  onClose: () => void;
+  tracks: Track[];
+  selectedArtist: string | null;
+  selectedAlbum: string | null;
+  onArtistSelect: (artist: string | null) => void;
+  onAlbumSelect: (album: string | null) => void;
+  height: number;
+  onHeightChange: (h: number) => void;
 }
 
-type BrowserSelection = {
-  artist: string | null;
-  album: string | null;
-};
+// Strip leading "the " for sorting
+function sortKey(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.startsWith('the ')) {
+    return lower.slice(4);
+  }
+  return lower;
+}
 
-const ROW_HEIGHT = 25.5; // Fixed row height
-const BROWSER_WIDTH = 800; // Fixed browser width
-
-export default function Browser({ onClose }: BrowserProps) {
-  /**
-   * @dev window provider hook
-   */
-  const { width, height } = useWindowDimensions();
-
-  /**
-   * @dev store hooks
-   */
-  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
-  const setOverrideScrollToIndex = useMainStore(
-    (store) => store.setOverrideScrollToIndex,
+function Browser({
+  tracks,
+  selectedArtist,
+  selectedAlbum,
+  onArtistSelect,
+  onAlbumSelect,
+  height,
+  onHeightChange,
+}: BrowserProps) {
+  const artistColumnRef = useRef<HTMLDivElement>(null);
+  const albumColumnRef = useRef<HTMLDivElement>(null);
+  const browserPanelRef = useRef<HTMLDivElement>(null);
+  const resizeStartRef = useRef<{ startY: number; startHeight: number } | null>(
+    null,
   );
-  const currentSong = useMainStore((store) => store.currentSong);
-  const storeLibrary = useMainStore((store) => store.library);
+  const [focusedColumn, setFocusedColumn] = useState<'artist' | 'album' | null>(
+    null,
+  );
+  const typeAheadBufferRef = useRef('');
+  const typeAheadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
-  /**
-   * @dev component state
-   */
-  const [selection, setSelection] = useState<BrowserSelection>({
-    artist: null,
-    album: null,
-  });
-
-  const [artists, setArtists] = useState<string[]>([]);
-  const [albums, setAlbums] = useState<string[]>([]);
-  const [position, setPosition] = useState({ x: 100, y: 100 });
-  const [browserDimensions, setBrowserDimensions] = useState({
-    width: BROWSER_WIDTH,
-    height: height ? height * 0.25 : 400,
-  });
-
-  /**
-   * @dev component refs
-   */
-  const browserRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!browserRef.current) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      // eslint-disable-next-line no-restricted-syntax
-      for (const entry of entries) {
-        const { width: newWidth, height: newHeight } = entry.contentRect;
-
-        setBrowserDimensions({
-          width: newWidth,
-          height: newHeight,
-        });
-      }
-    });
-
-    resizeObserver.observe(browserRef.current);
-
-    // eslint-disable-next-line consistent-return
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [browserRef]);
-
-  // Calculate available artists and albums based on library
-  useEffect(() => {
-    if (!storeLibrary) return;
-
+  // Compute unique album artists from tracks
+  const artists = useMemo(() => {
     const artistSet = new Set<string>();
-    const albumSet = new Set<string>();
-
-    Object.values(storeLibrary).forEach((song: LightweightAudioMetadata) => {
-      if (song.common.artist) {
-        artistSet.add(song.common.artist);
-      }
-      if (song.common.album) {
-        albumSet.add(song.common.album);
-      }
+    tracks.forEach((track) => {
+      const artist = track.albumArtist || track.artist || 'Unknown Artist';
+      artistSet.add(artist);
     });
+    const list = Array.from(artistSet);
+    list.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    return list;
+  }, [tracks]);
 
-    setArtists(Array.from(artistSet).sort());
-    setAlbums(Array.from(albumSet).sort());
-  }, [storeLibrary]);
+  // Compute unique albums, filtered by selected artist if any
+  const albums = useMemo(() => {
+    let filtered = tracks;
+    if (selectedArtist) {
+      filtered = tracks.filter((track) => {
+        const artist = track.albumArtist || track.artist || 'Unknown Artist';
+        return artist === selectedArtist;
+      });
+    }
+    const albumSet = new Set<string>();
+    filtered.forEach((track) => {
+      const album = track.album || 'Unknown Album';
+      albumSet.add(album);
+    });
+    const list = Array.from(albumSet);
+    list.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    return list;
+  }, [tracks, selectedArtist]);
 
-  // Filter the library based on selections
+  // Auto-scroll selected artist into view
   useEffect(() => {
-    if (!storeLibrary) return;
-
-    const filteredSongs = Object.fromEntries(
-      Object.entries(storeLibrary).filter(([_, song]) => {
-        return (
-          (!selection.artist || song.common.artist === selection.artist) &&
-          (!selection.album || song.common.album === selection.album)
-        );
-      }),
-    );
-
-    setFilteredLibrary(filteredSongs);
-  }, [selection, storeLibrary, setFilteredLibrary]);
-
-  // Update available albums when artist is selected
-  useEffect(() => {
-    if (!storeLibrary || !selection.artist) {
-      // Reset albums to full list when artist is deselected
-      const albumSet = new Set<string>();
-      Object.values(storeLibrary || {}).forEach(
-        (song: LightweightAudioMetadata) => {
-          if (song.common.album) {
-            albumSet.add(song.common.album);
-          }
-        },
+    if (selectedArtist && artistColumnRef.current) {
+      const el = artistColumnRef.current.querySelector(
+        `[data-artist="${CSS.escape(selectedArtist)}"]`,
       );
-      setAlbums(Array.from(albumSet).sort());
-      return;
-    }
-
-    const albumSet = new Set<string>();
-    Object.values(storeLibrary).forEach((song: LightweightAudioMetadata) => {
-      if (song.common.artist === selection.artist && song.common.album) {
-        albumSet.add(song.common.album);
+      if (el) {
+        el.scrollIntoView({ block: 'nearest' });
       }
-    });
-    setAlbums(Array.from(albumSet).sort());
-    setSelection((prev) => ({ ...prev, album: null }));
-  }, [selection.artist, storeLibrary]);
+    }
+  }, [selectedArtist]);
 
+  // Auto-scroll selected album into view
   useEffect(() => {
-    if (!width || !height) return;
-
-    let newX = position.x;
-    if (position.x + browserDimensions.width > width) {
-      newX = width - browserDimensions.width - 10;
+    if (selectedAlbum && albumColumnRef.current) {
+      const el = albumColumnRef.current.querySelector(
+        `[data-album="${CSS.escape(selectedAlbum)}"]`,
+      );
+      if (el) {
+        el.scrollIntoView({ block: 'nearest' });
+      }
     }
-    if (newX < 0) {
-      newX = 0;
-    }
+  }, [selectedAlbum]);
 
-    let newY = position.y;
-    if (position.y + browserDimensions.height > height - 80) {
-      newY = height - browserDimensions.height - 80;
-    }
-    if (newY < 60) {
-      newY = 60;
-    }
+  // Clear focus and type-ahead buffer when clicking outside the browser panel
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      if (
+        browserPanelRef.current &&
+        !browserPanelRef.current.contains(e.target as Node)
+      ) {
+        setFocusedColumn(null);
+        typeAheadBufferRef.current = '';
+      }
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, []);
 
-    if (newX !== position.x || newY !== position.y) {
-      setPosition({ x: newX, y: newY });
-    }
-  }, [
-    width,
-    height,
-    position.x,
-    position.y,
-    browserDimensions.width,
-    browserDimensions.height,
-  ]);
+  // Type-ahead keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!focusedColumn) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.length !== 1) return;
 
-  type ResizeCorner = 'topLeft' | 'topRight' | 'bottomLeft';
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')
+      ) {
+        return;
+      }
 
-  const handleResize =
-    (corner: ResizeCorner) => (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!browserRef.current) return;
+      // Don't respond if browser panel is hidden
+      if (!browserPanelRef.current?.offsetParent) return;
 
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const startWidth = browserRef.current.offsetWidth;
-      const startHeight = browserRef.current.offsetHeight;
-      const startLeft = position.x;
-      const startTop = position.y;
+      e.preventDefault();
+
+      typeAheadBufferRef.current += e.key.toLowerCase();
+
+      if (typeAheadTimeoutRef.current) {
+        clearTimeout(typeAheadTimeoutRef.current);
+      }
+      typeAheadTimeoutRef.current = setTimeout(() => {
+        typeAheadBufferRef.current = '';
+      }, 600);
+
+      const buffer = typeAheadBufferRef.current;
+      const list = focusedColumn === 'artist' ? artists : albums;
+      const match = list.find((item) => sortKey(item).startsWith(buffer));
+
+      if (match) {
+        if (focusedColumn === 'artist') {
+          onArtistSelect(match);
+        } else {
+          onAlbumSelect(match);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [focusedColumn, artists, albums, onArtistSelect, onAlbumSelect]);
+
+  // Resize handle logic
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      resizeStartRef.current = { startY: e.clientY, startHeight: height };
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
-        // Calculate deltas based on corner
-        const deltaX =
-          corner === 'topRight'
-            ? moveEvent.clientX - startX
-            : startX - moveEvent.clientX;
-
-        const deltaY = corner.startsWith('top')
-          ? startY - moveEvent.clientY
-          : moveEvent.clientY - startY;
-
-        const newWidth = Math.min(
-          Math.max(400, startWidth + deltaX),
-          width ? width - 20 : 1200,
+        if (!resizeStartRef.current) return;
+        const delta = moveEvent.clientY - resizeStartRef.current.startY;
+        const newHeight = Math.max(
+          80,
+          Math.min(600, resizeStartRef.current.startHeight + delta),
         );
-        const newHeight = Math.min(
-          Math.max(200, startHeight + deltaY),
-          height ? height - 60 - 120 : 800,
-        );
-
-        // Update position based on corner
-        const newLeft =
-          corner !== 'topRight'
-            ? startLeft - (newWidth - startWidth)
-            : startLeft;
-
-        const newTop = corner.startsWith('top')
-          ? startTop - (newHeight - startHeight)
-          : startTop;
-
-        setBrowserDimensions({
-          width: newWidth,
-          height: newHeight,
-        });
-
-        setPosition({
-          x: corner !== 'topRight' ? newLeft : position.x,
-          y: corner.startsWith('top') ? Math.max(60, newTop) : position.y,
-        });
+        onHeightChange(newHeight);
       };
 
       const handleMouseUp = () => {
+        resizeStartRef.current = null;
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
 
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
-    };
-
-  const renderRow = (
-    list: string[],
-    selectedItem: string | null,
-    onClick: (item: string | null) => void,
-  ) =>
-    // eslint-disable-next-line react/no-unstable-nested-components, func-names
-    function ({
-      index,
-      key,
-      style,
-    }: {
-      index: number;
-      key: string;
-      style: React.CSSProperties;
-    }) {
-      return (
-        <div
-          key={key}
-          className="flex w-full items-center border-b last:border-b-0 border-neutral-800 transition-colors duration-75 hover:bg-neutral-800/50 data-[state=selected]:bg-neutral-800 py-1"
-          data-state={list[index] === selectedItem ? 'selected' : undefined}
-          onClick={() => {
-            if (list[index] === selectedItem) {
-              onClick(null);
-            } else {
-              onClick(list[index]);
-            }
-          }}
-          onKeyDown={() => {}}
-          role="button"
-          style={style}
-          tabIndex={index}
-        >
-          <div className="select-none whitespace-nowrap overflow-hidden py-1 px-4 align-middle text-xs">
-            {list[index]}
-          </div>
-        </div>
-      );
-    };
-
-  if (!width || !height) return null;
+    },
+    [height, onHeightChange],
+  );
 
   return (
-    <Draggable
-      bounds="parent"
-      handle=".drag-handle"
-      onStop={(e, data) => setPosition({ x: data.x, y: data.y })}
-      position={position}
+    <div
+      ref={browserPanelRef}
+      className="browser-panel"
+      data-testid="browser-panel"
+      style={{ height }}
     >
-      <div
-        ref={browserRef}
-        className="absolute nodrag bg-[#1d1d1d] rounded-lg shadow-2xl resize overflow-hidden"
-        style={{
-          width: browserDimensions.width,
-          height: browserDimensions.height,
-          resize: 'both',
-          minWidth: '400px',
-          minHeight: '200px',
-          maxWidth: width ? width - 20 : BROWSER_WIDTH,
-          maxHeight: height ? height - 60 - 120 : '400px',
-          zIndex: 1000000000,
-        }}
-      >
-        {/* Add this line right after the opening div */}
+      <div className="browser-columns">
+        {/* Album Artist column */}
+        {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
         <div
-          aria-label="Resize browser"
-          className="resize-handle-nw"
-          onMouseDown={handleResize('topLeft')}
-          role="button"
-          tabIndex={0}
-        />
-
-        <div
-          aria-label="Resize browser"
-          className="resize-handle-ne"
-          onMouseDown={handleResize('topRight')}
-          role="button"
-          tabIndex={0}
-        />
-
-        <div
-          aria-label="Resize browser"
-          className="resize-handle-sw"
-          onMouseDown={handleResize('bottomLeft')}
-          role="button"
-          tabIndex={0}
-        />
-
-        <div className="drag-handle flex items-center justify-between px-2 py-0.5 border-b border-neutral-800 cursor-move border-t-2 border-l-2 border-r-2">
-          <div className="flex items-center gap-2">
-            <DragIndicatorIcon className="text-neutral-400" fontSize="small" />
-            <span className="text-xs font-medium text-neutral-400">
-              browser
-            </span>
-          </div>
-          <IconButton
-            className="text-neutral-400 hover:text-white"
-            onClick={() => {
-              const oldSelection = selection;
-
-              setSelection({
-                artist: null,
-                album: null,
-              });
-
-              if (storeLibrary) {
-                setFilteredLibrary(storeLibrary);
-              }
-
-              if (oldSelection.album) {
-                // scroll to the album's first song in the library
-                const firstSongIndex = Object.keys(storeLibrary).findIndex(
-                  (key) =>
-                    storeLibrary[key].common.album === oldSelection.album,
-                );
-                setOverrideScrollToIndex(firstSongIndex);
-              } else if (oldSelection.artist) {
-                // scroll to the artist's first song in the library
-                const firstSongIndex = Object.keys(storeLibrary).findIndex(
-                  (key) =>
-                    storeLibrary[key].common.artist === oldSelection.artist,
-                );
-                setOverrideScrollToIndex(firstSongIndex);
-              } else if (currentSong) {
-                // scroll to the currently playing song
-                const currentSongIndex = Object.keys(storeLibrary).findIndex(
-                  (key) => key === currentSong,
-                );
-                setOverrideScrollToIndex(currentSongIndex);
-              }
-
-              onClose();
-            }}
-            size="small"
+          ref={artistColumnRef}
+          className={`browser-column${focusedColumn === 'artist' ? ' browser-column-focused' : ''}`}
+          data-testid="browser-artist-column"
+          onMouseDown={() => {
+            setFocusedColumn('artist');
+            typeAheadBufferRef.current = '';
+          }}
+          role="listbox"
+        >
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus */}
+          <div
+            aria-selected={selectedArtist === null}
+            className={`browser-item${selectedArtist === null ? ' browser-item-selected' : ''}`}
+            data-testid="browser-artist-all"
+            onClick={() => onArtistSelect(null)}
+            role="option"
           >
-            <CloseIcon fontSize="small" />
-          </IconButton>
+            All Album Artists ({artists.length})
+          </div>
+          {artists.map((artist) => (
+            // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus
+            <div
+              key={artist}
+              aria-selected={selectedArtist === artist}
+              className={`browser-item${selectedArtist === artist ? ' browser-item-selected' : ''}`}
+              data-artist={artist}
+              data-testid="browser-artist-item"
+              onClick={() =>
+                onArtistSelect(selectedArtist === artist ? null : artist)
+              }
+              role="option"
+            >
+              {artist}
+            </div>
+          ))}
         </div>
 
-        <div className="grid grid-cols-2 divide-x divide-neutral-800 h-[calc(100%-32px)] border-neutral-800  border-b-2 border-l-2 border-r-2 rounded-b-lg">
-          <div>
-            <div className="sticky top-0 z-50 bg-[#1d1d1d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
-              <div className="select-none flex flow-row leading-[1em] items-center py-1.5 px-4 text-left align-middle font-medium text-xs text-neutral-500">
-                Artist
-              </div>
-            </div>
-            <List
-              height={browserDimensions.height - 64}
-              rowCount={artists.length}
-              rowHeight={ROW_HEIGHT}
-              rowRenderer={renderRow(artists, selection.artist, (artist) =>
-                setSelection((_prev) => ({
-                  artist,
-                  album: null,
-                })),
-              )}
-              width={browserDimensions.width / 2}
-            />
+        {/* Album column */}
+        {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
+        <div
+          ref={albumColumnRef}
+          className={`browser-column${focusedColumn === 'album' ? ' browser-column-focused' : ''}`}
+          data-testid="browser-album-column"
+          onMouseDown={() => {
+            setFocusedColumn('album');
+            typeAheadBufferRef.current = '';
+          }}
+          role="listbox"
+        >
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus */}
+          <div
+            aria-selected={selectedAlbum === null}
+            className={`browser-item${selectedAlbum === null ? ' browser-item-selected' : ''}`}
+            data-testid="browser-album-all"
+            onClick={() => onAlbumSelect(null)}
+            role="option"
+          >
+            All Albums ({albums.length})
           </div>
-          <div>
-            <div className="sticky top-0 z-50 bg-[#1d1d1d] outline outline-offset-0 outline-1 mb-[1px] outline-neutral-800">
-              <div className="select-none flex flow-row leading-[1em] items-center py-1.5 px-4 text-left align-middle font-medium text-xs text-neutral-500">
-                Album
-              </div>
+          {albums.map((album) => (
+            // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus
+            <div
+              key={album}
+              aria-selected={selectedAlbum === album}
+              className={`browser-item${selectedAlbum === album ? ' browser-item-selected' : ''}`}
+              data-album={album}
+              data-testid="browser-album-item"
+              onClick={() =>
+                onAlbumSelect(selectedAlbum === album ? null : album)
+              }
+              role="option"
+            >
+              {album}
             </div>
-            <List
-              height={browserDimensions.height - 64}
-              rowCount={albums.length}
-              rowHeight={ROW_HEIGHT}
-              rowRenderer={renderRow(albums, selection.album, (album) =>
-                setSelection((prev) => ({ ...prev, album })),
-              )}
-              width={browserDimensions.width / 2}
-            />
-          </div>
+          ))}
         </div>
       </div>
-    </Draggable>
+
+      {/* Resize handle */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div
+        className="browser-resize-handle"
+        data-testid="browser-resize-handle"
+        onMouseDown={handleResizeMouseDown}
+      />
+    </div>
   );
 }
+
+export default React.memo(Browser, (prevProps, nextProps) => {
+  return (
+    prevProps.tracks === nextProps.tracks &&
+    prevProps.selectedArtist === nextProps.selectedArtist &&
+    prevProps.selectedAlbum === nextProps.selectedAlbum &&
+    prevProps.height === nextProps.height &&
+    prevProps.onArtistSelect === nextProps.onArtistSelect &&
+    prevProps.onAlbumSelect === nextProps.onAlbumSelect &&
+    prevProps.onHeightChange === nextProps.onHeightChange
+  );
+});

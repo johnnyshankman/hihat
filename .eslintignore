@@ -31,3 +31,5 @@ npm-debug.log.*
 # eslint ignores hidden directories by default:
 # https://github.com/eslint/eslint/issues/8429
 !.erb
+.erb/configs/webpack.config.base.ts
+.erb/scripts/electron-rebuild.js

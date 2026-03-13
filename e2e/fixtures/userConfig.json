@@ -1,0 +1,184 @@
+{
+  "library": {
+    "{{TEST_SONGS_PATH}}/001 - Aurora Synth - Dream of Love.mp3": {
+      "common": {
+        "artist": "Aurora Synth",
+        "album": "Digital Dreams",
+        "title": "Dream of Love",
+        "track": {
+          "no": 1,
+          "of": 12
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Aurora Synth",
+        "picture": null
+      },
+      "format": {
+        "duration": 10.0
+      },
+      "additionalInfo": {
+        "playCount": 333,
+        "lastPlayed": 1698456789000,
+        "dateAdded": 1695000000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/002 - The Jazz Collective - A Dream of Love.mp3": {
+      "common": {
+        "artist": "The Jazz Collective",
+        "album": "Blue Notes",
+        "title": "A Dream of Love",
+        "track": {
+          "no": 2,
+          "of": 12
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "The Jazz Collective",
+        "picture": null
+      },
+      "format": {
+        "duration": 10.0
+      },
+      "additionalInfo": {
+        "playCount": 8,
+        "lastPlayed": 1698356789000,
+        "dateAdded": 1695100000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/003 - Indie Folk Band - My Dream of Love.mp3": {
+      "common": {
+        "artist": "Indie Folk Band",
+        "album": "Autumn Leaves",
+        "title": "My Dream of Love",
+        "track": {
+          "no": 3,
+          "of": 12
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Indie Folk Band",
+        "picture": null
+      },
+      "format": {
+        "duration": 10.0
+      },
+      "additionalInfo": {
+        "playCount": 25,
+        "lastPlayed": 1698556789000,
+        "dateAdded": 1694000000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/004 - Electronic Pulse - Your Dream of Love.mp3": {
+      "common": {
+        "artist": "Electronic Pulse",
+        "album": "Bass Drop",
+        "title": "Your Dream of Love",
+        "track": {
+          "no": 4,
+          "of": 12
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Electronic Pulse",
+        "picture": null
+      },
+      "format": {
+        "duration": 10.0
+      },
+      "additionalInfo": {
+        "playCount": 18,
+        "lastPlayed": 1698656789000,
+        "dateAdded": 1694100000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/005 - Classical Masters - Our Dream of Love.mp3": {
+      "common": {
+        "artist": "Classical Masters",
+        "album": "Symphony No. 1",
+        "title": "Our Dream of Love",
+        "track": {
+          "no": 5,
+          "of": 12
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Classical Masters",
+        "picture": null
+      },
+      "format": {
+        "duration": 10.0
+      },
+      "additionalInfo": {
+        "playCount": 32,
+        "lastPlayed": 1698756789000,
+        "dateAdded": 1694200000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/006 - Rock Titans - Lost Dream.mp3": {
+      "common": {
+        "artist": "Rock Titans",
+        "album": "Thunder Road",
+        "title": "Lost Dream",
+        "track": {
+          "no": 6,
+          "of": 12
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Rock Titans",
+        "picture": null
+      },
+      "format": {
+        "duration": 10.0
+      },
+      "additionalInfo": {
+        "playCount": 5,
+        "lastPlayed": 1698256789000,
+        "dateAdded": 1695200000000
+      }
+    },
+    "{{TEST_SONGS_PATH}}/007 - Hip Hop Legends - Found Dream of Love.mp3": {
+      "common": {
+        "artist": "Hip Hop Legends",
+        "album": "Street Poetry",
+        "title": "Found Dream of Love",
+        "track": {
+          "no": 7,
+          "of": 12
+        },
+        "disk": {
+          "no": 1,
+          "of": 1
+        },
+        "albumartist": "Hip Hop Legends",
+        "picture": null
+      },
+      "format": {
+        "duration": 10.0
+      },
+      "additionalInfo": {
+        "playCount": 42,
+        "lastPlayed": 1698856789000,
+        "dateAdded": 1693000000000
+      }
+    }
+  },
+  "playlists": [],
+  "lastPlayedSong": "{{TEST_SONGS_PATH}}/007 - Hip Hop Legends - Found Dream of Love.mp3",
+  "libraryPath": "{{TEST_SONGS_PATH}}",
+  "initialized": true,
+  "scrollToIndex": 0
+}

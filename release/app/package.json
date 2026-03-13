@@ -1,12 +1,11 @@
 {
   "name": "hihat",
-  "version": "1.2.0",
-  "description": "A minimalist offline music player for OSX audiophiles :: Based on iTunes circa 2002 :: by White Lights",
+  "version": "2.0.0",
+  "description": "The minimalist offline music library player for macOS",
   "license": "MIT",
   "author": {
-    "name": "Johnny Shankman aka White Lights",
-    "email": "johnny@white-lights.net",
-    "url": "https://github.com/johnnyshankman/hihat"
+    "name": "Johnny Shankman (White Lights)",
+    "url": "https://github.com/johnnyshankman"
   },
   "main": "./dist/main/main.js",
   "scripts": {
@@ -14,5 +13,7 @@
     "postinstall": "npm run rebuild && npm run link-modules",
     "link-modules": "node -r ts-node/register ../../.erb/scripts/link-modules.ts"
   },
-  "dependencies": {}
+  "dependencies": {
+    "sql.js": "^1.8.0"
+  }
 }

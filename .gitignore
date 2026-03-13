@@ -27,3 +27,15 @@ npm-debug.log.*
 *.css.d.ts
 *.sass.d.ts
 *.scss.d.ts
+
+# Claude Code settings
+.claude
+
+# E2E Testing
+e2e/screenshots/
+playwright-report/
+test-results/
+.test-data/
+e2e/fixtures/*.sqlite
+e2e/fixtures/test-userConfig.json
+e2e/fixtures/test-userConfig.json.migrated

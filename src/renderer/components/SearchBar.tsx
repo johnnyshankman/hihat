@@ -1,59 +1,81 @@
-import React from 'react';
-import Box from '@mui/material/Box';
-import SearchIcon from '@mui/icons-material/Search';
-import { StoreStructure } from '../../common/common';
-import useMainStore from '../store/main';
-import {
-  Search,
-  SearchIconWrapper,
-  StyledInputBase,
-} from './SimpleStyledMaterialUIComponents';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { IconButton, InputAdornment, TextField } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import { useDebouncedValue } from '../utils/hooks';
 
-type SearchBarProps = {
-  // eslint-disable-next-line react/require-default-props
-  className?: string;
-};
+interface SearchBarProps {
+  initialValue: string;
+  onDebouncedChange: (value: string) => void;
+  onClose: () => void;
+  placeholder?: string;
+}
 
-export default function SearchBar({ className }: SearchBarProps) {
-  const storeLibrary = useMainStore((store) => store.library);
-  const setFilteredLibrary = useMainStore((store) => store.setFilteredLibrary);
+/**
+ * Self-contained search input that debounces internally.
+ * The parent only receives debounced values, so it never re-renders
+ * during fast typing — only this component re-renders per keystroke.
+ */
+function SearchBar({
+  initialValue,
+  onDebouncedChange,
+  onClose,
+  placeholder = 'Filter tracks',
+}: SearchBarProps) {
+  const [value, setValue] = useState(initialValue);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debouncedValue = useDebouncedValue(value, 150);
 
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const query = event.target.value;
-    if (!storeLibrary) return;
-    const filtered = Object.keys(storeLibrary).filter((song) => {
-      const meta = storeLibrary[song];
-      return (
-        meta.common.title?.toLowerCase().includes(query.toLowerCase()) ||
-        meta.common.artist?.toLowerCase().includes(query.toLowerCase()) ||
-        meta.common.album?.toLowerCase().includes(query.toLowerCase())
-      );
-    });
+  // Sync internal value when initialValue changes (e.g. playlist switch)
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
 
-    const filteredLib: StoreStructure['library'] = {};
-    filtered.forEach((song) => {
-      filteredLib[song] = storeLibrary[song];
-    });
+  // Notify parent when the debounced value changes
+  useEffect(() => {
+    onDebouncedChange(debouncedValue);
+  }, [debouncedValue, onDebouncedChange]);
 
-    setFilteredLibrary(filteredLib);
-  };
+  const handleClear = useCallback(() => {
+    setValue('');
+    inputRef.current?.focus();
+  }, []);
 
   return (
-    <Box className={className}>
-      <Search
-        sx={{
-          borderRadius: '0.375rem',
-        }}
-      >
-        <StyledInputBase
-          inputProps={{ 'aria-label': 'search' }}
-          onChange={handleSearch}
-          placeholder="Search"
-        />
-        <SearchIconWrapper className="text-[16px]">
-          <SearchIcon fontSize="inherit" />
-        </SearchIconWrapper>
-      </Search>
-    </Box>
+    <TextField
+      autoFocus
+      inputRef={inputRef}
+      onChange={(e) => {
+        setValue(e.target.value);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
+      placeholder={placeholder}
+      size="small"
+      slotProps={{
+        htmlInput: { 'data-testid': 'search-input' },
+        input: {
+          endAdornment: value ? (
+            <InputAdornment position="end">
+              <IconButton edge="end" onClick={handleClear} size="small">
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </InputAdornment>
+          ) : null,
+        },
+      }}
+      sx={{
+        flexGrow: 1,
+        flexShrink: 1,
+        minWidth: '100px',
+        '& .MuiOutlinedInput-root': { height: '28px' },
+      }}
+      value={value}
+      variant="outlined"
+    />
   );
 }
+
+export default React.memo(SearchBar);
