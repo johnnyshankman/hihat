@@ -677,7 +677,7 @@ export default function Settings({ onClose }: SettingsProps) {
                 The folder on your computer where your music files live. hihat
                 scans this folder and all its subfolders.
               </Typography>
-              <FormControl fullWidth sx={{ mb: 2, mt: 1 }}>
+              <FormControl fullWidth sx={{ mt: 1 }}>
                 <TextField
                   InputProps={{
                     endAdornment: (
