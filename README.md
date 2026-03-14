@@ -300,14 +300,14 @@ hihat also responds to **media keys** on your keyboard and **Bluetooth headphone
 * Try **resizing the window** — hihat adapts to all sorts of sizes, including a compact view at narrow widths
 * Use **Cmd+Click** or **Shift+Click** to select multiple tracks for bulk operations
 * Check the **hihat** menu in the menu bar for library stats
-* Smart playlists are a great way to rediscover music you haven't listened to in a while
+* Smart playlists are a great way to rediscover your favorite music or latest additions to your library
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Roadmap
 
-- [x] Edit song metadata
 - [ ] Queue a next-up song
+- [ ] View the playback queue/history
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features and known issues.
 
@@ -398,7 +398,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 
-Johnny aka White Lights - [@iamwhitelights](https://twitter.com/iamwhitelights)
+Johnny Shankman aka White Lights - [@iamwhitelights](https://twitter.com/iamwhitelights)
 
 Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnnyshankman/hihat)
 
