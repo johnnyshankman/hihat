@@ -175,6 +175,8 @@ Double-click any track in the library to start playing. The player bar at the bo
 * **Track title and artist** in the center (click the title to scroll back to the current song)
 * **Playback controls**: previous, play/pause, next, repeat, and shuffle
 * **Seek slider** to scrub through the track
+* **Notification bell** — toggle the notification panel to see your recent actions
+* **Browser icon** — open the Browser panel for quickly filtering by artist or album
 * **Volume control** on the right
 
 ![hihat player bar showing album art, track title, playback controls, seek slider, and volume](screenshots/usage-player-bar.png)
