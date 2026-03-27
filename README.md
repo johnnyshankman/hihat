@@ -80,7 +80,7 @@
 * User-created playlists — create, rename, delete, and add or remove tracks
 * Smart playlists: Recently Added, Recently Played, and Most Played (top 50 each, updated automatically)
 * Browser panel for filtering by album artist and album
-* Sort by any column: Title, Artist, Album, Album Artist, Genre, Time, Play Count, Date Added, Last Played
+* Sort by any column
 * Quick search bar — filter by title, artist, album, or genre
 * Customizable column visibility — right-click any column header
 * Drag-and-drop column reordering
@@ -141,6 +141,8 @@ For detailed format information, see:
 
 1. Download the `.dmg` file from the [Latest Release](https://github.com/johnnyshankman/hihat/releases/latest)
 2. Double-click the `.dmg` to open it, then drag **hihat** into your Applications folder
+
+That's it — hihat is now installed and ready to use.
 
 > **Note:** The first time you open hihat, macOS will warn you it's from an unidentified developer and ask you to confirm. This is expected — hihat is free and does not pay for an Apple Developer License to suppress this dialog.
 
@@ -211,7 +213,7 @@ Right-click any user-created playlist in the sidebar to **Rename** or **Delete**
 
 **Search:** Click the search icon in the toolbar (or just start typing when focused on the library) to filter tracks by title, artist, album, or genre.
 
-**Browser:** Click the people icon in the toolbar to open the Browser panel at the top. It has two columns — Album Artist and Album — so you can drill down by artist and then by album. Click any item to filter; click it again to deselect.
+**Browser:** Click the panel/drawer icon in the toolbar to open the Browser panel at the top. It has two columns — Album Artist and Album — so you can drill down by artist and then by album. Click any item to filter; click it again to deselect.
 
 **Sorting:** Click any column header to sort ascending or descending.
 
@@ -296,11 +298,10 @@ hihat also responds to **media keys** on your keyboard and **Bluetooth headphone
 
 ## Tips
 
-* Click the **song name** or **album art** in the player bar to scroll back to the currently playing track
+* Click the **song name** in the player bar to scroll back to the currently playing track
 * Try **resizing the window** — hihat adapts to all sorts of sizes, including a compact view at narrow widths
 * Use **Cmd+Click** or **Shift+Click** to select multiple tracks for bulk operations
 * Check the **hihat** menu in the menu bar for library stats
-* Smart playlists are a great way to rediscover music you haven't listened to in a while
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
