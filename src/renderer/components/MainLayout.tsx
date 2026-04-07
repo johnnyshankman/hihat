@@ -9,7 +9,6 @@ import {
   ListItemIcon,
   ListItemText,
   CssBaseline,
-  Collapse,
   IconButton,
   Menu,
   MenuItem,
@@ -21,8 +20,6 @@ import QueueMusicIcon from '@mui/icons-material/QueueMusic';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
-import ExpandLess from '@mui/icons-material/ExpandLess';
-import ExpandMore from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
@@ -98,7 +95,6 @@ export default function MainLayout() {
   const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
 
   const [open, setOpen] = useState(true);
-  const [playlistsOpen, setPlaylistsOpen] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [dragOverPlaylistId, setDragOverPlaylistId] = useState<string | null>(
@@ -136,10 +132,6 @@ export default function MainLayout() {
 
   const handleViewChange = (view: View) => {
     setCurrentView(view);
-  };
-
-  const handlePlaylistsClick = () => {
-    setPlaylistsOpen(!playlistsOpen);
   };
 
   const handlePlaylistSelect = (playlistId: string) => {
@@ -204,10 +196,6 @@ export default function MainLayout() {
   const handleAddPlaylistClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     setCreateDialogOpen(true);
-  };
-
-  const handlePlaylistCreated = () => {
-    setPlaylistsOpen(true); // Expand the playlists list
   };
 
   const closeCreateDialog = () => {
@@ -821,21 +809,15 @@ export default function MainLayout() {
               {/* Playlists section */}
               <Box sx={{ mt: 0.5, mb: 0.5 }}>
                 <Box
-                  onClick={handlePlaylistsClick}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
                     px: 1.5,
                     py: 0.5,
-                    cursor: 'pointer',
                     WebkitAppRegion: 'no-drag',
-                    '&:hover .playlist-header-text': {
-                      color: (t) => t.palette.text.primary,
-                    },
                   }}
                 >
                   <Typography
-                    className="playlist-header-text"
                     sx={{
                       flexGrow: 1,
                       fontSize: '11px',
@@ -849,126 +831,116 @@ export default function MainLayout() {
                   >
                     Playlists
                   </Typography>
-                  <IconButton
-                    data-testid="add-playlist-button"
-                    onClick={handleAddPlaylistClick}
-                    size="small"
-                    sx={{
-                      p: 0.25,
-                      mr: 0.5,
-                      WebkitAppRegion: 'no-drag',
-                      opacity: 0.7,
-                      '&:hover': {
-                        opacity: 1,
-                      },
-                    }}
-                  >
-                    <AddIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                  <Box
-                    sx={{ opacity: 0.7, display: 'flex', alignItems: 'center' }}
-                  >
-                    {playlistsOpen ? (
-                      <ExpandLess sx={{ fontSize: 18 }} />
-                    ) : (
-                      <ExpandMore sx={{ fontSize: 18 }} />
-                    )}
-                  </Box>
+                  <Tooltip title="Create Playlist">
+                    <IconButton
+                      data-testid="add-playlist-button"
+                      onClick={handleAddPlaylistClick}
+                      size="small"
+                      sx={{
+                        p: 0.25,
+                        WebkitAppRegion: 'no-drag',
+                        opacity: 0.7,
+                        '&:hover': {
+                          opacity: 1,
+                        },
+                      }}
+                    >
+                      <AddIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
 
-                <Collapse in={playlistsOpen} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding>
-                    {playlists.map((playlist) => (
-                      <ListItemButton
-                        key={playlist.id}
-                        data-playlist-id={playlist.id}
-                        onClick={() => handlePlaylistSelect(playlist.id)}
-                        onContextMenu={(e) =>
-                          handlePlaylistContextMenu(e, playlist.id)
-                        }
-                        onDragLeave={handlePlaylistDragLeave}
-                        onDragOver={(e) =>
-                          handlePlaylistDragOver(
-                            e,
-                            playlist.id,
-                            !!playlist.isSmart,
-                          )
-                        }
-                        onDrop={(e) =>
-                          handlePlaylistDrop(e, playlist.id, !!playlist.isSmart)
-                        }
-                        selected={
-                          currentView === 'playlists' &&
-                          selectedPlaylistId === playlist.id
-                        }
-                        sx={{
-                          py: 0.25,
-                          px: 1.5,
-                          WebkitAppRegion: 'no-drag',
-                          borderRadius: 1,
-                          mb: 0,
-                          transition: 'background-color 0.1s, outline 0.1s',
-                          ...(dragOverPlaylistId === playlist.id &&
-                            !playlist.isSmart && {
-                              backgroundColor: (t) =>
-                                t.palette.mode === 'dark'
-                                  ? 'rgba(66, 165, 245, 0.15)'
-                                  : 'rgba(33, 150, 243, 0.12)',
-                              outline: (t) =>
-                                `1px solid ${t.palette.mode === 'dark' ? 'rgba(66, 165, 245, 0.5)' : 'rgba(33, 150, 243, 0.5)'}`,
-                            }),
-                          '&.Mui-selected': {
+                <List component="div" disablePadding>
+                  {playlists.map((playlist) => (
+                    <ListItemButton
+                      key={playlist.id}
+                      data-playlist-id={playlist.id}
+                      onClick={() => handlePlaylistSelect(playlist.id)}
+                      onContextMenu={(e) =>
+                        handlePlaylistContextMenu(e, playlist.id)
+                      }
+                      onDragLeave={handlePlaylistDragLeave}
+                      onDragOver={(e) =>
+                        handlePlaylistDragOver(
+                          e,
+                          playlist.id,
+                          !!playlist.isSmart,
+                        )
+                      }
+                      onDrop={(e) =>
+                        handlePlaylistDrop(e, playlist.id, !!playlist.isSmart)
+                      }
+                      selected={
+                        currentView === 'playlists' &&
+                        selectedPlaylistId === playlist.id
+                      }
+                      sx={{
+                        py: 0.25,
+                        px: 1.5,
+                        WebkitAppRegion: 'no-drag',
+                        borderRadius: 1,
+                        mb: 0,
+                        transition: 'background-color 0.1s, outline 0.1s',
+                        ...(dragOverPlaylistId === playlist.id &&
+                          !playlist.isSmart && {
                             backgroundColor: (t) =>
                               t.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.08)'
-                                : 'rgba(0, 0, 0, 0.08)',
-                            '& .MuiListItemText-primary': {
-                              fontWeight: 600,
-                            },
-                            '&:hover': {
-                              backgroundColor: (t) =>
-                                t.palette.mode === 'dark'
-                                  ? 'rgba(255, 255, 255, 0.1)'
-                                  : 'rgba(0, 0, 0, 0.1)',
-                            },
+                                ? 'rgba(66, 165, 245, 0.15)'
+                                : 'rgba(33, 150, 243, 0.12)',
+                            outline: (t) =>
+                              `1px solid ${t.palette.mode === 'dark' ? 'rgba(66, 165, 245, 0.5)' : 'rgba(33, 150, 243, 0.5)'}`,
+                          }),
+                        '&.Mui-selected': {
+                          backgroundColor: (t) =>
+                            t.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(0, 0, 0, 0.08)',
+                          '& .MuiListItemText-primary': {
+                            fontWeight: 600,
                           },
                           '&:hover': {
                             backgroundColor: (t) =>
                               t.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.04)'
-                                : 'rgba(0, 0, 0, 0.04)',
+                                ? 'rgba(255, 255, 255, 0.1)'
+                                : 'rgba(0, 0, 0, 0.1)',
                           },
+                        },
+                        '&:hover': {
+                          backgroundColor: (t) =>
+                            t.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.04)'
+                              : 'rgba(0, 0, 0, 0.04)',
+                        },
+                      }}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          minWidth: '24px',
+                          opacity: 0.7,
                         }}
                       >
-                        <ListItemIcon
-                          sx={{
-                            minWidth: '24px',
-                            opacity: 0.7,
-                          }}
-                        >
-                          {playlist.isSmart ? (
-                            <AutoAwesomeIcon sx={{ fontSize: 16 }} />
-                          ) : (
-                            <QueueMusicIcon sx={{ fontSize: 16 }} />
-                          )}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={playlist.name}
-                          primaryTypographyProps={{
-                            noWrap: true,
-                            title: playlist.name,
-                            fontSize: '13px',
-                            fontWeight:
-                              currentView === 'playlists' &&
-                              selectedPlaylistId === playlist.id
-                                ? 600
-                                : 400,
-                          }}
-                        />
-                      </ListItemButton>
-                    ))}
-                  </List>
-                </Collapse>
+                        {playlist.isSmart ? (
+                          <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+                        ) : (
+                          <QueueMusicIcon sx={{ fontSize: 16 }} />
+                        )}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={playlist.name}
+                        primaryTypographyProps={{
+                          noWrap: true,
+                          title: playlist.name,
+                          fontSize: '13px',
+                          fontWeight:
+                            currentView === 'playlists' &&
+                            selectedPlaylistId === playlist.id
+                              ? 600
+                              : 400,
+                        }}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
               </Box>
             </List>
           </Paper>
@@ -1066,7 +1038,6 @@ export default function MainLayout() {
       {/* Create Playlist Dialog */}
       <CreatePlaylistDialog
         onClose={closeCreateDialog}
-        onPlaylistCreated={handlePlaylistCreated}
         open={createDialogOpen}
       />
 

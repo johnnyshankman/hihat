@@ -12,14 +12,9 @@ import { useLibraryStore } from '../stores';
 interface CreatePlaylistDialogProps {
   open: boolean;
   onClose: () => void;
-  onPlaylistCreated?: () => void;
 }
 
-function CreatePlaylistDialog({
-  open,
-  onClose,
-  onPlaylistCreated,
-}: CreatePlaylistDialogProps) {
+function CreatePlaylistDialog({ open, onClose }: CreatePlaylistDialogProps) {
   // Local state for the input - isolated from parent
   const [name, setName] = useState('');
 
@@ -35,9 +30,6 @@ function CreatePlaylistDialog({
       try {
         await useLibraryStore.getState().createPlaylist(name.trim());
         onClose();
-        if (onPlaylistCreated) {
-          onPlaylistCreated();
-        }
       } catch (error) {
         console.error('Error creating playlist:', error);
       }
