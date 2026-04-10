@@ -6,6 +6,7 @@ import React, {
   useEffect,
 } from 'react';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
+import { keyframes } from '@mui/system';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchIcon from '@mui/icons-material/Search';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
@@ -33,6 +34,17 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
+
+const searchExpandAnimation = keyframes`
+  from {
+    max-width: 0;
+    opacity: 0;
+  }
+  to {
+    max-width: 600px;
+    opacity: 1;
+  }
+`;
 
 // Define props interface for Playlists component
 interface PlaylistsProps {
@@ -793,75 +805,82 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
         >
           {playlistNameContent}
         </Typography>
-        {!showSearch && (
-          <>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {playlistTrackCount.toLocaleString()}&nbsp;&#9835;
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {playlistTotalHours}&nbsp;
-              </Typography>
-              <AccessTimeIcon
-                sx={{
-                  fontSize: 14,
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              />
-            </Box>
-          </>
-        )}
-        {showSearch && (
-          <SearchBar
-            initialValue={globalFilter}
-            onClose={handleSearchToggle}
-            onDebouncedChange={handleDebouncedSearchChange}
-            placeholder="Search playlist"
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: '16px',
+            backgroundColor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.grey[200],
+            px: 1.5,
+            py: 0.5,
+            justifyContent: 'center',
+            userSelect: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <Typography
+            sx={{
+              color: (theme) => theme.palette.text.secondary,
+              lineHeight: 1,
+            }}
+            variant="body2"
+          >
+            {playlistTrackCount.toLocaleString()}&nbsp;&#9835;
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: '16px',
+            backgroundColor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.grey[200],
+            px: 1.5,
+            py: 0.5,
+            justifyContent: 'center',
+            userSelect: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <Typography
+            sx={{
+              color: (theme) => theme.palette.text.secondary,
+              lineHeight: 1,
+            }}
+            variant="body2"
+          >
+            {playlistTotalHours}&nbsp;
+          </Typography>
+          <AccessTimeIcon
+            sx={{
+              fontSize: 14,
+              color: (theme) => theme.palette.text.secondary,
+            }}
           />
+        </Box>
+        {showSearch && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexGrow: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              marginLeft: 'auto',
+              animation: `${searchExpandAnimation} 120ms ease-out forwards`,
+            }}
+          >
+            <SearchBar
+              initialValue={globalFilter}
+              onClose={handleSearchToggle}
+              onDebouncedChange={handleDebouncedSearchChange}
+              placeholder="Search playlist"
+            />
+          </Box>
         )}
         <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
         <Box

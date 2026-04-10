@@ -16,6 +16,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { keyframes } from '@mui/system';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchIcon from '@mui/icons-material/Search';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
@@ -42,6 +43,17 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
+
+const searchExpandAnimation = keyframes`
+  from {
+    max-width: 0;
+    opacity: 0;
+  }
+  to {
+    max-width: 600px;
+    opacity: 1;
+  }
+`;
 
 // Define the type for directory selection result
 interface DirectorySelectionResult {
@@ -751,74 +763,81 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         >
           Library
         </Typography>
-        {!showSearch && (
-          <>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {trackCount.toLocaleString()}&nbsp;&#9835;
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {totalHours}&nbsp;
-              </Typography>
-              <AccessTimeIcon
-                sx={{
-                  fontSize: 14,
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              />
-            </Box>
-          </>
-        )}
-        {showSearch && (
-          <SearchBar
-            initialValue={globalFilterRef.current}
-            onClose={handleSearchToggle}
-            onDebouncedChange={handleDebouncedSearchChange}
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: '16px',
+            backgroundColor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.grey[200],
+            px: 1.5,
+            py: 0.5,
+            justifyContent: 'center',
+            userSelect: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <Typography
+            sx={{
+              color: (theme) => theme.palette.text.secondary,
+              lineHeight: 1,
+            }}
+            variant="body2"
+          >
+            {trackCount.toLocaleString()}&nbsp;&#9835;
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: '16px',
+            backgroundColor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.grey[200],
+            px: 1.5,
+            py: 0.5,
+            justifyContent: 'center',
+            userSelect: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <Typography
+            sx={{
+              color: (theme) => theme.palette.text.secondary,
+              lineHeight: 1,
+            }}
+            variant="body2"
+          >
+            {totalHours}&nbsp;
+          </Typography>
+          <AccessTimeIcon
+            sx={{
+              fontSize: 14,
+              color: (theme) => theme.palette.text.secondary,
+            }}
           />
+        </Box>
+        {showSearch && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexGrow: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              marginLeft: 'auto',
+              animation: `${searchExpandAnimation} 120ms ease-out forwards`,
+            }}
+          >
+            <SearchBar
+              initialValue={globalFilterRef.current}
+              onClose={handleSearchToggle}
+              onDebouncedChange={handleDebouncedSearchChange}
+            />
+          </Box>
         )}
         <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
         <Box
