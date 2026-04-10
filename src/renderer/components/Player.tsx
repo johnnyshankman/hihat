@@ -30,6 +30,7 @@ import {
   mutedIconButtonSx,
   toggleIconButtonSx,
 } from '../styles/iconButtonStyles';
+import { playerSliderSx } from '../styles/sliderStyles';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -946,18 +947,11 @@ function Player() {
             size="small"
             step={0.01}
             sx={{
-              color: (t) => t.palette.primary.main,
               width: 120,
               maxWidth: '100%',
               minWidth: 40,
               flexShrink: 1,
-              '& .MuiSlider-thumb': {
-                width: 10,
-                height: 10,
-              },
-              '& .MuiSlider-rail': {
-                opacity: 0.35,
-              },
+              ...playerSliderSx,
             }}
             value={volume}
           />

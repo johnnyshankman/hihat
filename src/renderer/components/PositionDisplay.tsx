@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Box, Typography, Slider } from '@mui/material';
 import { useSettingsAndPlaybackStore } from '../stores';
 import { formatDuration } from '../utils/formatters';
+import { playerSliderSx } from '../styles/sliderStyles';
 
 interface PositionDisplayProps {
   disabled?: boolean;
@@ -46,7 +47,7 @@ const PositionDisplay = React.memo(
             mr: 1,
             minWidth: '36px',
             textAlign: 'right',
-            fontSize: '11px',
+            fontSize: '12px',
             lineHeight: 1,
             userSelect: 'none',
           }}
@@ -63,11 +64,7 @@ const PositionDisplay = React.memo(
           size="small"
           sx={{
             mx: 0.25,
-            color: (t) => t.palette.grey[500],
-            '& .MuiSlider-thumb': {
-              height: 8,
-              width: 8,
-            },
+            ...playerSliderSx,
           }}
           value={position}
         />
@@ -76,7 +73,7 @@ const PositionDisplay = React.memo(
           sx={{
             ml: 1,
             minWidth: '36px',
-            fontSize: '11px',
+            fontSize: '12px',
             lineHeight: 1,
             userSelect: 'none',
           }}
