@@ -9,6 +9,7 @@ concurrency:
 
 jobs:
   check:
+    name: Typecheck, Lint & Build
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
@@ -30,6 +31,7 @@ jobs:
       run: npm run build
 
   changes:
+    name: Detect E2E-Relevant Changes
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     outputs:
@@ -53,6 +55,7 @@ jobs:
             - '.github/workflows/prcheck.yml'
 
   e2e:
+    name: E2E Tests
     needs: [check, changes]
     if: needs.changes.outputs.e2e == 'true'
     runs-on: macos-latest
