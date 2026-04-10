@@ -478,10 +478,31 @@ function Player() {
   // Render repeat icon based on repeat mode. Uses MaterialSymbolIcon
   // with a heavier weight (wght axis) so the stroked glyph has enough
   // solid interior to not read as a lighter gray than the other
-  // transport icons due to anti-aliasing on its thin strokes.
+  // transport icons due to anti-aliasing on its thin strokes. When
+  // active, swaps to the *_on variants with the FILL axis enabled so
+  // the rounded-square background reads as filled.
   const renderRepeatIcon = () => {
-    const iconName = repeatMode === 'track' ? 'repeat_one' : 'repeat';
-    return <MaterialSymbolIcon fontSize="small" icon={iconName} weight={500} />;
+    if (repeatMode === 'track') {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="small"
+          icon="repeat_one_on"
+          weight={500}
+        />
+      );
+    }
+    if (repeatMode === 'all') {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="small"
+          icon="repeat_on"
+          weight={500}
+        />
+      );
+    }
+    return <MaterialSymbolIcon fontSize="small" icon="repeat" weight={500} />;
   };
 
   // Get tooltip text based on repeat mode
@@ -501,9 +522,20 @@ function Player() {
   // Render shuffle icon. Uses MaterialSymbolIcon with a heavier weight
   // (wght axis) so the stroked glyph has enough solid interior to not
   // read as a lighter gray than the other transport icons due to
-  // anti-aliasing on its thin crossing strokes. Active state is
-  // conveyed via the button color, not a filled icon variant.
+  // anti-aliasing on its thin crossing strokes. When active, swaps to
+  // shuffle_on with the FILL axis enabled so the rounded-square
+  // background reads as filled.
   const renderShuffleIcon = () => {
+    if (shuffleMode) {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="small"
+          icon="shuffle_on"
+          weight={500}
+        />
+      );
+    }
     return <MaterialSymbolIcon fontSize="small" icon="shuffle" weight={500} />;
   };
 

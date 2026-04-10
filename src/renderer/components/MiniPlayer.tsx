@@ -257,10 +257,30 @@ export default function MiniPlayer() {
   };
 
   // Render repeat icon based on repeat mode.
-  // Uses MaterialSymbolIcon with wght=500 to match the main Player.
+  // Uses MaterialSymbolIcon with wght=500 to match the main Player,
+  // and swaps to the *_on filled variants when active.
   const renderRepeatIcon = () => {
-    const iconName = repeatMode === 'track' ? 'repeat_one' : 'repeat';
-    return <MaterialSymbolIcon fontSize="small" icon={iconName} weight={500} />;
+    if (repeatMode === 'track') {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="small"
+          icon="repeat_one_on"
+          weight={500}
+        />
+      );
+    }
+    if (repeatMode === 'all') {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="small"
+          icon="repeat_on"
+          weight={500}
+        />
+      );
+    }
+    return <MaterialSymbolIcon fontSize="small" icon="repeat" weight={500} />;
   };
 
   // Get tooltip text based on repeat mode
@@ -278,8 +298,19 @@ export default function MiniPlayer() {
   };
 
   // Render shuffle icon. Uses MaterialSymbolIcon with wght=500 to
-  // match the main Player.
+  // match the main Player, and swaps to shuffle_on (FILL=1) when
+  // active.
   const renderShuffleIcon = () => {
+    if (shuffleMode) {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="small"
+          icon="shuffle_on"
+          weight={500}
+        />
+      );
+    }
     return <MaterialSymbolIcon fontSize="small" icon="shuffle" weight={500} />;
   };
 

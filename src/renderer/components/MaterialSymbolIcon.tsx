@@ -8,6 +8,12 @@ interface MaterialSymbolIconProps {
    * Omit to inherit the CSS default (400).
    */
   weight?: number;
+  /**
+   * Material Symbols FILL axis. When true, the glyph's background
+   * shape (e.g. the rounded square behind shuffle_on/repeat_on) is
+   * filled instead of outlined.
+   */
+  filled?: boolean;
 }
 
 const sizeMap = {
@@ -21,7 +27,14 @@ function MaterialSymbolIcon({
   icon,
   fontSize = 'medium',
   weight,
+  filled,
 }: MaterialSymbolIconProps) {
+  // Build font-variation-settings only for axes the caller actually
+  // set, so we don't override the CSS defaults unnecessarily.
+  const variationAxes: string[] = [];
+  if (filled !== undefined) variationAxes.push(`'FILL' ${filled ? 1 : 0}`);
+  if (weight !== undefined) variationAxes.push(`'wght' ${weight}`);
+
   return (
     <span
       className="material-symbols-outlined"
@@ -31,7 +44,9 @@ function MaterialSymbolIcon({
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        ...(weight !== undefined ? { fontWeight: weight } : {}),
+        ...(variationAxes.length > 0
+          ? { fontVariationSettings: variationAxes.join(', ') }
+          : {}),
       }}
     >
       {icon}
