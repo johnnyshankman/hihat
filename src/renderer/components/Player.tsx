@@ -881,6 +881,8 @@ function Player() {
             <Tooltip arrow placement="top" title={getShuffleTooltipText()}>
               <span>
                 <IconButton
+                  data-shuffle-mode={shuffleMode ? 'on' : 'off'}
+                  data-testid="shuffle-button"
                   disabled={!currentTrack}
                   onClick={toggleShuffleMode}
                   size="small"
@@ -954,6 +956,8 @@ function Player() {
             <Tooltip arrow placement="top" title={getRepeatTooltipText()}>
               <span>
                 <IconButton
+                  data-repeat-mode={repeatMode}
+                  data-testid="repeat-button"
                   disabled={!currentTrack}
                   onClick={toggleRepeatMode}
                   size="small"
