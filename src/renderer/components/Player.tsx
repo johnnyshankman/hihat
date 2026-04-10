@@ -102,6 +102,7 @@ function NotificationButton() {
         onClick={() => setPanelOpen(!panelOpen)}
         size="medium"
         sx={{
+          padding: 0,
           color: panelOpen ? 'primary.main' : 'text.secondary',
           '&:hover': {
             color: panelOpen ? 'primary.dark' : 'text.primary',
@@ -664,7 +665,7 @@ function Player() {
           gridTemplateColumns: '1fr auto 1fr',
           alignItems: 'center',
           pl: 1.5,
-          pr: 2,
+          pr: 1.5,
           width: '100%',
           height: '100%',
           py: 0,
@@ -694,7 +695,7 @@ function Player() {
               onClick={currentTrack ? openMiniPlayer : undefined}
               sx={{
                 height: '100%',
-                mr: { xs: 1, sm: 2 },
+                mr: 2,
                 borderRadius: '4px',
                 aspectRatio: '1/1',
                 cursor: currentTrack ? 'pointer' : 'default',
@@ -951,8 +952,8 @@ function Player() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
-            pr: { xs: 0, sm: 1 },
-            gap: 1,
+            pr: 0,
+            gap: 1.5,
             minWidth: 0,
           }}
         >
@@ -968,6 +969,7 @@ function Player() {
               onClick={() => setBrowserOpen(!browserOpen)}
               size="medium"
               sx={{
+                padding: 0,
                 color: browserOpen ? 'primary.main' : 'text.secondary',
                 '&:hover': {
                   color: browserOpen ? 'primary.dark' : 'text.primary',
@@ -978,7 +980,11 @@ function Player() {
             </IconButton>
           </Tooltip>
           <Tooltip arrow placement="top" title="Volume">
-            <IconButton onClick={toggleVolumeControls} size="medium">
+            <IconButton
+              onClick={toggleVolumeControls}
+              size="medium"
+              sx={{ padding: 0 }}
+            >
               {renderVolumeIcon()}
             </IconButton>
           </Tooltip>
