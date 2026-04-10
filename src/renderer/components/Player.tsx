@@ -20,11 +20,6 @@ import {
   VolumeUp,
   VolumeDown,
   VolumeMute,
-  Repeat,
-  RepeatOn,
-  RepeatOne,
-  Shuffle,
-  ShuffleOn,
   Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import Marquee from 'react-fast-marquee';
@@ -480,19 +475,13 @@ function Player() {
     return 'large';
   };
 
-  // Render repeat icon based on repeat mode
+  // Render repeat icon based on repeat mode. Uses MaterialSymbolIcon
+  // with a heavier weight (wght axis) so the stroked glyph has enough
+  // solid interior to not read as a lighter gray than the other
+  // transport icons due to anti-aliasing on its thin strokes.
   const renderRepeatIcon = () => {
-    const iconSize = 'small';
-
-    switch (repeatMode) {
-      case 'track':
-        return <RepeatOne fontSize={iconSize} />;
-      case 'all':
-        return <RepeatOn fontSize={iconSize} />;
-      case 'off':
-      default:
-        return <Repeat fontSize={iconSize} />;
-    }
+    const iconName = repeatMode === 'track' ? 'repeat_one' : 'repeat';
+    return <MaterialSymbolIcon fontSize="small" icon={iconName} weight={500} />;
   };
 
   // Get tooltip text based on repeat mode
@@ -509,14 +498,13 @@ function Player() {
     }
   };
 
-  // Render shuffle icon based on shuffle mode
+  // Render shuffle icon. Uses MaterialSymbolIcon with a heavier weight
+  // (wght axis) so the stroked glyph has enough solid interior to not
+  // read as a lighter gray than the other transport icons due to
+  // anti-aliasing on its thin crossing strokes. Active state is
+  // conveyed via the button color, not a filled icon variant.
   const renderShuffleIcon = () => {
-    const iconSize = 'small';
-
-    if (shuffleMode) {
-      return <ShuffleOn fontSize={iconSize} />;
-    }
-    return <Shuffle fontSize={iconSize} />;
+    return <MaterialSymbolIcon fontSize="small" icon="shuffle" weight={500} />;
   };
 
   // Get tooltip text based on shuffle mode

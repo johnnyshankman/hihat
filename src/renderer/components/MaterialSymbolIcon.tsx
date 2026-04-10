@@ -3,6 +3,11 @@ import React from 'react';
 interface MaterialSymbolIconProps {
   icon: string;
   fontSize?: 'small' | 'medium' | 'large' | 'inherit';
+  /**
+   * Material Symbols variable-font weight axis (100–700).
+   * Omit to inherit the CSS default (400).
+   */
+  weight?: number;
 }
 
 const sizeMap = {
@@ -15,6 +20,7 @@ const sizeMap = {
 function MaterialSymbolIcon({
   icon,
   fontSize = 'medium',
+  weight,
 }: MaterialSymbolIconProps) {
   return (
     <span
@@ -25,6 +31,7 @@ function MaterialSymbolIcon({
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
+        ...(weight !== undefined ? { fontWeight: weight } : {}),
       }}
     >
       {icon}
