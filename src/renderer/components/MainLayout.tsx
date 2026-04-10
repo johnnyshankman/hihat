@@ -39,6 +39,7 @@ import Player from './Player';
 import NotificationSystem from './NotificationSystem';
 import RenamePlaylistDialog from './RenamePlaylistDialog';
 import CreatePlaylistDialog from './CreatePlaylistDialog';
+import { mutedIconButtonSx } from '../styles/iconButtonStyles';
 
 const drawerWidth = 200;
 
@@ -681,10 +682,7 @@ export default function MainLayout() {
                     onClick={() => setSettingsOpen(!settingsOpen)}
                     size="small"
                     sx={{
-                      color: settingsOpen ? 'text.primary' : 'text.secondary',
-                      '&:hover': {
-                        color: 'text.primary',
-                      },
+                      ...mutedIconButtonSx,
                       padding: 0,
                     }}
                   >
@@ -698,10 +696,7 @@ export default function MainLayout() {
                     onClick={handleDrawerToggle}
                     size="small"
                     sx={{
-                      color: 'text.secondary',
-                      '&:hover': {
-                        color: 'text.primary',
-                      },
+                      ...mutedIconButtonSx,
                       padding: 0,
                     }}
                   >
@@ -830,13 +825,10 @@ export default function MainLayout() {
                       onClick={handleAddPlaylistClick}
                       size="small"
                       sx={{
+                        ...mutedIconButtonSx,
                         p: 0,
                         left: '2px', // offset makes it perfectly centered underneath the "hide sidebar" icon
                         WebkitAppRegion: 'no-drag',
-                        opacity: 0.7,
-                        '&:hover': {
-                          opacity: 1,
-                        },
                       }}
                     >
                       <AddIcon sx={{ fontSize: 16 }} />

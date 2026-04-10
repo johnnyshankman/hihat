@@ -37,6 +37,10 @@ import {
   useLibraryStore,
 } from '../stores';
 import PositionDisplay from './PositionDisplay';
+import {
+  mutedIconButtonSx,
+  toggleIconButtonSx,
+} from '../styles/iconButtonStyles';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -102,11 +106,8 @@ function NotificationButton() {
         onClick={() => setPanelOpen(!panelOpen)}
         size="medium"
         sx={{
+          ...toggleIconButtonSx(panelOpen),
           padding: 0,
-          color: panelOpen ? 'primary.main' : 'text.secondary',
-          '&:hover': {
-            color: panelOpen ? 'primary.dark' : 'text.primary',
-          },
         }}
       >
         <Badge
@@ -864,11 +865,8 @@ function Player() {
                   onClick={toggleShuffleMode}
                   size="small"
                   sx={{
+                    ...toggleIconButtonSx(shuffleMode),
                     padding: { xs: '4px', sm: '4px' },
-                    color: shuffleMode ? 'primary.main' : 'text.secondary',
-                    '&:hover': {
-                      color: shuffleMode ? 'primary.dark' : 'text.primary',
-                    },
                   }}
                 >
                   {renderShuffleIcon()}
@@ -882,9 +880,8 @@ function Player() {
                   onClick={skipToPreviousTrack}
                   size="medium"
                   sx={{
+                    ...mutedIconButtonSx,
                     padding: { xs: '4px', sm: '4px' },
-                    color: 'text.secondary',
-                    '&:hover': { color: 'text.primary' },
                   }}
                 >
                   <SkipPrevious fontSize={isXsScreen ? 'small' : 'medium'} />
@@ -926,9 +923,8 @@ function Player() {
                   onClick={skipToNextTrack}
                   size="medium"
                   sx={{
+                    ...mutedIconButtonSx,
                     padding: { xs: '4px', sm: '4px' },
-                    color: 'text.secondary',
-                    '&:hover': { color: 'text.primary' },
                   }}
                 >
                   <SkipNext fontSize={isXsScreen ? 'small' : 'medium'} />
@@ -942,11 +938,8 @@ function Player() {
                   onClick={toggleRepeatMode}
                   size="small"
                   sx={{
+                    ...toggleIconButtonSx(repeatMode !== 'off'),
                     padding: { xs: '4px', sm: '4px' },
-                    color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
-                    '&:hover': {
-                      color: repeatMode !== 'off' ? 'primary.dark' : 'text.primary',
-                    },
                   }}
                 >
                   {renderRepeatIcon()}
@@ -981,11 +974,8 @@ function Player() {
               onClick={() => setBrowserOpen(!browserOpen)}
               size="medium"
               sx={{
+                ...toggleIconButtonSx(browserOpen),
                 padding: 0,
-                color: browserOpen ? 'primary.main' : 'text.secondary',
-                '&:hover': {
-                  color: browserOpen ? 'primary.dark' : 'text.primary',
-                },
               }}
             >
               <MaterialSymbolIcon icon="top_panel_open" />
@@ -996,11 +986,8 @@ function Player() {
               onClick={toggleVolumeControls}
               size="medium"
               sx={{
+                ...toggleIconButtonSx(volumeOpen),
                 padding: 0,
-                color: volumeOpen ? 'primary.main' : 'text.secondary',
-                '&:hover': {
-                  color: volumeOpen ? 'primary.dark' : 'text.primary',
-                },
               }}
             >
               {renderVolumeIcon()}
