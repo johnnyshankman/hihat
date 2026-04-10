@@ -20,8 +20,6 @@ import {
 import {
   PlayArrow,
   Pause,
-  SkipPrevious,
-  SkipNext,
   VolumeUp,
   VolumeDown,
   VolumeMute,
@@ -264,7 +262,7 @@ export default function MiniPlayer() {
       return (
         <MaterialSymbolIcon
           filled
-          fontSize="small"
+          fontSize="medium"
           icon="repeat_one_on"
           weight={500}
         />
@@ -274,13 +272,13 @@ export default function MiniPlayer() {
       return (
         <MaterialSymbolIcon
           filled
-          fontSize="small"
+          fontSize="medium"
           icon="repeat_on"
           weight={500}
         />
       );
     }
-    return <MaterialSymbolIcon fontSize="small" icon="repeat" weight={500} />;
+    return <MaterialSymbolIcon fontSize="medium" icon="repeat" weight={500} />;
   };
 
   // Get tooltip text based on repeat mode
@@ -305,13 +303,13 @@ export default function MiniPlayer() {
       return (
         <MaterialSymbolIcon
           filled
-          fontSize="small"
+          fontSize="medium"
           icon="shuffle_on"
           weight={500}
         />
       );
     }
-    return <MaterialSymbolIcon fontSize="small" icon="shuffle" weight={500} />;
+    return <MaterialSymbolIcon fontSize="medium" icon="shuffle" weight={500} />;
   };
 
   // Get tooltip text based on shuffle mode
@@ -498,8 +496,14 @@ export default function MiniPlayer() {
                 mx: 0.5,
                 color: (theme) => theme.palette.grey[500],
                 '& .MuiSlider-thumb': {
-                  height: 8,
-                  width: 8,
+                  height: 9,
+                  width: 9,
+                  '&:hover, &.Mui-focusVisible': {
+                    boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.08)',
+                  },
+                  '&.Mui-active': {
+                    boxShadow: '0 0 0 6px rgba(255, 255, 255, 0.12)',
+                  },
                 },
               }}
               value={seekPosition}
@@ -524,8 +528,8 @@ export default function MiniPlayer() {
               <span>
                 <IconButton
                   onClick={toggleShuffleMode}
-                  size="small"
-                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                  size="medium"
+                  sx={{ color: 'white', padding: '4px' }}
                 >
                   {renderShuffleIcon()}
                 </IconButton>
@@ -537,9 +541,14 @@ export default function MiniPlayer() {
                   disabled={!currentTrack}
                   onClick={handlePreviousTrack}
                   size="medium"
-                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                  sx={{ color: 'white', padding: '4px' }}
                 >
-                  <SkipPrevious fontSize="medium" />
+                  <MaterialSymbolIcon
+                    filled
+                    fontSize={32}
+                    icon="skip_previous"
+                    weight={500}
+                  />
                 </IconButton>
               </span>
             </Tooltip>
@@ -550,8 +559,8 @@ export default function MiniPlayer() {
                   onClick={handlePlayPause}
                   size="large"
                   sx={{
-                    mx: { xs: 0.25, sm: 1 },
-                    padding: { xs: '2px', sm: '2px' },
+                    mx: 1,
+                    padding: '2px',
                     color: 'white',
                   }}
                 >
@@ -569,9 +578,14 @@ export default function MiniPlayer() {
                   disabled={!currentTrack}
                   onClick={handleNextTrack}
                   size="medium"
-                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                  sx={{ color: 'white', padding: '4px' }}
                 >
-                  <SkipNext fontSize="medium" />
+                  <MaterialSymbolIcon
+                    filled
+                    fontSize={32}
+                    icon="skip_next"
+                    weight={500}
+                  />
                 </IconButton>
               </span>
             </Tooltip>
@@ -579,8 +593,8 @@ export default function MiniPlayer() {
               <span>
                 <IconButton
                   onClick={toggleRepeatMode}
-                  size="small"
-                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                  size="medium"
+                  sx={{ color: 'white', padding: '4px' }}
                 >
                   {renderRepeatIcon()}
                 </IconButton>
