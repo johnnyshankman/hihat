@@ -52,6 +52,19 @@ const baseThemeOptions: ThemeOptions = {
         },
       },
     },
+    MuiIconButton: {
+      defaultProps: {
+        disableRipple: true,
+      },
+      styleOverrides: {
+        root: {
+          backgroundColor: 'transparent',
+          '&:hover, &.Mui-focusVisible': {
+            backgroundColor: 'transparent',
+          },
+        },
+      },
+    },
   },
 };
 

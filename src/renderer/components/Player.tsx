@@ -888,6 +888,7 @@ function Player() {
               <span>
                 <IconButton
                   disabled={!currentTrack}
+                  disableRipple={false}
                   onClick={() => setPaused(!paused)}
                   size="large"
                   sx={{

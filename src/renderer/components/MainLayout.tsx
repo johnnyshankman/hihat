@@ -682,18 +682,8 @@ export default function MainLayout() {
                     size="small"
                     sx={{
                       color: settingsOpen ? 'text.primary' : 'text.secondary',
-                      backgroundColor: settingsOpen
-                        ? (muiTheme) =>
-                            muiTheme.palette.mode === 'dark'
-                              ? 'rgba(255, 255, 255, 0.08)'
-                              : 'rgba(0, 0, 0, 0.08)'
-                        : 'transparent',
                       '&:hover': {
                         color: 'text.primary',
-                        backgroundColor: (muiTheme) =>
-                          muiTheme.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.1)'
-                            : 'rgba(0, 0, 0, 0.1)',
                       },
                     }}
                   >
