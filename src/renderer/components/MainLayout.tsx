@@ -672,7 +672,7 @@ export default function MainLayout() {
                 </Tooltip>
               </Box>
               <Box
-                sx={{ display: 'flex', gap: '4px', WebkitAppRegion: 'no-drag' }}
+                sx={{ display: 'flex', gap: 1.5, WebkitAppRegion: 'no-drag' }}
               >
                 {/* Settings button */}
                 <Tooltip title="Settings">
@@ -685,6 +685,7 @@ export default function MainLayout() {
                       '&:hover': {
                         color: 'text.primary',
                       },
+                      padding: 0,
                     }}
                   >
                     <SettingsIcon sx={{ fontSize: 20 }} />
@@ -701,6 +702,7 @@ export default function MainLayout() {
                       '&:hover': {
                         color: 'text.primary',
                       },
+                      padding: 0,
                     }}
                   >
                     <ViewSidebarRoundedIcon sx={{ fontSize: 20 }} />
@@ -828,7 +830,8 @@ export default function MainLayout() {
                       onClick={handleAddPlaylistClick}
                       size="small"
                       sx={{
-                        p: 0.25,
+                        p: 0,
+                        left: '2px', // offset makes it perfectly centered underneath the "hide sidebar" icon
                         WebkitAppRegion: 'no-drag',
                         opacity: 0.7,
                         '&:hover': {

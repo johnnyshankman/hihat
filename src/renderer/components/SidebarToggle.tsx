@@ -27,8 +27,8 @@ function SidebarToggle({ isOpen, onToggle }: SidebarToggleProps) {
           padding: 0,
           margin: 0,
           color: isHovered
-            ? theme.palette.text.secondary
-            : theme.palette.text.primary,
+            ? theme.palette.text.primary
+            : theme.palette.text.secondary,
           height: '100%',
           display: 'flex',
           alignItems: 'center',
