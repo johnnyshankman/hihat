@@ -97,7 +97,7 @@ export const darkTheme = createTheme({
       secondary: '#AAAAAA',
     },
     divider: '#1A1A1A', // Subtle divider color
-    tableStripe: '#0D0D0D', // matches grey.A700 — preserves the previously-tuned dark zebra contrast
+    tableStripe: '#020202', // tuned dark zebra contrast
     action: {
       active: '#FFFFFF',
       hover: 'rgba(255, 255, 255, 0.08)',
