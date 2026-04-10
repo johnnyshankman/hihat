@@ -983,7 +983,13 @@ function Player() {
             <IconButton
               onClick={toggleVolumeControls}
               size="medium"
-              sx={{ padding: 0 }}
+              sx={{
+                padding: 0,
+                color: volumeOpen ? 'primary.main' : 'text.secondary',
+                '&:hover': {
+                  color: volumeOpen ? 'primary.dark' : 'text.primary',
+                },
+              }}
             >
               {renderVolumeIcon()}
             </IconButton>
