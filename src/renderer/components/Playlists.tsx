@@ -27,6 +27,8 @@ import SidebarToggle from './SidebarToggle';
 import Browser from './Browser';
 import SearchBar from './SearchBar';
 import VirtualTable from './VirtualTable';
+import NotificationButton from './NotificationButton';
+import MaterialSymbolIcon from './MaterialSymbolIcon';
 import {
   getRowClassName,
   getCommonColumnDefs,
@@ -142,6 +144,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Browser state
   const browserOpen = useUIStore((state) => state.browserOpen);
+  const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
   const browserFilters = useLibraryStore((state) => state.browserFilters);
   const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
   const [browserHeight, setBrowserHeight] = useState(200);
@@ -792,24 +795,26 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
         }}
       >
         <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-        <Typography
-          sx={{
-            maxWidth: window.innerWidth < 768 ? '200px' : '400px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            userSelect: 'none',
-            flexShrink: showSearch ? 1 : 0,
-          }}
-          variant="h2"
-        >
-          {playlistNameContent}
-        </Typography>
+        {!drawerOpen && (
+          <Typography
+            sx={{
+              maxWidth: window.innerWidth < 768 ? '200px' : '400px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              userSelect: 'none',
+              flexShrink: showSearch ? 1 : 0,
+            }}
+            variant="h2"
+          >
+            {playlistNameContent}
+          </Typography>
+        )}
         <Box
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
-            borderRadius: '16px',
+            borderRadius: '8px',
             backgroundColor: (theme) =>
               theme.palette.mode === 'dark'
                 ? theme.palette.grey[800]
@@ -835,7 +840,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
-            borderRadius: '16px',
+            borderRadius: '8px',
             backgroundColor: (theme) =>
               theme.palette.mode === 'dark'
                 ? theme.palette.grey[800]
@@ -901,6 +906,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
                 '&:hover': {
                   color: 'text.primary',
                 },
+                WebkitAppRegion: 'no-drag',
               }}
             >
               {showSearch ? (
@@ -910,6 +916,24 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
               )}
             </IconButton>
           </Tooltip>
+          <Tooltip title={browserOpen ? 'Hide Browser' : 'Show Browser'}>
+            <IconButton
+              aria-label="Show/Hide browser"
+              data-testid="browser-toggle"
+              onClick={() => setBrowserOpen(!browserOpen)}
+              size="small"
+              sx={{
+                color: browserOpen ? 'text.primary' : 'text.secondary',
+                '&:hover': {
+                  color: 'text.primary',
+                },
+                WebkitAppRegion: 'no-drag',
+              }}
+            >
+              <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
+            </IconButton>
+          </Tooltip>
+          <NotificationButton />
         </Box>
       </Box>
     );
@@ -925,6 +949,8 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     playlistTotalHours,
     handleSearchToggle,
     handleDebouncedSearchChange,
+    browserOpen,
+    setBrowserOpen,
   ]);
 
   // Browser panel to pass to VirtualTable

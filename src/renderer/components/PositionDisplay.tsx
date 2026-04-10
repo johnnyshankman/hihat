@@ -36,9 +36,7 @@ const PositionDisplay = React.memo(
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          maxWidth: '500px',
-          mx: 'auto',
-          mb: 0.5,
+          mt: 0.5,
         }}
       >
         <Typography
@@ -46,9 +44,10 @@ const PositionDisplay = React.memo(
           data-testid="player-elapsed-time"
           sx={{
             mr: 1,
-            minWidth: { xs: '30px', sm: '40px' },
+            minWidth: '36px',
             textAlign: 'right',
-            fontSize: { xs: '0.65rem', sm: '0.75rem' },
+            fontSize: '0.65rem',
+            lineHeight: 1,
             userSelect: 'none',
           }}
           variant="caption"
@@ -76,8 +75,9 @@ const PositionDisplay = React.memo(
           color="textSecondary"
           sx={{
             ml: 1,
-            minWidth: { xs: '30px', sm: '40px' },
-            fontSize: { xs: '0.65rem', sm: '0.75rem' },
+            minWidth: '36px',
+            fontSize: '0.65rem',
+            lineHeight: 1,
             userSelect: 'none',
           }}
           variant="caption"

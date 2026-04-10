@@ -69,7 +69,7 @@ export default function NotificationSystem() {
   return (
     <Box
       data-testid="notification-panel"
-      sx={{
+      sx={(theme) => ({
         position: 'fixed',
         bottom: 80,
         right: 24,
@@ -79,7 +79,7 @@ export default function NotificationSystem() {
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: '#1a1a1a',
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: `1px solid ${theme.palette.divider}`,
         borderRadius: '8px',
         overflow: 'hidden',
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
@@ -94,19 +94,19 @@ export default function NotificationSystem() {
             opacity: 1,
           },
         },
-      }}
+      })}
     >
       {/* Header */}
       <Box
-        sx={{
+        sx={(theme) => ({
           px: '10px',
           py: '6px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: `1px solid ${theme.palette.divider}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           minHeight: '32px',
-        }}
+        })}
       >
         <Typography
           sx={{
@@ -184,14 +184,14 @@ export default function NotificationSystem() {
           <Box
             key={notification.id}
             data-testid="notification-item"
-            sx={{
+            sx={(theme) => ({
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               px: '8px',
               py: '6px',
               borderLeft: `3px solid ${ACCENT_COLORS[notification.type] || ACCENT_COLORS.info}`,
-              borderBottom: '1px solid rgba(255,255,255,0.04)',
+              borderBottom: `1px solid ${theme.palette.divider}`,
               borderRadius: '4px',
               minHeight: '32px',
               opacity: dismissingIds.has(notification.id) ? 0 : 1,
@@ -207,7 +207,7 @@ export default function NotificationSystem() {
                   opacity: 1,
                 },
               },
-            }}
+            })}
           >
             <Typography
               sx={{

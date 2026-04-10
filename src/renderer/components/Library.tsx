@@ -36,6 +36,8 @@ import SidebarToggle from './SidebarToggle';
 import Browser from './Browser';
 import SearchBar from './SearchBar';
 import VirtualTable from './VirtualTable';
+import NotificationButton from './NotificationButton';
+import MaterialSymbolIcon from './MaterialSymbolIcon';
 import {
   getRowClassName,
   getCommonColumnDefs,
@@ -139,6 +141,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
   const getSearchFilter = useLibraryStore((state) => state.getSearchFilter);
   const browserOpen = useUIStore((state) => state.browserOpen);
+  const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
   const libraryViewState = useLibraryStore((state) => state.libraryViewState);
   const [showSearch, setShowSearch] = useState(() =>
     Boolean(getSearchFilter('library')),
@@ -751,23 +754,25 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         }}
       >
         <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-        <Typography
-          sx={{
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            userSelect: 'none',
-            flexShrink: 0,
-          }}
-          variant="h2"
-        >
-          Library
-        </Typography>
+        {!drawerOpen && (
+          <Typography
+            sx={{
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              userSelect: 'none',
+              flexShrink: 0,
+            }}
+            variant="h2"
+          >
+            Library
+          </Typography>
+        )}
         <Box
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
-            borderRadius: '16px',
+            borderRadius: '8px',
             backgroundColor: (theme) =>
               theme.palette.mode === 'dark'
                 ? theme.palette.grey[800]
@@ -793,7 +798,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
-            borderRadius: '16px',
+            borderRadius: '8px',
             backgroundColor: (theme) =>
               theme.palette.mode === 'dark'
                 ? theme.palette.grey[800]
@@ -858,6 +863,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
                 '&:hover': {
                   color: 'text.primary',
                 },
+                WebkitAppRegion: 'no-drag',
               }}
             >
               {showSearch ? (
@@ -867,6 +873,24 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
               )}
             </IconButton>
           </Tooltip>
+          <Tooltip title={browserOpen ? 'Hide Browser' : 'Show Browser'}>
+            <IconButton
+              aria-label="Show/Hide browser"
+              data-testid="browser-toggle"
+              onClick={() => setBrowserOpen(!browserOpen)}
+              size="small"
+              sx={{
+                color: browserOpen ? 'text.primary' : 'text.secondary',
+                '&:hover': {
+                  color: 'text.primary',
+                },
+                WebkitAppRegion: 'no-drag',
+              }}
+            >
+              <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
+            </IconButton>
+          </Tooltip>
+          <NotificationButton />
         </Box>
       </Box>
     ),
@@ -878,6 +902,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       showSearch,
       handleSearchToggle,
       handleDebouncedSearchChange,
+      browserOpen,
+      setBrowserOpen,
     ],
   );
 
