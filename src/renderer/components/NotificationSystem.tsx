@@ -71,8 +71,8 @@ export default function NotificationSystem() {
       data-testid="notification-panel"
       sx={(theme) => ({
         position: 'fixed',
-        bottom: 80,
-        right: 24,
+        top: 44,
+        right: 8,
         zIndex: 2001,
         width: '320px',
         maxHeight: '400px',
@@ -83,14 +83,14 @@ export default function NotificationSystem() {
         borderRadius: '8px',
         overflow: 'hidden',
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-        animation: 'panelSlideIn 0.3s ease-out',
+        animation: 'panelSlideIn 0.2s ease-out',
         '@keyframes panelSlideIn': {
           from: {
-            transform: 'translateX(20px)',
+            transform: 'translateY(-8px)',
             opacity: 0,
           },
           to: {
-            transform: 'translateX(0)',
+            transform: 'translateY(0)',
             opacity: 1,
           },
         },
