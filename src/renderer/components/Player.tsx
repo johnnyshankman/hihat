@@ -995,6 +995,7 @@ function Player() {
               horizontal: 'center',
             }}
             disableRestoreFocus
+            marginThreshold={0}
             onClose={handleVolumeClose}
             open={volumeOpen}
             transformOrigin={{
@@ -1005,8 +1006,9 @@ function Player() {
             <Box
               sx={{
                 height: 120,
-                width: 40,
-                p: 2,
+                width: 32,
+                px: 0,
+                py: 2,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
