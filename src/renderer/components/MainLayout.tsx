@@ -812,7 +812,8 @@ export default function MainLayout() {
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    px: 1.5,
+                    pl: 1.5,
+                    pr: 1,
                     py: 0.5,
                     WebkitAppRegion: 'no-drag',
                   }}
