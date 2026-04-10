@@ -25,13 +25,9 @@ import {
   VolumeUp,
   VolumeDown,
   VolumeMute,
-  Repeat,
-  RepeatOne,
-  RepeatOn,
-  Shuffle,
-  ShuffleOn,
   MusicNote,
 } from '@mui/icons-material';
+import MaterialSymbolIcon from './MaterialSymbolIcon';
 
 import { formatDuration } from '../utils/formatters';
 
@@ -260,17 +256,11 @@ export default function MiniPlayer() {
     return <VolumeUp />;
   };
 
-  // Render repeat icon based on repeat mode
+  // Render repeat icon based on repeat mode.
+  // Uses MaterialSymbolIcon with wght=500 to match the main Player.
   const renderRepeatIcon = () => {
-    switch (repeatMode) {
-      case 'track':
-        return <RepeatOne color="primary" fontSize="small" />;
-      case 'all':
-        return <RepeatOn color="primary" fontSize="small" />;
-      case 'off':
-      default:
-        return <Repeat fontSize="small" />;
-    }
+    const iconName = repeatMode === 'track' ? 'repeat_one' : 'repeat';
+    return <MaterialSymbolIcon fontSize="small" icon={iconName} weight={500} />;
   };
 
   // Get tooltip text based on repeat mode
@@ -287,12 +277,10 @@ export default function MiniPlayer() {
     }
   };
 
-  // Render shuffle icon based on shuffle mode
+  // Render shuffle icon. Uses MaterialSymbolIcon with wght=500 to
+  // match the main Player.
   const renderShuffleIcon = () => {
-    if (shuffleMode) {
-      return <ShuffleOn color="primary" fontSize="small" />;
-    }
-    return <Shuffle fontSize="small" />;
+    return <MaterialSymbolIcon fontSize="small" icon="shuffle" weight={500} />;
   };
 
   // Get tooltip text based on shuffle mode
