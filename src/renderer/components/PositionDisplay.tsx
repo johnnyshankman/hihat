@@ -46,7 +46,7 @@ const PositionDisplay = React.memo(
             mr: 1,
             minWidth: '36px',
             textAlign: 'right',
-            fontSize: '0.65rem',
+            fontSize: '11px',
             lineHeight: 1,
             userSelect: 'none',
           }}
@@ -76,7 +76,7 @@ const PositionDisplay = React.memo(
           sx={{
             ml: 1,
             minWidth: '36px',
-            fontSize: '0.65rem',
+            fontSize: '11px',
             lineHeight: 1,
             userSelect: 'none',
           }}
