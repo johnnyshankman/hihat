@@ -62,7 +62,7 @@ const PositionDisplay = React.memo(
           }}
           size="small"
           sx={{
-            mx: 0.5,
+            mx: 0.25,
             color: (t) => t.palette.grey[500],
             '& .MuiSlider-thumb': {
               height: 8,
