@@ -485,9 +485,9 @@ function Player() {
 
     switch (repeatMode) {
       case 'track':
-        return <RepeatOne color="primary" fontSize={iconSize} />;
+        return <RepeatOne fontSize={iconSize} />;
       case 'all':
-        return <RepeatOn color="primary" fontSize={iconSize} />;
+        return <RepeatOn fontSize={iconSize} />;
       case 'off':
       default:
         return <Repeat fontSize={iconSize} />;
@@ -513,7 +513,7 @@ function Player() {
     const iconSize = 'small';
 
     if (shuffleMode) {
-      return <ShuffleOn color="primary" fontSize={iconSize} />;
+      return <ShuffleOn fontSize={iconSize} />;
     }
     return <Shuffle fontSize={iconSize} />;
   };
@@ -865,6 +865,10 @@ function Player() {
                   size="small"
                   sx={{
                     padding: { xs: '4px', sm: '4px' },
+                    color: shuffleMode ? 'primary.main' : 'text.secondary',
+                    '&:hover': {
+                      color: shuffleMode ? 'primary.dark' : 'text.primary',
+                    },
                   }}
                 >
                   {renderShuffleIcon()}
@@ -879,6 +883,8 @@ function Player() {
                   size="medium"
                   sx={{
                     padding: { xs: '4px', sm: '4px' },
+                    color: 'text.secondary',
+                    '&:hover': { color: 'text.primary' },
                   }}
                 >
                   <SkipPrevious fontSize={isXsScreen ? 'small' : 'medium'} />
@@ -921,6 +927,8 @@ function Player() {
                   size="medium"
                   sx={{
                     padding: { xs: '4px', sm: '4px' },
+                    color: 'text.secondary',
+                    '&:hover': { color: 'text.primary' },
                   }}
                 >
                   <SkipNext fontSize={isXsScreen ? 'small' : 'medium'} />
@@ -935,6 +943,10 @@ function Player() {
                   size="small"
                   sx={{
                     padding: { xs: '4px', sm: '4px' },
+                    color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
+                    '&:hover': {
+                      color: repeatMode !== 'off' ? 'primary.dark' : 'text.primary',
+                    },
                   }}
                 >
                   {renderRepeatIcon()}
