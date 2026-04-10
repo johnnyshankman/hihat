@@ -8,8 +8,8 @@ import React, {
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { keyframes } from '@mui/system';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import SearchIcon from '@mui/icons-material/Search';
-import SearchOffIcon from '@mui/icons-material/SearchOff';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
 import { type SortingState, type Row, type Table } from '@tanstack/react-table';
 import { type Virtualizer } from '@tanstack/react-virtual';
 import Marquee from 'react-fast-marquee';
@@ -895,14 +895,19 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             <IconButton
               aria-label="Show/Hide search"
               onClick={handleSearchToggle}
+              size="small"
               sx={{
-                color: showSearch ? 'primary.main' : 'text.secondary',
+                color: showSearch ? 'text.primary' : 'text.secondary',
                 '&:hover': {
-                  color: showSearch ? 'primary.dark' : 'text.primary',
+                  color: 'text.primary',
                 },
               }}
             >
-              {showSearch ? <SearchOffIcon /> : <SearchIcon />}
+              {showSearch ? (
+                <SearchOffRoundedIcon sx={{ fontSize: 20 }} />
+              ) : (
+                <SearchRoundedIcon sx={{ fontSize: 20 }} />
+              )}
             </IconButton>
           </Tooltip>
         </Box>
