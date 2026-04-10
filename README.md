@@ -39,6 +39,7 @@
     - [Sidebar and Navigation](#sidebar-and-navigation)
     - [Playlists](#playlists)
     - [Browsing and Filtering](#browsing-and-filtering)
+    - [Notifications](#notifications)
     - [Mini Player](#mini-player)
     - [Editing Metadata](#editing-metadata)
     - [Right-Click Actions](#right-click-actions)
@@ -170,10 +171,10 @@ For detailed format information, see:
 Double-click any track in the library to start playing. The player bar at the bottom of the window shows:
 
 * **Album art** on the left (click to open the Mini Player)
-* **Track title and artist** in the center (click the title to scroll back to the current song)
-* **Playback controls**: previous, play/pause, next, repeat, and shuffle
-* **Seek slider** to scrub through the track
-* **Volume control** on the right
+* **Track title and artist** next to the album art (click the title to scroll back to the current song)
+* **Playback controls** in the center: shuffle, previous, play/pause, next, and repeat
+* **Seek slider** with elapsed and remaining time below the playback controls
+* **Volume slider and mute button** on the right
 
 ![hihat player bar showing album art, track title, playback controls, seek slider, and volume](screenshots/usage-player-bar.png)
 
@@ -209,15 +210,23 @@ Right-click any user-created playlist in the sidebar to **Rename** or **Delete**
 
 ### Browsing and Filtering
 
-**Search:** Click the search icon in the toolbar (or just start typing when focused on the library) to filter tracks by title, artist, album, or genre.
+The toolbar at the top of the track list holds all the tools for finding and organizing music: a search button, a browser button, and a notification button, all grouped at the right edge of the toolbar.
 
-**Browser:** Click the people icon in the toolbar to open the Browser panel at the top. It has two columns — Album Artist and Album — so you can drill down by artist and then by album. Click any item to filter; click it again to deselect.
+**Search:** Click the search button in the toolbar (or just start typing when focused on the library) to filter tracks by title, artist, album, or genre.
+
+**Browser:** Click the browser button in the toolbar (next to search) to open the Browser panel at the top of the track list. It has two columns — Album Artist and Album — so you can drill down by artist and then by album. Click any item to filter; click it again to deselect.
 
 **Sorting:** Click any column header to sort ascending or descending.
 
 **Column visibility:** Right-click any column header to show or hide columns (Title, Artist, Album, Album Artist, Genre, Time, Play Count, Date Added, Last Played).
 
 ![hihat library with search bar active and Browser panel open at the top](screenshots/usage-search-artist-browser.png)
+
+### Notifications
+
+hihat shows quick, in-app notifications when things happen in the background — for example, when a track is added to a playlist, when metadata is saved, or when a file can't be written.
+
+Click the **bell button** in the toolbar (at the far right, next to the browser button) to open the notification panel. A small badge appears on the bell whenever there are unread notifications. From the panel you can review recent notifications, dismiss them one by one, or clear them all at once. Click the bell again to close the panel.
 
 ### Mini Player
 
