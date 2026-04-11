@@ -84,7 +84,7 @@ test.describe('Playback Modes', () => {
     // Skip through several tracks and record what plays
     const shuffledTitles: string[] = [];
     for (let i = 0; i < 5; i++) {
-      await page.locator('button:has(svg[data-testid="SkipNextIcon"])').click();
+      await page.locator('[data-testid="skip-next-button"]').click();
       await page.waitForTimeout(1000);
 
       // Get the title from the player area by checking page content

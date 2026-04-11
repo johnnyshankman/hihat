@@ -27,7 +27,7 @@ test.describe('Playback Skip Behaviors', () => {
 
     // Skip next 3 times rapidly
     for (let i = 0; i < 3; i++) {
-      await page.locator('button:has(svg[data-testid="SkipNextIcon"])').click();
+      await page.locator('[data-testid="skip-next-button"]').click();
       await page.waitForTimeout(500);
     }
 
@@ -66,9 +66,7 @@ test.describe('Playback Skip Behaviors', () => {
     await expect(pauseIcon).toBeVisible({ timeout: 5000 });
 
     // Skip previous (within 3 seconds so it goes to previous track)
-    await page
-      .locator('button:has(svg[data-testid="SkipPreviousIcon"])')
-      .click();
+    await page.locator('[data-testid="skip-previous-button"]').click();
     await page.waitForTimeout(1000);
 
     // Verify still playing
@@ -104,13 +102,11 @@ test.describe('Playback Skip Behaviors', () => {
     await expect(pauseIcon).toBeVisible({ timeout: 5000 });
 
     // Skip next
-    await page.locator('button:has(svg[data-testid="SkipNextIcon"])').click();
+    await page.locator('[data-testid="skip-next-button"]').click();
     await page.waitForTimeout(1000);
 
     // Skip previous (within 3 seconds)
-    await page
-      .locator('button:has(svg[data-testid="SkipPreviousIcon"])')
-      .click();
+    await page.locator('[data-testid="skip-previous-button"]').click();
     await page.waitForTimeout(1000);
 
     // Verify still playing
@@ -144,7 +140,7 @@ test.describe('Playback Skip Behaviors', () => {
     await expect(playIcon).toBeVisible({ timeout: 5000 });
 
     // Skip next
-    await page.locator('button:has(svg[data-testid="SkipNextIcon"])').click();
+    await page.locator('[data-testid="skip-next-button"]').click();
     await page.waitForTimeout(1000);
 
     // Verify still paused
@@ -183,9 +179,7 @@ test.describe('Playback Skip Behaviors', () => {
     await expect(playIcon).toBeVisible({ timeout: 5000 });
 
     // Skip previous (within 3 seconds)
-    await page
-      .locator('button:has(svg[data-testid="SkipPreviousIcon"])')
-      .click();
+    await page.locator('[data-testid="skip-previous-button"]').click();
     await page.waitForTimeout(1000);
 
     // Verify still paused

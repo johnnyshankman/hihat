@@ -82,7 +82,7 @@ test.describe('Playback Auto-play Behaviors', () => {
     await expect(pauseIcon).toBeVisible({ timeout: 5000 });
 
     // Click skip-next button
-    await page.locator('button:has(svg[data-testid="SkipNextIcon"])').click();
+    await page.locator('[data-testid="skip-next-button"]').click();
     await page.waitForTimeout(1000);
 
     // Verify PauseIcon is still visible (still playing after skip)
@@ -121,7 +121,7 @@ test.describe('Playback Auto-play Behaviors', () => {
     await expect(playIcon).toBeVisible({ timeout: 5000 });
 
     // Click skip-next button
-    await page.locator('button:has(svg[data-testid="SkipNextIcon"])').click();
+    await page.locator('[data-testid="skip-next-button"]').click();
     await page.waitForTimeout(1000);
 
     // Verify PlayArrowIcon is still visible (still paused after skip)

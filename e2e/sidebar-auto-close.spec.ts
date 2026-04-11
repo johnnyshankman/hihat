@@ -20,9 +20,14 @@ test.describe('Sidebar Persistence', () => {
     await page.getByText('Test Playlist', { exact: true }).click();
     await page.waitForTimeout(500);
 
-    // Verify we're in playlist view
-    const playlistHeading = page.locator('h2');
-    await expect(playlistHeading).toContainText('Test Playlist');
+    // Verify we're in playlist view. The in-header `h2` title is intentionally
+    // hidden while the sidebar is open (the selected sidebar row already names
+    // the playlist), so assert selection via the sidebar row's Mui-selected
+    // class instead — which is the actual source of truth for the current view.
+    const selectedPlaylistRow = page
+      .locator('[data-playlist-id]')
+      .filter({ hasText: 'Test Playlist' });
+    await expect(selectedPlaylistRow).toHaveClass(/Mui-selected/);
 
     // Verify sidebar is still open
     expect(await isSidebarOpen()).toBe(true);

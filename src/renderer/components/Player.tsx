@@ -842,6 +842,7 @@ function Player() {
             <Tooltip arrow placement="top" title="Previous">
               <span>
                 <IconButton
+                  data-testid="skip-previous-button"
                   disabled={!currentTrack || skipInProgress}
                   onClick={skipToPreviousTrack}
                   size="medium"
@@ -890,6 +891,7 @@ function Player() {
             <Tooltip arrow placement="top" title="Next">
               <span>
                 <IconButton
+                  data-testid="skip-next-button"
                   disabled={!currentTrack || skipInProgress}
                   onClick={skipToNextTrack}
                   size="medium"
