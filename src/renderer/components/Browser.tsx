@@ -15,6 +15,8 @@ interface BrowserProps {
   onAlbumSelect: (album: string | null) => void;
   height: number;
   onHeightChange: (h: number) => void;
+  open: boolean;
+  onClose?: () => void;
 }
 
 // Strip leading "the " for sorting
@@ -34,20 +36,41 @@ function Browser({
   onAlbumSelect,
   height,
   onHeightChange,
+  open,
+  onClose,
 }: BrowserProps) {
   const artistColumnRef = useRef<HTMLDivElement>(null);
   const albumColumnRef = useRef<HTMLDivElement>(null);
   const browserPanelRef = useRef<HTMLDivElement>(null);
+  const revealRef = useRef<HTMLDivElement>(null);
   const resizeStartRef = useRef<{ startY: number; startHeight: number } | null>(
     null,
   );
   const [focusedColumn, setFocusedColumn] = useState<'artist' | 'album' | null>(
     null,
   );
+  const [isResizing, setIsResizing] = useState(false);
   const typeAheadBufferRef = useRef('');
   const typeAheadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+
+  // Sync inert attribute (React 18 doesn't type inert as a prop) and, on close,
+  // return focus to the toggle button if focus lives inside the panel.
+  useEffect(() => {
+    const el = revealRef.current;
+    if (!el) return;
+    if (open) {
+      el.removeAttribute('inert');
+      return;
+    }
+    el.setAttribute('inert', '');
+    if (browserPanelRef.current?.contains(document.activeElement)) {
+      document
+        .querySelector<HTMLElement>('[data-testid="browser-toggle"]')
+        ?.focus();
+    }
+  }, [open]);
 
   // Compute unique album artists from tracks
   const artists = useMemo(() => {
@@ -119,9 +142,21 @@ function Browser({
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, []);
 
-  // Type-ahead keyboard navigation
+  // Type-ahead keyboard navigation (+ Escape closes)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Bail if panel is closed
+      if (!open) return;
+
+      // Escape closes the panel when a column has focus
+      if (e.key === 'Escape' && focusedColumn && onClose) {
+        e.preventDefault();
+        setFocusedColumn(null);
+        typeAheadBufferRef.current = '';
+        onClose();
+        return;
+      }
+
       if (!focusedColumn) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.length !== 1) return;
@@ -133,9 +168,6 @@ function Browser({
       ) {
         return;
       }
-
-      // Don't respond if browser panel is hidden
-      if (!browserPanelRef.current?.offsetParent) return;
 
       e.preventDefault();
 
@@ -163,12 +195,21 @@ function Browser({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [focusedColumn, artists, albums, onArtistSelect, onAlbumSelect]);
+  }, [
+    focusedColumn,
+    artists,
+    albums,
+    onArtistSelect,
+    onAlbumSelect,
+    open,
+    onClose,
+  ]);
 
-  // Resize handle logic
+  // Resize handle logic — suppresses reveal transition while dragging
   const handleResizeMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      setIsResizing(true);
       resizeStartRef.current = { startY: e.clientY, startHeight: height };
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -183,6 +224,7 @@ function Browser({
 
       const handleMouseUp = () => {
         resizeStartRef.current = null;
+        setIsResizing(false);
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
@@ -195,100 +237,107 @@ function Browser({
 
   return (
     <div
-      ref={browserPanelRef}
-      className="browser-panel"
-      data-testid="browser-panel"
-      style={{ height }}
+      ref={revealRef}
+      aria-hidden={!open}
+      className={`browser-reveal${isResizing ? ' browser-resizing' : ''}`}
+      id="browser-panel"
+      style={{ height: open ? height : 0 }}
     >
-      <div className="browser-columns">
-        {/* Album Artist column */}
-        {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
-        <div
-          ref={artistColumnRef}
-          className={`browser-column${focusedColumn === 'artist' ? ' browser-column-focused' : ''}`}
-          data-testid="browser-artist-column"
-          onMouseDown={() => {
-            setFocusedColumn('artist');
-            typeAheadBufferRef.current = '';
-          }}
-          role="listbox"
-        >
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus */}
-          <div
-            aria-selected={selectedArtist === null}
-            className={`browser-item${selectedArtist === null ? ' browser-item-selected' : ''}`}
-            data-testid="browser-artist-all"
-            onClick={() => onArtistSelect(null)}
-            role="option"
-          >
-            All Album Artists ({artists.length})
-          </div>
-          {artists.map((artist) => (
-            // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus
-            <div
-              key={artist}
-              aria-selected={selectedArtist === artist}
-              className={`browser-item${selectedArtist === artist ? ' browser-item-selected' : ''}`}
-              data-artist={artist}
-              data-testid="browser-artist-item"
-              onClick={() =>
-                onArtistSelect(selectedArtist === artist ? null : artist)
-              }
-              role="option"
-            >
-              {artist}
-            </div>
-          ))}
-        </div>
-
-        {/* Album column */}
-        {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
-        <div
-          ref={albumColumnRef}
-          className={`browser-column${focusedColumn === 'album' ? ' browser-column-focused' : ''}`}
-          data-testid="browser-album-column"
-          onMouseDown={() => {
-            setFocusedColumn('album');
-            typeAheadBufferRef.current = '';
-          }}
-          role="listbox"
-        >
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus */}
-          <div
-            aria-selected={selectedAlbum === null}
-            className={`browser-item${selectedAlbum === null ? ' browser-item-selected' : ''}`}
-            data-testid="browser-album-all"
-            onClick={() => onAlbumSelect(null)}
-            role="option"
-          >
-            All Albums ({albums.length})
-          </div>
-          {albums.map((album) => (
-            // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus
-            <div
-              key={album}
-              aria-selected={selectedAlbum === album}
-              className={`browser-item${selectedAlbum === album ? ' browser-item-selected' : ''}`}
-              data-album={album}
-              data-testid="browser-album-item"
-              onClick={() =>
-                onAlbumSelect(selectedAlbum === album ? null : album)
-              }
-              role="option"
-            >
-              {album}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Resize handle */}
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div
-        className="browser-resize-handle"
-        data-testid="browser-resize-handle"
-        onMouseDown={handleResizeMouseDown}
-      />
+        ref={browserPanelRef}
+        className="browser-panel"
+        data-testid="browser-panel"
+      >
+        <div className="browser-columns">
+          {/* Album Artist column */}
+          {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
+          <div
+            ref={artistColumnRef}
+            className={`browser-column${focusedColumn === 'artist' ? ' browser-column-focused' : ''}`}
+            data-testid="browser-artist-column"
+            onMouseDown={() => {
+              setFocusedColumn('artist');
+              typeAheadBufferRef.current = '';
+            }}
+            role="listbox"
+          >
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus */}
+            <div
+              aria-selected={selectedArtist === null}
+              className={`browser-item${selectedArtist === null ? ' browser-item-selected' : ''}`}
+              data-testid="browser-artist-all"
+              onClick={() => onArtistSelect(null)}
+              role="option"
+            >
+              All Album Artists ({artists.length})
+            </div>
+            {artists.map((artist) => (
+              // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus
+              <div
+                key={artist}
+                aria-selected={selectedArtist === artist}
+                className={`browser-item${selectedArtist === artist ? ' browser-item-selected' : ''}`}
+                data-artist={artist}
+                data-testid="browser-artist-item"
+                onClick={() =>
+                  onArtistSelect(selectedArtist === artist ? null : artist)
+                }
+                role="option"
+              >
+                {artist}
+              </div>
+            ))}
+          </div>
+
+          {/* Album column */}
+          {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
+          <div
+            ref={albumColumnRef}
+            className={`browser-column${focusedColumn === 'album' ? ' browser-column-focused' : ''}`}
+            data-testid="browser-album-column"
+            onMouseDown={() => {
+              setFocusedColumn('album');
+              typeAheadBufferRef.current = '';
+            }}
+            role="listbox"
+          >
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus */}
+            <div
+              aria-selected={selectedAlbum === null}
+              className={`browser-item${selectedAlbum === null ? ' browser-item-selected' : ''}`}
+              data-testid="browser-album-all"
+              onClick={() => onAlbumSelect(null)}
+              role="option"
+            >
+              All Albums ({albums.length})
+            </div>
+            {albums.map((album) => (
+              // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus
+              <div
+                key={album}
+                aria-selected={selectedAlbum === album}
+                className={`browser-item${selectedAlbum === album ? ' browser-item-selected' : ''}`}
+                data-album={album}
+                data-testid="browser-album-item"
+                onClick={() =>
+                  onAlbumSelect(selectedAlbum === album ? null : album)
+                }
+                role="option"
+              >
+                {album}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Resize handle */}
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+        <div
+          className="browser-resize-handle"
+          data-testid="browser-resize-handle"
+          onMouseDown={handleResizeMouseDown}
+        />
+      </div>
     </div>
   );
 }
@@ -299,8 +348,10 @@ export default React.memo(Browser, (prevProps, nextProps) => {
     prevProps.selectedArtist === nextProps.selectedArtist &&
     prevProps.selectedAlbum === nextProps.selectedAlbum &&
     prevProps.height === nextProps.height &&
+    prevProps.open === nextProps.open &&
     prevProps.onArtistSelect === nextProps.onArtistSelect &&
     prevProps.onAlbumSelect === nextProps.onAlbumSelect &&
-    prevProps.onHeightChange === nextProps.onHeightChange
+    prevProps.onHeightChange === nextProps.onHeightChange &&
+    prevProps.onClose === nextProps.onClose
   );
 });

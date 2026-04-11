@@ -201,15 +201,61 @@ tr[draggable="true"] {
   padding: 0;
 }
 
-/* Browser Panel */
+/* Browser reveal wrapper — owns reflow via pixel height, clips inner */
+.browser-reveal {
+  height: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+  contain: layout paint;
+  will-change: height;
+  /* Exit (close) timing — snappier than entry */
+  transition: height 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.browser-reveal:not([aria-hidden='true']) {
+  /* Enter (open) timing */
+  transition: height 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Suppress transition while user is dragging the resize handle */
+.browser-reveal.browser-resizing {
+  transition: none !important;
+}
+
+/* Browser Panel — GPU-composited visual layer (transform + opacity) */
 .browser-panel {
   display: flex;
   flex-direction: column;
+  height: 100%;
   border-bottom: 1px solid var(--vt-divider);
   background-color: var(--vt-bg-default);
-  flex-shrink: 0;
   overflow: hidden;
   -webkit-app-region: no-drag;
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  backface-visibility: hidden;
+  will-change: transform;
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.browser-reveal[aria-hidden='true'] > .browser-panel {
+  transform: translate3d(0, -6px, 0);
+  opacity: 0;
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .browser-reveal,
+  .browser-reveal > .browser-panel {
+    transition: none !important;
+  }
+  .browser-reveal[aria-hidden='true'] > .browser-panel {
+    transform: none !important;
+  }
 }
 
 .browser-columns {

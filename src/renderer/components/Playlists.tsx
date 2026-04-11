@@ -918,6 +918,8 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
           </Tooltip>
           <Tooltip title={browserOpen ? 'Hide Browser' : 'Show Browser'}>
             <IconButton
+              aria-controls="browser-panel"
+              aria-expanded={browserOpen}
               aria-label="Show/Hide browser"
               data-testid="browser-toggle"
               onClick={() => setBrowserOpen(!browserOpen)}
@@ -930,7 +932,15 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
                 WebkitAppRegion: 'no-drag',
               }}
             >
-              <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  transform: browserOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+                }}
+              >
+                <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
+              </Box>
             </IconButton>
           </Tooltip>
           <NotificationButton />
@@ -953,15 +963,23 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     setBrowserOpen,
   ]);
 
-  // Browser panel to pass to VirtualTable
+  const handleBrowserClose = useCallback(
+    () => setBrowserOpen(false),
+    [setBrowserOpen],
+  );
+
+  // Browser panel to pass to VirtualTable — mounted whenever a playlist is selected
+  // so open/close can animate. Gate on selectedPlaylistId only (not browserOpen).
   const browserPanel = useMemo(() => {
-    if (!browserOpen || !selectedPlaylistId) return undefined;
+    if (!selectedPlaylistId) return undefined;
     return (
       <Browser
         height={browserHeight}
         onAlbumSelect={handleBrowserAlbumSelect}
         onArtistSelect={handleBrowserArtistSelect}
+        onClose={handleBrowserClose}
         onHeightChange={setBrowserHeight}
+        open={browserOpen}
         selectedAlbum={playlistAlbumFilter}
         selectedArtist={playlistArtistFilter}
         tracks={playlistTracks}
@@ -973,6 +991,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     browserHeight,
     handleBrowserAlbumSelect,
     handleBrowserArtistSelect,
+    handleBrowserClose,
     playlistAlbumFilter,
     playlistArtistFilter,
     playlistTracks,

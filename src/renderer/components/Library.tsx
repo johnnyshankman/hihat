@@ -875,6 +875,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           </Tooltip>
           <Tooltip title={browserOpen ? 'Hide Browser' : 'Show Browser'}>
             <IconButton
+              aria-controls="browser-panel"
+              aria-expanded={browserOpen}
               aria-label="Show/Hide browser"
               data-testid="browser-toggle"
               onClick={() => setBrowserOpen(!browserOpen)}
@@ -887,7 +889,15 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
                 WebkitAppRegion: 'no-drag',
               }}
             >
-              <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  transform: browserOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+                }}
+              >
+                <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
+              </Box>
             </IconButton>
           </Tooltip>
           <NotificationButton />
@@ -946,15 +956,21 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [drawerOpen],
   );
 
-  // Browser panel to pass to VirtualTable
+  const handleBrowserClose = useCallback(
+    () => setBrowserOpen(false),
+    [setBrowserOpen],
+  );
+
+  // Browser panel to pass to VirtualTable — always mounted so open/close can animate
   const browserPanel = useMemo(() => {
-    if (!browserOpen) return undefined;
     return (
       <Browser
         height={browserHeight}
         onAlbumSelect={handleAlbumSelect}
         onArtistSelect={handleArtistSelect}
+        onClose={handleBrowserClose}
         onHeightChange={setBrowserHeight}
+        open={browserOpen}
         selectedAlbum={albumFilter}
         selectedArtist={artistFilter}
         tracks={tracks}
@@ -965,6 +981,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     browserHeight,
     handleAlbumSelect,
     handleArtistSelect,
+    handleBrowserClose,
     albumFilter,
     artistFilter,
     tracks,
