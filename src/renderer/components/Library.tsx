@@ -16,9 +16,10 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { keyframes } from '@mui/system';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import SearchIcon from '@mui/icons-material/Search';
-import SearchOffIcon from '@mui/icons-material/SearchOff';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
 import { type SortingState, type Row, type Table } from '@tanstack/react-table';
 import { type Virtualizer } from '@tanstack/react-virtual';
 import {
@@ -35,6 +36,8 @@ import SidebarToggle from './SidebarToggle';
 import Browser from './Browser';
 import SearchBar from './SearchBar';
 import VirtualTable from './VirtualTable';
+import NotificationButton from './NotificationButton';
+import MaterialSymbolIcon from './MaterialSymbolIcon';
 import {
   getRowClassName,
   getCommonColumnDefs,
@@ -42,6 +45,17 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
+
+const searchExpandAnimation = keyframes`
+  from {
+    max-width: 0;
+    opacity: 0;
+  }
+  to {
+    max-width: 600px;
+    opacity: 1;
+  }
+`;
 
 // Define the type for directory selection result
 interface DirectorySelectionResult {
@@ -127,6 +141,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
   const getSearchFilter = useLibraryStore((state) => state.getSearchFilter);
   const browserOpen = useUIStore((state) => state.browserOpen);
+  const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
   const libraryViewState = useLibraryStore((state) => state.libraryViewState);
   const [showSearch, setShowSearch] = useState(() =>
     Boolean(getSearchFilter('library')),
@@ -739,86 +754,95 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         }}
       >
         <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-        <Typography
+        {!drawerOpen && (
+          <Typography
+            sx={{
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              userSelect: 'none',
+              flexShrink: 0,
+            }}
+            variant="h2"
+          >
+            Library
+          </Typography>
+        )}
+        <Box
           sx={{
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: '8px',
+            backgroundColor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.grey[200],
+            px: 1.5,
+            py: 0.5,
+            justifyContent: 'center',
             userSelect: 'none',
             flexShrink: 0,
           }}
-          variant="h2"
         >
-          Library
-        </Typography>
-        {!showSearch && (
-          <>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {trackCount.toLocaleString()}&nbsp;&#9835;
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {totalHours}&nbsp;
-              </Typography>
-              <AccessTimeIcon
-                sx={{
-                  fontSize: 14,
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              />
-            </Box>
-          </>
-        )}
-        {showSearch && (
-          <SearchBar
-            initialValue={globalFilterRef.current}
-            onClose={handleSearchToggle}
-            onDebouncedChange={handleDebouncedSearchChange}
+          <Typography
+            sx={{
+              color: (theme) => theme.palette.text.secondary,
+              lineHeight: 1,
+            }}
+            variant="body2"
+          >
+            {trackCount.toLocaleString()}&nbsp;&#9835;
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: '8px',
+            backgroundColor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.grey[200],
+            px: 1.5,
+            py: 0.5,
+            justifyContent: 'center',
+            userSelect: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <Typography
+            sx={{
+              color: (theme) => theme.palette.text.secondary,
+              lineHeight: 1,
+            }}
+            variant="body2"
+          >
+            {totalHours}&nbsp;
+          </Typography>
+          <AccessTimeIcon
+            sx={{
+              fontSize: 14,
+              color: (theme) => theme.palette.text.secondary,
+            }}
           />
+        </Box>
+        {showSearch && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexGrow: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              marginLeft: 'auto',
+              animation: `${searchExpandAnimation} 120ms ease-out forwards`,
+            }}
+          >
+            <SearchBar
+              initialValue={globalFilterRef.current}
+              onClose={handleSearchToggle}
+              onDebouncedChange={handleDebouncedSearchChange}
+            />
+          </Box>
         )}
         <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
         <Box
@@ -833,17 +857,50 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             <IconButton
               aria-label="Show/Hide search"
               onClick={handleSearchToggle}
+              size="small"
               sx={{
-                padding: '4px',
-                color: showSearch ? 'primary.main' : 'text.secondary',
+                color: showSearch ? 'text.primary' : 'text.secondary',
                 '&:hover': {
-                  color: showSearch ? 'primary.dark' : 'text.primary',
+                  color: 'text.primary',
                 },
+                WebkitAppRegion: 'no-drag',
               }}
             >
-              {showSearch ? <SearchOffIcon /> : <SearchIcon />}
+              {showSearch ? (
+                <SearchOffRoundedIcon sx={{ fontSize: 20 }} />
+              ) : (
+                <SearchRoundedIcon sx={{ fontSize: 20 }} />
+              )}
             </IconButton>
           </Tooltip>
+          <Tooltip title={browserOpen ? 'Hide Browser' : 'Show Browser'}>
+            <IconButton
+              aria-controls="browser-panel"
+              aria-expanded={browserOpen}
+              aria-label="Show/Hide browser"
+              data-testid="browser-toggle"
+              onClick={() => setBrowserOpen(!browserOpen)}
+              size="small"
+              sx={{
+                color: browserOpen ? 'text.primary' : 'text.secondary',
+                '&:hover': {
+                  color: 'text.primary',
+                },
+                WebkitAppRegion: 'no-drag',
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  transform: browserOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+                }}
+              >
+                <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
+              </Box>
+            </IconButton>
+          </Tooltip>
+          <NotificationButton />
         </Box>
       </Box>
     ),
@@ -855,6 +912,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       showSearch,
       handleSearchToggle,
       handleDebouncedSearchChange,
+      browserOpen,
+      setBrowserOpen,
     ],
   );
 
@@ -897,15 +956,21 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [drawerOpen],
   );
 
-  // Browser panel to pass to VirtualTable
+  const handleBrowserClose = useCallback(
+    () => setBrowserOpen(false),
+    [setBrowserOpen],
+  );
+
+  // Browser panel to pass to VirtualTable — always mounted so open/close can animate
   const browserPanel = useMemo(() => {
-    if (!browserOpen) return undefined;
     return (
       <Browser
         height={browserHeight}
         onAlbumSelect={handleAlbumSelect}
         onArtistSelect={handleArtistSelect}
+        onClose={handleBrowserClose}
         onHeightChange={setBrowserHeight}
+        open={browserOpen}
         selectedAlbum={albumFilter}
         selectedArtist={artistFilter}
         tracks={tracks}
@@ -916,6 +981,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     browserHeight,
     handleAlbumSelect,
     handleArtistSelect,
+    handleBrowserClose,
     albumFilter,
     artistFilter,
     tracks,

@@ -6,9 +6,10 @@ import React, {
   useEffect,
 } from 'react';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
+import { keyframes } from '@mui/system';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import SearchIcon from '@mui/icons-material/Search';
-import SearchOffIcon from '@mui/icons-material/SearchOff';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
 import { type SortingState, type Row, type Table } from '@tanstack/react-table';
 import { type Virtualizer } from '@tanstack/react-virtual';
 import Marquee from 'react-fast-marquee';
@@ -26,6 +27,8 @@ import SidebarToggle from './SidebarToggle';
 import Browser from './Browser';
 import SearchBar from './SearchBar';
 import VirtualTable from './VirtualTable';
+import NotificationButton from './NotificationButton';
+import MaterialSymbolIcon from './MaterialSymbolIcon';
 import {
   getRowClassName,
   getCommonColumnDefs,
@@ -33,6 +36,17 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
+
+const searchExpandAnimation = keyframes`
+  from {
+    max-width: 0;
+    opacity: 0;
+  }
+  to {
+    max-width: 600px;
+    opacity: 1;
+  }
+`;
 
 // Define props interface for Playlists component
 interface PlaylistsProps {
@@ -130,6 +144,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
 
   // Browser state
   const browserOpen = useUIStore((state) => state.browserOpen);
+  const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
   const browserFilters = useLibraryStore((state) => state.browserFilters);
   const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
   const [browserHeight, setBrowserHeight] = useState(200);
@@ -780,88 +795,97 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
         }}
       >
         <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
-        <Typography
-          sx={{
-            maxWidth: window.innerWidth < 768 ? '200px' : '400px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            userSelect: 'none',
-            flexShrink: showSearch ? 1 : 0,
-          }}
-          variant="h2"
-        >
-          {playlistNameContent}
-        </Typography>
-        {!showSearch && (
-          <>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {playlistTrackCount.toLocaleString()}&nbsp;&#9835;
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                borderRadius: '16px',
-                backgroundColor: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? theme.palette.grey[800]
-                    : theme.palette.grey[200],
-                px: 1.5,
-                py: 0.5,
-                justifyContent: 'center',
-                userSelect: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <Typography
-                sx={{
-                  color: (theme) => theme.palette.text.secondary,
-                  lineHeight: 1,
-                }}
-                variant="body2"
-              >
-                {playlistTotalHours}&nbsp;
-              </Typography>
-              <AccessTimeIcon
-                sx={{
-                  fontSize: 14,
-                  color: (theme) => theme.palette.text.secondary,
-                }}
-              />
-            </Box>
-          </>
+        {!drawerOpen && (
+          <Typography
+            sx={{
+              maxWidth: window.innerWidth < 768 ? '200px' : '400px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              userSelect: 'none',
+              flexShrink: showSearch ? 1 : 0,
+            }}
+            variant="h2"
+          >
+            {playlistNameContent}
+          </Typography>
         )}
-        {showSearch && (
-          <SearchBar
-            initialValue={globalFilter}
-            onClose={handleSearchToggle}
-            onDebouncedChange={handleDebouncedSearchChange}
-            placeholder="Search playlist"
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: '8px',
+            backgroundColor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.grey[200],
+            px: 1.5,
+            py: 0.5,
+            justifyContent: 'center',
+            userSelect: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <Typography
+            sx={{
+              color: (theme) => theme.palette.text.secondary,
+              lineHeight: 1,
+            }}
+            variant="body2"
+          >
+            {playlistTrackCount.toLocaleString()}&nbsp;&#9835;
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: '8px',
+            backgroundColor: (theme) =>
+              theme.palette.mode === 'dark'
+                ? theme.palette.grey[800]
+                : theme.palette.grey[200],
+            px: 1.5,
+            py: 0.5,
+            justifyContent: 'center',
+            userSelect: 'none',
+            flexShrink: 0,
+          }}
+        >
+          <Typography
+            sx={{
+              color: (theme) => theme.palette.text.secondary,
+              lineHeight: 1,
+            }}
+            variant="body2"
+          >
+            {playlistTotalHours}&nbsp;
+          </Typography>
+          <AccessTimeIcon
+            sx={{
+              fontSize: 14,
+              color: (theme) => theme.palette.text.secondary,
+            }}
           />
+        </Box>
+        {showSearch && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexGrow: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              marginLeft: 'auto',
+              animation: `${searchExpandAnimation} 120ms ease-out forwards`,
+            }}
+          >
+            <SearchBar
+              initialValue={globalFilter}
+              onClose={handleSearchToggle}
+              onDebouncedChange={handleDebouncedSearchChange}
+              placeholder="Search playlist"
+            />
+          </Box>
         )}
         <Box sx={{ flexGrow: showSearch ? 0 : 1 }} />
         <Box
@@ -876,16 +900,50 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             <IconButton
               aria-label="Show/Hide search"
               onClick={handleSearchToggle}
+              size="small"
               sx={{
-                color: showSearch ? 'primary.main' : 'text.secondary',
+                color: showSearch ? 'text.primary' : 'text.secondary',
                 '&:hover': {
-                  color: showSearch ? 'primary.dark' : 'text.primary',
+                  color: 'text.primary',
                 },
+                WebkitAppRegion: 'no-drag',
               }}
             >
-              {showSearch ? <SearchOffIcon /> : <SearchIcon />}
+              {showSearch ? (
+                <SearchOffRoundedIcon sx={{ fontSize: 20 }} />
+              ) : (
+                <SearchRoundedIcon sx={{ fontSize: 20 }} />
+              )}
             </IconButton>
           </Tooltip>
+          <Tooltip title={browserOpen ? 'Hide Browser' : 'Show Browser'}>
+            <IconButton
+              aria-controls="browser-panel"
+              aria-expanded={browserOpen}
+              aria-label="Show/Hide browser"
+              data-testid="browser-toggle"
+              onClick={() => setBrowserOpen(!browserOpen)}
+              size="small"
+              sx={{
+                color: browserOpen ? 'text.primary' : 'text.secondary',
+                '&:hover': {
+                  color: 'text.primary',
+                },
+                WebkitAppRegion: 'no-drag',
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  transform: browserOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+                }}
+              >
+                <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
+              </Box>
+            </IconButton>
+          </Tooltip>
+          <NotificationButton />
         </Box>
       </Box>
     );
@@ -901,17 +959,27 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     playlistTotalHours,
     handleSearchToggle,
     handleDebouncedSearchChange,
+    browserOpen,
+    setBrowserOpen,
   ]);
 
-  // Browser panel to pass to VirtualTable
+  const handleBrowserClose = useCallback(
+    () => setBrowserOpen(false),
+    [setBrowserOpen],
+  );
+
+  // Browser panel to pass to VirtualTable — mounted whenever a playlist is selected
+  // so open/close can animate. Gate on selectedPlaylistId only (not browserOpen).
   const browserPanel = useMemo(() => {
-    if (!browserOpen || !selectedPlaylistId) return undefined;
+    if (!selectedPlaylistId) return undefined;
     return (
       <Browser
         height={browserHeight}
         onAlbumSelect={handleBrowserAlbumSelect}
         onArtistSelect={handleBrowserArtistSelect}
+        onClose={handleBrowserClose}
         onHeightChange={setBrowserHeight}
+        open={browserOpen}
         selectedAlbum={playlistAlbumFilter}
         selectedArtist={playlistArtistFilter}
         tracks={playlistTracks}
@@ -923,6 +991,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     browserHeight,
     handleBrowserAlbumSelect,
     handleBrowserArtistSelect,
+    handleBrowserClose,
     playlistAlbumFilter,
     playlistArtistFilter,
     playlistTracks,

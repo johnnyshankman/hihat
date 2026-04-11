@@ -28,17 +28,18 @@
 ## Table of Contents
 
 1. [About The Project](#about-the-project)
-2. [Features](#features)
-3. [Supported Audio Formats](#supported-audio-formats)
-4. [Getting Started](#getting-started)
+2. [Getting Started](#getting-started)
     - [Installing hihat](#installing-hihat)
     - [First Time Setup](#first-time-setup)
     - [Updating hihat](#updating-hihat)
+3. [Features](#features)
+4. [Supported Audio Formats](#supported-audio-formats)
 5. [Using hihat](#using-hihat)
     - [Playing Music](#playing-music)
     - [Sidebar and Navigation](#sidebar-and-navigation)
     - [Playlists](#playlists)
     - [Browsing and Filtering](#browsing-and-filtering)
+    - [Notifications](#notifications)
     - [Mini Player](#mini-player)
     - [Editing Metadata](#editing-metadata)
     - [Right-Click Actions](#right-click-actions)
@@ -56,6 +57,36 @@
 ## About The Project
 
 **hihat** is a free, open-source music player for macOS built for people who keep a local music library. It plays every major audio format with true gapless playback, manages libraries of any size, and stays out of your way with a clean dark-mode interface. No ads, no accounts, no internet required — just your music.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Getting Started
+
+### Installing hihat
+
+1. Download the `.dmg` file from the [Latest Release](https://github.com/johnnyshankman/hihat/releases/latest)
+2. Double-click the `.dmg` to open it, then drag **hihat** into your Applications folder
+
+That's it — hihat is now installed and ready to use.
+
+> **Note:** The first time you open hihat, macOS will warn you it's from an unidentified developer and ask you to confirm. This is expected — hihat is free and does not pay for an Apple Developer License to suppress this dialog.
+
+### First Time Setup
+
+1. Open hihat
+2. Click the **Settings** icon (gear) in the top-right corner of the sidebar
+3. Under **Music Folder**, click the folder icon to select the folder where you store your music
+4. Confirm you want to scan the folder
+5. Wait for the import to complete (about 1 minute per 10,000 songs)
+6. Your library is ready — start playing!
+
+![hihat first-time setup showing the Settings drawer with Library Location folder picker](screenshots/setup-library-location.png)
+
+### Updating hihat
+
+1. Download the latest `.dmg` from the [Releases](https://github.com/johnnyshankman/hihat/releases/latest) page
+2. Drag the new **hihat** into your Applications folder and confirm the replacement
+3. Open hihat — your library, playlists, play counts, and settings are all preserved
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -135,36 +166,6 @@ For detailed format information, see:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Getting Started
-
-### Installing hihat
-
-1. Download the `.dmg` file from the [Latest Release](https://github.com/johnnyshankman/hihat/releases/latest)
-2. Double-click the `.dmg` to open it, then drag **hihat** into your Applications folder
-
-That's it — hihat is now installed and ready to use.
-
-> **Note:** The first time you open hihat, macOS will warn you it's from an unidentified developer and ask you to confirm. This is expected — hihat is free and does not pay for an Apple Developer License to suppress this dialog.
-
-### First Time Setup
-
-1. Open hihat
-2. Click the **Settings** icon (gear) in the top-right corner of the sidebar
-3. Under **Music Folder**, click the folder icon to select the folder where you store your music
-4. Confirm you want to scan the folder
-5. Wait for the import to complete (about 1 minute per 10,000 songs)
-6. Your library is ready — start playing!
-
-![hihat first-time setup showing the Settings drawer with Library Location folder picker](screenshots/setup-library-location.png)
-
-### Updating hihat
-
-1. Download the latest `.dmg` from the [Releases](https://github.com/johnnyshankman/hihat/releases/latest) page
-2. Drag the new **hihat** into your Applications folder and confirm the replacement
-3. Open hihat — your library, playlists, play counts, and settings are all preserved
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 ## Using hihat
 
 ### Playing Music
@@ -172,12 +173,10 @@ That's it — hihat is now installed and ready to use.
 Double-click any track in the library to start playing. The player bar at the bottom of the window shows:
 
 * **Album art** on the left (click to open the Mini Player)
-* **Track title and artist** in the center (click the title to scroll back to the current song)
-* **Playback controls**: previous, play/pause, next, repeat, and shuffle
-* **Seek slider** to scrub through the track
-* **Notification bell** — toggle the notification panel to see your recent actions
-* **Browser icon** — open the Browser panel for quickly filtering by artist or album
-* **Volume control** on the right
+* **Track title and artist** next to the album art (click the title to scroll back to the current song)
+* **Playback controls** in the center: shuffle, previous, play/pause, next, and repeat
+* **Seek slider** with elapsed and remaining time below the playback controls
+* **Volume slider and mute button** on the right
 
 ![hihat player bar showing album art, track title, playback controls, seek slider, and volume](screenshots/usage-player-bar.png)
 
@@ -213,15 +212,25 @@ Right-click any user-created playlist in the sidebar to **Rename** or **Delete**
 
 ### Browsing and Filtering
 
-**Search:** Click the search icon in the toolbar (or just start typing when focused on the library) to filter tracks by title, artist, album, or genre.
+The toolbar at the top of the track list holds all the tools for finding and organizing music: a search button, a browser button, and a notification button, all grouped at the right edge of the toolbar.
 
-**Browser:** Click the panel/drawer icon in the toolbar to open the Browser panel at the top. It has two columns — Album Artist and Album — so you can drill down by artist and then by album. Click any item to filter; click it again to deselect.
+**Search:** Click the search button in the toolbar (or just start typing when focused on the library) to filter tracks by title, artist, album, or genre.
+
+**Browser:** Click the browser button in the toolbar (next to search) to open the Browser panel at the top of the track list. It has two columns — Album Artist and Album — so you can drill down by artist and then by album. Click any item to filter; click it again to deselect.
 
 **Sorting:** Click any column header to sort ascending or descending.
 
 **Column visibility:** Right-click any column header to show or hide columns (Title, Artist, Album, Album Artist, Genre, Time, Play Count, Date Added, Last Played).
 
 ![hihat library with search bar active and Browser panel open at the top](screenshots/usage-search-artist-browser.png)
+
+### Notifications
+
+hihat shows quick, in-app notifications when things happen in the background — for example, when a track is added to a playlist, when metadata is saved, or when a file can't be written.
+
+Click the **bell button** in the toolbar (at the far right, next to the browser button) to open the notification panel. A small badge appears on the bell whenever there are unread notifications. From the panel you can review recent notifications, dismiss them one by one, or clear them all at once. Click the bell again to close the panel.
+
+![hihat notifications panel open from the toolbar bell button showing recent in-app notifications](screenshots/usage-notifications.png)
 
 ### Mini Player
 
@@ -242,6 +251,8 @@ When you click **Save**, hihat updates both its database and the actual audio fi
 **Supported formats for file tag writing:** MP3 (ID3), M4A/AAC (MP4 atoms), FLAC (Vorbis Comment), and OGG. Album art and any tags you don't edit are always preserved.
 
 > **Note:** If hihat cannot write to the file (e.g. the file is on a read-only drive, or is in an unsupported format like WAV), your edits are still saved to the hihat database. You'll see a warning notification letting you know the file tags could not be updated.
+
+![hihat Edit Metadata dialog showing editable title, artist, album, genre, and track number fields](screenshots/usage-metadata.png)
 
 ### Right-Click Actions
 
@@ -311,6 +322,7 @@ hihat also responds to **media keys** on your keyboard and **Bluetooth headphone
 
 - [x] Edit song metadata
 - [ ] Queue a next-up song
+- [ ] Ability to Change Audio Outputs
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features and known issues.
 

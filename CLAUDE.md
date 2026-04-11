@@ -136,6 +136,16 @@ npm run package        # Build + package Electron app
 - Test audio files in `e2e/fixtures/test-songs-large/`
 - Uses `TEST_MODE=true` and `TEST_DB_PATH` env vars to isolate test database
 
+### ALWAYS rebuild before running e2e tests
+
+**You must run `npm run build` before `npm run test:e2e` whenever source has changed.** The e2e harness launches Electron against the compiled output in `dist/` and does **not** hot-reload. Running `test:e2e` against a stale build will silently test the previous version of the code — green results do not mean anything until a fresh build has been produced. This is a hard prerequisite, not a recommendation: a passing run against a stale build is indistinguishable from a passing run against the current source, and you will ship bugs.
+
+### Visual verification of frontend work
+
+**To visually verify frontend changes, use the Playwright e2e system** — write or extend a spec that navigates to the relevant view, takes a screenshot via `TestHelpers.takeScreenshot`, and then read the screenshot back to inspect it. Do **not** claim a UI change is verified from `npm run start` output, from reading the source, or from manually "checking in dev" — those don't produce reviewable artifacts and don't exercise the production build path.
+
+This pairs directly with the rebuild rule above: because e2e runs against the compiled bundle, screenshot verification must be preceded by `npm run build`. The full loop is: edit → `npm run build` → run (or write) a spec that drives the UI and calls `TestHelpers.takeScreenshot` → Read the screenshot file → iterate.
+
 ## Important Conventions
 
 1. **Never use `console.log`** - use `console.error` for errors, `console.warn` for informational logging

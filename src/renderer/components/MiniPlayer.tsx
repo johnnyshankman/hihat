@@ -20,18 +20,12 @@ import {
 import {
   PlayArrow,
   Pause,
-  SkipPrevious,
-  SkipNext,
   VolumeUp,
   VolumeDown,
   VolumeMute,
-  Repeat,
-  RepeatOne,
-  RepeatOn,
-  Shuffle,
-  ShuffleOn,
   MusicNote,
 } from '@mui/icons-material';
+import MaterialSymbolIcon from './MaterialSymbolIcon';
 
 import { formatDuration } from '../utils/formatters';
 
@@ -260,17 +254,31 @@ export default function MiniPlayer() {
     return <VolumeUp />;
   };
 
-  // Render repeat icon based on repeat mode
+  // Render repeat icon based on repeat mode.
+  // Uses MaterialSymbolIcon with wght=500 to match the main Player,
+  // and swaps to the *_on filled variants when active.
   const renderRepeatIcon = () => {
-    switch (repeatMode) {
-      case 'track':
-        return <RepeatOne color="primary" fontSize="small" />;
-      case 'all':
-        return <RepeatOn color="primary" fontSize="small" />;
-      case 'off':
-      default:
-        return <Repeat fontSize="small" />;
+    if (repeatMode === 'track') {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="medium"
+          icon="repeat_one_on"
+          weight={500}
+        />
+      );
     }
+    if (repeatMode === 'all') {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="medium"
+          icon="repeat_on"
+          weight={500}
+        />
+      );
+    }
+    return <MaterialSymbolIcon fontSize="medium" icon="repeat" weight={500} />;
   };
 
   // Get tooltip text based on repeat mode
@@ -287,12 +295,21 @@ export default function MiniPlayer() {
     }
   };
 
-  // Render shuffle icon based on shuffle mode
+  // Render shuffle icon. Uses MaterialSymbolIcon with wght=500 to
+  // match the main Player, and swaps to shuffle_on (FILL=1) when
+  // active.
   const renderShuffleIcon = () => {
     if (shuffleMode) {
-      return <ShuffleOn color="primary" fontSize="small" />;
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="medium"
+          icon="shuffle_on"
+          weight={500}
+        />
+      );
     }
-    return <Shuffle fontSize="small" />;
+    return <MaterialSymbolIcon fontSize="medium" icon="shuffle" weight={500} />;
   };
 
   // Get tooltip text based on shuffle mode
@@ -479,8 +496,14 @@ export default function MiniPlayer() {
                 mx: 0.5,
                 color: (theme) => theme.palette.grey[500],
                 '& .MuiSlider-thumb': {
-                  height: 8,
-                  width: 8,
+                  height: 9,
+                  width: 9,
+                  '&:hover, &.Mui-focusVisible': {
+                    boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.08)',
+                  },
+                  '&.Mui-active': {
+                    boxShadow: '0 0 0 6px rgba(255, 255, 255, 0.12)',
+                  },
                 },
               }}
               value={seekPosition}
@@ -505,8 +528,8 @@ export default function MiniPlayer() {
               <span>
                 <IconButton
                   onClick={toggleShuffleMode}
-                  size="small"
-                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                  size="medium"
+                  sx={{ color: 'white', padding: '4px' }}
                 >
                   {renderShuffleIcon()}
                 </IconButton>
@@ -518,9 +541,14 @@ export default function MiniPlayer() {
                   disabled={!currentTrack}
                   onClick={handlePreviousTrack}
                   size="medium"
-                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                  sx={{ color: 'white', padding: '4px' }}
                 >
-                  <SkipPrevious fontSize="medium" />
+                  <MaterialSymbolIcon
+                    filled
+                    fontSize={32}
+                    icon="skip_previous"
+                    weight={500}
+                  />
                 </IconButton>
               </span>
             </Tooltip>
@@ -531,8 +559,8 @@ export default function MiniPlayer() {
                   onClick={handlePlayPause}
                   size="large"
                   sx={{
-                    mx: { xs: 0.25, sm: 1 },
-                    padding: { xs: '2px', sm: '2px' },
+                    mx: 1,
+                    padding: '2px',
                     color: 'white',
                   }}
                 >
@@ -550,9 +578,14 @@ export default function MiniPlayer() {
                   disabled={!currentTrack}
                   onClick={handleNextTrack}
                   size="medium"
-                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                  sx={{ color: 'white', padding: '4px' }}
                 >
-                  <SkipNext fontSize="medium" />
+                  <MaterialSymbolIcon
+                    filled
+                    fontSize={32}
+                    icon="skip_next"
+                    weight={500}
+                  />
                 </IconButton>
               </span>
             </Tooltip>
@@ -560,8 +593,8 @@ export default function MiniPlayer() {
               <span>
                 <IconButton
                   onClick={toggleRepeatMode}
-                  size="small"
-                  sx={{ color: 'white', padding: { xs: '4px', sm: '4px' } }}
+                  size="medium"
+                  sx={{ color: 'white', padding: '4px' }}
                 >
                   {renderRepeatIcon()}
                 </IconButton>

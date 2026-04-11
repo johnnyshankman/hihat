@@ -20,9 +20,7 @@ test.describe('Rapid Skip Bug Regression', () => {
 
     // Fire 5 rapid clicks via DOM dispatching (no await between clicks)
     await page.evaluate(() => {
-      const btn = document.querySelector(
-        'button:has(svg[data-testid="SkipNextIcon"])',
-      );
+      const btn = document.querySelector('[data-testid="skip-next-button"]');
       if (!btn) return;
       for (let i = 0; i < 5; i++) {
         btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -72,7 +70,7 @@ test.describe('Rapid Skip Bug Regression', () => {
     // Fire 5 rapid clicks via DOM dispatching (no await between clicks)
     await page.evaluate(() => {
       const btn = document.querySelector(
-        'button:has(svg[data-testid="SkipPreviousIcon"])',
+        '[data-testid="skip-previous-button"]',
       );
       if (!btn) return;
       for (let i = 0; i < 5; i++) {

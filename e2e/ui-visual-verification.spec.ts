@@ -235,7 +235,11 @@ test.describe('UI Visual Verification', () => {
       true,
     );
 
-    // Verify playlist heading is visible
+    // Title is hidden when sidebar is open (matches SidebarToggle pattern).
+    // Close sidebar so the playlist name becomes visible for this assertion.
+    await page.locator('[data-testid="sidebar-toggle-close"]').click();
+    await page.waitForTimeout(500);
+
     const playlistHeading = page.locator('h2');
     await expect(playlistHeading).toContainText('Test Playlist');
 

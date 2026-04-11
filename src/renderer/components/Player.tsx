@@ -6,26 +6,15 @@ import {
   Slider,
   Paper,
   Stack,
-  Popover,
   Tooltip,
-  Badge,
-  useMediaQuery,
   useTheme,
 } from '@mui/material';
 import {
   PlayArrow,
   Pause,
-  SkipPrevious,
-  SkipNext,
   VolumeUp,
   VolumeDown,
-  VolumeMute,
-  Repeat,
-  RepeatOn,
-  RepeatOne,
-  Shuffle,
-  ShuffleOn,
-  Notifications as NotificationsIcon,
+  VolumeOff,
 } from '@mui/icons-material';
 import Marquee from 'react-fast-marquee';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -37,6 +26,11 @@ import {
   useLibraryStore,
 } from '../stores';
 import PositionDisplay from './PositionDisplay';
+import {
+  mutedIconButtonSx,
+  toggleIconButtonSx,
+} from '../styles/iconButtonStyles';
+import { playerSliderSx } from '../styles/sliderStyles';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -82,49 +76,6 @@ function AlbumArtPlaceholder() {
         hihat
       </Typography>
     </Box>
-  );
-}
-
-// Notification button component
-function NotificationButton() {
-  const notifications = useUIStore((state) => state.notifications);
-  const panelOpen = useUIStore((state) => state.notificationPanelOpen);
-  const setPanelOpen = useUIStore((state) => state.setNotificationPanelOpen);
-
-  return (
-    <Tooltip
-      arrow
-      placement="top"
-      title={panelOpen ? 'Hide Notifications' : 'Show Notifications'}
-    >
-      <IconButton
-        data-testid="notification-button"
-        onClick={() => setPanelOpen(!panelOpen)}
-        size="medium"
-        sx={{
-          color: panelOpen ? 'primary.main' : 'text.secondary',
-          '&:hover': {
-            color: panelOpen ? 'primary.dark' : 'text.primary',
-          },
-        }}
-      >
-        <Badge
-          badgeContent={notifications.length}
-          color="error"
-          invisible={notifications.length === 0}
-          sx={{
-            '& .MuiBadge-badge': {
-              fontSize: '0.65rem',
-              height: '16px',
-              minWidth: '16px',
-              padding: '0 4px',
-            },
-          }}
-        >
-          <NotificationsIcon />
-        </Badge>
-      </IconButton>
-    </Tooltip>
   );
 }
 
@@ -184,10 +135,6 @@ function Player() {
   }, [setSilentAudioRef]);
 
   // local state
-  const [volumeOpen, setVolumeOpen] = useState(false);
-  const [volumeAnchorEl, setVolumeAnchorEl] = useState<HTMLElement | null>(
-    null,
-  );
   const [albumArt, setAlbumArt] = useState<string | null>(null);
   const [isTitleScrolling, setIsTitleScrolling] = useState(false);
   const [isArtistAlbumScrolling, setIsArtistAlbumScrolling] = useState(false);
@@ -201,18 +148,12 @@ function Player() {
   // Get the setCurrentView function from the UI store
   const setCurrentView = useUIStore((state) => state.setCurrentView);
 
-  // Browser toggle state
-  const browserOpen = useUIStore((state) => state.browserOpen);
-  const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
-
   // Get the clearAllBrowserFilters function from the library store
   const clearAllBrowserFilters = useLibraryStore(
     (state) => state.clearAllBrowserFilters,
   );
 
-  // Use Material UI's theme breakpoints
   const theme = useTheme();
-  const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Fetch album art when current track changes
   useEffect(() => {
@@ -257,18 +198,20 @@ function Player() {
 
   // Position-related formatting moved to PositionDisplay component to isolate updates
 
-  const toggleVolumeControls = useCallback(
-    (event: React.MouseEvent<HTMLElement>) => {
-      setVolumeAnchorEl(volumeOpen ? null : event.currentTarget);
-      setVolumeOpen(!volumeOpen);
-    },
-    [volumeOpen],
-  );
+  // Remember the last non-zero volume so clicking the volume icon can
+  // toggle between muted and the user's previous level.
+  const prevVolumeRef = useRef(volume > 0 ? volume : 1);
+  useEffect(() => {
+    if (volume > 0) prevVolumeRef.current = volume;
+  }, [volume]);
 
-  const handleVolumeClose = useCallback(() => {
-    setVolumeAnchorEl(null);
-    setVolumeOpen(false);
-  }, []);
+  const handleMuteToggle = useCallback(() => {
+    if (volume > 0) {
+      setVolume(0);
+    } else {
+      setVolume(prevVolumeRef.current || 1);
+    }
+  }, [volume, setVolume]);
 
   // Open MiniPlayer in a new window
   const openMiniPlayer = () => {
@@ -464,33 +407,46 @@ function Player() {
   // Render volume icon based on volume level
   const renderVolumeIcon = () => {
     if (volume === 0) {
-      return <VolumeMute />;
+      return <VolumeOff sx={{ fontSize: 20 }} />;
     }
     if (volume < 0.5) {
-      return <VolumeDown />;
+      return <VolumeDown sx={{ fontSize: 20 }} />;
     }
-    return <VolumeUp />;
+    return <VolumeUp sx={{ fontSize: 20 }} />;
   };
 
-  // Get icon size for play/pause button
-  const getPlayPauseIconSize = () => {
-    if (isXsScreen) return 'medium';
-    return 'large';
-  };
+  // Play/pause button icon size. Kept constant across widths so the
+  // transport row reads identically at every screen size.
+  const getPlayPauseIconSize = () => 'large' as const;
 
-  // Render repeat icon based on repeat mode
+  // Render repeat icon based on repeat mode. Uses MaterialSymbolIcon
+  // with a heavier weight (wght axis) so the stroked glyph has enough
+  // solid interior to not read as a lighter gray than the other
+  // transport icons due to anti-aliasing on its thin strokes. When
+  // active, swaps to the *_on variants with the FILL axis enabled so
+  // the rounded-square background reads as filled.
   const renderRepeatIcon = () => {
-    const iconSize = 'small';
-
-    switch (repeatMode) {
-      case 'track':
-        return <RepeatOne color="primary" fontSize={iconSize} />;
-      case 'all':
-        return <RepeatOn color="primary" fontSize={iconSize} />;
-      case 'off':
-      default:
-        return <Repeat fontSize={iconSize} />;
+    if (repeatMode === 'track') {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="medium"
+          icon="repeat_one_on"
+          weight={500}
+        />
+      );
     }
+    if (repeatMode === 'all') {
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="medium"
+          icon="repeat_on"
+          weight={500}
+        />
+      );
+    }
+    return <MaterialSymbolIcon fontSize="medium" icon="repeat" weight={500} />;
   };
 
   // Get tooltip text based on repeat mode
@@ -507,14 +463,24 @@ function Player() {
     }
   };
 
-  // Render shuffle icon based on shuffle mode
+  // Render shuffle icon. Uses MaterialSymbolIcon with a heavier weight
+  // (wght axis) so the stroked glyph has enough solid interior to not
+  // read as a lighter gray than the other transport icons due to
+  // anti-aliasing on its thin crossing strokes. When active, swaps to
+  // shuffle_on with the FILL axis enabled so the rounded-square
+  // background reads as filled.
   const renderShuffleIcon = () => {
-    const iconSize = 'small';
-
     if (shuffleMode) {
-      return <ShuffleOn color="primary" fontSize={iconSize} />;
+      return (
+        <MaterialSymbolIcon
+          filled
+          fontSize="medium"
+          icon="shuffle_on"
+          weight={500}
+        />
+      );
     }
-    return <Shuffle fontSize={iconSize} />;
+    return <MaterialSymbolIcon fontSize="medium" icon="shuffle" weight={500} />;
   };
 
   // Get tooltip text based on shuffle mode
@@ -663,7 +629,8 @@ function Player() {
           display: 'grid',
           gridTemplateColumns: '1fr auto 1fr',
           alignItems: 'center',
-          px: 2,
+          pl: 1,
+          pr: 1,
           width: '100%',
           height: '100%',
           py: 0,
@@ -693,7 +660,7 @@ function Player() {
               onClick={currentTrack ? openMiniPlayer : undefined}
               sx={{
                 height: '100%',
-                mr: { xs: 1, sm: 2 },
+                mr: 2,
                 borderRadius: '4px',
                 aspectRatio: '1/1',
                 cursor: currentTrack ? 'pointer' : 'default',
@@ -842,7 +809,7 @@ function Player() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            px: { xs: 1, sm: 2 },
+            px: 2,
             py: 1,
             minWidth: 0,
             width: 'clamp(200px, 40vw, 500px)',
@@ -858,11 +825,14 @@ function Player() {
             <Tooltip arrow placement="top" title={getShuffleTooltipText()}>
               <span>
                 <IconButton
+                  data-shuffle-mode={shuffleMode ? 'on' : 'off'}
+                  data-testid="shuffle-button"
                   disabled={!currentTrack}
                   onClick={toggleShuffleMode}
-                  size="small"
+                  size="medium"
                   sx={{
-                    padding: { xs: '4px', sm: '4px' },
+                    ...toggleIconButtonSx(shuffleMode),
+                    padding: '4px',
                   }}
                 >
                   {renderShuffleIcon()}
@@ -872,14 +842,21 @@ function Player() {
             <Tooltip arrow placement="top" title="Previous">
               <span>
                 <IconButton
+                  data-testid="skip-previous-button"
                   disabled={!currentTrack || skipInProgress}
                   onClick={skipToPreviousTrack}
                   size="medium"
                   sx={{
-                    padding: { xs: '4px', sm: '4px' },
+                    ...mutedIconButtonSx,
+                    padding: '4px',
                   }}
                 >
-                  <SkipPrevious fontSize={isXsScreen ? 'small' : 'medium'} />
+                  <MaterialSymbolIcon
+                    filled
+                    fontSize={32}
+                    icon="skip_previous"
+                    weight={500}
+                  />
                 </IconButton>
               </span>
             </Tooltip>
@@ -887,11 +864,12 @@ function Player() {
               <span>
                 <IconButton
                   disabled={!currentTrack}
+                  disableRipple={false}
                   onClick={() => setPaused(!paused)}
                   size="large"
                   sx={{
-                    mx: { xs: 0.25, sm: 1 },
-                    padding: { xs: '2px', sm: '2px' },
+                    mx: 1,
+                    padding: '2px',
                     backgroundColor: 'text.primary',
                     color: 'background.default',
                     borderRadius: '50%',
@@ -913,25 +891,35 @@ function Player() {
             <Tooltip arrow placement="top" title="Next">
               <span>
                 <IconButton
+                  data-testid="skip-next-button"
                   disabled={!currentTrack || skipInProgress}
                   onClick={skipToNextTrack}
                   size="medium"
                   sx={{
-                    padding: { xs: '4px', sm: '4px' },
+                    ...mutedIconButtonSx,
+                    padding: '4px',
                   }}
                 >
-                  <SkipNext fontSize={isXsScreen ? 'small' : 'medium'} />
+                  <MaterialSymbolIcon
+                    filled
+                    fontSize={32}
+                    icon="skip_next"
+                    weight={500}
+                  />
                 </IconButton>
               </span>
             </Tooltip>
             <Tooltip arrow placement="top" title={getRepeatTooltipText()}>
               <span>
                 <IconButton
+                  data-repeat-mode={repeatMode}
+                  data-testid="repeat-button"
                   disabled={!currentTrack}
                   onClick={toggleRepeatMode}
-                  size="small"
+                  size="medium"
                   sx={{
-                    padding: { xs: '4px', sm: '4px' },
+                    ...toggleIconButtonSx(repeatMode !== 'off'),
+                    padding: '4px',
                   }}
                 >
                   {renderRepeatIcon()}
@@ -943,82 +931,53 @@ function Player() {
           <PositionDisplay disabled={!currentTrack} />
         </Box>
 
-        {/* Right cell: Volume control and notifications */}
+        {/* Right cell: Inline volume control (slider → mute icon) */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
-            pr: { xs: 0, sm: 1 },
             gap: 1,
             minWidth: 0,
           }}
         >
-          {/* Notification button */}
-          <NotificationButton />
+          <Slider
+            aria-label="Volume"
+            data-testid="volume-slider"
+            max={1}
+            onChange={(_, value) => setVolume(value as number)}
+            size="small"
+            step={0.01}
+            sx={{
+              width: 120,
+              maxWidth: '100%',
+              minWidth: 40,
+              flexShrink: 1,
+              ...playerSliderSx,
+            }}
+            value={volume}
+          />
           <Tooltip
             arrow
-            placement="top"
-            title={browserOpen ? 'Hide Browser' : 'Show Browser'}
+            placement="bottom"
+            title={volume === 0 ? 'Unmute' : 'Mute'}
           >
             <IconButton
-              data-testid="browser-toggle"
-              onClick={() => setBrowserOpen(!browserOpen)}
-              size="medium"
+              aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+              data-testid="volume-mute-toggle"
+              onClick={handleMuteToggle}
+              size="small"
               sx={{
-                color: browserOpen ? 'primary.main' : 'text.secondary',
+                color: volume === 0 ? 'text.primary' : 'text.secondary',
                 '&:hover': {
-                  color: browserOpen ? 'primary.dark' : 'text.primary',
+                  color: 'text.primary',
                 },
+                flexShrink: 0,
               }}
             >
-              <MaterialSymbolIcon icon="top_panel_open" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip arrow placement="top" title="Volume">
-            <IconButton onClick={toggleVolumeControls} size="medium">
               {renderVolumeIcon()}
             </IconButton>
           </Tooltip>
-          <Popover
-            anchorEl={volumeAnchorEl}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'center',
-            }}
-            disableRestoreFocus
-            onClose={handleVolumeClose}
-            open={volumeOpen}
-            transformOrigin={{
-              vertical: 'bottom',
-              horizontal: 'center',
-            }}
-          >
-            <Box
-              sx={{
-                height: 120,
-                width: 40,
-                p: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Slider
-                max={1}
-                onChange={(_, value) => setVolume(value as number)}
-                orientation="vertical"
-                size="small"
-                step={0.01}
-                sx={{
-                  height: '100%',
-                  color: (t) => t.palette.primary.main,
-                }}
-                value={volume}
-              />
-            </Box>
-          </Popover>
         </Box>
       </Box>
     </Paper>

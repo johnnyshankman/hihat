@@ -1,6 +1,7 @@
 name: PR Check
 on:
-  pull_request: {}
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -8,6 +9,55 @@ concurrency:
 
 jobs:
   check:
+    name: Typecheck, Lint & Build
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Typecheck
+      run: npm run typecheck
+
+    - name: Lint
+      run: npm run lint
+
+    - name: Build
+      run: npm run build
+
+  changes:
+    name: Detect E2E-Relevant Changes
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    outputs:
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          e2e:
+            - 'src/**'
+            - 'e2e/**'
+            - '.erb/**'
+            - 'assets/**'
+            - 'package.json'
+            - 'package-lock.json'
+            - 'tsconfig.json'
+            - 'playwright.config.ts'
+            - 'postcss.config.js'
+            - '.github/workflows/prcheck.yml'
+
+  e2e:
+    name: E2E Tests
+    needs: [check, changes]
+    if: needs.changes.outputs.e2e == 'true'
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
@@ -21,12 +71,6 @@ jobs:
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps chromium
-
-    - name: Typecheck
-      run: npm run typecheck
-
-    - name: Lint
-      run: npm run lint
 
     - name: Build
       run: npm run build

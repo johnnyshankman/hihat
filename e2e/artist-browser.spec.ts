@@ -136,7 +136,7 @@ test.describe('Browser Panel Filtering', () => {
     await page.waitForTimeout(1000);
 
     // Click skip-next
-    await page.locator('button:has(svg[data-testid="SkipNextIcon"])').click();
+    await page.locator('[data-testid="skip-next-button"]').click();
     await page.waitForTimeout(1000);
 
     // Verify the now-playing track is from Aurora Synth

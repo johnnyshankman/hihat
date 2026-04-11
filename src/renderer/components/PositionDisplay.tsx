@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Box, Typography, Slider } from '@mui/material';
 import { useSettingsAndPlaybackStore } from '../stores';
 import { formatDuration } from '../utils/formatters';
+import { playerSliderSx } from '../styles/sliderStyles';
 
 interface PositionDisplayProps {
   disabled?: boolean;
@@ -36,9 +37,7 @@ const PositionDisplay = React.memo(
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          maxWidth: '500px',
-          mx: 'auto',
-          mb: 0.5,
+          mt: 0.5,
         }}
       >
         <Typography
@@ -46,9 +45,10 @@ const PositionDisplay = React.memo(
           data-testid="player-elapsed-time"
           sx={{
             mr: 1,
-            minWidth: { xs: '30px', sm: '40px' },
+            minWidth: '36px',
             textAlign: 'right',
-            fontSize: { xs: '0.65rem', sm: '0.75rem' },
+            fontSize: '12px',
+            lineHeight: 1,
             userSelect: 'none',
           }}
           variant="caption"
@@ -63,12 +63,8 @@ const PositionDisplay = React.memo(
           }}
           size="small"
           sx={{
-            mx: 0.5,
-            color: (t) => t.palette.grey[500],
-            '& .MuiSlider-thumb': {
-              height: 8,
-              width: 8,
-            },
+            mx: 0.25,
+            ...playerSliderSx,
           }}
           value={position}
         />
@@ -76,8 +72,9 @@ const PositionDisplay = React.memo(
           color="textSecondary"
           sx={{
             ml: 1,
-            minWidth: { xs: '30px', sm: '40px' },
-            fontSize: { xs: '0.65rem', sm: '0.75rem' },
+            minWidth: '36px',
+            fontSize: '12px',
+            lineHeight: 1,
             userSelect: 'none',
           }}
           variant="caption"

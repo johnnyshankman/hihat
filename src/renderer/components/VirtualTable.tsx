@@ -193,11 +193,9 @@ function VirtualTable({
     root.style.setProperty('--vt-text-primary', theme.palette.text.primary);
     root.style.setProperty('--vt-text-secondary', theme.palette.text.secondary);
 
-    // Alternating row colors
-    root.style.setProperty(
-      '--vt-bg-even',
-      isDark ? theme.palette.grey.A700 : theme.palette.grey[50],
-    );
+    // Alternating row color — semantic token defined in materialTheme.ts
+    // so the value lives with the rest of the palette, not inline here.
+    root.style.setProperty('--vt-bg-even', theme.palette.tableStripe);
 
     // Selected row
     root.style.setProperty(

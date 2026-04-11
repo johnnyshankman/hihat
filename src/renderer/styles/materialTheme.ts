@@ -7,6 +7,15 @@
 
 import { createTheme, ThemeOptions } from '@mui/material/styles';
 
+declare module '@mui/material/styles' {
+  interface Palette {
+    tableStripe: string;
+  }
+  interface PaletteOptions {
+    tableStripe?: string;
+  }
+}
+
 // Base theme options shared between light and dark modes
 const baseThemeOptions: ThemeOptions = {
   typography: {
@@ -52,6 +61,19 @@ const baseThemeOptions: ThemeOptions = {
         },
       },
     },
+    MuiIconButton: {
+      defaultProps: {
+        disableRipple: true,
+      },
+      styleOverrides: {
+        root: {
+          backgroundColor: 'transparent',
+          '&:hover, &.Mui-focusVisible': {
+            backgroundColor: 'transparent',
+          },
+        },
+      },
+    },
   },
 };
 
@@ -75,6 +97,7 @@ export const darkTheme = createTheme({
       secondary: '#AAAAAA',
     },
     divider: '#1A1A1A', // Subtle divider color
+    tableStripe: '#020202', // tuned dark zebra contrast
     action: {
       active: '#FFFFFF',
       hover: 'rgba(255, 255, 255, 0.08)',
@@ -121,6 +144,7 @@ export const lightTheme = createTheme({
       primary: '#000000',
       secondary: '#666666',
     },
+    tableStripe: '#F6F6F6', // light zebra stripe — pinned hex so rendering stays byte-exact over the white background
   },
 });
 

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Tooltip } from '@mui/material';
+import React from 'react';
+import { IconButton, Tooltip } from '@mui/material';
 import ViewSidebarRoundedIcon from '@mui/icons-material/ViewSidebarRounded';
-import { useTheme } from '@mui/material/styles';
+import { mutedIconButtonSx } from '../styles/iconButtonStyles';
 
 interface SidebarToggleProps {
   isOpen: boolean;
@@ -9,37 +9,23 @@ interface SidebarToggleProps {
 }
 
 function SidebarToggle({ isOpen, onToggle }: SidebarToggleProps) {
-  const theme = useTheme();
-  const [isHovered, setIsHovered] = useState(false);
   // Only render the button when the sidebar is closed
   if (isOpen) return null;
 
   return (
     <Tooltip title="Show Sidebar">
-      <button
+      <IconButton
         data-testid="sidebar-toggle"
         onClick={onToggle}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        style={{
-          backgroundColor: 'transparent',
-          border: 'none',
-          padding: 0,
-          margin: 0,
-          color: isHovered
-            ? theme.palette.text.secondary
-            : theme.palette.text.primary,
+        size="small"
+        sx={{
+          ...mutedIconButtonSx,
           height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          transition: 'color 0.2s ease',
+          padding: 0,
         }}
-        type="button"
       >
         <ViewSidebarRoundedIcon sx={{ fontSize: 20 }} />
-      </button>
+      </IconButton>
     </Tooltip>
   );
 }

@@ -24,18 +24,15 @@ test.describe('Playback Modes', () => {
 
     // Enable repeat-track mode by clicking repeat button
     // Cycle is: off → track → all → off
-    // Click once for "track" (RepeatOneIcon should appear)
-    const repeatButton = page.locator(
-      'button:has(svg[data-testid="RepeatIcon"])',
-    );
+    // Click once for "track" (data-repeat-mode should become "track")
+    const repeatButton = page.locator('[data-testid="repeat-button"]');
     await repeatButton.click();
     await page.waitForTimeout(500);
 
-    // Verify RepeatOneIcon is visible (track repeat mode)
-    const repeatOneIcon = page.locator(
-      'button svg[data-testid="RepeatOneIcon"]',
-    );
-    await expect(repeatOneIcon).toBeVisible({ timeout: 5000 });
+    // Verify the button is now in track-repeat mode
+    await expect(repeatButton).toHaveAttribute('data-repeat-mode', 'track', {
+      timeout: 5000,
+    });
 
     // Wait for 10-second track to finish (~12s to be safe)
     await page.waitForTimeout(12000);
@@ -75,22 +72,19 @@ test.describe('Playback Modes', () => {
     await expect(pauseIcon).toBeVisible({ timeout: 5000 });
 
     // Enable shuffle mode by clicking the shuffle button
-    const shuffleButton = page.locator(
-      'button:has(svg[data-testid="ShuffleIcon"])',
-    );
+    const shuffleButton = page.locator('[data-testid="shuffle-button"]');
     await shuffleButton.click();
     await page.waitForTimeout(500);
 
-    // Verify ShuffleOnIcon is visible (shuffle enabled)
-    const shuffleOnIcon = page.locator(
-      'button svg[data-testid="ShuffleOnIcon"]',
-    );
-    await expect(shuffleOnIcon).toBeVisible({ timeout: 5000 });
+    // Verify the button is now in shuffle-on mode
+    await expect(shuffleButton).toHaveAttribute('data-shuffle-mode', 'on', {
+      timeout: 5000,
+    });
 
     // Skip through several tracks and record what plays
     const shuffledTitles: string[] = [];
     for (let i = 0; i < 5; i++) {
-      await page.locator('button:has(svg[data-testid="SkipNextIcon"])').click();
+      await page.locator('[data-testid="skip-next-button"]').click();
       await page.waitForTimeout(1000);
 
       // Get the title from the player area by checking page content
