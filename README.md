@@ -28,12 +28,12 @@
 ## Table of Contents
 
 1. [About The Project](#about-the-project)
-2. [Features](#features)
-3. [Supported Audio Formats](#supported-audio-formats)
-4. [Getting Started](#getting-started)
+2. [Getting Started](#getting-started)
     - [Installing hihat](#installing-hihat)
     - [First Time Setup](#first-time-setup)
     - [Updating hihat](#updating-hihat)
+3. [Features](#features)
+4. [Supported Audio Formats](#supported-audio-formats)
 5. [Using hihat](#using-hihat)
     - [Playing Music](#playing-music)
     - [Sidebar and Navigation](#sidebar-and-navigation)
@@ -57,6 +57,36 @@
 ## About The Project
 
 **hihat** is a free, open-source music player for macOS built for people who keep a local music library. It plays every major audio format with true gapless playback, manages libraries of any size, and stays out of your way with a clean dark-mode interface. No ads, no accounts, no internet required — just your music.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Getting Started
+
+### Installing hihat
+
+1. Download the `.dmg` file from the [Latest Release](https://github.com/johnnyshankman/hihat/releases/latest)
+2. Double-click the `.dmg` to open it, then drag **hihat** into your Applications folder
+
+That's it — hihat is now installed and ready to use.
+
+> **Note:** The first time you open hihat, macOS will warn you it's from an unidentified developer and ask you to confirm. This is expected — hihat is free and does not pay for an Apple Developer License to suppress this dialog.
+
+### First Time Setup
+
+1. Open hihat
+2. Click the **Settings** icon (gear) in the top-right corner of the sidebar
+3. Under **Music Folder**, click the folder icon to select the folder where you store your music
+4. Confirm you want to scan the folder
+5. Wait for the import to complete (about 1 minute per 10,000 songs)
+6. Your library is ready — start playing!
+
+![hihat first-time setup showing the Settings drawer with Library Location folder picker](screenshots/setup-library-location.png)
+
+### Updating hihat
+
+1. Download the latest `.dmg` from the [Releases](https://github.com/johnnyshankman/hihat/releases/latest) page
+2. Drag the new **hihat** into your Applications folder and confirm the replacement
+3. Open hihat — your library, playlists, play counts, and settings are all preserved
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -133,36 +163,6 @@ For detailed format information, see:
 * hihat does not play online streams
 * hihat does not play protected content (M4P, AAX)
 * hihat does not display album art for formats that do not embed it (WAV)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## Getting Started
-
-### Installing hihat
-
-1. Download the `.dmg` file from the [Latest Release](https://github.com/johnnyshankman/hihat/releases/latest)
-2. Double-click the `.dmg` to open it, then drag **hihat** into your Applications folder
-
-That's it — hihat is now installed and ready to use.
-
-> **Note:** The first time you open hihat, macOS will warn you it's from an unidentified developer and ask you to confirm. This is expected — hihat is free and does not pay for an Apple Developer License to suppress this dialog.
-
-### First Time Setup
-
-1. Open hihat
-2. Click the **Settings** icon (gear) in the top-right corner of the sidebar
-3. Under **Music Folder**, click the folder icon to select the folder where you store your music
-4. Confirm you want to scan the folder
-5. Wait for the import to complete (about 1 minute per 10,000 songs)
-6. Your library is ready — start playing!
-
-![hihat first-time setup showing the Settings drawer with Library Location folder picker](screenshots/setup-library-location.png)
-
-### Updating hihat
-
-1. Download the latest `.dmg` from the [Releases](https://github.com/johnnyshankman/hihat/releases/latest) page
-2. Drag the new **hihat** into your Applications folder and confirm the replacement
-3. Open hihat — your library, playlists, play counts, and settings are all preserved
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -318,6 +318,7 @@ hihat also responds to **media keys** on your keyboard and **Bluetooth headphone
 
 - [x] Edit song metadata
 - [ ] Queue a next-up song
+- [ ] Ability to Change Audio Outputs
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features and known issues.
 
