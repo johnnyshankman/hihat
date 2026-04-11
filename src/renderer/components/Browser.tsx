@@ -240,14 +240,11 @@ function Browser({
       ref={revealRef}
       aria-hidden={!open}
       className={`browser-reveal${isResizing ? ' browser-resizing' : ''}`}
+      data-testid="browser-panel"
       id="browser-panel"
       style={{ height: open ? height : 0 }}
     >
-      <div
-        ref={browserPanelRef}
-        className="browser-panel"
-        data-testid="browser-panel"
-      >
+      <div ref={browserPanelRef} className="browser-panel">
         <div className="browser-columns">
           {/* Album Artist column */}
           {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
