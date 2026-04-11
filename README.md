@@ -230,6 +230,8 @@ hihat shows quick, in-app notifications when things happen in the background —
 
 Click the **bell button** in the toolbar (at the far right, next to the browser button) to open the notification panel. A small badge appears on the bell whenever there are unread notifications. From the panel you can review recent notifications, dismiss them one by one, or clear them all at once. Click the bell again to close the panel.
 
+![hihat notifications panel open from the toolbar bell button showing recent in-app notifications](screenshots/usage-notifications.png)
+
 ### Mini Player
 
 Click the album art in the player bar to open the Mini Player — a compact floating window that stays on top of other apps. It displays the album art as a full background with playback controls overlaid at the bottom. All controls work: play/pause, skip, previous, seek, volume, shuffle, and repeat.
@@ -249,6 +251,8 @@ When you click **Save**, hihat updates both its database and the actual audio fi
 **Supported formats for file tag writing:** MP3 (ID3), M4A/AAC (MP4 atoms), FLAC (Vorbis Comment), and OGG. Album art and any tags you don't edit are always preserved.
 
 > **Note:** If hihat cannot write to the file (e.g. the file is on a read-only drive, or is in an unsupported format like WAV), your edits are still saved to the hihat database. You'll see a warning notification letting you know the file tags could not be updated.
+
+![hihat Edit Metadata dialog showing editable title, artist, album, genre, and track number fields](screenshots/usage-metadata.png)
 
 ### Right-Click Actions
 
