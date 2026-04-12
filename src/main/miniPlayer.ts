@@ -190,16 +190,7 @@ export function createMiniPlayerWindow(): void {
         contextIsolation: true,
         sandbox: !isTest,
         backgroundThrottling: !isTest,
-        preload: (() => {
-          if (
-            app.isPackaged ||
-            process.env.NODE_ENV === 'production' ||
-            isTest
-          ) {
-            return path.join(__dirname, 'preload.js');
-          }
-          return path.join(__dirname, '../../.erb/dll/preload.js');
-        })(),
+        preload: path.join(__dirname, 'preload.js'),
       },
     });
 
