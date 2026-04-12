@@ -571,7 +571,7 @@ async function processFile(
         } else {
           existingMetadata = await mm.parseFile(duplicate.filePath);
         }
-      } catch (error) {
+      } catch (_error) {
         // If we can't read the existing file, prefer the new one
         existingMetadata = { format: {} } as mm.IAudioMetadata;
       }

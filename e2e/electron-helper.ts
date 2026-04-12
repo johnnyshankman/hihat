@@ -170,7 +170,7 @@ export class ElectronHelper {
         if (response.ok || response.status) {
           return;
         }
-      } catch (error) {
+      } catch (_error) {
         // Port not ready yet
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -192,7 +192,7 @@ export class ElectronHelper {
       try {
         const page = await app.firstWindow();
         if (page) return page;
-      } catch (error) {
+      } catch (_error) {
         console.log(
           `Waiting for window... (attempt ${retries + 1}/${maxRetries})`,
         );
