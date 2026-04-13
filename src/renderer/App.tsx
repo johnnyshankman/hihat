@@ -151,7 +151,7 @@ function ThemedApp() {
     <ThemeProvider theme={themeToProvide}>
       <CssBaseline />
       <MigrationDialog />
-      <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+      <Router>
         <Routes>
           <Route element={<MainLayout />} path="/" />
           <Route element={<MiniPlayer />} path="/mini-player" />
