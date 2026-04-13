@@ -66,11 +66,11 @@ function RenamePlaylistDialog({
         <TextField
           autoFocus
           fullWidth
-          inputProps={{ 'data-testid': 'rename-playlist-input' }}
           label="New Playlist Name"
           margin="dense"
           onChange={(e) => setName(e.target.value)}
           onKeyDown={handleKeyDown}
+          slotProps={{ htmlInput: { 'data-testid': 'rename-playlist-input' } }}
           type="text"
           value={name}
         />

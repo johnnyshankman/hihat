@@ -49,11 +49,11 @@ function CreatePlaylistDialog({ open, onClose }: CreatePlaylistDialogProps) {
         <TextField
           autoFocus
           fullWidth
-          inputProps={{ 'data-testid': 'playlist-name-input' }}
           label="Playlist Name"
           margin="dense"
           onChange={(e) => setName(e.target.value)}
           onKeyDown={handleKeyDown}
+          slotProps={{ htmlInput: { 'data-testid': 'playlist-name-input' } }}
           type="text"
           value={name}
         />
