@@ -785,9 +785,13 @@ export default function MainLayout() {
                   </ListItemIcon>
                   <ListItemText
                     primary="All"
-                    primaryTypographyProps={{
-                      fontSize: '13px',
-                      fontWeight: currentView === 'library' ? 600 : 400,
+                    slotProps={{
+                      primary: {
+                        sx: {
+                          fontSize: '13px',
+                          fontWeight: currentView === 'library' ? 600 : 400,
+                        },
+                      },
                     }}
                   />
                 </ListItemButton>
@@ -913,15 +917,19 @@ export default function MainLayout() {
                       </ListItemIcon>
                       <ListItemText
                         primary={playlist.name}
-                        primaryTypographyProps={{
-                          noWrap: true,
-                          title: playlist.name,
-                          fontSize: '13px',
-                          fontWeight:
-                            currentView === 'playlists' &&
-                            selectedPlaylistId === playlist.id
-                              ? 600
-                              : 400,
+                        slotProps={{
+                          primary: {
+                            noWrap: true,
+                            title: playlist.name,
+                            sx: {
+                              fontSize: '13px',
+                              fontWeight:
+                                currentView === 'playlists' &&
+                                selectedPlaylistId === playlist.id
+                                  ? 600
+                                  : 400,
+                            },
+                          },
                         }}
                       />
                     </ListItemButton>

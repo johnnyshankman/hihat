@@ -156,114 +156,132 @@ function EditMetadataDialog({
         <TextField
           autoFocus
           fullWidth
-          inputProps={{ 'data-testid': 'metadata-title-input' }}
           label="Title"
           margin="dense"
           onChange={(e) => setTitle(e.target.value)}
+          slotProps={{ htmlInput: { 'data-testid': 'metadata-title-input' } }}
           value={title}
         />
         <TextField
           fullWidth
-          inputProps={{ 'data-testid': 'metadata-artist-input' }}
           label="Artist"
           margin="dense"
           onChange={(e) => setArtist(e.target.value)}
+          slotProps={{ htmlInput: { 'data-testid': 'metadata-artist-input' } }}
           value={artist}
         />
         <TextField
           fullWidth
-          inputProps={{ 'data-testid': 'metadata-album-input' }}
           label="Album"
           margin="dense"
           onChange={(e) => setAlbum(e.target.value)}
+          slotProps={{ htmlInput: { 'data-testid': 'metadata-album-input' } }}
           value={album}
         />
         <TextField
           fullWidth
-          inputProps={{ 'data-testid': 'metadata-album-artist-input' }}
           label="Album Artist"
           margin="dense"
           onChange={(e) => setAlbumArtist(e.target.value)}
+          slotProps={{
+            htmlInput: { 'data-testid': 'metadata-album-artist-input' },
+          }}
           value={albumArtist}
         />
         <TextField
           fullWidth
-          inputProps={{ 'data-testid': 'metadata-genre-input' }}
           label="Genre"
           margin="dense"
           onChange={(e) => setGenre(e.target.value)}
+          slotProps={{ htmlInput: { 'data-testid': 'metadata-genre-input' } }}
           value={genre}
         />
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             fullWidth
-            inputProps={{ 'data-testid': 'metadata-track-number-input' }}
             label="Track #"
             margin="dense"
             onChange={(e) => setTrackNumber(e.target.value)}
+            slotProps={{
+              htmlInput: { 'data-testid': 'metadata-track-number-input' },
+            }}
             value={trackNumber}
           />
           <TextField
             fullWidth
-            inputProps={{ 'data-testid': 'metadata-total-tracks-input' }}
             label="Total Tracks"
             margin="dense"
             onChange={(e) => setTotalTracks(e.target.value)}
+            slotProps={{
+              htmlInput: { 'data-testid': 'metadata-total-tracks-input' },
+            }}
             value={totalTracks}
           />
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             fullWidth
-            inputProps={{ 'data-testid': 'metadata-disc-number-input' }}
             label="Disc #"
             margin="dense"
             onChange={(e) => setDiscNumber(e.target.value)}
+            slotProps={{
+              htmlInput: { 'data-testid': 'metadata-disc-number-input' },
+            }}
             value={discNumber}
           />
           <TextField
             fullWidth
-            inputProps={{ 'data-testid': 'metadata-total-discs-input' }}
             label="Total Discs"
             margin="dense"
             onChange={(e) => setTotalDiscs(e.target.value)}
+            slotProps={{
+              htmlInput: { 'data-testid': 'metadata-total-discs-input' },
+            }}
             value={totalDiscs}
           />
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             fullWidth
-            inputProps={{ 'data-testid': 'metadata-year-input' }}
             label="Year"
             margin="dense"
             onChange={(e) => setYear(e.target.value)}
+            slotProps={{
+              htmlInput: { 'data-testid': 'metadata-year-input' },
+            }}
             value={year}
           />
           <TextField
             fullWidth
-            inputProps={{ 'data-testid': 'metadata-bpm-input' }}
             label="BPM"
             margin="dense"
             onChange={(e) => setBpm(e.target.value)}
+            slotProps={{
+              htmlInput: { 'data-testid': 'metadata-bpm-input' },
+            }}
             value={bpm}
           />
         </Box>
         <TextField
           fullWidth
-          inputProps={{ 'data-testid': 'metadata-composer-input' }}
           label="Composer"
           margin="dense"
           onChange={(e) => setComposer(e.target.value)}
+          slotProps={{
+            htmlInput: { 'data-testid': 'metadata-composer-input' },
+          }}
           value={composer}
         />
         <TextField
           fullWidth
-          inputProps={{ 'data-testid': 'metadata-comment-input' }}
           label="Comment"
           margin="dense"
           multiline
           onChange={(e) => setComment(e.target.value)}
           rows={3}
+          slotProps={{
+            htmlInput: { 'data-testid': 'metadata-comment-input' },
+          }}
           value={comment}
         />
       </DialogContent>

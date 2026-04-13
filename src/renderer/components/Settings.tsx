@@ -19,7 +19,7 @@ import {
   LinearProgress,
   Divider,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import FolderIcon from '@mui/icons-material/Folder';
 import WarningIcon from '@mui/icons-material/Warning';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -679,20 +679,22 @@ export default function Settings({ onClose }: SettingsProps) {
               </Typography>
               <FormControl fullWidth sx={{ mt: 1 }}>
                 <TextField
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          edge="end"
-                          onClick={handleSelectLibraryPath}
-                        >
-                          <FolderIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
                   label="Folder"
                   onChange={handleSelectLibraryPath}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            edge="end"
+                            onClick={handleSelectLibraryPath}
+                          >
+                            <FolderIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
                   value={libraryPath}
                 />
               </FormControl>

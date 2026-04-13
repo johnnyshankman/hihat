@@ -105,13 +105,14 @@ export default function MigrationDialog() {
   return (
     <Dialog
       data-testid="migration-dialog"
-      disableEscapeKeyDown
       fullWidth
       maxWidth="sm"
       open={open}
-      PaperProps={{
-        sx: {
-          bgcolor: 'background.paper',
+      slotProps={{
+        paper: {
+          sx: {
+            bgcolor: 'background.paper',
+          },
         },
       }}
     >

@@ -816,11 +816,14 @@ function Player() {
           }}
         >
           <Stack
-            alignItems="center"
             direction="row"
-            justifyContent="center"
             spacing={0.75}
-            sx={{ mb: 0.0, width: '100%' }}
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 0.0,
+              width: '100%',
+            }}
           >
             <Tooltip arrow placement="top" title={getShuffleTooltipText()}>
               <span>
@@ -881,9 +884,15 @@ function Player() {
                   }}
                 >
                   {!paused ? (
-                    <Pause fontSize={getPlayPauseIconSize()} />
+                    <Pause
+                      data-testid="PauseIcon"
+                      fontSize={getPlayPauseIconSize()}
+                    />
                   ) : (
-                    <PlayArrow fontSize={getPlayPauseIconSize()} />
+                    <PlayArrow
+                      data-testid="PlayArrowIcon"
+                      fontSize={getPlayPauseIconSize()}
+                    />
                   )}
                 </IconButton>
               </span>

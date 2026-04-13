@@ -50,9 +50,11 @@ export default function MultiSelectContextMenu({
       anchorReference="anchorPosition"
       onClose={onClose}
       open={open}
-      PaperProps={{
-        sx: {
-          minWidth: 200,
+      slotProps={{
+        paper: {
+          sx: {
+            minWidth: 200,
+          },
         },
       }}
     >
