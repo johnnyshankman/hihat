@@ -361,11 +361,11 @@ Don't forget to give the project a star! Thanks again!
 
 ### Prerequisites
 
-* Node v20+
+* Node v22+
   ```sh
   brew install nvm
-  nvm install v20
-  nvm use v20
+  nvm install 22
+  nvm use 22
   ```
 
 * npm v10+

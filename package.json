@@ -243,7 +243,7 @@
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": ">=20.x",
+      "version": ">=22.x",
       "onFail": "error"
     },
     "packageManager": {
