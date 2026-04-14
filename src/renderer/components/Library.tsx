@@ -192,13 +192,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     null,
   );
 
-  const handlePlayTrack = useCallback(
-    (trackId: string) => {
-      // Play the track with 'library' as the source
-      playTrack(trackId, 'library');
-    },
-    [playTrack],
-  );
+  const handlePlayTrack = (trackId: string) => {
+    playTrack(trackId, 'library');
+  };
 
   const handleSelectFolder = async () => {
     try {
@@ -235,18 +231,14 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     setDialogOpen(false);
   };
 
-  // Context menu handlers
-  const handleContextMenu = useCallback(
-    (event: React.MouseEvent, trackId: string) => {
-      event.preventDefault();
-      setContextMenu({
-        mouseX: event.clientX,
-        mouseY: event.clientY,
-      });
-      setSelectedTrackId(trackId);
-    },
-    [],
-  );
+  const handleContextMenu = (event: React.MouseEvent, trackId: string) => {
+    event.preventDefault();
+    setContextMenu({
+      mouseX: event.clientX,
+      mouseY: event.clientY,
+    });
+    setSelectedTrackId(trackId);
+  };
 
   const handleCloseContextMenu = () => {
     setContextMenu(null);
@@ -612,115 +604,98 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     };
   }, [sorting, globalFilter, data.length]);
 
-  // Row event handlers
-  const handleRowClick = useCallback(
-    (row: Row<TableData>, index: number, e: React.MouseEvent) => {
-      const trackId = row.original.id;
+  const handleRowClick = (
+    row: Row<TableData>,
+    index: number,
+    e: React.MouseEvent,
+  ) => {
+    const trackId = row.original.id;
 
-      setSelectedTracks((prev) => {
-        if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
-          const newSelectedTracks = { ...prev };
-          if (newSelectedTracks[trackId]) {
-            delete newSelectedTracks[trackId];
-          } else {
-            newSelectedTracks[trackId] = true;
-          }
+    setSelectedTracks((prev) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        const newSelectedTracks = { ...prev };
+        if (newSelectedTracks[trackId]) {
+          delete newSelectedTracks[trackId];
+        } else {
+          newSelectedTracks[trackId] = true;
+        }
+        setLastClickedIndex(index);
+        return newSelectedTracks;
+      }
+
+      if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        if (lastClickedIndex === null) {
           setLastClickedIndex(index);
-          return newSelectedTracks;
+          return { [trackId]: true };
         }
 
-        if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
-          if (lastClickedIndex === null) {
-            setLastClickedIndex(index);
-            return { [trackId]: true };
-          }
+        const start = Math.min(lastClickedIndex, index);
+        const end = Math.max(lastClickedIndex, index);
 
-          const start = Math.min(lastClickedIndex, index);
-          const end = Math.max(lastClickedIndex, index);
+        const rangeSelection: Record<string, boolean> = {};
 
-          const rangeSelection: Record<string, boolean> = {};
-
-          if (tableRef.current) {
-            const visibleRows = tableRef.current.getRowModel().rows;
-            for (let i = start; i <= end; i += 1) {
-              const rowData = visibleRows[i]?.original;
-              if (rowData) {
-                rangeSelection[rowData.id] = true;
-              }
+        if (tableRef.current) {
+          const visibleRows = tableRef.current.getRowModel().rows;
+          for (let i = start; i <= end; i += 1) {
+            const rowData = visibleRows[i]?.original;
+            if (rowData) {
+              rangeSelection[rowData.id] = true;
             }
           }
-
-          return rangeSelection;
         }
 
-        setLastClickedIndex(index);
-        return { [trackId]: true };
-      });
-    },
-    [lastClickedIndex],
-  );
-
-  const handleRowDoubleClick = useCallback(
-    (row: Row<TableData>, _index: number) => {
-      handlePlayTrack(row.original.id);
-      setSelectedTracks({ [row.original.id]: true });
-    },
-    [handlePlayTrack],
-  );
-
-  const handleRowContextMenu = useCallback(
-    (row: Row<TableData>, _index: number, e: React.MouseEvent) => {
-      const trackId = row.original.id;
-
-      if (selectedTracks[trackId]) {
-        handleContextMenu(e, trackId);
-      } else {
-        setSelectedTracks({ [trackId]: true });
-        handleContextMenu(e, trackId);
+        return rangeSelection;
       }
-    },
-    [selectedTracks, handleContextMenu],
-  );
 
-  const handleGetRowClassName = useCallback(
-    (row: Row<TableData>, index: number) => {
-      return getRowClassName(
-        row.original.id,
-        currentTrack?.id || undefined,
-        Object.keys(selectedTracks),
-        playbackSource || '',
-        'library',
-        undefined,
-        undefined,
-        index,
-      );
-    },
-    [currentTrack?.id, selectedTracks, playbackSource],
-  );
+      setLastClickedIndex(index);
+      return { [trackId]: true };
+    });
+  };
 
-  // Column visibility toggle handler
-  const handleColumnVisibilityToggle = useCallback(
-    (columnId: string, visible: boolean) => {
-      updateColumnVisibility(columnId, visible);
-    },
-    [updateColumnVisibility],
-  );
+  const handleRowDoubleClick = (row: Row<TableData>, _index: number) => {
+    handlePlayTrack(row.original.id);
+    setSelectedTracks({ [row.original.id]: true });
+  };
 
-  // Column sizing persistence handler
-  const handleColumnSizingPersist = useCallback(
-    (sizing: Record<string, number>) => {
-      setColumnWidths(sizing);
-    },
-    [setColumnWidths],
-  );
+  const handleRowContextMenu = (
+    row: Row<TableData>,
+    _index: number,
+    e: React.MouseEvent,
+  ) => {
+    const trackId = row.original.id;
 
-  // Column order change handler
-  const handleColumnOrderChange = useCallback(
-    (newOrder: string[]) => {
-      setColumnOrder(newOrder);
-    },
-    [setColumnOrder],
-  );
+    if (selectedTracks[trackId]) {
+      handleContextMenu(e, trackId);
+    } else {
+      setSelectedTracks({ [trackId]: true });
+      handleContextMenu(e, trackId);
+    }
+  };
+
+  const handleGetRowClassName = (row: Row<TableData>, index: number) => {
+    return getRowClassName(
+      row.original.id,
+      currentTrack?.id || undefined,
+      Object.keys(selectedTracks),
+      playbackSource || '',
+      'library',
+      undefined,
+      undefined,
+      index,
+    );
+  };
+
+  const handleColumnVisibilityToggle = (columnId: string, visible: boolean) => {
+    updateColumnVisibility(columnId, visible);
+  };
+
+  const handleColumnSizingPersist = (sizing: Record<string, number>) => {
+    setColumnWidths(sizing);
+  };
+
+  const handleColumnOrderChange = (newOrder: string[]) => {
+    setColumnOrder(newOrder);
+  };
 
   // Drag-and-drop: compute selected track IDs list
   const selectedTrackIdsList = useMemo(
@@ -728,16 +703,15 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [selectedTracks],
   );
 
-  // Drag-and-drop: handle row drag start
-  const handleRowDragStart = useCallback(
-    (trackId: string, selectedIds: string[]): string[] => {
-      if (selectedIds.includes(trackId)) {
-        return selectedIds;
-      }
-      return [trackId];
-    },
-    [],
-  );
+  const handleRowDragStart = (
+    trackId: string,
+    selectedIds: string[],
+  ): string[] => {
+    if (selectedIds.includes(trackId)) {
+      return selectedIds;
+    }
+    return [trackId];
+  };
 
   // Toolbar content
   const toolbarContent = useMemo(
