@@ -561,22 +561,19 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   // Tanstack's OnChangeFn accepts either a value or an updater function.
   // Resolve to a plain value and hand off to setPlaylistSortPreference,
   // which handles the full fan-out (session cache, playlistViewState,
-  // DB persist).
-  const handleSortingChange = useCallback(
-    (updater: SortingState | ((old: SortingState) => SortingState)) => {
-      const state = useLibraryStore.getState();
-      const pid = state.selectedPlaylistId;
-      if (!pid) return;
-      const current =
-        state.playlistSortPreferences[pid] ?? DEFAULT_PLAYLIST_SORTING;
-      const next =
-        typeof updater === 'function'
-          ? (updater as (old: SortingState) => SortingState)(current)
-          : updater;
-      setPlaylistSortPreference(pid, next);
-    },
-    [setPlaylistSortPreference],
-  );
+  // DB persist). No useCallback: VirtualTable isn't memoized, so
+  // identity stability would be cargo-culted ceremony.
+  const handleSortingChange = (
+    updater: SortingState | ((old: SortingState) => SortingState),
+  ) => {
+    const state = useLibraryStore.getState();
+    const pid = state.selectedPlaylistId;
+    if (!pid) return;
+    const current =
+      state.playlistSortPreferences[pid] ?? DEFAULT_PLAYLIST_SORTING;
+    const next = typeof updater === 'function' ? updater(current) : updater;
+    setPlaylistSortPreference(pid, next);
+  };
 
   // Handle search toggle. Closing the bar clears the filter through
   // handleDebouncedSearchChange so persistence and scroll-on-clear both

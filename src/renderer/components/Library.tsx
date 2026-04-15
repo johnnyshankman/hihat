@@ -360,19 +360,17 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Tanstack's OnChangeFn accepts either a value or an updater function.
   // Resolve to a plain value and hand off to setLibrarySorting, which
   // handles the full fan-out (in-memory, libraryViewState, DB persist).
-  const handleSortingChange = useCallback(
-    (updater: SortingState | ((old: SortingState) => SortingState)) => {
-      const current =
-        useSettingsAndPlaybackStore.getState().librarySorting ??
-        DEFAULT_LIBRARY_SORTING;
-      const next =
-        typeof updater === 'function'
-          ? (updater as (old: SortingState) => SortingState)(current)
-          : updater;
-      setLibrarySorting(next);
-    },
-    [setLibrarySorting],
-  );
+  // No useCallback: VirtualTable isn't memoized, so identity stability
+  // would be cargo-culted ceremony.
+  const handleSortingChange = (
+    updater: SortingState | ((old: SortingState) => SortingState),
+  ) => {
+    const current =
+      useSettingsAndPlaybackStore.getState().librarySorting ??
+      DEFAULT_LIBRARY_SORTING;
+    const next = typeof updater === 'function' ? updater(current) : updater;
+    setLibrarySorting(next);
+  };
 
   // Expose the scrollToTrack function to the window object
   useEffect(() => {
