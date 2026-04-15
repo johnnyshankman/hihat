@@ -13,7 +13,9 @@ interface PositionDisplayProps {
 
 // Isolated component for position display and seeking
 // This prevents the entire Player component from re-rendering when position updates
-function PositionDisplay({ disabled = false }: PositionDisplayProps) {
+export default function PositionDisplay({
+  disabled = false,
+}: PositionDisplayProps) {
   // Subscribe only to position and duration to minimize re-renders
   const position = useSettingsAndPlaybackStore((state) => state.position);
   const duration = useSettingsAndPlaybackStore((state) => state.duration);
@@ -80,5 +82,3 @@ function PositionDisplay({ disabled = false }: PositionDisplayProps) {
     </Box>
   );
 }
-
-export default PositionDisplay;

@@ -3,7 +3,7 @@ import { Badge, IconButton, Tooltip } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useUIStore } from '../stores';
 
-function NotificationButton() {
+export default function NotificationButton() {
   const notifications = useUIStore((state) => state.notifications);
   const panelOpen = useUIStore((state) => state.notificationPanelOpen);
   const setPanelOpen = useUIStore((state) => state.setNotificationPanelOpen);
@@ -46,5 +46,3 @@ function NotificationButton() {
     </Tooltip>
   );
 }
-
-export default NotificationButton;

@@ -70,7 +70,7 @@ interface VirtualTableProps {
   > | null>;
 }
 
-function VirtualTable({
+export default function VirtualTable({
   browserPanel,
   columnOrder,
   columns,
@@ -559,5 +559,3 @@ function VirtualTable({
     </div>
   );
 }
-
-export default VirtualTable;

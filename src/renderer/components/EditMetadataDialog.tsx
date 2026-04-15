@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -26,7 +26,7 @@ function parseNum(val: string): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
-function EditMetadataDialog({
+export default function EditMetadataDialog({
   open,
   trackId,
   onClose,
@@ -46,6 +46,9 @@ function EditMetadataDialog({
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Code smell: This is sort of an anti pattern. We're reacting to prop changes
+  // in order to reset the internal state which is kind of odd. It's because this
+  // is hidden but still mounted 24/7 so the state never implicitly resets itself.
   useEffect(() => {
     if (open && trackId) {
       const track = useLibraryStore.getState().getTrackById(trackId);
@@ -301,5 +304,3 @@ function EditMetadataDialog({
     </Dialog>
   );
 }
-
-export default memo(EditMetadataDialog);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -14,11 +14,17 @@ interface CreatePlaylistDialogProps {
   onClose: () => void;
 }
 
-function CreatePlaylistDialog({ open, onClose }: CreatePlaylistDialogProps) {
+export default function CreatePlaylistDialog({
+  open,
+  onClose,
+}: CreatePlaylistDialogProps) {
   // Local state for the input - isolated from parent
   const [name, setName] = useState('');
 
   // Reset name when dialog opens
+  // Code smell: This is sort of an anti pattern. We're reacting to prop changes
+  // in order to reset the internal state which is kind of odd. It's because this
+  // is hidden but still mounted 24/7 so the state never implicitly resets itself.
   useEffect(() => {
     if (open) {
       setName('');
@@ -73,6 +79,3 @@ function CreatePlaylistDialog({ open, onClose }: CreatePlaylistDialogProps) {
     </Dialog>
   );
 }
-
-// Memoize the component to prevent unnecessary re-renders
-export default memo(CreatePlaylistDialog);
