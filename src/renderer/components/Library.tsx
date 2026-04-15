@@ -143,7 +143,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const getSearchFilter = useLibraryStore((state) => state.getSearchFilter);
   const browserOpen = useUIStore((state) => state.browserOpen);
   const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
-  const libraryViewState = useLibraryStore((state) => state.libraryViewState);
   const [showSearch, setShowSearch] = useState(() =>
     Boolean(getSearchFilter('library')),
   );
@@ -177,10 +176,14 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
   const globalFilterRef = useRef(globalFilter);
 
-  // Sorting state - initialize from store to persist across unmount/remount
-  const [sorting, setSorting] = useState<SortingState>(
-    () => libraryViewState.sorting || [{ id: 'albumArtist', desc: false }],
-  );
+  // Sorting state - initialize from store to persist across unmount/remount.
+  // Read via getState() at init time only: we don't want to subscribe to
+  // libraryViewState because we write to it on every sort/search change,
+  // which would re-render this component for data it no longer reads.
+  const [sorting, setSorting] = useState<SortingState>(() => {
+    const stored = useLibraryStore.getState().libraryViewState.sorting;
+    return stored || [{ id: 'albumArtist', desc: false }];
+  });
 
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(
@@ -328,6 +331,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Latest reactive values held in a ref so handlers below can read fresh
   // state without becoming reactive themselves (keeps callback identity
   // stable for SearchBar, which subscribes via useEffect on the callback).
+  // Also lets handleSortingChange compute the next sorting outside of a
+  // state updater (state updaters must stay pure — they're double-invoked
+  // in StrictMode / Concurrent rendering).
   const latestRef = useRef({
     sorting,
     artistFilter,
@@ -336,14 +342,12 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     playbackSource,
     scrollToTrack,
   });
-  latestRef.current = {
-    sorting,
-    artistFilter,
-    albumFilter,
-    currentTrack,
-    playbackSource,
-    scrollToTrack,
-  };
+  latestRef.current.sorting = sorting;
+  latestRef.current.artistFilter = artistFilter;
+  latestRef.current.albumFilter = albumFilter;
+  latestRef.current.currentTrack = currentTrack;
+  latestRef.current.playbackSource = playbackSource;
+  latestRef.current.scrollToTrack = scrollToTrack;
 
   // Single source of truth for changing the global filter: updates local
   // state, persists to store, and snaps to the current track when the user
@@ -386,20 +390,22 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const handleDebouncedSearchChange = applyGlobalFilter;
 
   // Wrap the sorting setter so persistence happens at the event source
-  // instead of in a downstream effect.
+  // instead of in a downstream effect. Compute `next` outside setSorting
+  // so the updater stays pure — React may call updater functions more
+  // than once and will discard the side effects of trial renders.
   const handleSortingChange = useCallback(
     (updater: SortingState | ((old: SortingState) => SortingState)) => {
-      setSorting((prev) => {
-        const next =
-          typeof updater === 'function'
-            ? (updater as (old: SortingState) => SortingState)(prev)
-            : updater;
-        updateLibraryViewState(next, globalFilterRef.current);
-        if (next && next.length > 0) {
-          setLibrarySorting(next);
-        }
-        return next;
-      });
+      const next =
+        typeof updater === 'function'
+          ? (updater as (old: SortingState) => SortingState)(
+              latestRef.current.sorting,
+            )
+          : updater;
+      setSorting(next);
+      updateLibraryViewState(next, globalFilterRef.current);
+      if (next.length > 0) {
+        setLibrarySorting(next);
+      }
     },
     [updateLibraryViewState, setLibrarySorting],
   );
