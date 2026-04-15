@@ -4,6 +4,7 @@ import React, {
   useRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
 } from 'react';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { keyframes } from '@mui/system';
@@ -48,6 +49,12 @@ const searchExpandAnimation = keyframes`
   }
 `;
 
+// Stable module-level default so selector fallbacks return the same
+// reference on every render, preventing spurious Zustand re-renders.
+const DEFAULT_PLAYLIST_SORTING: SortingState = [
+  { id: 'albumArtist', desc: false },
+];
+
 // Define props interface for Playlists component
 interface PlaylistsProps {
   drawerOpen: boolean;
@@ -61,15 +68,25 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const selectedPlaylistId = useLibraryStore(
     (state) => state.selectedPlaylistId,
   );
-  const updatePlaylistViewState = useLibraryStore(
-    (state) => state.updatePlaylistViewState,
-  );
-  const playlistViewState = useLibraryStore((state) => state.playlistViewState);
   const setPlaylistSortPreference = useLibraryStore(
     (state) => state.setPlaylistSortPreference,
   );
   const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
-  const getSearchFilter = useLibraryStore((state) => state.getSearchFilter);
+
+  // Sort and filter for the selected playlist are read directly from
+  // the store via selectors. setPlaylistSortPreference and
+  // setSearchFilter handle the full fan-out to playlistViewState, so
+  // this component does nothing beyond writing one value at a time.
+  const sorting = useLibraryStore((state) => {
+    const pid = state.selectedPlaylistId;
+    if (!pid) return DEFAULT_PLAYLIST_SORTING;
+    return state.playlistSortPreferences[pid] ?? DEFAULT_PLAYLIST_SORTING;
+  });
+  const globalFilter = useLibraryStore((state) => {
+    const pid = state.selectedPlaylistId;
+    if (!pid) return '';
+    return state.searchFilters[pid] ?? '';
+  });
 
   // Get state from settings store
   const columnVisibility = useSettingsAndPlaybackStore(
@@ -101,23 +118,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     (state) => state.playbackSourcePlaylistId,
   );
 
-  // Sorting state - initialize from store to persist across unmount/remount
-  const [sorting, setSorting] = useState<SortingState>(
-    () => playlistViewState.sorting || [{ id: 'albumArtist', desc: false }],
-  );
-
-  // Global filter state — receives debounced values from SearchBar.
-  const [globalFilter, setGlobalFilter] = useState(() =>
-    selectedPlaylistId ? getSearchFilter(selectedPlaylistId) : '',
-  );
-  const globalFilterRef = useRef(globalFilter);
-
-  // Stable callback for SearchBar — never changes identity
-  const handleDebouncedSearchChange = useCallback((value: string) => {
-    setGlobalFilter(value);
-    globalFilterRef.current = value;
-  }, []);
-
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
@@ -137,10 +137,20 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   );
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
 
-  // Search state
-  const [showSearch, setShowSearch] = useState(() =>
-    selectedPlaylistId ? !!getSearchFilter(selectedPlaylistId) : false,
-  );
+  // Search bar visibility. Initialized from store, then reset on every
+  // playlist switch via the "adjusting some state when a prop changes"
+  // pattern below — React docs explicitly recommend this over an effect.
+  const [showSearch, setShowSearch] = useState(() => {
+    const pid = useLibraryStore.getState().selectedPlaylistId;
+    if (!pid) return false;
+    return !!useLibraryStore.getState().searchFilters[pid];
+  });
+  const [lastSeenPlaylistId, setLastSeenPlaylistId] =
+    useState(selectedPlaylistId);
+  if (lastSeenPlaylistId !== selectedPlaylistId) {
+    setLastSeenPlaylistId(selectedPlaylistId);
+    setShowSearch(!!globalFilter);
+  }
 
   // Browser state
   const browserOpen = useUIStore((state) => state.browserOpen);
@@ -180,10 +190,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     },
     [selectedPlaylistId, setBrowserFilter, playlistBrowserFilter],
   );
-
-  // Track playlist switches to restore per-playlist sorting
-  const prevPlaylistIdRef = useRef(selectedPlaylistId);
-  const justSwitchedPlaylistRef = useRef(false);
 
   // Confirmation dialog state
   const [removeTrackConfirmOpen, setRemoveTrackConfirmOpen] = useState(false);
@@ -230,10 +236,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   );
 
   const handlePlayTrack = (trackId: string) => {
-    if (selectedPlaylistId) {
-      updatePlaylistViewState(sorting, globalFilter, selectedPlaylistId);
-    }
-
+    // No manual updatePlaylistViewState call needed — the store keeps
+    // playlistViewState in sync via selectPlaylist / setSearchFilter /
+    // setPlaylistSortPreference fan-outs.
     playTrack(trackId, 'playlist', selectedPlaylistId);
   };
 
@@ -414,41 +419,13 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     [scrollToTrack],
   );
 
-  // Expose the scrollToTrack function to the window object
+  // Expose the scrollToTrack function to the window object.
   useEffect(() => {
     window.hihatScrollToPlaylistTrack = scrollToTrackWhenReady;
-
     return () => {
       delete window.hihatScrollToPlaylistTrack;
-      tableReadyRef.current = false;
     };
   }, [scrollToTrackWhenReady]);
-
-  // Restore per-playlist sorting and search when switching playlists
-  useEffect(() => {
-    const prevId = prevPlaylistIdRef.current;
-    if (selectedPlaylistId) {
-      // Restore sorting
-      const prefs = useLibraryStore.getState().playlistSortPreferences;
-      const savedSorting = prefs[selectedPlaylistId];
-      setSorting(savedSorting || [{ id: 'albumArtist', desc: false }]);
-
-      // Save outgoing search, restore incoming search
-      if (prevId && prevId !== selectedPlaylistId) {
-        setSearchFilter(prevId, globalFilterRef.current);
-        justSwitchedPlaylistRef.current = true;
-      }
-      const savedFilter = getSearchFilter(selectedPlaylistId);
-      setGlobalFilter(savedFilter);
-      globalFilterRef.current = savedFilter;
-      setShowSearch(!!savedFilter);
-    } else {
-      setGlobalFilter('');
-      globalFilterRef.current = '';
-      setShowSearch(false);
-    }
-    prevPlaylistIdRef.current = selectedPlaylistId;
-  }, [selectedPlaylistId, setSearchFilter, getSearchFilter]);
 
   // Check if playlist name text overflows its container
   useEffect(() => {
@@ -540,66 +517,92 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     });
   }, [playlistTracks, playlistArtistFilter, playlistAlbumFilter]);
 
-  // Track previous global filter for detecting clears
-  const prevGlobalFilterRef = useRef(globalFilter);
-
-  // Persist global filter to store and handle scroll-to-track on clear
-  useEffect(() => {
-    const prevFilter = prevGlobalFilterRef.current;
-    prevGlobalFilterRef.current = globalFilter;
-
-    updatePlaylistViewState(sorting, globalFilter, selectedPlaylistId);
-    if (selectedPlaylistId && !justSwitchedPlaylistRef.current) {
-      setSearchFilter(selectedPlaylistId, globalFilter);
-    }
-    justSwitchedPlaylistRef.current = false;
-
-    // Persist per-playlist sort preference to DB
-    if (selectedPlaylistId && sorting && sorting.length > 0) {
-      setPlaylistSortPreference(selectedPlaylistId, sorting);
-    }
-
-    if (
-      prevFilter &&
-      !globalFilter &&
-      currentTrack &&
-      playbackSource === 'playlist' &&
-      playbackSourcePlaylistId === selectedPlaylistId
-    ) {
-      const playlistTrackIds = playlistTracks.map((t) => t.id);
-      if (playlistTrackIds.includes(currentTrack.id)) {
-        setTimeout(() => {
-          scrollToTrack(currentTrack.id);
-        }, 100);
-      }
-    }
-  }, [
-    globalFilter,
-    sorting,
-    updatePlaylistViewState,
-    selectedPlaylistId,
-    setSearchFilter,
-    setPlaylistSortPreference,
+  // Latest reactive values held in a ref so handleDebouncedSearchChange
+  // can read fresh state for its scroll-on-clear check without becoming
+  // reactive itself (SearchBar subscribes via useEffect on the callback,
+  // so the callback must keep a stable identity). Writes happen in a
+  // layout effect so a speculative render React discards cannot leave
+  // stale values behind.
+  const latestRef = useRef({
+    playlistArtistFilter,
+    playlistAlbumFilter,
     currentTrack,
     playbackSource,
     playbackSourcePlaylistId,
     playlistTracks,
     scrollToTrack,
-  ]);
+  });
+  useLayoutEffect(() => {
+    latestRef.current.playlistArtistFilter = playlistArtistFilter;
+    latestRef.current.playlistAlbumFilter = playlistAlbumFilter;
+    latestRef.current.currentTrack = currentTrack;
+    latestRef.current.playbackSource = playbackSource;
+    latestRef.current.playbackSourcePlaylistId = playbackSourcePlaylistId;
+    latestRef.current.playlistTracks = playlistTracks;
+    latestRef.current.scrollToTrack = scrollToTrack;
+  });
 
-  // Handle search toggle
+  // Change the global filter for the currently-selected playlist. The
+  // store is the single source of truth — setSearchFilter fans out
+  // internally to playlistViewState.filtering. Scroll-on-clear snaps to
+  // the playing track when the user has just cleared a non-empty filter
+  // on the playlist that is currently playing.
+  const handleDebouncedSearchChange = useCallback(
+    (value: string) => {
+      const state = useLibraryStore.getState();
+      const pid = state.selectedPlaylistId;
+      if (!pid) return;
+      const prev = state.searchFilters[pid] ?? '';
+      setSearchFilter(pid, value);
+
+      if (!prev || value) return;
+      const latest = latestRef.current;
+      if (
+        !latest.currentTrack ||
+        latest.playbackSource !== 'playlist' ||
+        latest.playbackSourcePlaylistId !== pid
+      )
+        return;
+
+      const playlistTrackIds = latest.playlistTracks.map((t) => t.id);
+      if (!playlistTrackIds.includes(latest.currentTrack.id)) return;
+
+      setTimeout(() => {
+        const ct = latestRef.current.currentTrack;
+        if (ct) latestRef.current.scrollToTrack(ct.id);
+      }, 100);
+    },
+    [setSearchFilter],
+  );
+
+  // Tanstack's OnChangeFn accepts either a value or an updater function.
+  // Resolve to a plain value and hand off to setPlaylistSortPreference,
+  // which handles the full fan-out (session cache, playlistViewState,
+  // DB persist).
+  const handleSortingChange = useCallback(
+    (updater: SortingState | ((old: SortingState) => SortingState)) => {
+      const state = useLibraryStore.getState();
+      const pid = state.selectedPlaylistId;
+      if (!pid) return;
+      const current =
+        state.playlistSortPreferences[pid] ?? DEFAULT_PLAYLIST_SORTING;
+      const next =
+        typeof updater === 'function'
+          ? (updater as (old: SortingState) => SortingState)(current)
+          : updater;
+      setPlaylistSortPreference(pid, next);
+    },
+    [setPlaylistSortPreference],
+  );
+
+  // Handle search toggle. Closing the bar clears the filter through
+  // handleDebouncedSearchChange so persistence and scroll-on-clear both
+  // fire. The side effect lives outside setShowSearch because state
+  // updaters must stay pure.
   const handleSearchToggle = useCallback(() => {
-    setShowSearch((prev) => {
-      if (prev) {
-        setGlobalFilter('');
-        globalFilterRef.current = '';
-        if (selectedPlaylistId) {
-          setSearchFilter(selectedPlaylistId, '');
-        }
-      }
-      return !prev;
-    });
-  }, [selectedPlaylistId, setSearchFilter]);
+    if (showSearch) handleDebouncedSearchChange('');
+    setShowSearch((prev) => !prev);
+  }, [showSearch, handleDebouncedSearchChange]);
 
   // Memoize playlist track count and hours for stable toolbar deps
   const playlistTrackCount = useMemo(
@@ -611,15 +614,15 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     [playlistTracks],
   );
 
-  // Mark table as ready after render completes
+  // Mark table as ready after the next frame so the virtualizer has
+  // measured rows for the new sorting/filter/data.
   useEffect(() => {
+    tableReadyRef.current = false;
     const rafId = requestAnimationFrame(() => {
       tableReadyRef.current = true;
     });
-
     return () => {
       cancelAnimationFrame(rafId);
-      tableReadyRef.current = false;
     };
   }, [sorting, globalFilter, data.length]);
 
@@ -1057,7 +1060,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             onRowContextMenu={handleRowContextMenu}
             onRowDoubleClick={handleRowDoubleClick}
             onRowDragStart={handleRowDragStart}
-            onSortingChange={setSorting}
+            onSortingChange={handleSortingChange}
             selectedTrackIds={selectedTrackIdsList}
             sorting={sorting}
             tableRef={tableRef}
