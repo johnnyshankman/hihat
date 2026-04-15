@@ -320,14 +320,10 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [scrollToTrack],
   );
 
-  // Change the global filter. The store is the single source of truth —
-  // setSearchFilter fans out internally to libraryViewState.filtering, so
-  // this handler does nothing more than (a) write the store and (b) run
-  // the scroll-on-clear side effect when the user has just cleared a
-  // non-empty filter. Reactive values are read fresh from stores at call
-  // time rather than captured in a latestRef — the callback closes over
-  // nothing that changes, so its identity is stable without any ref
-  // plumbing, and SearchBar's debounce subscription doesn't re-fire.
+  // Writes filter to the store (which fan-outs internally) and snaps
+  // scroll to the playing track when clearing a non-empty filter. Reads
+  // store state fresh per call so the callback's identity stays stable —
+  // SearchBar's debounce subscription won't re-fire.
   const handleDebouncedSearchChange = useCallback(
     (value: string) => {
       const libState = useLibraryStore.getState();
@@ -355,11 +351,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [setSearchFilter, scrollToTrack],
   );
 
-  // Tanstack's OnChangeFn accepts either a value or an updater function.
-  // Resolve to a plain value and hand off to setLibrarySorting, which
-  // handles the full fan-out (in-memory, libraryViewState, DB persist).
-  // No useCallback: VirtualTable isn't memoized, so identity stability
-  // would be cargo-culted ceremony.
+  // Resolve Tanstack's updater-or-value to a plain value for
+  // setLibrarySorting (fan-outs to state + viewState + DB). No
+  // useCallback — VirtualTable isn't memoized.
   const handleSortingChange = (
     updater: SortingState | ((old: SortingState) => SortingState),
   ) => {
@@ -501,13 +495,10 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     }
   };
 
-  // Save the currently visible track on unmount. Read the virtualizer
-  // through the ref *inside* the cleanup so we see its real value at
-  // unmount time, not the (typically null) value at first mount. The
-  // virtualizer's range indexes the browser-filtered rows, so we must
-  // resolve it against the same artist/album filters via latestRef —
-  // otherwise we save the wrong track whenever a browser filter is
-  // active at unmount.
+  // Save visible track on unmount. Read virtualizer + filters inside
+  // the cleanup — the ref is null at mount, and the virtualizer's range
+  // indexes browser-filtered rows, so a stale filter means we save the
+  // wrong track.
   useEffect(() => {
     return () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -530,10 +521,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     };
   }, [setLastViewedTrackId]);
 
-  // Restore scroll position on mount, exactly once. Without the guard this
-  // re-fires whenever tracks reload or the filter changes and yanks the
-  // user back to the saved track. scrollToTrackWhenReady polls until the
-  // table is rendered, so we don't need a timeout race.
+  // Restore scroll on mount, exactly once. Without the guard this
+  // re-fires on track reloads / filter changes and yanks the user back.
+  // scrollToTrackWhenReady polls for readiness, so no timeout race.
   const scrollRestoredRef = useRef(false);
   useEffect(() => {
     if (scrollRestoredRef.current) return;
@@ -583,11 +573,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // useMemo: O(n) reduce over track durations.
   const totalHours = useMemo(() => calculateTotalHours(data), [data]);
 
-  // Handle search toggle. Closing the bar clears the filter through
-  // handleDebouncedSearchChange so persistence and scroll-on-clear both
-  // fire. Side effect lives outside setShowSearch because state updaters
-  // must stay pure — React may double-invoke them in StrictMode and
-  // discard the side effects of trial renders.
+  // Closing routes through handleDebouncedSearchChange so persistence
+  // + scroll-on-clear both fire. Side effect lives outside setShowSearch
+  // — StrictMode double-invokes state updaters and would discard it.
   const handleSearchToggle = useCallback(() => {
     if (showSearch) handleDebouncedSearchChange('');
     setShowSearch((prev) => !prev);
@@ -1115,9 +1103,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
 }
 
-// React.memo with default shallow comparison lets MainLayout re-render
-// (settings drawer toggle, notifications, mini player sync, etc.) without
-// forcing Library — an expensive component with many hooks and a
-// virtualized table — to re-render. Library's only props are drawerOpen
-// and onDrawerToggle, so the default shallow compare is sufficient.
+// Shields Library from MainLayout re-renders (drawer toggle,
+// notifications, player sync, etc.). Props are primitive + stable
+// useCallback, so the default shallow compare is sufficient.
 export default React.memo(Library);

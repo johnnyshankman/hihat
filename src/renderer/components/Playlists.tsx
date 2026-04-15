@@ -72,10 +72,8 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   );
   const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
 
-  // Sort and filter for the selected playlist are read directly from
-  // the store via selectors. setPlaylistSortPreference and
-  // setSearchFilter handle the full fan-out to playlistViewState, so
-  // this component does nothing beyond writing one value at a time.
+  // Read via selectors; setPlaylistSortPreference and setSearchFilter
+  // fan out to playlistViewState, so this component just writes.
   const sorting = useLibraryStore((state) => {
     const pid = state.selectedPlaylistId;
     if (!pid) return DEFAULT_PLAYLIST_SORTING;
@@ -503,14 +501,10 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     });
   }, [playlistTracks, playlistArtistFilter, playlistAlbumFilter]);
 
-  // Change the global filter for the currently-selected playlist. The
-  // store is the single source of truth — setSearchFilter fans out
-  // internally to playlistViewState.filtering. Scroll-on-clear snaps to
-  // the playing track when the user has just cleared a non-empty filter
-  // on the playlist that is currently playing. Reactive values are read
-  // fresh from stores at call time instead of captured in a latestRef —
-  // the callback closes over nothing that changes, so its identity is
-  // stable without any ref plumbing.
+  // Writes filter to the store (which fan-outs internally) and snaps
+  // scroll to the playing track when clearing a non-empty filter on the
+  // active playlist. Reads store state fresh per call so the callback's
+  // identity stays stable.
   const handleDebouncedSearchChange = useCallback(
     (value: string) => {
       const libState = useLibraryStore.getState();
@@ -545,11 +539,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     [setSearchFilter, scrollToTrack],
   );
 
-  // Tanstack's OnChangeFn accepts either a value or an updater function.
-  // Resolve to a plain value and hand off to setPlaylistSortPreference,
-  // which handles the full fan-out (session cache, playlistViewState,
-  // DB persist). No useCallback: VirtualTable isn't memoized, so
-  // identity stability would be cargo-culted ceremony.
+  // Resolve Tanstack's updater-or-value to a plain value for
+  // setPlaylistSortPreference (fan-outs to session cache + viewState +
+  // DB). No useCallback — VirtualTable isn't memoized.
   const handleSortingChange = (
     updater: SortingState | ((old: SortingState) => SortingState),
   ) => {
@@ -1141,9 +1133,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   );
 }
 
-// React.memo with default shallow comparison lets MainLayout re-render
-// (settings drawer toggle, notifications, mini player sync, etc.) without
-// forcing Playlists — an expensive component with many hooks and a
-// virtualized table — to re-render. Playlists' only props are drawerOpen
-// and onDrawerToggle, so the default shallow compare is sufficient.
+// Shields Playlists from MainLayout re-renders (drawer toggle,
+// notifications, player sync, etc.). Props are primitive + stable
+// useCallback, so the default shallow compare is sufficient.
 export default React.memo(Playlists);
