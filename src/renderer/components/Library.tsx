@@ -3,8 +3,8 @@ import React, {
   useMemo,
   useRef,
   useEffect,
-  useLayoutEffect,
   useCallback,
+  useInsertionEffect,
 } from 'react';
 import {
   Box,
@@ -334,6 +334,12 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Also lets handleSortingChange compute the next sorting outside of a
   // state updater (state updaters must stay pure — they're double-invoked
   // in StrictMode / Concurrent rendering).
+  //
+  // The ref is written inside useInsertionEffect so writes happen on commit,
+  // not during render — a speculative render that React discards must not
+  // leave stale values behind. useInsertionEffect fires before any other
+  // effect on the same commit, so every downstream reader sees the latest
+  // committed values.
   const latestRef = useRef({
     sorting,
     artistFilter,
@@ -342,12 +348,14 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     playbackSource,
     scrollToTrack,
   });
-  latestRef.current.sorting = sorting;
-  latestRef.current.artistFilter = artistFilter;
-  latestRef.current.albumFilter = albumFilter;
-  latestRef.current.currentTrack = currentTrack;
-  latestRef.current.playbackSource = playbackSource;
-  latestRef.current.scrollToTrack = scrollToTrack;
+  useInsertionEffect(() => {
+    latestRef.current.sorting = sorting;
+    latestRef.current.artistFilter = artistFilter;
+    latestRef.current.albumFilter = albumFilter;
+    latestRef.current.currentTrack = currentTrack;
+    latestRef.current.playbackSource = playbackSource;
+    latestRef.current.scrollToTrack = scrollToTrack;
+  });
 
   // Single source of truth for changing the global filter: updates local
   // state, persists to store, and snaps to the current track when the user
@@ -543,8 +551,11 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   // Save the currently visible track on unmount. Read the virtualizer
   // through the ref *inside* the cleanup so we see its real value at
-  // unmount time, not the (typically null) value at first mount.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // unmount time, not the (typically null) value at first mount. The
+  // virtualizer's range indexes the browser-filtered rows, so we must
+  // resolve it against the same artist/album filters via latestRef —
+  // otherwise we save the wrong track whenever a browser filter is
+  // active at unmount.
   useEffect(() => {
     return () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -555,7 +566,13 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       const middleIndex = Math.floor(
         (visibleRange.startIndex + visibleRange.endIndex) / 2,
       );
-      const trackIds = getFilteredAndSortedTrackIds('library');
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const latest = latestRef.current;
+      const trackIds = getFilteredAndSortedTrackIds(
+        'library',
+        latest.artistFilter,
+        latest.albumFilter,
+      );
       if (trackIds[middleIndex]) {
         setLastViewedTrackId(trackIds[middleIndex]);
       }
@@ -617,19 +634,17 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   // Handle search toggle. Closing the bar clears the filter through
   // applyGlobalFilter so persistence and scroll-on-clear both fire.
+  // Side effect lives outside setShowSearch because state updaters must
+  // stay pure — React may double-invoke them in StrictMode and discard
+  // the side effects of trial renders.
   const handleSearchToggle = useCallback(() => {
-    setShowSearch((prev) => {
-      if (prev) {
-        applyGlobalFilter('');
-      }
-      return !prev;
-    });
-  }, [applyGlobalFilter]);
+    if (showSearch) applyGlobalFilter('');
+    setShowSearch((prev) => !prev);
+  }, [showSearch, applyGlobalFilter]);
 
-  // Mark table as ready after layout commits. useLayoutEffect runs after
-  // DOM mutations but before paint, so by the time the rAF callback fires
-  // the virtualizer has measured rows for the new sorting/filter/data.
-  useLayoutEffect(() => {
+  // Mark table as ready after the next frame so the virtualizer has
+  // measured rows for the new sorting/filter/data.
+  useEffect(() => {
     tableReadyRef.current = false;
     const rafId = requestAnimationFrame(() => {
       tableReadyRef.current = true;
