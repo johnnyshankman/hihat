@@ -200,6 +200,7 @@ export default function Player() {
 
   // Remember the last non-zero volume so clicking the volume icon can
   // toggle between muted and the user's previous level.
+  // Code smell: there should be a point where we declarative change volume and can store this value instead of reacting to prop change?
   const prevVolumeRef = useRef(volume > 0 ? volume : 1);
   useEffect(() => {
     if (volume > 0) prevVolumeRef.current = volume;

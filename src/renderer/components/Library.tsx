@@ -70,7 +70,7 @@ interface DirectorySelectionResult {
   filePaths: string[];
 }
 
-function Library() {
+export default function Library() {
   // Subscribe directly so the parent doesn't need a drawer prop.
   const drawerOpen = useUIStore((state) => state.sidebarOpen);
   const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
@@ -1099,5 +1099,3 @@ function Library() {
     </Box>
   );
 }
-
-export default Library;

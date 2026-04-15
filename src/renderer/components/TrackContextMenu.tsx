@@ -27,7 +27,7 @@ interface TrackContextMenuProps {
   onRemoveFromPlaylist?: (trackId: string) => void;
 }
 
-function TrackContextMenu({
+export default function TrackContextMenu({
   open,
   anchorPosition,
   onClose,
@@ -375,5 +375,3 @@ function TrackContextMenu({
     </>
   );
 }
-
-export default TrackContextMenu;

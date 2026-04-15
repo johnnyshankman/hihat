@@ -22,7 +22,7 @@ interface PlaylistSelectionDialogProps {
   trackIds?: string[];
 }
 
-function PlaylistSelectionDialog({
+export default function PlaylistSelectionDialog({
   open,
   onClose,
   trackId = undefined,
@@ -180,5 +180,3 @@ function PlaylistSelectionDialog({
     </Dialog>
   );
 }
-
-export default PlaylistSelectionDialog;

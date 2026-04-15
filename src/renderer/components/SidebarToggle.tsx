@@ -8,7 +8,10 @@ interface SidebarToggleProps {
   onToggle: () => void;
 }
 
-function SidebarToggle({ isOpen, onToggle }: SidebarToggleProps) {
+export default function SidebarToggle({
+  isOpen,
+  onToggle,
+}: SidebarToggleProps) {
   // Only render the button when the sidebar is closed
   if (isOpen) return null;
 
@@ -29,5 +32,3 @@ function SidebarToggle({ isOpen, onToggle }: SidebarToggleProps) {
     </Tooltip>
   );
 }
-
-export default SidebarToggle;

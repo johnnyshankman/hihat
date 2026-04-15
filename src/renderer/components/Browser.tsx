@@ -103,7 +103,7 @@ function Browser({
     return list;
   }, [tracks, selectedArtist]);
 
-  // Auto-scroll selected artist into view
+  // Auto-scroll previously selected artist into view upon re-render/return
   useEffect(() => {
     if (selectedArtist && artistColumnRef.current) {
       const el = artistColumnRef.current.querySelector(
@@ -115,7 +115,7 @@ function Browser({
     }
   }, [selectedArtist]);
 
-  // Auto-scroll selected album into view
+  // Auto-scroll previously selected album into view upon re-render/return
   useEffect(() => {
     if (selectedAlbum && albumColumnRef.current) {
       const el = albumColumnRef.current.querySelector(
@@ -339,16 +339,4 @@ function Browser({
   );
 }
 
-export default React.memo(Browser, (prevProps, nextProps) => {
-  return (
-    prevProps.tracks === nextProps.tracks &&
-    prevProps.selectedArtist === nextProps.selectedArtist &&
-    prevProps.selectedAlbum === nextProps.selectedAlbum &&
-    prevProps.height === nextProps.height &&
-    prevProps.open === nextProps.open &&
-    prevProps.onArtistSelect === nextProps.onArtistSelect &&
-    prevProps.onAlbumSelect === nextProps.onAlbumSelect &&
-    prevProps.onHeightChange === nextProps.onHeightChange &&
-    prevProps.onClose === nextProps.onClose
-  );
-});
+export default React.memo(Browser);
