@@ -8,6 +8,7 @@ const useUIStore = create<UIStore>((set) => ({
   currentView: 'library',
   settingsOpen: false,
   browserOpen: false,
+  sidebarOpen: true,
   notificationPanelOpen: false,
 
   // Actions
@@ -54,6 +55,9 @@ const useUIStore = create<UIStore>((set) => ({
     }
     set({ browserOpen: open });
   },
+
+  setSidebarOpen: (open: boolean) => set({ sidebarOpen: open }),
+  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 }));
 
 export default useUIStore;

@@ -54,13 +54,12 @@ const DEFAULT_PLAYLIST_SORTING: SortingState = [
   { id: 'albumArtist', desc: false },
 ];
 
-// Define props interface for Playlists component
-interface PlaylistsProps {
-  drawerOpen: boolean;
-  onDrawerToggle: () => void;
-}
+function Playlists() {
+  // Sidebar drawer state lives in uiStore — read it directly here so
+  // the parent doesn't need to thread it through as a prop.
+  const drawerOpen = useUIStore((state) => state.sidebarOpen);
+  const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
 
-function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   // Get state from library store
   const playlists = useLibraryStore((state) => state.playlists);
   const tracks = useLibraryStore((state) => state.tracks);
@@ -1133,7 +1132,4 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   );
 }
 
-// Shields Playlists from MainLayout re-renders (drawer toggle,
-// notifications, player sync, etc.). Props are primitive + stable
-// useCallback, so the default shallow compare is sufficient.
-export default React.memo(Playlists);
+export default Playlists;

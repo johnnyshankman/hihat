@@ -70,13 +70,12 @@ interface DirectorySelectionResult {
   filePaths: string[];
 }
 
-// Define props interface for Library component
-interface LibraryProps {
-  drawerOpen: boolean;
-  onDrawerToggle: () => void;
-}
+function Library() {
+  // Sidebar drawer state lives in uiStore — read it directly here so
+  // the parent doesn't need to thread it through as a prop.
+  const drawerOpen = useUIStore((state) => state.sidebarOpen);
+  const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
 
-function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Get state from library store
   const tracks = useLibraryStore((state) => state.tracks);
   const getTrackById = useLibraryStore((state) => state.getTrackById);
@@ -1103,7 +1102,4 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
 }
 
-// Shields Library from MainLayout re-renders (drawer toggle,
-// notifications, player sync, etc.). Props are primitive + stable
-// useCallback, so the default shallow compare is sufficient.
-export default React.memo(Library);
+export default Library;
