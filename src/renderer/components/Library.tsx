@@ -3,8 +3,8 @@ import React, {
   useMemo,
   useRef,
   useEffect,
+  useLayoutEffect,
   useCallback,
-  useInsertionEffect,
 } from 'react';
 import {
   Box,
@@ -58,6 +58,13 @@ const searchExpandAnimation = keyframes`
   }
 `;
 
+// Stable module-level default so the `librarySorting` selector fallback
+// returns the same reference every render, preventing spurious re-renders
+// from Zustand equality checks when no persisted sorting exists yet.
+const DEFAULT_LIBRARY_SORTING: SortingState = [
+  { id: 'albumArtist', desc: false },
+];
+
 // Define the type for directory selection result
 interface DirectorySelectionResult {
   canceled: boolean;
@@ -74,12 +81,15 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Get state from library store
   const tracks = useLibraryStore((state) => state.tracks);
   const getTrackById = useLibraryStore((state) => state.getTrackById);
-  const updateLibraryViewState = useLibraryStore(
-    (state) => state.updateLibraryViewState,
-  );
   const lastViewedTrackId = useLibraryStore((state) => state.lastViewedTrackId);
   const setLastViewedTrackId = useLibraryStore(
     (state) => state.setLastViewedTrackId,
+  );
+  // Library's global filter lives in the libraryStore keyed by view ID.
+  // Reading it directly here means the store is the single source of truth
+  // — no local mirror, no ref, no manual fan-out on change.
+  const globalFilter = useLibraryStore(
+    (state) => state.searchFilters.library ?? '',
   );
   // Get state from settings store
   const columnVisibility = useSettingsAndPlaybackStore(
@@ -96,6 +106,12 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
   const setLibrarySorting = useSettingsAndPlaybackStore(
     (state) => state.setLibrarySorting,
+  );
+  // Sort preference lives in settingsAndPlaybackStore and is persisted to
+  // DB. setLibrarySorting internally fans out to libraryViewState, so the
+  // component just reads and writes this one value.
+  const sorting = useSettingsAndPlaybackStore(
+    (state) => state.librarySorting ?? DEFAULT_LIBRARY_SORTING,
   );
   const columnOrder = useSettingsAndPlaybackStore((state) => state.columnOrder);
   const setColumnOrder = useSettingsAndPlaybackStore(
@@ -140,11 +156,10 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const browserFilters = useLibraryStore((state) => state.browserFilters);
   const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
   const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
-  const getSearchFilter = useLibraryStore((state) => state.getSearchFilter);
   const browserOpen = useUIStore((state) => state.browserOpen);
   const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
-  const [showSearch, setShowSearch] = useState(() =>
-    Boolean(getSearchFilter('library')),
+  const [showSearch, setShowSearch] = useState(
+    () => !!useLibraryStore.getState().searchFilters.library,
   );
   const [browserHeight, setBrowserHeight] = useState(200);
 
@@ -169,21 +184,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     },
     [setBrowserFilter, libraryBrowserFilter],
   );
-
-  // Global filter state — receives debounced values from SearchBar.
-  const [globalFilter, setGlobalFilter] = useState(() =>
-    getSearchFilter('library'),
-  );
-  const globalFilterRef = useRef(globalFilter);
-
-  // Sorting state - initialize from store to persist across unmount/remount.
-  // Read via getState() at init time only: we don't want to subscribe to
-  // libraryViewState because we write to it on every sort/search change,
-  // which would re-render this component for data it no longer reads.
-  const [sorting, setSorting] = useState<SortingState>(() => {
-    const stored = useLibraryStore.getState().libraryViewState.sorting;
-    return stored || [{ id: 'albumArtist', desc: false }];
-  });
 
   // Add row virtualizer ref
   const rowVirtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(
@@ -328,28 +328,20 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [scrollToTrack],
   );
 
-  // Latest reactive values held in a ref so handlers below can read fresh
-  // state without becoming reactive themselves (keeps callback identity
-  // stable for SearchBar, which subscribes via useEffect on the callback).
-  // Also lets handleSortingChange compute the next sorting outside of a
-  // state updater (state updaters must stay pure — they're double-invoked
-  // in StrictMode / Concurrent rendering).
-  //
-  // The ref is written inside useInsertionEffect so writes happen on commit,
-  // not during render — a speculative render that React discards must not
-  // leave stale values behind. useInsertionEffect fires before any other
-  // effect on the same commit, so every downstream reader sees the latest
-  // committed values.
+  // Latest reactive values held in a ref so handleDebouncedSearchChange
+  // can read fresh state for its scroll-on-clear check without becoming
+  // reactive itself (SearchBar subscribes via useEffect on the callback,
+  // so the callback must keep a stable identity). Writes happen in a
+  // layout effect to avoid mutating during render — a speculative render
+  // that React discards must not leave stale values behind.
   const latestRef = useRef({
-    sorting,
     artistFilter,
     albumFilter,
     currentTrack,
     playbackSource,
     scrollToTrack,
   });
-  useInsertionEffect(() => {
-    latestRef.current.sorting = sorting;
+  useLayoutEffect(() => {
     latestRef.current.artistFilter = artistFilter;
     latestRef.current.albumFilter = albumFilter;
     latestRef.current.currentTrack = currentTrack;
@@ -357,65 +349,53 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     latestRef.current.scrollToTrack = scrollToTrack;
   });
 
-  // Single source of truth for changing the global filter: updates local
-  // state, persists to store, and snaps to the current track when the user
-  // clears a non-empty filter. Called from both SearchBar (debounced typing)
-  // and handleSearchToggle (close-button clear).
-  const applyGlobalFilter = useCallback(
+  // Change the global filter. The store is the single source of truth —
+  // setSearchFilter fans out internally to libraryViewState.filtering, so
+  // this handler does nothing more than (a) write the store and (b) run
+  // the scroll-on-clear side effect when the user has just cleared a
+  // non-empty filter. Called from SearchBar's debounced flow and from
+  // handleSearchToggle (close-button clear).
+  const handleDebouncedSearchChange = useCallback(
     (value: string) => {
-      const prev = globalFilterRef.current;
-      setGlobalFilter(value);
-      globalFilterRef.current = value;
-
-      const latest = latestRef.current;
-      updateLibraryViewState(latest.sorting, value);
+      const prev = useLibraryStore.getState().searchFilters.library ?? '';
       setSearchFilter('library', value);
 
-      if (
-        prev &&
-        !value &&
-        latest.currentTrack &&
-        latest.playbackSource === 'library'
-      ) {
-        const visibleTrackIds = getFilteredAndSortedTrackIds(
-          'library',
-          latest.artistFilter,
-          latest.albumFilter,
-        );
-        if (visibleTrackIds.includes(latest.currentTrack.id)) {
-          // Defer one frame so the table re-renders without the filter
-          // before we ask the virtualizer to scroll.
-          setTimeout(() => {
-            const ct = latestRef.current.currentTrack;
-            if (ct) latestRef.current.scrollToTrack(ct.id);
-          }, 100);
-        }
-      }
+      if (!prev || value) return;
+      const latest = latestRef.current;
+      if (!latest.currentTrack || latest.playbackSource !== 'library') return;
+
+      const visibleTrackIds = getFilteredAndSortedTrackIds(
+        'library',
+        latest.artistFilter,
+        latest.albumFilter,
+      );
+      if (!visibleTrackIds.includes(latest.currentTrack.id)) return;
+
+      // Defer one frame so the table re-renders without the filter
+      // before we ask the virtualizer to scroll.
+      setTimeout(() => {
+        const ct = latestRef.current.currentTrack;
+        if (ct) latestRef.current.scrollToTrack(ct.id);
+      }, 100);
     },
-    [updateLibraryViewState, setSearchFilter],
+    [setSearchFilter],
   );
 
-  const handleDebouncedSearchChange = applyGlobalFilter;
-
-  // Wrap the sorting setter so persistence happens at the event source
-  // instead of in a downstream effect. Compute `next` outside setSorting
-  // so the updater stays pure — React may call updater functions more
-  // than once and will discard the side effects of trial renders.
+  // Tanstack's OnChangeFn accepts either a value or an updater function.
+  // Resolve to a plain value and hand off to setLibrarySorting, which
+  // handles the full fan-out (in-memory, libraryViewState, DB persist).
   const handleSortingChange = useCallback(
     (updater: SortingState | ((old: SortingState) => SortingState)) => {
+      const current =
+        useSettingsAndPlaybackStore.getState().librarySorting ??
+        DEFAULT_LIBRARY_SORTING;
       const next =
         typeof updater === 'function'
-          ? (updater as (old: SortingState) => SortingState)(
-              latestRef.current.sorting,
-            )
+          ? (updater as (old: SortingState) => SortingState)(current)
           : updater;
-      setSorting(next);
-      updateLibraryViewState(next, globalFilterRef.current);
-      if (next.length > 0) {
-        setLibrarySorting(next);
-      }
+      setLibrarySorting(next);
     },
-    [updateLibraryViewState, setLibrarySorting],
+    [setLibrarySorting],
   );
 
   // Expose the scrollToTrack function to the window object
@@ -633,14 +613,14 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const trackCount = useMemo(() => data.length, [data]);
 
   // Handle search toggle. Closing the bar clears the filter through
-  // applyGlobalFilter so persistence and scroll-on-clear both fire.
-  // Side effect lives outside setShowSearch because state updaters must
-  // stay pure — React may double-invoke them in StrictMode and discard
-  // the side effects of trial renders.
+  // handleDebouncedSearchChange so persistence and scroll-on-clear both
+  // fire. Side effect lives outside setShowSearch because state updaters
+  // must stay pure — React may double-invoke them in StrictMode and
+  // discard the side effects of trial renders.
   const handleSearchToggle = useCallback(() => {
-    if (showSearch) applyGlobalFilter('');
+    if (showSearch) handleDebouncedSearchChange('');
     setShowSearch((prev) => !prev);
-  }, [showSearch, applyGlobalFilter]);
+  }, [showSearch, handleDebouncedSearchChange]);
 
   // Mark table as ready after the next frame so the virtualizer has
   // measured rows for the new sorting/filter/data.
@@ -862,7 +842,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             }}
           >
             <SearchBar
-              initialValue={globalFilterRef.current}
+              initialValue={globalFilter}
               onClose={handleSearchToggle}
               onDebouncedChange={handleDebouncedSearchChange}
             />
@@ -936,6 +916,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       showSearch,
       handleSearchToggle,
       handleDebouncedSearchChange,
+      globalFilter,
       browserOpen,
       setBrowserOpen,
     ],

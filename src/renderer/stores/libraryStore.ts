@@ -372,12 +372,26 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   setSearchFilter: (viewId: string, filter: string) => {
-    set((state) => ({
-      searchFilters: {
+    set((state) => {
+      const searchFilters = {
         ...state.searchFilters,
         [viewId]: filter,
-      },
-    }));
+      };
+      // Keep libraryViewState.filtering in sync for the library view so
+      // trackSelectionUtils (used for next/prev track math) sees the
+      // current filter immediately without any component-side fan-out.
+      // Playlists.tsx still manages its own playlistViewState sync.
+      if (viewId === 'library') {
+        return {
+          searchFilters,
+          libraryViewState: {
+            ...state.libraryViewState,
+            filtering: filter,
+          },
+        };
+      }
+      return { searchFilters };
+    });
   },
 
   getSearchFilter: (viewId: string) => {
