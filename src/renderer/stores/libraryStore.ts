@@ -145,7 +145,32 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   selectPlaylist: (playlistId: string | null) => {
-    set({ selectedPlaylistId: playlistId });
+    // Reset playlistViewState to the new playlist's saved sort/filter
+    // so trackSelectionUtils (used by next/prev track math) always sees
+    // the view state matching the currently-selected playlist, even in
+    // the brief window before the component renders.
+    set((state) => {
+      if (!playlistId) {
+        return {
+          selectedPlaylistId: null,
+          playlistViewState: {
+            sorting: state.playlistViewState.sorting,
+            filtering: '',
+            playlistId: null,
+          },
+        };
+      }
+      const savedSort = state.playlistSortPreferences[playlistId];
+      const savedFilter = state.searchFilters[playlistId] ?? '';
+      return {
+        selectedPlaylistId: playlistId,
+        playlistViewState: {
+          sorting: savedSort ?? [{ id: 'albumArtist', desc: false }],
+          filtering: savedFilter,
+          playlistId,
+        },
+      };
+    });
   },
 
   selectTrack: (trackId: string | null) => {
@@ -372,12 +397,38 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   setSearchFilter: (viewId: string, filter: string) => {
-    set((state) => ({
-      searchFilters: {
+    set((state) => {
+      const searchFilters = {
         ...state.searchFilters,
         [viewId]: filter,
-      },
-    }));
+      };
+      // Keep libraryViewState.filtering in sync for the library view so
+      // trackSelectionUtils (used for next/prev track math) sees the
+      // current filter immediately without any component-side fan-out.
+      if (viewId === 'library') {
+        return {
+          searchFilters,
+          libraryViewState: {
+            ...state.libraryViewState,
+            filtering: filter,
+          },
+        };
+      }
+      // For a playlist view ID that matches the currently-selected
+      // playlist, mirror the filter into playlistViewState so next/prev
+      // track math follows what the user sees.
+      if (viewId === state.selectedPlaylistId) {
+        return {
+          searchFilters,
+          playlistViewState: {
+            ...state.playlistViewState,
+            filtering: filter,
+            playlistId: viewId,
+          },
+        };
+      }
+      return { searchFilters };
+    });
   },
 
   getSearchFilter: (viewId: string) => {
@@ -389,14 +440,29 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     playlistId: string,
     sorting: Array<{ id: string; desc: boolean }>,
   ) => {
+    if (!sorting || sorting.length === 0) return;
+
     // Update the session cache (do NOT update playlists array to avoid
-    // triggering re-renders that cause infinite loops in Playlists.tsx)
-    set((state) => ({
-      playlistSortPreferences: {
+    // triggering re-renders that cause infinite loops in Playlists.tsx).
+    // If this playlist is the currently-selected one, also mirror the
+    // sort into playlistViewState so trackSelectionUtils sees it.
+    set((state) => {
+      const playlistSortPreferences = {
         ...state.playlistSortPreferences,
         [playlistId]: sorting,
-      },
-    }));
+      };
+      if (playlistId === state.selectedPlaylistId) {
+        return {
+          playlistSortPreferences,
+          playlistViewState: {
+            ...state.playlistViewState,
+            sorting,
+            playlistId,
+          },
+        };
+      }
+      return { playlistSortPreferences };
+    });
 
     // Persist to DB (fire-and-forget)
     const { playlists } = get();

@@ -57,28 +57,36 @@ const searchExpandAnimation = keyframes`
   }
 `;
 
+// Stable module-level default so the `librarySorting` selector fallback
+// returns the same reference every render, preventing spurious re-renders
+// from Zustand equality checks when no persisted sorting exists yet.
+const DEFAULT_LIBRARY_SORTING: SortingState = [
+  { id: 'albumArtist', desc: false },
+];
+
 // Define the type for directory selection result
 interface DirectorySelectionResult {
   canceled: boolean;
   filePaths: string[];
 }
 
-// Define props interface for Library component
-interface LibraryProps {
-  drawerOpen: boolean;
-  onDrawerToggle: () => void;
-}
+function Library() {
+  // Subscribe directly so the parent doesn't need a drawer prop.
+  const drawerOpen = useUIStore((state) => state.sidebarOpen);
+  const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
 
-function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Get state from library store
   const tracks = useLibraryStore((state) => state.tracks);
   const getTrackById = useLibraryStore((state) => state.getTrackById);
-  const updateLibraryViewState = useLibraryStore(
-    (state) => state.updateLibraryViewState,
-  );
   const lastViewedTrackId = useLibraryStore((state) => state.lastViewedTrackId);
   const setLastViewedTrackId = useLibraryStore(
     (state) => state.setLastViewedTrackId,
+  );
+  // Library's global filter lives in the libraryStore keyed by view ID.
+  // Reading it directly here means the store is the single source of truth
+  // — no local mirror, no ref, no manual fan-out on change.
+  const globalFilter = useLibraryStore(
+    (state) => state.searchFilters.library ?? '',
   );
   // Get state from settings store
   const columnVisibility = useSettingsAndPlaybackStore(
@@ -95,6 +103,12 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
   const setLibrarySorting = useSettingsAndPlaybackStore(
     (state) => state.setLibrarySorting,
+  );
+  // Sort preference lives in settingsAndPlaybackStore and is persisted to
+  // DB. setLibrarySorting internally fans out to libraryViewState, so the
+  // component just reads and writes this one value.
+  const sorting = useSettingsAndPlaybackStore(
+    (state) => state.librarySorting ?? DEFAULT_LIBRARY_SORTING,
   );
   const columnOrder = useSettingsAndPlaybackStore((state) => state.columnOrder);
   const setColumnOrder = useSettingsAndPlaybackStore(
@@ -139,22 +153,20 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const browserFilters = useLibraryStore((state) => state.browserFilters);
   const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
   const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
-  const getSearchFilter = useLibraryStore((state) => state.getSearchFilter);
   const browserOpen = useUIStore((state) => state.browserOpen);
   const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
-  const libraryViewState = useLibraryStore((state) => state.libraryViewState);
-  const [showSearch, setShowSearch] = useState(() =>
-    Boolean(getSearchFilter('library')),
+  const showNotification = useUIStore((state) => state.showNotification);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
+  const [showSearch, setShowSearch] = useState(
+    () => !!useLibraryStore.getState().searchFilters.library,
   );
   const [browserHeight, setBrowserHeight] = useState(200);
 
-  // Derive artist/album filter from browser filters
-  const libraryBrowserFilter = useMemo(
-    () => browserFilters.library || { artist: null, album: null },
-    [browserFilters],
-  );
-  const artistFilter = libraryBrowserFilter.artist;
-  const albumFilter = libraryBrowserFilter.album;
+  // Derive artist/album filter scalars directly from the browser filter
+  // dictionary. No useMemo: each value is a primitive, and the consumers
+  // below only need the scalar values or construct their own object.
+  const artistFilter = browserFilters.library?.artist ?? null;
+  const albumFilter = browserFilters.library?.album ?? null;
 
   const handleArtistSelect = useCallback(
     (artist: string | null) => {
@@ -165,26 +177,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   const handleAlbumSelect = useCallback(
     (album: string | null) => {
-      setBrowserFilter('library', { ...libraryBrowserFilter, album });
+      setBrowserFilter('library', { artist: artistFilter, album });
     },
-    [setBrowserFilter, libraryBrowserFilter],
-  );
-
-  // Global filter state — receives debounced values from SearchBar.
-  const [globalFilter, setGlobalFilter] = useState(() =>
-    getSearchFilter('library'),
-  );
-  const globalFilterRef = useRef(globalFilter);
-
-  // Stable callback for SearchBar — never changes identity
-  const handleDebouncedSearchChange = useCallback((value: string) => {
-    setGlobalFilter(value);
-    globalFilterRef.current = value;
-  }, []);
-
-  // Sorting state - initialize from store to persist across unmount/remount
-  const [sorting, setSorting] = useState<SortingState>(
-    () => libraryViewState.sorting || [{ id: 'albumArtist', desc: false }],
+    [setBrowserFilter, artistFilter],
   );
 
   // Add row virtualizer ref
@@ -192,13 +187,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     null,
   );
 
-  const handlePlayTrack = useCallback(
-    (trackId: string) => {
-      // Play the track with 'library' as the source
-      playTrack(trackId, 'library');
-    },
-    [playTrack],
-  );
+  const handlePlayTrack = (trackId: string) => {
+    playTrack(trackId, 'library');
+  };
 
   const handleSelectFolder = async () => {
     try {
@@ -235,18 +226,14 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     setDialogOpen(false);
   };
 
-  // Context menu handlers
-  const handleContextMenu = useCallback(
-    (event: React.MouseEvent, trackId: string) => {
-      event.preventDefault();
-      setContextMenu({
-        mouseX: event.clientX,
-        mouseY: event.clientY,
-      });
-      setSelectedTrackId(trackId);
-    },
-    [],
-  );
+  const handleContextMenu = (event: React.MouseEvent, trackId: string) => {
+    event.preventDefault();
+    setContextMenu({
+      mouseX: event.clientX,
+      mouseY: event.clientY,
+    });
+    setSelectedTrackId(trackId);
+  };
 
   const handleCloseContextMenu = () => {
     setContextMenu(null);
@@ -273,37 +260,32 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     setMultiSelectPlaylistDialogOpen(false);
   };
 
-  // Function to scroll to a specific track by ID
-  const scrollToTrack = useCallback(
-    (trackId: string) => {
-      if (!rowVirtualizerRef.current) return;
+  // Scroll to a specific track by ID. Stable across renders — refs are
+  // stable containers, and the fallback path reads browser filters from
+  // the store at call time rather than closing over reactive values.
+  const scrollToTrack = useCallback((trackId: string) => {
+    if (!rowVirtualizerRef.current) return;
 
-      // Use the table's actual row model to find the track index
-      let trackIndex = -1;
+    let trackIndex = -1;
+    if (tableRef.current) {
+      const { rows } = tableRef.current.getRowModel();
+      trackIndex = rows.findIndex((row) => row.original.id === trackId);
+    }
 
-      if (tableRef.current) {
-        const { rows } = tableRef.current.getRowModel();
-        trackIndex = rows.findIndex((row) => row.original.id === trackId);
-      }
+    // Fallback: if tanstack's row model isn't populated yet, compute
+    // the index from the store directly.
+    if (trackIndex === -1) {
+      const libState = useLibraryStore.getState();
+      const af = libState.browserFilters.library?.artist ?? null;
+      const alf = libState.browserFilters.library?.album ?? null;
+      const trackIds = getFilteredAndSortedTrackIds('library', af, alf);
+      trackIndex = trackIds.indexOf(trackId);
+    }
 
-      // Fallback to calculating the index if table isn't ready yet
-      if (trackIndex === -1) {
-        const trackIds = getFilteredAndSortedTrackIds(
-          'library',
-          artistFilter,
-          albumFilter,
-        );
-        trackIndex = trackIds.indexOf(trackId);
-      }
-
-      if (trackIndex !== -1) {
-        rowVirtualizerRef.current.scrollToIndex(trackIndex, {
-          align: 'center',
-        });
-      }
-    },
-    [artistFilter, albumFilter],
-  );
+    if (trackIndex !== -1) {
+      rowVirtualizerRef.current.scrollToIndex(trackIndex, { align: 'center' });
+    }
+  }, []);
 
   // Function that waits for the table to be ready before scrolling
   const scrollToTrackWhenReady = useCallback(
@@ -338,13 +320,56 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [scrollToTrack],
   );
 
+  // Writes filter to the store (which fan-outs internally) and snaps
+  // scroll to the playing track when clearing a non-empty filter. Reads
+  // store state fresh per call so the callback's identity stays stable —
+  // SearchBar's debounce subscription won't re-fire.
+  const handleDebouncedSearchChange = useCallback(
+    (value: string) => {
+      const libState = useLibraryStore.getState();
+      const prev = libState.searchFilters.library ?? '';
+      setSearchFilter('library', value);
+
+      if (!prev || value) return;
+
+      const playState = useSettingsAndPlaybackStore.getState();
+      if (!playState.currentTrack || playState.playbackSource !== 'library')
+        return;
+
+      const af = libState.browserFilters.library?.artist ?? null;
+      const alf = libState.browserFilters.library?.album ?? null;
+      const visibleTrackIds = getFilteredAndSortedTrackIds('library', af, alf);
+      if (!visibleTrackIds.includes(playState.currentTrack.id)) return;
+
+      // Defer one frame so the table re-renders without the filter
+      // before we ask the virtualizer to scroll.
+      setTimeout(() => {
+        const ct = useSettingsAndPlaybackStore.getState().currentTrack;
+        if (ct) scrollToTrack(ct.id);
+      }, 100);
+    },
+    [setSearchFilter, scrollToTrack],
+  );
+
+  // Resolve Tanstack's updater-or-value to a plain value for
+  // setLibrarySorting (fan-outs to state + viewState + DB). No
+  // useCallback — VirtualTable isn't memoized.
+  const handleSortingChange = (
+    updater: SortingState | ((old: SortingState) => SortingState),
+  ) => {
+    const current =
+      useSettingsAndPlaybackStore.getState().librarySorting ??
+      DEFAULT_LIBRARY_SORTING;
+    const next = typeof updater === 'function' ? updater(current) : updater;
+    setLibrarySorting(next);
+  };
+
   // Expose the scrollToTrack function to the window object
   useEffect(() => {
     window.hihatScrollToLibraryTrack = scrollToTrackWhenReady;
 
     return () => {
       delete window.hihatScrollToLibraryTrack;
-      tableReadyRef.current = false;
     };
   }, [scrollToTrackWhenReady]);
 
@@ -361,8 +386,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     if (selectedTrackIds.length === 0) return;
 
     try {
-      const { showNotification } = useUIStore.getState();
-
       const currentTrackIds = getFilteredAndSortedTrackIds(
         'library',
         artistFilter,
@@ -465,46 +488,52 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       );
     } catch (error) {
       console.error('Error deleting tracks:', error);
-      const { showNotification } = useUIStore.getState();
       showNotification('Failed to delete tracks', 'error');
     }
   };
 
-  // Save the currently visible track on unmount
+  // Save visible track on unmount. Read virtualizer + filters inside
+  // the cleanup — the ref is null at mount, and the virtualizer's range
+  // indexes browser-filtered rows, so a stale filter means we save the
+  // wrong track.
   useEffect(() => {
-    const virtualizerRefCurrent = rowVirtualizerRef.current;
     return () => {
-      if (virtualizerRefCurrent) {
-        const visibleRange = virtualizerRefCurrent.range;
-
-        if (visibleRange) {
-          const middleIndex = Math.floor(
-            (visibleRange.startIndex + visibleRange.endIndex) / 2,
-          );
-
-          const trackIds = getFilteredAndSortedTrackIds('library');
-
-          if (trackIds[middleIndex]) {
-            setLastViewedTrackId(trackIds[middleIndex]);
-          }
-        }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const virt = rowVirtualizerRef.current;
+      if (!virt) return;
+      const visibleRange = virt.range;
+      if (!visibleRange) return;
+      const middleIndex = Math.floor(
+        (visibleRange.startIndex + visibleRange.endIndex) / 2,
+      );
+      // Read browser filters fresh from the store at unmount time so
+      // the lookup list matches what the virtualizer was rendering.
+      const libState = useLibraryStore.getState();
+      const af = libState.browserFilters.library?.artist ?? null;
+      const alf = libState.browserFilters.library?.album ?? null;
+      const trackIds = getFilteredAndSortedTrackIds('library', af, alf);
+      if (trackIds[middleIndex]) {
+        setLastViewedTrackId(trackIds[middleIndex]);
       }
     };
   }, [setLastViewedTrackId]);
 
-  // Restore scroll position on mount
+  // Restore scroll on mount, exactly once. Without the guard this
+  // re-fires on track reloads / filter changes and yanks the user back.
+  // scrollToTrackWhenReady polls for readiness, so no timeout race.
+  const scrollRestoredRef = useRef(false);
   useEffect(() => {
-    if (lastViewedTrackId && rowVirtualizerRef.current && tracks.length > 0) {
-      setTimeout(() => {
-        scrollToTrack(lastViewedTrackId);
-      }, 100);
-    }
-  }, [lastViewedTrackId, scrollToTrack, tracks.length]);
+    if (scrollRestoredRef.current) return;
+    if (!lastViewedTrackId || tracks.length === 0) return;
+    scrollRestoredRef.current = true;
+    scrollToTrackWhenReady(lastViewedTrackId);
+  }, [lastViewedTrackId, tracks.length, scrollToTrackWhenReady]);
 
-  // Get columns from shared configuration
+  // useMemo: stable identity for tanstack's internal row-model memoization
+  // and avoids re-allocating column defs each render. Empty deps = once.
   const columns = useMemo(() => getCommonColumnDefs(), []);
 
-  // Prepare data for the table with browser filtering
+  // useMemo: O(n) filter + map over potentially thousands of tracks.
   const data = useMemo<TableData[]>(() => {
     let filteredTracks = tracks;
 
@@ -538,208 +567,134 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     });
   }, [tracks, artistFilter, albumFilter]);
 
-  // Memoize total hours calculation to avoid recalculating on every render
+  // useMemo: O(n) reduce over track durations.
   const totalHours = useMemo(() => calculateTotalHours(data), [data]);
-  const trackCount = useMemo(() => data.length, [data]);
 
-  // Track previous global filter for detecting clears
-  const prevGlobalFilterRef = useRef(globalFilter);
-
-  // Persist global filter to store and handle scroll-to-track on clear
-  useEffect(() => {
-    const prevFilter = prevGlobalFilterRef.current;
-    prevGlobalFilterRef.current = globalFilter;
-
-    updateLibraryViewState(sorting, globalFilter);
-    setSearchFilter('library', globalFilter);
-
-    // Persist library sorting preference to DB
-    if (sorting && sorting.length > 0) {
-      setLibrarySorting(sorting);
-    }
-
-    if (
-      prevFilter &&
-      !globalFilter &&
-      currentTrack &&
-      playbackSource === 'library'
-    ) {
-      const visibleTrackIds = getFilteredAndSortedTrackIds(
-        'library',
-        artistFilter,
-        albumFilter,
-      );
-      if (visibleTrackIds.includes(currentTrack.id)) {
-        setTimeout(() => {
-          scrollToTrack(currentTrack.id);
-        }, 100);
-      }
-    }
-  }, [
-    globalFilter,
-    sorting,
-    updateLibraryViewState,
-    setSearchFilter,
-    setLibrarySorting,
-    currentTrack,
-    playbackSource,
-    artistFilter,
-    albumFilter,
-    scrollToTrack,
-  ]);
-
-  // Handle search toggle
+  // Closing routes through handleDebouncedSearchChange so persistence
+  // + scroll-on-clear both fire. Side effect lives outside setShowSearch
+  // — StrictMode double-invokes state updaters and would discard it.
   const handleSearchToggle = useCallback(() => {
-    setShowSearch((prev) => {
-      if (prev) {
-        setGlobalFilter('');
-        globalFilterRef.current = '';
-        setSearchFilter('library', '');
-      }
-      return !prev;
-    });
-  }, [setSearchFilter]);
+    if (showSearch) handleDebouncedSearchChange('');
+    setShowSearch((prev) => !prev);
+  }, [showSearch, handleDebouncedSearchChange]);
 
-  // Mark table as ready after render completes
+  // Mark table as ready after the next frame so the virtualizer has
+  // measured rows for the new sorting/filter/data.
   useEffect(() => {
+    tableReadyRef.current = false;
     const rafId = requestAnimationFrame(() => {
       tableReadyRef.current = true;
     });
-
     return () => {
       cancelAnimationFrame(rafId);
-      tableReadyRef.current = false;
     };
   }, [sorting, globalFilter, data.length]);
 
-  // Row event handlers
-  const handleRowClick = useCallback(
-    (row: Row<TableData>, index: number, e: React.MouseEvent) => {
-      const trackId = row.original.id;
+  const handleRowClick = (
+    row: Row<TableData>,
+    index: number,
+    e: React.MouseEvent,
+  ) => {
+    const trackId = row.original.id;
 
-      setSelectedTracks((prev) => {
-        if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
-          const newSelectedTracks = { ...prev };
-          if (newSelectedTracks[trackId]) {
-            delete newSelectedTracks[trackId];
-          } else {
-            newSelectedTracks[trackId] = true;
-          }
+    setSelectedTracks((prev) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        const newSelectedTracks = { ...prev };
+        if (newSelectedTracks[trackId]) {
+          delete newSelectedTracks[trackId];
+        } else {
+          newSelectedTracks[trackId] = true;
+        }
+        setLastClickedIndex(index);
+        return newSelectedTracks;
+      }
+
+      if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        if (lastClickedIndex === null) {
           setLastClickedIndex(index);
-          return newSelectedTracks;
+          return { [trackId]: true };
         }
 
-        if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
-          if (lastClickedIndex === null) {
-            setLastClickedIndex(index);
-            return { [trackId]: true };
-          }
+        const start = Math.min(lastClickedIndex, index);
+        const end = Math.max(lastClickedIndex, index);
 
-          const start = Math.min(lastClickedIndex, index);
-          const end = Math.max(lastClickedIndex, index);
+        const rangeSelection: Record<string, boolean> = {};
 
-          const rangeSelection: Record<string, boolean> = {};
-
-          if (tableRef.current) {
-            const visibleRows = tableRef.current.getRowModel().rows;
-            for (let i = start; i <= end; i += 1) {
-              const rowData = visibleRows[i]?.original;
-              if (rowData) {
-                rangeSelection[rowData.id] = true;
-              }
+        if (tableRef.current) {
+          const visibleRows = tableRef.current.getRowModel().rows;
+          for (let i = start; i <= end; i += 1) {
+            const rowData = visibleRows[i]?.original;
+            if (rowData) {
+              rangeSelection[rowData.id] = true;
             }
           }
-
-          return rangeSelection;
         }
 
-        setLastClickedIndex(index);
-        return { [trackId]: true };
-      });
-    },
-    [lastClickedIndex],
-  );
-
-  const handleRowDoubleClick = useCallback(
-    (row: Row<TableData>, _index: number) => {
-      handlePlayTrack(row.original.id);
-      setSelectedTracks({ [row.original.id]: true });
-    },
-    [handlePlayTrack],
-  );
-
-  const handleRowContextMenu = useCallback(
-    (row: Row<TableData>, _index: number, e: React.MouseEvent) => {
-      const trackId = row.original.id;
-
-      if (selectedTracks[trackId]) {
-        handleContextMenu(e, trackId);
-      } else {
-        setSelectedTracks({ [trackId]: true });
-        handleContextMenu(e, trackId);
+        return rangeSelection;
       }
-    },
-    [selectedTracks, handleContextMenu],
-  );
 
-  const handleGetRowClassName = useCallback(
-    (row: Row<TableData>, index: number) => {
-      return getRowClassName(
-        row.original.id,
-        currentTrack?.id || undefined,
-        Object.keys(selectedTracks),
-        playbackSource || '',
-        'library',
-        undefined,
-        undefined,
-        index,
-      );
-    },
-    [currentTrack?.id, selectedTracks, playbackSource],
-  );
+      setLastClickedIndex(index);
+      return { [trackId]: true };
+    });
+  };
 
-  // Column visibility toggle handler
-  const handleColumnVisibilityToggle = useCallback(
-    (columnId: string, visible: boolean) => {
-      updateColumnVisibility(columnId, visible);
-    },
-    [updateColumnVisibility],
-  );
+  const handleRowDoubleClick = (row: Row<TableData>, _index: number) => {
+    handlePlayTrack(row.original.id);
+    setSelectedTracks({ [row.original.id]: true });
+  };
 
-  // Column sizing persistence handler
-  const handleColumnSizingPersist = useCallback(
-    (sizing: Record<string, number>) => {
-      setColumnWidths(sizing);
-    },
-    [setColumnWidths],
-  );
+  const handleRowContextMenu = (
+    row: Row<TableData>,
+    _index: number,
+    e: React.MouseEvent,
+  ) => {
+    const trackId = row.original.id;
 
-  // Column order change handler
-  const handleColumnOrderChange = useCallback(
-    (newOrder: string[]) => {
-      setColumnOrder(newOrder);
-    },
-    [setColumnOrder],
-  );
+    if (selectedTracks[trackId]) {
+      handleContextMenu(e, trackId);
+    } else {
+      setSelectedTracks({ [trackId]: true });
+      handleContextMenu(e, trackId);
+    }
+  };
 
-  // Drag-and-drop: compute selected track IDs list
-  const selectedTrackIdsList = useMemo(
-    () => Object.keys(selectedTracks),
-    [selectedTracks],
-  );
+  const handleGetRowClassName = (row: Row<TableData>, index: number) => {
+    return getRowClassName(
+      row.original.id,
+      currentTrack?.id || undefined,
+      Object.keys(selectedTracks),
+      playbackSource || '',
+      'library',
+      undefined,
+      undefined,
+      index,
+    );
+  };
 
-  // Drag-and-drop: handle row drag start
-  const handleRowDragStart = useCallback(
-    (trackId: string, selectedIds: string[]): string[] => {
-      if (selectedIds.includes(trackId)) {
-        return selectedIds;
-      }
-      return [trackId];
-    },
-    [],
-  );
+  const handleColumnVisibilityToggle = (columnId: string, visible: boolean) => {
+    updateColumnVisibility(columnId, visible);
+  };
 
-  // Toolbar content
+  const handleColumnSizingPersist = (sizing: Record<string, number>) => {
+    setColumnWidths(sizing);
+  };
+
+  const handleColumnOrderChange = (newOrder: string[]) => {
+    setColumnOrder(newOrder);
+  };
+
+  const handleRowDragStart = (
+    trackId: string,
+    selectedIds: string[],
+  ): string[] => {
+    if (selectedIds.includes(trackId)) {
+      return selectedIds;
+    }
+    return [trackId];
+  };
+
+  // useMemo: deep JSX subtree. Stable element reference lets React skip
+  // reconciliation of the toolbar when row clicks re-render the parent.
   const toolbarContent = useMemo(
     () => (
       <Box
@@ -791,7 +746,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             }}
             variant="body2"
           >
-            {trackCount.toLocaleString()}&nbsp;&#9835;
+            {data.length.toLocaleString()}&nbsp;&#9835;
           </Typography>
         </Box>
         <Box
@@ -838,7 +793,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             }}
           >
             <SearchBar
-              initialValue={globalFilterRef.current}
+              initialValue={globalFilter}
               onClose={handleSearchToggle}
               onDebouncedChange={handleDebouncedSearchChange}
             />
@@ -907,17 +862,19 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [
       drawerOpen,
       onDrawerToggle,
-      trackCount,
+      data.length,
       totalHours,
       showSearch,
       handleSearchToggle,
       handleDebouncedSearchChange,
+      globalFilter,
       browserOpen,
       setBrowserOpen,
     ],
   );
 
-  // Empty state content
+  // useMemo: stable element reference skips subtree reconciliation on
+  // parent re-renders where drawerOpen hasn't changed.
   const emptyStateContent = useMemo(
     () => (
       <Box
@@ -961,7 +918,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [setBrowserOpen],
   );
 
-  // Browser panel to pass to VirtualTable — always mounted so open/close can animate
+  // useMemo: wraps React.memo'd Browser. Stable element reference skips
+  // its subtree on parent re-renders where deps haven't changed. Always
+  // mounted so open/close can animate.
   const browserPanel = useMemo(() => {
     return (
       <Browser
@@ -1032,8 +991,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           onRowContextMenu={handleRowContextMenu}
           onRowDoubleClick={handleRowDoubleClick}
           onRowDragStart={handleRowDragStart}
-          onSortingChange={setSorting}
-          selectedTrackIds={selectedTrackIdsList}
+          onSortingChange={handleSortingChange}
+          selectedTrackIds={Object.keys(selectedTracks)}
           sorting={sorting}
           tableRef={tableRef}
           toolbar={toolbarContent}
@@ -1120,7 +1079,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         onCancel={() => setScanConfirmOpen(false)}
         onConfirm={() => {
           setScanConfirmOpen(false);
-          useUIStore.getState().setSettingsOpen(true);
+          setSettingsOpen(true);
         }}
         open={scanConfirmOpen}
         title="Scan Library"
@@ -1141,10 +1100,4 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
 }
 
-// Memoize the Library component to prevent unnecessary re-renders
-export default React.memo(Library, (prevProps, nextProps) => {
-  return (
-    prevProps.drawerOpen === nextProps.drawerOpen &&
-    prevProps.onDrawerToggle === nextProps.onDrawerToggle
-  );
-});
+export default Library;

@@ -17,9 +17,9 @@ import {
   DialogTitle,
   DialogContent,
   LinearProgress,
-  Grid,
   Divider,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import FolderIcon from '@mui/icons-material/Folder';
 import WarningIcon from '@mui/icons-material/Warning';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -665,7 +665,7 @@ export default function Settings({ onClose }: SettingsProps) {
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
           <Grid container spacing={3}>
             {/* Library Path Section */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography gutterBottom variant="h2">
                 Music Folder
               </Typography>
@@ -679,30 +679,32 @@ export default function Settings({ onClose }: SettingsProps) {
               </Typography>
               <FormControl fullWidth sx={{ mt: 1 }}>
                 <TextField
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          edge="end"
-                          onClick={handleSelectLibraryPath}
-                        >
-                          <FolderIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
                   label="Folder"
                   onChange={handleSelectLibraryPath}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            edge="end"
+                            onClick={handleSelectLibraryPath}
+                          >
+                            <FolderIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
                   value={libraryPath}
                 />
               </FormControl>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Divider sx={{ my: 2 }} />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography gutterBottom variant="h2">
                 Import Music
               </Typography>
@@ -729,12 +731,12 @@ export default function Settings({ onClose }: SettingsProps) {
               </Box>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Divider sx={{ my: 2 }} />
             </Grid>
 
             {/* Library Operations Section */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography gutterBottom variant="h2">
                 Rescan Library
               </Typography>
@@ -759,12 +761,12 @@ export default function Settings({ onClose }: SettingsProps) {
               </Box>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Divider sx={{ my: 2 }} />
             </Grid>
 
             {/* Backup Section */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography gutterBottom variant="h2">
                 Backup Library
               </Typography>

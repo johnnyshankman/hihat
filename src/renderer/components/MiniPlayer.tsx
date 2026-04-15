@@ -518,11 +518,14 @@ export default function MiniPlayer() {
 
           {/* Control buttons */}
           <Stack
-            alignItems="center"
             direction="row"
-            justifyContent="center"
             spacing={0.75}
-            sx={{ mb: 0, width: '100%' }}
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 0,
+              width: '100%',
+            }}
           >
             <Tooltip title={getShuffleTooltipText()}>
               <span>
@@ -565,9 +568,9 @@ export default function MiniPlayer() {
                   }}
                 >
                   {!paused ? (
-                    <Pause fontSize="large" />
+                    <Pause data-testid="PauseIcon" fontSize="large" />
                   ) : (
-                    <PlayArrow fontSize="large" />
+                    <PlayArrow data-testid="PlayArrowIcon" fontSize="large" />
                   )}
                 </IconButton>
               </span>

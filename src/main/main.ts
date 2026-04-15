@@ -12,6 +12,7 @@ import path from 'path';
 import { app, BrowserWindow, shell, ipcMain, protocol } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import electronDebug from 'electron-debug';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import {
@@ -45,7 +46,8 @@ function configureLogging() {
     log.transports.file.level = 'info';
 
     // Set log file path - use separate directories for dev and prod
-    log.transports.file.resolvePath = () => {
+    // electron-log v5 renamed resolvePath to resolvePathFn.
+    log.transports.file.resolvePathFn = () => {
       const basePath = app.getPath('userData');
       const userDataPath =
         process.env.NODE_ENV === 'development'
@@ -105,7 +107,7 @@ const isTest =
 const isTestHidden = isTest && process.env.TEST_VISIBLE !== 'true';
 
 if (isDebug) {
-  require('electron-debug')();
+  electronDebug();
 }
 
 const installExtensions = async () => {
@@ -227,14 +229,9 @@ const createWindow = async () => {
     frame: false, // Use frameless window for all platforms
     backgroundColor: '#00000000', // Transparent background
     webPreferences: {
-      preload: (() => {
-        // For production and tests running the built app
-        if (app.isPackaged || process.env.NODE_ENV === 'production' || isTest) {
-          return path.join(__dirname, 'preload.js');
-        }
-        // For development
-        return path.join(__dirname, '../../.erb/dll/preload.js');
-      })(),
+      // In all modes (dev, prod, test) the main bundle and preload bundle
+      // sit in the same directory: .erb/dll/ in dev, dist/main/ in prod.
+      preload: path.join(__dirname, 'preload.js'),
       // Test mode configuration
       sandbox: !isTest,
       nodeIntegration: false, // Keep false for security

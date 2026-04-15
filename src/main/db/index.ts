@@ -1780,7 +1780,7 @@ export function resetDatabase(): Promise<boolean> {
                 return;
               }
             }
-          } catch (queryError) {
+          } catch (_queryError) {
             console.warn('Database not ready yet, waiting...');
           }
         }
