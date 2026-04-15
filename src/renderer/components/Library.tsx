@@ -162,13 +162,11 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
   const [browserHeight, setBrowserHeight] = useState(200);
 
-  // Derive artist/album filter from browser filters
-  const libraryBrowserFilter = useMemo(
-    () => browserFilters.library || { artist: null, album: null },
-    [browserFilters],
-  );
-  const artistFilter = libraryBrowserFilter.artist;
-  const albumFilter = libraryBrowserFilter.album;
+  // Derive artist/album filter scalars directly from the browser filter
+  // dictionary. No useMemo: each value is a primitive, and the consumers
+  // below only need the scalar values or construct their own object.
+  const artistFilter = browserFilters.library?.artist ?? null;
+  const albumFilter = browserFilters.library?.album ?? null;
 
   const handleArtistSelect = useCallback(
     (artist: string | null) => {
@@ -179,9 +177,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   const handleAlbumSelect = useCallback(
     (album: string | null) => {
-      setBrowserFilter('library', { ...libraryBrowserFilter, album });
+      setBrowserFilter('library', { artist: artistFilter, album });
     },
-    [setBrowserFilter, libraryBrowserFilter],
+    [setBrowserFilter, artistFilter],
   );
 
   // Add row virtualizer ref
@@ -583,7 +581,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
 
   // Memoize total hours calculation to avoid recalculating on every render
   const totalHours = useMemo(() => calculateTotalHours(data), [data]);
-  const trackCount = useMemo(() => data.length, [data]);
 
   // Handle search toggle. Closing the bar clears the filter through
   // handleDebouncedSearchChange so persistence and scroll-on-clear both
@@ -700,12 +697,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     setColumnOrder(newOrder);
   };
 
-  // Drag-and-drop: compute selected track IDs list
-  const selectedTrackIdsList = useMemo(
-    () => Object.keys(selectedTracks),
-    [selectedTracks],
-  );
-
   const handleRowDragStart = (
     trackId: string,
     selectedIds: string[],
@@ -768,7 +759,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
             }}
             variant="body2"
           >
-            {trackCount.toLocaleString()}&nbsp;&#9835;
+            {data.length.toLocaleString()}&nbsp;&#9835;
           </Typography>
         </Box>
         <Box
@@ -884,7 +875,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [
       drawerOpen,
       onDrawerToggle,
-      trackCount,
+      data.length,
       totalHours,
       showSearch,
       handleSearchToggle,
@@ -1011,7 +1002,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           onRowDoubleClick={handleRowDoubleClick}
           onRowDragStart={handleRowDragStart}
           onSortingChange={handleSortingChange}
-          selectedTrackIds={selectedTrackIdsList}
+          selectedTrackIds={Object.keys(selectedTracks)}
           sorting={sorting}
           tableRef={tableRef}
           toolbar={toolbarContent}
@@ -1119,10 +1110,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
 }
 
-// Memoize the Library component to prevent unnecessary re-renders
-export default React.memo(Library, (prevProps, nextProps) => {
-  return (
-    prevProps.drawerOpen === nextProps.drawerOpen &&
-    prevProps.onDrawerToggle === nextProps.onDrawerToggle
-  );
-});
+// React.memo with default shallow comparison lets MainLayout re-render
+// (settings drawer toggle, notifications, mini player sync, etc.) without
+// forcing Library — an expensive component with many hooks and a
+// virtualized table — to re-render. Library's only props are drawerOpen
+// and onDrawerToggle, so the default shallow compare is sufficient.
+export default React.memo(Library);

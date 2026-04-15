@@ -158,16 +158,15 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
   const [browserHeight, setBrowserHeight] = useState(200);
 
-  // Derive browser filter for current playlist
-  const playlistBrowserFilter = useMemo(
-    () =>
-      selectedPlaylistId
-        ? browserFilters[selectedPlaylistId] || { artist: null, album: null }
-        : { artist: null, album: null },
-    [browserFilters, selectedPlaylistId],
-  );
-  const playlistArtistFilter = playlistBrowserFilter.artist;
-  const playlistAlbumFilter = playlistBrowserFilter.album;
+  // Derive browser filter scalars for the currently-selected playlist
+  // directly from the browser filter dictionary. No useMemo: primitives
+  // are compared by value downstream.
+  const playlistArtistFilter = selectedPlaylistId
+    ? (browserFilters[selectedPlaylistId]?.artist ?? null)
+    : null;
+  const playlistAlbumFilter = selectedPlaylistId
+    ? (browserFilters[selectedPlaylistId]?.album ?? null)
+    : null;
 
   const handleBrowserArtistSelect = useCallback(
     (artist: string | null) => {
@@ -182,12 +181,12 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     (album: string | null) => {
       if (selectedPlaylistId) {
         setBrowserFilter(selectedPlaylistId, {
-          ...playlistBrowserFilter,
+          artist: playlistArtistFilter,
           album,
         });
       }
     },
-    [selectedPlaylistId, setBrowserFilter, playlistBrowserFilter],
+    [selectedPlaylistId, setBrowserFilter, playlistArtistFilter],
   );
 
   // Confirmation dialog state
@@ -213,26 +212,14 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const playlistNameRef = useRef<HTMLDivElement>(null);
   const playlistNameRef2 = useRef<HTMLDivElement>(null);
 
-  // Define getPlaylistTracks as a useCallback to use it in dependencies
-  const getPlaylistTracks = useCallback(() => {
-    if (!selectedPlaylistId || !playlists) {
-      return [];
-    }
-
+  // Memoize the playlist tracks to prevent unnecessary re-renders. Reads
+  // the store's getTracksByIds via the trackIndex map for O(n) lookup.
+  const playlistTracks = useMemo(() => {
+    if (!selectedPlaylistId || !playlists) return [];
     const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
-    if (!selectedPlaylist) {
-      return [];
-    }
-
-    const { getTracksByIds } = useLibraryStore.getState();
-    return getTracksByIds(selectedPlaylist.trackIds);
+    if (!selectedPlaylist) return [];
+    return useLibraryStore.getState().getTracksByIds(selectedPlaylist.trackIds);
   }, [selectedPlaylistId, playlists]);
-
-  // Memoize the playlist tracks to prevent unnecessary re-renders
-  const playlistTracks = useMemo(
-    () => getPlaylistTracks(),
-    [getPlaylistTracks],
-  );
 
   const handlePlayTrack = (trackId: string) => {
     // No manual updatePlaylistViewState call needed — the store keeps
@@ -584,11 +571,8 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     setShowSearch((prev) => !prev);
   }, [showSearch, handleDebouncedSearchChange]);
 
-  // Memoize playlist track count and hours for stable toolbar deps
-  const playlistTrackCount = useMemo(
-    () => playlistTracks.length,
-    [playlistTracks],
-  );
+  // Total hours is O(n) over playlist tracks — worth memoizing. Track
+  // count is just playlistTracks.length, read inline.
   const playlistTotalHours = useMemo(
     () => calculateTotalHours(playlistTracks),
     [playlistTracks],
@@ -699,12 +683,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     setColumnOrder(newOrder);
   };
 
-  // Drag-and-drop: compute selected track IDs list
-  const selectedTrackIdsList = useMemo(
-    () => Object.keys(selectedTracks),
-    [selectedTracks],
-  );
-
   const handleRowDragStart = (
     trackId: string,
     selectedIds: string[],
@@ -791,7 +769,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             }}
             variant="body2"
           >
-            {playlistTrackCount.toLocaleString()}&nbsp;&#9835;
+            {playlistTracks.length.toLocaleString()}&nbsp;&#9835;
           </Typography>
         </Box>
         <Box
@@ -913,7 +891,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     playlists,
     showSearch,
     globalFilter,
-    playlistTrackCount,
+    playlistTracks.length,
     playlistTotalHours,
     handleSearchToggle,
     handleDebouncedSearchChange,
@@ -1041,7 +1019,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
             onRowDoubleClick={handleRowDoubleClick}
             onRowDragStart={handleRowDragStart}
             onSortingChange={handleSortingChange}
-            selectedTrackIds={selectedTrackIdsList}
+            selectedTrackIds={Object.keys(selectedTracks)}
             sorting={sorting}
             tableRef={tableRef}
             toolbar={toolbarContent}
@@ -1161,10 +1139,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   );
 }
 
-// Memoize Playlists component to prevent unnecessary re-renders
-export default React.memo(Playlists, (prevProps, nextProps) => {
-  return (
-    prevProps.drawerOpen === nextProps.drawerOpen &&
-    prevProps.onDrawerToggle === nextProps.onDrawerToggle
-  );
-});
+// React.memo with default shallow comparison lets MainLayout re-render
+// (settings drawer toggle, notifications, mini player sync, etc.) without
+// forcing Playlists — an expensive component with many hooks and a
+// virtualized table — to re-render. Playlists' only props are drawerOpen
+// and onDrawerToggle, so the default shallow compare is sufficient.
+export default React.memo(Playlists);
