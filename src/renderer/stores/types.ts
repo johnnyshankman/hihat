@@ -161,6 +161,7 @@ export interface UIStore {
   currentView: 'library' | 'playlists';
   settingsOpen: boolean;
   browserOpen: boolean;
+  sidebarOpen: boolean;
   showNotification: (
     message: string,
     type: 'info' | 'success' | 'warning' | 'error',
@@ -172,6 +173,8 @@ export interface UIStore {
   setCurrentView: (view: 'library' | 'playlists') => void;
   setSettingsOpen: (open: boolean) => void;
   setBrowserOpen: (open: boolean) => void;
+  setSidebarOpen: (open: boolean) => void;
+  toggleSidebar: () => void;
 }
 
 // Combined Settings and Playback Store Types

@@ -70,13 +70,11 @@ interface DirectorySelectionResult {
   filePaths: string[];
 }
 
-// Define props interface for Library component
-interface LibraryProps {
-  drawerOpen: boolean;
-  onDrawerToggle: () => void;
-}
+function Library() {
+  // Subscribe directly so the parent doesn't need a drawer prop.
+  const drawerOpen = useUIStore((state) => state.sidebarOpen);
+  const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
 
-function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   // Get state from library store
   const tracks = useLibraryStore((state) => state.tracks);
   const getTrackById = useLibraryStore((state) => state.getTrackById);
@@ -157,6 +155,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
   const browserOpen = useUIStore((state) => state.browserOpen);
   const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
+  const showNotification = useUIStore((state) => state.showNotification);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const [showSearch, setShowSearch] = useState(
     () => !!useLibraryStore.getState().searchFilters.library,
   );
@@ -386,8 +386,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     if (selectedTrackIds.length === 0) return;
 
     try {
-      const { showNotification } = useUIStore.getState();
-
       const currentTrackIds = getFilteredAndSortedTrackIds(
         'library',
         artistFilter,
@@ -490,7 +488,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       );
     } catch (error) {
       console.error('Error deleting tracks:', error);
-      const { showNotification } = useUIStore.getState();
       showNotification('Failed to delete tracks', 'error');
     }
   };
@@ -1082,7 +1079,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
         onCancel={() => setScanConfirmOpen(false)}
         onConfirm={() => {
           setScanConfirmOpen(false);
-          useUIStore.getState().setSettingsOpen(true);
+          setSettingsOpen(true);
         }}
         open={scanConfirmOpen}
         title="Scan Library"
@@ -1103,7 +1100,4 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
 }
 
-// Shields Library from MainLayout re-renders (drawer toggle,
-// notifications, player sync, etc.). Props are primitive + stable
-// useCallback, so the default shallow compare is sufficient.
-export default React.memo(Library);
+export default Library;

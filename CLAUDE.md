@@ -82,7 +82,30 @@ e2e/                        # Playwright E2E tests
 - **libraryStore**: tracks array, playlists, indexed lookups (Map-based O(1)), library/playlist view state, artist filter
 - **settingsAndPlaybackStore**: settings (theme, columns, libraryPath, volume), playback state (currentTrack, position, shuffle/repeat), Gapless-5 player instance
 - **uiStore**: notifications, currentView, artistBrowserOpen
-- Stores access each other via `useXStore.getState()` (not hooks) when needed cross-store
+
+#### When to subscribe (`useXStore(selector)`) vs read at call time (`useXStore.getState()`)
+
+When a component pulls anything out of a Zustand store — whether that's reading a state slice, displaying it, or **invoking an action** — the access pattern depends on **where the access happens**, not on whether you're reading data or calling a mutator. (Invoking an action is itself a read: you pull the function reference out of the store, then call it. The rule below treats both the same.) Get this wrong and you either pay for subscriptions you don't need, or you reintroduce stale-closure bugs inside effects.
+
+**Use a top-level selector** — `const x = useXStore((s) => s.x);` near the top of the component — when the value is read **or the action is invoked** in any of:
+- JSX render output
+- Callbacks bound directly to JSX elements (`onClick`, `onChange`, `onClose`, `onConfirm`, drag handlers, etc.)
+- `useMemo` / `useCallback` bodies whose result feeds JSX
+- Anywhere else that should trigger a re-render when the slice changes
+
+**Use `useXStore.getState().x` at call time** — inside the body of the function that needs it — when the value is read **or the action is invoked** **only** in any of:
+- `useEffect` bodies and their cleanup functions
+- Listeners attached to non-React sources (IPC handlers, `document.addEventListener`, MediaSession callbacks, etc.)
+- Async handlers that fire long after mount and don't drive renders themselves
+
+**Why it matters:**
+1. Every top-level selector creates a Zustand subscription for the lifetime of the component — one closure, one listener slot, one shallow compare per store update. For state values you want this (re-render on change). For actions it's technically a no-op (Zustand action references are stable, so the selector returns the same value and never schedules a render), but you still pay the per-update cost and you add noise: an extra binding, an extra dep-array entry, one more thing for the next reader to track.
+2. Inside a `useEffect` or async event handler, a top-level selector also captures its value into the effect's closure at render time. For state *values* that means stale reads — `getState()` reads the latest value at the moment the event fires, with no stale-closure trap.
+3. For actions specifically, both patterns are functionally equivalent (the reference is stable), so the choice comes down to subscription cost and component clarity.
+
+**If a value is read in both render-driving code and inside an effect, declare it once as a top-level selector and use the variable inside the effect.** Add it to the effect's dep array — Zustand action references are stable, so the effect still only runs once on mount for action-only deps, and ESLint stays happy. Splitting the same action between a top-level selector and a `getState()` call in the same component is a smell — pick one.
+
+**Cross-store reads:** stores access other stores exclusively via `useXStore.getState()` (lazy `require()` if a circular import is involved — see `uiStore.setBrowserOpen`). React hooks aren't available inside store modules, so `getState()` is the only option there.
 
 ### Audio Playback
 - Gapless-5 player initialized lazily in `initPlayer()`

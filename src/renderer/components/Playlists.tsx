@@ -54,13 +54,11 @@ const DEFAULT_PLAYLIST_SORTING: SortingState = [
   { id: 'albumArtist', desc: false },
 ];
 
-// Define props interface for Playlists component
-interface PlaylistsProps {
-  drawerOpen: boolean;
-  onDrawerToggle: () => void;
-}
+function Playlists() {
+  // Subscribe directly so the parent doesn't need a drawer prop.
+  const drawerOpen = useUIStore((state) => state.sidebarOpen);
+  const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
 
-function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   // Get state from library store
   const playlists = useLibraryStore((state) => state.playlists);
   const tracks = useLibraryStore((state) => state.tracks);
@@ -152,6 +150,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   // Browser state
   const browserOpen = useUIStore((state) => state.browserOpen);
   const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
+  const showNotification = useUIStore((state) => state.showNotification);
   const browserFilters = useLibraryStore((state) => state.browserFilters);
   const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
   const [browserHeight, setBrowserHeight] = useState(200);
@@ -274,8 +273,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     const track = tracks.find((t) => t.id === removeTrackId);
 
     try {
-      const { showNotification } = useUIStore.getState();
-
       const updatedPlaylist = {
         ...selectedPlaylist,
         trackIds: selectedPlaylist.trackIds.filter(
@@ -292,7 +289,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       );
     } catch (error) {
       console.error('Error removing track from playlist:', error);
-      const { showNotification } = useUIStore.getState();
       showNotification('Failed to remove track from playlist', 'error');
     }
 
@@ -321,8 +317,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     if (!selectedPlaylist) return;
 
     try {
-      const { showNotification } = useUIStore.getState();
-
       const updatedPlaylist = {
         ...selectedPlaylist,
         trackIds: selectedPlaylist.trackIds.filter(
@@ -341,7 +335,6 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
       );
     } catch (error) {
       console.error('Error removing tracks from playlist:', error);
-      const { showNotification } = useUIStore.getState();
       showNotification('Failed to remove tracks from playlist', 'error');
     }
   };
@@ -1133,7 +1126,4 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   );
 }
 
-// Shields Playlists from MainLayout re-renders (drawer toggle,
-// notifications, player sync, etc.). Props are primitive + stable
-// useCallback, so the default shallow compare is sufficient.
-export default React.memo(Playlists);
+export default Playlists;
