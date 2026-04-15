@@ -55,8 +55,7 @@ const DEFAULT_PLAYLIST_SORTING: SortingState = [
 ];
 
 function Playlists() {
-  // Sidebar drawer state lives in uiStore — read it directly here so
-  // the parent doesn't need to thread it through as a prop.
+  // Subscribe directly so the parent doesn't need a drawer prop.
   const drawerOpen = useUIStore((state) => state.sidebarOpen);
   const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
 
