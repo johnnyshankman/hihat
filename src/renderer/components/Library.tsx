@@ -3,6 +3,7 @@ import React, {
   useMemo,
   useRef,
   useEffect,
+  useLayoutEffect,
   useCallback,
 } from 'react';
 import {
@@ -176,12 +177,6 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   );
   const globalFilterRef = useRef(globalFilter);
 
-  // Stable callback for SearchBar — never changes identity
-  const handleDebouncedSearchChange = useCallback((value: string) => {
-    setGlobalFilter(value);
-    globalFilterRef.current = value;
-  }, []);
-
   // Sorting state - initialize from store to persist across unmount/remount
   const [sorting, setSorting] = useState<SortingState>(
     () => libraryViewState.sorting || [{ id: 'albumArtist', desc: false }],
@@ -330,13 +325,91 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [scrollToTrack],
   );
 
+  // Latest reactive values held in a ref so handlers below can read fresh
+  // state without becoming reactive themselves (keeps callback identity
+  // stable for SearchBar, which subscribes via useEffect on the callback).
+  const latestRef = useRef({
+    sorting,
+    artistFilter,
+    albumFilter,
+    currentTrack,
+    playbackSource,
+    scrollToTrack,
+  });
+  latestRef.current = {
+    sorting,
+    artistFilter,
+    albumFilter,
+    currentTrack,
+    playbackSource,
+    scrollToTrack,
+  };
+
+  // Single source of truth for changing the global filter: updates local
+  // state, persists to store, and snaps to the current track when the user
+  // clears a non-empty filter. Called from both SearchBar (debounced typing)
+  // and handleSearchToggle (close-button clear).
+  const applyGlobalFilter = useCallback(
+    (value: string) => {
+      const prev = globalFilterRef.current;
+      setGlobalFilter(value);
+      globalFilterRef.current = value;
+
+      const latest = latestRef.current;
+      updateLibraryViewState(latest.sorting, value);
+      setSearchFilter('library', value);
+
+      if (
+        prev &&
+        !value &&
+        latest.currentTrack &&
+        latest.playbackSource === 'library'
+      ) {
+        const visibleTrackIds = getFilteredAndSortedTrackIds(
+          'library',
+          latest.artistFilter,
+          latest.albumFilter,
+        );
+        if (visibleTrackIds.includes(latest.currentTrack.id)) {
+          // Defer one frame so the table re-renders without the filter
+          // before we ask the virtualizer to scroll.
+          setTimeout(() => {
+            const ct = latestRef.current.currentTrack;
+            if (ct) latestRef.current.scrollToTrack(ct.id);
+          }, 100);
+        }
+      }
+    },
+    [updateLibraryViewState, setSearchFilter],
+  );
+
+  const handleDebouncedSearchChange = applyGlobalFilter;
+
+  // Wrap the sorting setter so persistence happens at the event source
+  // instead of in a downstream effect.
+  const handleSortingChange = useCallback(
+    (updater: SortingState | ((old: SortingState) => SortingState)) => {
+      setSorting((prev) => {
+        const next =
+          typeof updater === 'function'
+            ? (updater as (old: SortingState) => SortingState)(prev)
+            : updater;
+        updateLibraryViewState(next, globalFilterRef.current);
+        if (next && next.length > 0) {
+          setLibrarySorting(next);
+        }
+        return next;
+      });
+    },
+    [updateLibraryViewState, setLibrarySorting],
+  );
+
   // Expose the scrollToTrack function to the window object
   useEffect(() => {
     window.hihatScrollToLibraryTrack = scrollToTrackWhenReady;
 
     return () => {
       delete window.hihatScrollToLibraryTrack;
-      tableReadyRef.current = false;
     };
   }, [scrollToTrackWhenReady]);
 
@@ -462,36 +535,38 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     }
   };
 
-  // Save the currently visible track on unmount
+  // Save the currently visible track on unmount. Read the virtualizer
+  // through the ref *inside* the cleanup so we see its real value at
+  // unmount time, not the (typically null) value at first mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const virtualizerRefCurrent = rowVirtualizerRef.current;
     return () => {
-      if (virtualizerRefCurrent) {
-        const visibleRange = virtualizerRefCurrent.range;
-
-        if (visibleRange) {
-          const middleIndex = Math.floor(
-            (visibleRange.startIndex + visibleRange.endIndex) / 2,
-          );
-
-          const trackIds = getFilteredAndSortedTrackIds('library');
-
-          if (trackIds[middleIndex]) {
-            setLastViewedTrackId(trackIds[middleIndex]);
-          }
-        }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const virt = rowVirtualizerRef.current;
+      if (!virt) return;
+      const visibleRange = virt.range;
+      if (!visibleRange) return;
+      const middleIndex = Math.floor(
+        (visibleRange.startIndex + visibleRange.endIndex) / 2,
+      );
+      const trackIds = getFilteredAndSortedTrackIds('library');
+      if (trackIds[middleIndex]) {
+        setLastViewedTrackId(trackIds[middleIndex]);
       }
     };
   }, [setLastViewedTrackId]);
 
-  // Restore scroll position on mount
+  // Restore scroll position on mount, exactly once. Without the guard this
+  // re-fires whenever tracks reload or the filter changes and yanks the
+  // user back to the saved track. scrollToTrackWhenReady polls until the
+  // table is rendered, so we don't need a timeout race.
+  const scrollRestoredRef = useRef(false);
   useEffect(() => {
-    if (lastViewedTrackId && rowVirtualizerRef.current && tracks.length > 0) {
-      setTimeout(() => {
-        scrollToTrack(lastViewedTrackId);
-      }, 100);
-    }
-  }, [lastViewedTrackId, scrollToTrack, tracks.length]);
+    if (scrollRestoredRef.current) return;
+    if (!lastViewedTrackId || tracks.length === 0) return;
+    scrollRestoredRef.current = true;
+    scrollToTrackWhenReady(lastViewedTrackId);
+  }, [lastViewedTrackId, tracks.length, scrollToTrackWhenReady]);
 
   // Get columns from shared configuration
   const columns = useMemo(() => getCommonColumnDefs(), []);
@@ -534,73 +609,27 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
   const totalHours = useMemo(() => calculateTotalHours(data), [data]);
   const trackCount = useMemo(() => data.length, [data]);
 
-  // Track previous global filter for detecting clears
-  const prevGlobalFilterRef = useRef(globalFilter);
-
-  // Persist global filter to store and handle scroll-to-track on clear
-  useEffect(() => {
-    const prevFilter = prevGlobalFilterRef.current;
-    prevGlobalFilterRef.current = globalFilter;
-
-    updateLibraryViewState(sorting, globalFilter);
-    setSearchFilter('library', globalFilter);
-
-    // Persist library sorting preference to DB
-    if (sorting && sorting.length > 0) {
-      setLibrarySorting(sorting);
-    }
-
-    if (
-      prevFilter &&
-      !globalFilter &&
-      currentTrack &&
-      playbackSource === 'library'
-    ) {
-      const visibleTrackIds = getFilteredAndSortedTrackIds(
-        'library',
-        artistFilter,
-        albumFilter,
-      );
-      if (visibleTrackIds.includes(currentTrack.id)) {
-        setTimeout(() => {
-          scrollToTrack(currentTrack.id);
-        }, 100);
-      }
-    }
-  }, [
-    globalFilter,
-    sorting,
-    updateLibraryViewState,
-    setSearchFilter,
-    setLibrarySorting,
-    currentTrack,
-    playbackSource,
-    artistFilter,
-    albumFilter,
-    scrollToTrack,
-  ]);
-
-  // Handle search toggle
+  // Handle search toggle. Closing the bar clears the filter through
+  // applyGlobalFilter so persistence and scroll-on-clear both fire.
   const handleSearchToggle = useCallback(() => {
     setShowSearch((prev) => {
       if (prev) {
-        setGlobalFilter('');
-        globalFilterRef.current = '';
-        setSearchFilter('library', '');
+        applyGlobalFilter('');
       }
       return !prev;
     });
-  }, [setSearchFilter]);
+  }, [applyGlobalFilter]);
 
-  // Mark table as ready after render completes
-  useEffect(() => {
+  // Mark table as ready after layout commits. useLayoutEffect runs after
+  // DOM mutations but before paint, so by the time the rAF callback fires
+  // the virtualizer has measured rows for the new sorting/filter/data.
+  useLayoutEffect(() => {
+    tableReadyRef.current = false;
     const rafId = requestAnimationFrame(() => {
       tableReadyRef.current = true;
     });
-
     return () => {
       cancelAnimationFrame(rafId);
-      tableReadyRef.current = false;
     };
   }, [sorting, globalFilter, data.length]);
 
@@ -1006,7 +1035,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
           onRowContextMenu={handleRowContextMenu}
           onRowDoubleClick={handleRowDoubleClick}
           onRowDragStart={handleRowDragStart}
-          onSortingChange={setSorting}
+          onSortingChange={handleSortingChange}
           selectedTrackIds={selectedTrackIdsList}
           sorting={sorting}
           tableRef={tableRef}
