@@ -63,6 +63,7 @@ export default function MainLayout() {
     const unsubToggleSidebar = window.electron.ipcRenderer.on(
       'ui:toggleSidebar',
       () => {
+        // toggleSidebar is not used in JSX so it actually saves overhead to pull it in during runtime
         useUIStore.getState().toggleSidebar();
       },
     );
