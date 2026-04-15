@@ -4,7 +4,6 @@ import React, {
   useRef,
   useCallback,
   useEffect,
-  useLayoutEffect,
 } from 'react';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { keyframes } from '@mui/system';
@@ -517,62 +516,46 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     });
   }, [playlistTracks, playlistArtistFilter, playlistAlbumFilter]);
 
-  // Latest reactive values held in a ref so handleDebouncedSearchChange
-  // can read fresh state for its scroll-on-clear check without becoming
-  // reactive itself (SearchBar subscribes via useEffect on the callback,
-  // so the callback must keep a stable identity). Writes happen in a
-  // layout effect so a speculative render React discards cannot leave
-  // stale values behind.
-  const latestRef = useRef({
-    playlistArtistFilter,
-    playlistAlbumFilter,
-    currentTrack,
-    playbackSource,
-    playbackSourcePlaylistId,
-    playlistTracks,
-    scrollToTrack,
-  });
-  useLayoutEffect(() => {
-    latestRef.current.playlistArtistFilter = playlistArtistFilter;
-    latestRef.current.playlistAlbumFilter = playlistAlbumFilter;
-    latestRef.current.currentTrack = currentTrack;
-    latestRef.current.playbackSource = playbackSource;
-    latestRef.current.playbackSourcePlaylistId = playbackSourcePlaylistId;
-    latestRef.current.playlistTracks = playlistTracks;
-    latestRef.current.scrollToTrack = scrollToTrack;
-  });
-
   // Change the global filter for the currently-selected playlist. The
   // store is the single source of truth — setSearchFilter fans out
   // internally to playlistViewState.filtering. Scroll-on-clear snaps to
   // the playing track when the user has just cleared a non-empty filter
-  // on the playlist that is currently playing.
+  // on the playlist that is currently playing. Reactive values are read
+  // fresh from stores at call time instead of captured in a latestRef —
+  // the callback closes over nothing that changes, so its identity is
+  // stable without any ref plumbing.
   const handleDebouncedSearchChange = useCallback(
     (value: string) => {
-      const state = useLibraryStore.getState();
-      const pid = state.selectedPlaylistId;
+      const libState = useLibraryStore.getState();
+      const pid = libState.selectedPlaylistId;
       if (!pid) return;
-      const prev = state.searchFilters[pid] ?? '';
+      const prev = libState.searchFilters[pid] ?? '';
       setSearchFilter(pid, value);
 
       if (!prev || value) return;
-      const latest = latestRef.current;
+
+      const playState = useSettingsAndPlaybackStore.getState();
       if (
-        !latest.currentTrack ||
-        latest.playbackSource !== 'playlist' ||
-        latest.playbackSourcePlaylistId !== pid
+        !playState.currentTrack ||
+        playState.playbackSource !== 'playlist' ||
+        playState.playbackSourcePlaylistId !== pid
       )
         return;
 
-      const playlistTrackIds = latest.playlistTracks.map((t) => t.id);
-      if (!playlistTrackIds.includes(latest.currentTrack.id)) return;
+      // After setSearchFilter's fan-out, playlistViewState.filtering is
+      // '' and playlistViewState.playlistId is pid, so getFilteredAnd
+      // SortedTrackIds returns exactly what's visible post-clear.
+      const af = libState.browserFilters[pid]?.artist ?? null;
+      const alf = libState.browserFilters[pid]?.album ?? null;
+      const visibleTrackIds = getFilteredAndSortedTrackIds('playlist', af, alf);
+      if (!visibleTrackIds.includes(playState.currentTrack.id)) return;
 
       setTimeout(() => {
-        const ct = latestRef.current.currentTrack;
-        if (ct) latestRef.current.scrollToTrack(ct.id);
+        const ct = useSettingsAndPlaybackStore.getState().currentTrack;
+        if (ct) scrollToTrack(ct.id);
       }, 100);
     },
-    [setSearchFilter],
+    [setSearchFilter, scrollToTrack],
   );
 
   // Tanstack's OnChangeFn accepts either a value or an updater function.

@@ -3,7 +3,6 @@ import React, {
   useMemo,
   useRef,
   useEffect,
-  useLayoutEffect,
   useCallback,
 } from 'react';
 import {
@@ -263,37 +262,32 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     setMultiSelectPlaylistDialogOpen(false);
   };
 
-  // Function to scroll to a specific track by ID
-  const scrollToTrack = useCallback(
-    (trackId: string) => {
-      if (!rowVirtualizerRef.current) return;
+  // Scroll to a specific track by ID. Stable across renders — refs are
+  // stable containers, and the fallback path reads browser filters from
+  // the store at call time rather than closing over reactive values.
+  const scrollToTrack = useCallback((trackId: string) => {
+    if (!rowVirtualizerRef.current) return;
 
-      // Use the table's actual row model to find the track index
-      let trackIndex = -1;
+    let trackIndex = -1;
+    if (tableRef.current) {
+      const { rows } = tableRef.current.getRowModel();
+      trackIndex = rows.findIndex((row) => row.original.id === trackId);
+    }
 
-      if (tableRef.current) {
-        const { rows } = tableRef.current.getRowModel();
-        trackIndex = rows.findIndex((row) => row.original.id === trackId);
-      }
+    // Fallback: if tanstack's row model isn't populated yet, compute
+    // the index from the store directly.
+    if (trackIndex === -1) {
+      const libState = useLibraryStore.getState();
+      const af = libState.browserFilters.library?.artist ?? null;
+      const alf = libState.browserFilters.library?.album ?? null;
+      const trackIds = getFilteredAndSortedTrackIds('library', af, alf);
+      trackIndex = trackIds.indexOf(trackId);
+    }
 
-      // Fallback to calculating the index if table isn't ready yet
-      if (trackIndex === -1) {
-        const trackIds = getFilteredAndSortedTrackIds(
-          'library',
-          artistFilter,
-          albumFilter,
-        );
-        trackIndex = trackIds.indexOf(trackId);
-      }
-
-      if (trackIndex !== -1) {
-        rowVirtualizerRef.current.scrollToIndex(trackIndex, {
-          align: 'center',
-        });
-      }
-    },
-    [artistFilter, albumFilter],
-  );
+    if (trackIndex !== -1) {
+      rowVirtualizerRef.current.scrollToIndex(trackIndex, { align: 'center' });
+    }
+  }, []);
 
   // Function that waits for the table to be ready before scrolling
   const scrollToTrackWhenReady = useCallback(
@@ -328,57 +322,39 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [scrollToTrack],
   );
 
-  // Latest reactive values held in a ref so handleDebouncedSearchChange
-  // can read fresh state for its scroll-on-clear check without becoming
-  // reactive itself (SearchBar subscribes via useEffect on the callback,
-  // so the callback must keep a stable identity). Writes happen in a
-  // layout effect to avoid mutating during render — a speculative render
-  // that React discards must not leave stale values behind.
-  const latestRef = useRef({
-    artistFilter,
-    albumFilter,
-    currentTrack,
-    playbackSource,
-    scrollToTrack,
-  });
-  useLayoutEffect(() => {
-    latestRef.current.artistFilter = artistFilter;
-    latestRef.current.albumFilter = albumFilter;
-    latestRef.current.currentTrack = currentTrack;
-    latestRef.current.playbackSource = playbackSource;
-    latestRef.current.scrollToTrack = scrollToTrack;
-  });
-
   // Change the global filter. The store is the single source of truth —
   // setSearchFilter fans out internally to libraryViewState.filtering, so
   // this handler does nothing more than (a) write the store and (b) run
   // the scroll-on-clear side effect when the user has just cleared a
-  // non-empty filter. Called from SearchBar's debounced flow and from
-  // handleSearchToggle (close-button clear).
+  // non-empty filter. Reactive values are read fresh from stores at call
+  // time rather than captured in a latestRef — the callback closes over
+  // nothing that changes, so its identity is stable without any ref
+  // plumbing, and SearchBar's debounce subscription doesn't re-fire.
   const handleDebouncedSearchChange = useCallback(
     (value: string) => {
-      const prev = useLibraryStore.getState().searchFilters.library ?? '';
+      const libState = useLibraryStore.getState();
+      const prev = libState.searchFilters.library ?? '';
       setSearchFilter('library', value);
 
       if (!prev || value) return;
-      const latest = latestRef.current;
-      if (!latest.currentTrack || latest.playbackSource !== 'library') return;
 
-      const visibleTrackIds = getFilteredAndSortedTrackIds(
-        'library',
-        latest.artistFilter,
-        latest.albumFilter,
-      );
-      if (!visibleTrackIds.includes(latest.currentTrack.id)) return;
+      const playState = useSettingsAndPlaybackStore.getState();
+      if (!playState.currentTrack || playState.playbackSource !== 'library')
+        return;
+
+      const af = libState.browserFilters.library?.artist ?? null;
+      const alf = libState.browserFilters.library?.album ?? null;
+      const visibleTrackIds = getFilteredAndSortedTrackIds('library', af, alf);
+      if (!visibleTrackIds.includes(playState.currentTrack.id)) return;
 
       // Defer one frame so the table re-renders without the filter
       // before we ask the virtualizer to scroll.
       setTimeout(() => {
-        const ct = latestRef.current.currentTrack;
-        if (ct) latestRef.current.scrollToTrack(ct.id);
+        const ct = useSettingsAndPlaybackStore.getState().currentTrack;
+        if (ct) scrollToTrack(ct.id);
       }, 100);
     },
-    [setSearchFilter],
+    [setSearchFilter, scrollToTrack],
   );
 
   // Tanstack's OnChangeFn accepts either a value or an updater function.
@@ -546,13 +522,12 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
       const middleIndex = Math.floor(
         (visibleRange.startIndex + visibleRange.endIndex) / 2,
       );
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      const latest = latestRef.current;
-      const trackIds = getFilteredAndSortedTrackIds(
-        'library',
-        latest.artistFilter,
-        latest.albumFilter,
-      );
+      // Read browser filters fresh from the store at unmount time so
+      // the lookup list matches what the virtualizer was rendering.
+      const libState = useLibraryStore.getState();
+      const af = libState.browserFilters.library?.artist ?? null;
+      const alf = libState.browserFilters.library?.album ?? null;
+      const trackIds = getFilteredAndSortedTrackIds('library', af, alf);
       if (trackIds[middleIndex]) {
         setLastViewedTrackId(trackIds[middleIndex]);
       }
