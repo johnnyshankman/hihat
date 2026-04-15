@@ -244,13 +244,28 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     setLibrarySorting: async (
       sorting: Array<{ id: string; desc: boolean }>,
     ) => {
+      // Guard: never clear the persisted sort via this path. Callers that
+      // want "no sort" would regress to the default on next launch, which
+      // is surprising. If that's ever needed, add a dedicated method.
+      if (!sorting || sorting.length === 0) return;
+
+      // Optimistic in-memory update first: the UI (component subscribers)
+      // and trackSelectionUtils (libraryViewState) respond immediately,
+      // before the DB round-trip completes. Errors in the DB write are
+      // logged but do not revert the UI — the user sees the sort they
+      // asked for and can retry the action.
+      set({ librarySorting: sorting });
+      const libState = useLibraryStore.getState();
+      libState.updateLibraryViewState(
+        sorting,
+        libState.libraryViewState.filtering,
+      );
+
       try {
         const state = get();
-
         if (!state.id) {
           throw new Error('Settings not loaded');
         }
-
         const updatedSettings = {
           id: state.id,
           libraryPath: state.libraryPath,
@@ -263,8 +278,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           columnOrder: state.columnOrder,
         };
         await window.electron.settings.update(updatedSettings);
-
-        set({ librarySorting: sorting });
       } catch (error) {
         console.error('Error updating library sorting:', error);
       }
