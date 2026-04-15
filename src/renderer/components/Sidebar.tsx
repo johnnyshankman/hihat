@@ -49,6 +49,7 @@ export default function Sidebar() {
   const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const showNotification = useUIStore((state) => state.showNotification);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [dragOverPlaylistId, setDragOverPlaylistId] = useState<string | null>(
@@ -94,9 +95,7 @@ export default function Sidebar() {
   const handleDeletePlaylist = async () => {
     if (!contextMenu) return;
     if (contextMenu.isSmart) {
-      useUIStore
-        .getState()
-        .showNotification('Smart playlists cannot be deleted', 'warning');
+      showNotification('Smart playlists cannot be deleted', 'warning');
       setContextMenu(null);
       return;
     }
@@ -174,7 +173,6 @@ export default function Sidebar() {
 
     if (!Array.isArray(trackIds) || trackIds.length === 0) return;
 
-    const { showNotification } = useUIStore.getState();
     const { addTrackToPlaylist } = useLibraryStore.getState();
 
     if (trackIds.length === 1) {

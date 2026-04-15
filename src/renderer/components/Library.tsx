@@ -156,6 +156,8 @@ function Library() {
   const setSearchFilter = useLibraryStore((state) => state.setSearchFilter);
   const browserOpen = useUIStore((state) => state.browserOpen);
   const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
+  const showNotification = useUIStore((state) => state.showNotification);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const [showSearch, setShowSearch] = useState(
     () => !!useLibraryStore.getState().searchFilters.library,
   );
@@ -385,8 +387,6 @@ function Library() {
     if (selectedTrackIds.length === 0) return;
 
     try {
-      const { showNotification } = useUIStore.getState();
-
       const currentTrackIds = getFilteredAndSortedTrackIds(
         'library',
         artistFilter,
@@ -489,7 +489,6 @@ function Library() {
       );
     } catch (error) {
       console.error('Error deleting tracks:', error);
-      const { showNotification } = useUIStore.getState();
       showNotification('Failed to delete tracks', 'error');
     }
   };
@@ -1081,7 +1080,7 @@ function Library() {
         onCancel={() => setScanConfirmOpen(false)}
         onConfirm={() => {
           setScanConfirmOpen(false);
-          useUIStore.getState().setSettingsOpen(true);
+          setSettingsOpen(true);
         }}
         open={scanConfirmOpen}
         title="Scan Library"

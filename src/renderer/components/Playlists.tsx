@@ -151,6 +151,7 @@ function Playlists() {
   // Browser state
   const browserOpen = useUIStore((state) => state.browserOpen);
   const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
+  const showNotification = useUIStore((state) => state.showNotification);
   const browserFilters = useLibraryStore((state) => state.browserFilters);
   const setBrowserFilter = useLibraryStore((state) => state.setBrowserFilter);
   const [browserHeight, setBrowserHeight] = useState(200);
@@ -273,8 +274,6 @@ function Playlists() {
     const track = tracks.find((t) => t.id === removeTrackId);
 
     try {
-      const { showNotification } = useUIStore.getState();
-
       const updatedPlaylist = {
         ...selectedPlaylist,
         trackIds: selectedPlaylist.trackIds.filter(
@@ -291,7 +290,6 @@ function Playlists() {
       );
     } catch (error) {
       console.error('Error removing track from playlist:', error);
-      const { showNotification } = useUIStore.getState();
       showNotification('Failed to remove track from playlist', 'error');
     }
 
@@ -320,8 +318,6 @@ function Playlists() {
     if (!selectedPlaylist) return;
 
     try {
-      const { showNotification } = useUIStore.getState();
-
       const updatedPlaylist = {
         ...selectedPlaylist,
         trackIds: selectedPlaylist.trackIds.filter(
@@ -340,7 +336,6 @@ function Playlists() {
       );
     } catch (error) {
       console.error('Error removing tracks from playlist:', error);
-      const { showNotification } = useUIStore.getState();
       showNotification('Failed to remove tracks from playlist', 'error');
     }
   };

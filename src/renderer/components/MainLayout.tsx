@@ -54,9 +54,11 @@ export default function MainLayout() {
   const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
 
-  // IPC: keyboard shortcut → toggle sidebar / open settings. Both store
-  // actions are referentially stable, so we read them from getState() at
-  // event time and keep the effect dep array empty.
+  // IPC keyboard shortcuts. toggleSidebar uses getState() because no
+  // other code in this file reads it (no top-level subscription needed).
+  // setSettingsOpen already has a top-level selector via the JSX, so we
+  // reuse it and accept the dep — Zustand action references are stable
+  // so the effect still only mounts once.
   useEffect(() => {
     const unsubToggleSidebar = window.electron.ipcRenderer.on(
       'ui:toggleSidebar',
@@ -67,17 +69,19 @@ export default function MainLayout() {
     const unsubOpenSettings = window.electron.ipcRenderer.on(
       'ui:openSettings',
       () => {
-        useUIStore.getState().setSettingsOpen(true);
+        setSettingsOpen(true);
       },
     );
     return () => {
       unsubToggleSidebar();
       unsubOpenSettings();
     };
-  }, []);
+  }, [setSettingsOpen]);
 
   // Document-level custom events for in-app navigation (used by deep
-  // links, notification clicks, etc.).
+  // links, notification clicks, etc.). setCurrentView uses getState()
+  // because nothing else in this file reads it; setSettingsOpen reuses
+  // the top-level selector for the same reason as the effect above.
   useEffect(() => {
     const handleCustomViewChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ view: string }>;
@@ -85,14 +89,14 @@ export default function MainLayout() {
       if (view === 'library' || view === 'playlists') {
         useUIStore.getState().setCurrentView(view);
       } else if (view === 'settings') {
-        useUIStore.getState().setSettingsOpen(true);
+        setSettingsOpen(true);
       }
     };
     document.addEventListener('hihat:viewChange', handleCustomViewChange);
     return () => {
       document.removeEventListener('hihat:viewChange', handleCustomViewChange);
     };
-  }, []);
+  }, [setSettingsOpen]);
 
   useEffect(() => {
     const handleCustomPlaylistSelect = (event: Event) => {
