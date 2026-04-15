@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IconButton, InputAdornment, TextField } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
@@ -36,10 +36,10 @@ function SearchBar({
     onDebouncedChange(debouncedValue);
   }, [debouncedValue, onDebouncedChange]);
 
-  const handleClear = useCallback(() => {
+  const handleClear = () => {
     setValue('');
     inputRef.current?.focus();
-  }, []);
+  };
 
   return (
     <TextField
@@ -150,4 +150,9 @@ function SearchBar({
   );
 }
 
+// Memo skips parent re-renders from Library/Playlists that aren't tied to
+// the search value (track selection, sort, currentTrack ticks). Props are
+// stable: primitive initialValue, literal placeholder, parent-useCallback'd
+// onClose/onDebouncedChange — the latter is also load-bearing for correctness
+// since SearchBar's debounce-flush effect depends on a stable reference.
 export default React.memo(SearchBar);

@@ -8,11 +8,10 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: '22.x'
+        cache: 'npm'
 
     - name: Install dependencies
-      run: |
-        echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-        npm ci
+      run: npm ci
 
     - name: Package
       run: npm run package
@@ -21,7 +20,7 @@ jobs:
       uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        automatic_release_tag: "${{ github.ref_name	 }}"
+        automatic_release_tag: "${{ github.ref_name }}"
         prerelease: false
         files: |
           release/build/*.zip

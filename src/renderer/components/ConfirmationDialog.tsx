@@ -26,7 +26,7 @@ interface ConfirmationDialogProps {
   onCancel: () => void;
 }
 
-function ConfirmationDialog({
+export default function ConfirmationDialog({
   open,
   title,
   message,
@@ -71,5 +71,3 @@ function ConfirmationDialog({
     </Dialog>
   );
 }
-
-export default ConfirmationDialog;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,7 +16,7 @@ interface RenamePlaylistDialogProps {
   onClose: () => void;
 }
 
-function RenamePlaylistDialog({
+export default function RenamePlaylistDialog({
   open,
   playlistId,
   initialName,
@@ -26,6 +26,7 @@ function RenamePlaylistDialog({
   const [name, setName] = useState(initialName);
 
   // Update local state when dialog opens with new playlist
+  // Code smell: this does not need to be done in a use effect. could be done declaratively when open is triggered. requires refactor.
   useEffect(() => {
     if (open) {
       setName(initialName);
@@ -94,6 +95,3 @@ function RenamePlaylistDialog({
     </Dialog>
   );
 }
-
-// Memoize the component to prevent unnecessary re-renders
-export default memo(RenamePlaylistDialog);

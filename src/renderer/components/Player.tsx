@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -79,7 +79,7 @@ function AlbumArtPlaceholder() {
   );
 }
 
-function Player() {
+export default function Player() {
   // Use selective state from the playback store to prevent unnecessary re-renders
   const currentTrack = useSettingsAndPlaybackStore(
     (state) => state.currentTrack,
@@ -200,18 +200,19 @@ function Player() {
 
   // Remember the last non-zero volume so clicking the volume icon can
   // toggle between muted and the user's previous level.
+  // Code smell: there should be a point where we declarative change volume and can store this value instead of reacting to prop change?
   const prevVolumeRef = useRef(volume > 0 ? volume : 1);
   useEffect(() => {
     if (volume > 0) prevVolumeRef.current = volume;
   }, [volume]);
 
-  const handleMuteToggle = useCallback(() => {
+  const handleMuteToggle = () => {
     if (volume > 0) {
       setVolume(0);
     } else {
       setVolume(prevVolumeRef.current || 1);
     }
-  }, [volume, setVolume]);
+  };
 
   // Open MiniPlayer in a new window
   const openMiniPlayer = () => {
@@ -489,7 +490,7 @@ function Player() {
   };
 
   // Handle click on track title to scroll to it in the appropriate view
-  const handleTrackTitleClick = useCallback(() => {
+  const handleTrackTitleClick = () => {
     if (!currentTrack || !playbackSource) return;
 
     // First, navigate to the appropriate view if needed
@@ -517,7 +518,7 @@ function Player() {
         }
       }, 50);
     }
-  }, [currentTrack, playbackSource, setCurrentView, clearAllBrowserFilters]);
+  };
 
   // Check if title text overflows its container
   useEffect(() => {
@@ -992,6 +993,3 @@ function Player() {
     </Paper>
   );
 }
-
-// Memoize Player component to prevent unnecessary re-renders
-export default React.memo(Player);

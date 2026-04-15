@@ -54,7 +54,7 @@ const DEFAULT_PLAYLIST_SORTING: SortingState = [
   { id: 'albumArtist', desc: false },
 ];
 
-function Playlists() {
+export default function Playlists() {
   // Subscribe directly so the parent doesn't need a drawer prop.
   const drawerOpen = useUIStore((state) => state.sidebarOpen);
   const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
@@ -1125,5 +1125,3 @@ function Playlists() {
     </Box>
   );
 }
-
-export default Playlists;
