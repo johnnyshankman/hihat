@@ -57,25 +57,34 @@ jobs:
   e2e:
     name: E2E Tests
     needs: [check, changes]
-    if: needs.changes.outputs.e2e == 'true'
     runs-on: macos-latest
     steps:
+    - name: Skip notice
+      if: needs.changes.outputs.e2e != 'true'
+      run: echo "No E2E-relevant changes detected; skipping E2E tests."
+
     - uses: actions/checkout@v4
+      if: needs.changes.outputs.e2e == 'true'
     - uses: actions/setup-node@v4
+      if: needs.changes.outputs.e2e == 'true'
       with:
         node-version: '22.x'
         cache: 'npm'
 
     - name: Install dependencies
+      if: needs.changes.outputs.e2e == 'true'
       run: npm ci
 
     - name: Install Playwright browsers
+      if: needs.changes.outputs.e2e == 'true'
       run: npx playwright install --with-deps chromium
 
     - name: Build
+      if: needs.changes.outputs.e2e == 'true'
       run: npm run build
 
     - name: Run E2E tests
+      if: needs.changes.outputs.e2e == 'true'
       run: npx playwright test
       env:
         CI: true
