@@ -542,10 +542,11 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     scrollToTrackWhenReady(lastViewedTrackId);
   }, [lastViewedTrackId, tracks.length, scrollToTrackWhenReady]);
 
-  // Get columns from shared configuration
+  // useMemo: stable identity for tanstack's internal row-model memoization
+  // and avoids re-allocating column defs each render. Empty deps = once.
   const columns = useMemo(() => getCommonColumnDefs(), []);
 
-  // Prepare data for the table with browser filtering
+  // useMemo: O(n) filter + map over potentially thousands of tracks.
   const data = useMemo<TableData[]>(() => {
     let filteredTracks = tracks;
 
@@ -579,7 +580,7 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     });
   }, [tracks, artistFilter, albumFilter]);
 
-  // Memoize total hours calculation to avoid recalculating on every render
+  // useMemo: O(n) reduce over track durations.
   const totalHours = useMemo(() => calculateTotalHours(data), [data]);
 
   // Handle search toggle. Closing the bar clears the filter through
@@ -707,7 +708,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     return [trackId];
   };
 
-  // Toolbar content
+  // useMemo: deep JSX subtree. Stable element reference lets React skip
+  // reconciliation of the toolbar when row clicks re-render the parent.
   const toolbarContent = useMemo(
     () => (
       <Box
@@ -886,7 +888,8 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     ],
   );
 
-  // Empty state content
+  // useMemo: stable element reference skips subtree reconciliation on
+  // parent re-renders where drawerOpen hasn't changed.
   const emptyStateContent = useMemo(
     () => (
       <Box
@@ -930,7 +933,9 @@ function Library({ drawerOpen, onDrawerToggle }: LibraryProps) {
     [setBrowserOpen],
   );
 
-  // Browser panel to pass to VirtualTable — always mounted so open/close can animate
+  // useMemo: wraps React.memo'd Browser. Stable element reference skips
+  // its subtree on parent re-renders where deps haven't changed. Always
+  // mounted so open/close can animate.
   const browserPanel = useMemo(() => {
     return (
       <Browser

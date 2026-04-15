@@ -212,8 +212,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
   const playlistNameRef = useRef<HTMLDivElement>(null);
   const playlistNameRef2 = useRef<HTMLDivElement>(null);
 
-  // Memoize the playlist tracks to prevent unnecessary re-renders. Reads
-  // the store's getTracksByIds via the trackIndex map for O(n) lookup.
+  // useMemo: playlist lookup + O(n) getTracksByIds via the trackIndex map.
   const playlistTracks = useMemo(() => {
     if (!selectedPlaylistId || !playlists) return [];
     const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
@@ -466,10 +465,11 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     };
   }, [selectedPlaylistId, playlists]);
 
-  // Get columns from shared configuration
+  // useMemo: stable identity for tanstack's internal row-model memoization
+  // and avoids re-allocating column defs each render. Empty deps = once.
   const columns = useMemo(() => getCommonColumnDefs(), []);
 
-  // Prepare data for the table with browser filtering
+  // useMemo: O(n) filter + map over playlist tracks.
   const data = useMemo<TableData[]>(() => {
     let filtered = playlistTracks;
 
@@ -571,8 +571,7 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     setShowSearch((prev) => !prev);
   }, [showSearch, handleDebouncedSearchChange]);
 
-  // Total hours is O(n) over playlist tracks — worth memoizing. Track
-  // count is just playlistTracks.length, read inline.
+  // useMemo: O(n) reduce over playlist track durations.
   const playlistTotalHours = useMemo(
     () => calculateTotalHours(playlistTracks),
     [playlistTracks],
@@ -693,7 +692,8 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     return [trackId];
   };
 
-  // Toolbar content
+  // useMemo: deep JSX subtree. Stable element reference lets React skip
+  // reconciliation of the toolbar when row clicks re-render the parent.
   const toolbarContent = useMemo(() => {
     let playlistNameContent;
 
@@ -904,8 +904,9 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     [setBrowserOpen],
   );
 
-  // Browser panel to pass to VirtualTable — mounted whenever a playlist is selected
-  // so open/close can animate. Gate on selectedPlaylistId only (not browserOpen).
+  // useMemo: wraps React.memo'd Browser. Stable element reference skips
+  // its subtree on parent re-renders where deps haven't changed. Gated
+  // on selectedPlaylistId (not browserOpen) so open/close can animate.
   const browserPanel = useMemo(() => {
     if (!selectedPlaylistId) return undefined;
     return (
@@ -933,7 +934,8 @@ function Playlists({ drawerOpen, onDrawerToggle }: PlaylistsProps) {
     playlistTracks,
   ]);
 
-  // Empty state content
+  // useMemo: stable element reference skips subtree reconciliation on
+  // parent re-renders where drawerOpen hasn't changed.
   const emptyStateContent = useMemo(
     () => (
       <Box
