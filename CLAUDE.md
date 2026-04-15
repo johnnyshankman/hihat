@@ -85,15 +85,15 @@ e2e/                        # Playwright E2E tests
 
 #### When to subscribe (`useXStore(selector)`) vs read at call time (`useXStore.getState()`)
 
-When a component pulls state or actions from a Zustand store, the access pattern depends on **where the value is consumed**, not on whether it's a state slice or an action. Get this wrong and you either pay for subscriptions you don't need, or you reintroduce stale-closure bugs inside effects.
+When a component pulls anything out of a Zustand store — whether that's reading a state slice, displaying it, or **invoking an action** — the access pattern depends on **where the access happens**, not on whether you're reading data or calling a mutator. (Invoking an action is itself a read: you pull the function reference out of the store, then call it. The rule below treats both the same.) Get this wrong and you either pay for subscriptions you don't need, or you reintroduce stale-closure bugs inside effects.
 
-**Use a top-level selector** — `const x = useXStore((s) => s.x);` near the top of the component — when the value is read in any of:
+**Use a top-level selector** — `const x = useXStore((s) => s.x);` near the top of the component — when the value is read **or the action is invoked** in any of:
 - JSX render output
 - Callbacks bound directly to JSX elements (`onClick`, `onChange`, `onClose`, `onConfirm`, drag handlers, etc.)
 - `useMemo` / `useCallback` bodies whose result feeds JSX
 - Anywhere else that should trigger a re-render when the slice changes
 
-**Use `useXStore.getState().x` at call time** — inside the body of the function that needs it — when the value is read **only** in any of:
+**Use `useXStore.getState().x` at call time** — inside the body of the function that needs it — when the value is read **or the action is invoked** **only** in any of:
 - `useEffect` bodies and their cleanup functions
 - Listeners attached to non-React sources (IPC handlers, `document.addEventListener`, MediaSession callbacks, etc.)
 - Async handlers that fire long after mount and don't drive renders themselves
