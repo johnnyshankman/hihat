@@ -243,17 +243,45 @@ const createWindow = async () => {
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
+  // ── Deferred window show ──────────────────────────────────────────
+  // The window is created with `show: false` (see BrowserWindow options
+  // above) to prevent a flash of incorrectly-themed content. Two
+  // conditions must be met before the window is shown:
+  //
+  //   1. ready-to-show  — Electron has painted the first frame
+  //   2. app:settingsLoaded — the renderer has loaded the user's theme
+  //      preference from the database (sent from loadSettings() in
+  //      settingsAndPlaybackStore.ts)
+  //
+  // Without this, the renderer's initial Zustand state (theme: 'dark')
+  // is painted before the async IPC round-trip to fetch the real
+  // preference completes, causing a visible theme flash for light-mode
+  // users. By holding the window hidden until both events fire, the
+  // first frame the user sees always has the correct theme applied.
+  // ────────────────────────────────────────────────────────────────────
   let windowReadyToShow = false;
-  mainWindow.on('ready-to-show', () => {
-    if (!mainWindow) {
-      throw new Error('"mainWindow" is not defined');
-    }
-    windowReadyToShow = true;
+  let rendererSettingsLoaded = false;
+
+  const showWindowIfReady = () => {
+    if (!mainWindow || !windowReadyToShow || !rendererSettingsLoaded) return;
     if (process.env.START_MINIMIZED) {
       mainWindow.minimize();
     } else if (!isTestHidden) {
       mainWindow.show();
     }
+  };
+
+  mainWindow.on('ready-to-show', () => {
+    if (!mainWindow) {
+      throw new Error('"mainWindow" is not defined');
+    }
+    windowReadyToShow = true;
+    showWindowIfReady();
+  });
+
+  ipcMain.once('app:settingsLoaded', () => {
+    rendererSettingsLoaded = true;
+    showWindowIfReady();
   });
 
   mainWindow.on('closed', () => {

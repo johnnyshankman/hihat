@@ -54,6 +54,7 @@ export type Channels =
   | 'app:restart'
   | 'app:open-in-browser'
   | 'app:getLogFilePath'
+  | 'app:settingsLoaded'
 
   // UI operations
   | 'ui:toggleSidebar'
@@ -164,6 +165,7 @@ export interface IPCRequests {
   'app:restart': void;
   'app:open-in-browser': { link: string };
   'app:getLogFilePath': void;
+  'app:settingsLoaded': void;
 
   // UI operations
   'ui:toggleSidebar': void;
@@ -320,6 +322,7 @@ export interface IPCResponses {
   'app:restart': boolean;
   'app:open-in-browser': { success: boolean; message?: string };
   'app:getLogFilePath': { path: string | null; exists: boolean };
+  'app:settingsLoaded': void;
 
   // UI operations
   'ui:toggleSidebar': boolean;
