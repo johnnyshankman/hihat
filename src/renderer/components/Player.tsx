@@ -746,6 +746,7 @@ export default function Player() {
                       textOverflow: 'ellipsis',
                       width: 'fit-content',
                       maxWidth: '100%',
+                      userSelect: 'none',
                     }}
                     variant="body1"
                   >
@@ -773,6 +774,7 @@ export default function Player() {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     fontWeight: '500',
+                    userSelect: 'none',
                   }}
                   variant="body2"
                 >

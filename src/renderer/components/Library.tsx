@@ -733,7 +733,7 @@ export default function Library() {
                 ? theme.palette.grey[800]
                 : theme.palette.grey[200],
             px: 1.5,
-            py: 0.5,
+            height: 22,
             justifyContent: 'center',
             userSelect: 'none',
             flexShrink: 0,
@@ -743,11 +743,25 @@ export default function Library() {
             sx={{
               color: (theme) => theme.palette.text.secondary,
               lineHeight: 1,
+              fontSize: '13px',
             }}
             variant="body2"
           >
-            {data.length.toLocaleString()}&nbsp;&#9835;
+            {data.length.toLocaleString()}&nbsp;
           </Typography>
+          <Box
+            component="span"
+            sx={{
+              color: (theme) => theme.palette.text.secondary,
+              display: 'inline-flex',
+            }}
+          >
+            <MaterialSymbolIcon
+              fontSize={16}
+              icon="music_note_2"
+              weight={100}
+            />
+          </Box>
         </Box>
         <Box
           sx={{
@@ -759,7 +773,7 @@ export default function Library() {
                 ? theme.palette.grey[800]
                 : theme.palette.grey[200],
             px: 1.5,
-            py: 0.5,
+            height: 22,
             justifyContent: 'center',
             userSelect: 'none',
             flexShrink: 0,
@@ -769,6 +783,7 @@ export default function Library() {
             sx={{
               color: (theme) => theme.palette.text.secondary,
               lineHeight: 1,
+              fontSize: '13px',
             }}
             variant="body2"
           >

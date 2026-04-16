@@ -327,6 +327,7 @@ export default function Sidebar() {
                     textTransform: 'uppercase',
                     color: (t) => t.palette.text.secondary,
                     opacity: 0.7,
+                    userSelect: 'none',
                   }}
                   variant="caption"
                 >
@@ -410,6 +411,7 @@ export default function Sidebar() {
                     textTransform: 'uppercase',
                     color: (t) => t.palette.text.secondary,
                     opacity: 0.7,
+                    userSelect: 'none',
                   }}
                   variant="caption"
                 >

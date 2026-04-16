@@ -651,12 +651,21 @@ export default function Settings({ onClose }: SettingsProps) {
           top: 0,
           backgroundColor: (t) => t.palette.background.paper,
           zIndex: 1,
+          WebkitAppRegion: 'drag',
         }}
       >
-        <Typography color="text.primary" variant="h1">
+        <Typography
+          color="text.primary"
+          sx={{ userSelect: 'none' }}
+          variant="h1"
+        >
           Settings
         </Typography>
-        <IconButton onClick={onClose} size="small">
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={{ WebkitAppRegion: 'no-drag' }}
+        >
           <CloseIcon />
         </IconButton>
       </Box>

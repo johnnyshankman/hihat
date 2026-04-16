@@ -272,14 +272,14 @@ export default function MainLayout() {
       </Box>
 
       <Drawer
-        anchor="right"
+        anchor="left"
         onClose={() => setSettingsOpen(false)}
         open={settingsOpen}
         sx={{
           '& .MuiDrawer-paper': {
             width: 'min(480px, calc(100vw - 60px))',
             boxSizing: 'border-box',
-            borderLeft: '1px solid',
+            borderRight: '1px solid',
             borderColor: (t) => t.palette.divider,
             WebkitAppRegion: 'no-drag',
           },
