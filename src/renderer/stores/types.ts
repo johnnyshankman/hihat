@@ -206,7 +206,7 @@ export interface SettingsAndPlaybackStore {
   // Derived boundary state: true when the matching skip button should be
   // enabled. Maintained as stored fields (rather than computed per-render
   // selectors) so large libraries don't pay O(n log n) filter/sort on
-  // every store update — see refreshBoundaries / withBoundaries.
+  // every store update — see refreshPrevNextBoundaries / withBoundaries.
   canGoNext: boolean;
   canGoPrevOrRestart: boolean;
 
@@ -248,5 +248,5 @@ export interface SettingsAndPlaybackStore {
   toggleShuffleMode: () => void;
   setSilentAudioRef: (ref: HTMLAudioElement | null) => void;
   autoPlayNextTrack: () => Promise<void>;
-  refreshBoundaries: () => void;
+  refreshPrevNextBoundaries: () => void;
 }

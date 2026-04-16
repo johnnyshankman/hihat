@@ -74,7 +74,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     shuffleMode: false, // shuffle mode
     shuffleHistory: [], // history of shuffled tracks
     shuffleHistoryPosition: -1, // current position in shuffle history (-1 means at the tip)
-    canGoNext: false, // stored boundary — refreshed by refreshBoundaries after mutations
+    canGoNext: false, // stored boundary — refreshed by refreshPrevNextBoundaries after mutations
     canGoPrevOrRestart: false, // true when prev click would navigate OR restart the song
 
     // Internal state (from playbackStore)
@@ -399,7 +399,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
      * these as stored fields avoids running the filter/sort in getFiltered...
      * on every store-update tick, which matters for large libraries.
      */
-    refreshBoundaries: () => {
+    refreshPrevNextBoundaries: () => {
       set((state) => {
         const canGoNext = computeCanGoNext(state);
         const canGoPrevOrRestart = computeCanGoPrevOrRestart(state);
@@ -550,7 +550,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackContextBrowserFilter: browserFilter, // Store the browser filter context
         };
       });
-      get().refreshBoundaries();
+      get().refreshPrevNextBoundaries();
     },
 
     skipToNextTrack: () => {
@@ -857,7 +857,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           duration: nextSong.duration,
         };
       });
-      get().refreshBoundaries();
+      get().refreshPrevNextBoundaries();
     },
 
     skipToPreviousTrack: () => {
@@ -1006,7 +1006,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: Date.now(),
         };
       });
-      get().refreshBoundaries();
+      get().refreshPrevNextBoundaries();
     },
 
     toggleRepeatMode: () => {
@@ -1034,7 +1034,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         return { repeatMode, player: state.player };
       });
-      get().refreshBoundaries();
+      get().refreshPrevNextBoundaries();
     },
 
     toggleShuffleMode: () => {
@@ -1045,7 +1045,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           shuffleHistoryPosition: -1,
         };
       });
-      get().refreshBoundaries();
+      get().refreshPrevNextBoundaries();
     },
 
     setPaused: (paused: boolean) => {
@@ -1183,7 +1183,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             // current track" escape hatch). Only refresh on a crossing so we
             // don't pay for findPreviousSong's sort on every tick.
             if (prevPosition <= 3 !== currentPosition <= 3) {
-              get().refreshBoundaries();
+              get().refreshPrevNextBoundaries();
             }
 
             // Handle tracking actual playback time for play count
@@ -1264,7 +1264,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: Date.now(),
         };
       });
-      get().refreshBoundaries();
+      get().refreshPrevNextBoundaries();
     },
 
     autoPlayNextTrack: async () => {
@@ -1515,7 +1515,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: timeUpdateDelay,
         };
       });
-      get().refreshBoundaries();
+      get().refreshPrevNextBoundaries();
     },
   }),
 );
