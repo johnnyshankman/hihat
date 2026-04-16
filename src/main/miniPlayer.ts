@@ -36,7 +36,7 @@ let playbackState = {
   repeatMode: 'off' as 'off' | 'track' | 'all',
   shuffleMode: false,
   canGoNext: false,
-  canGoPrev: false,
+  canGoPrevOrRestart: false,
 };
 
 // Store window position

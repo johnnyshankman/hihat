@@ -31,10 +31,6 @@ import {
   toggleIconButtonSx,
 } from '../styles/iconButtonStyles';
 import { playerSliderSx } from '../styles/sliderStyles';
-import {
-  computeCanGoNext,
-  computeCanGoPrev,
-} from '../utils/trackSelectionUtils';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -97,8 +93,10 @@ export default function Player() {
   );
   const repeatMode = useSettingsAndPlaybackStore((state) => state.repeatMode);
   const shuffleMode = useSettingsAndPlaybackStore((state) => state.shuffleMode);
-  const canGoNext = useSettingsAndPlaybackStore(computeCanGoNext);
-  const canGoPrev = useSettingsAndPlaybackStore(computeCanGoPrev);
+  const canGoNext = useSettingsAndPlaybackStore((state) => state.canGoNext);
+  const canGoPrevOrRestart = useSettingsAndPlaybackStore(
+    (state) => state.canGoPrevOrRestart,
+  );
 
   // Get actions from the store
   const setPaused = useSettingsAndPlaybackStore((state) => state.setPaused);
@@ -197,7 +195,7 @@ export default function Player() {
       shuffleMode,
       position,
       canGoNext,
-      canGoPrev,
+      canGoPrevOrRestart,
     });
   }, [
     paused,
@@ -207,7 +205,7 @@ export default function Player() {
     repeatMode,
     shuffleMode,
     canGoNext,
-    canGoPrev,
+    canGoPrevOrRestart,
   ]);
 
   // Position-related formatting moved to PositionDisplay component to isolate updates
@@ -747,6 +745,7 @@ export default function Player() {
                 >
                   <Typography
                     component="div"
+                    data-testid="now-playing-title"
                     onClick={handleTrackTitleClick}
                     sx={{
                       cursor: playbackSource ? 'pointer' : 'default',
@@ -859,11 +858,15 @@ export default function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip arrow placement="top" title={canGoPrev ? 'Previous' : ''}>
+            <Tooltip
+              arrow
+              placement="top"
+              title={canGoPrevOrRestart ? 'Previous' : ''}
+            >
               <span>
                 <IconButton
                   data-testid="skip-previous-button"
-                  disabled={!canGoPrev}
+                  disabled={!canGoPrevOrRestart}
                   onClick={skipToPreviousTrack}
                   size="medium"
                   sx={{

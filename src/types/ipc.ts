@@ -8,6 +8,26 @@
 import { Track, Playlist, Settings, MetadataToWrite } from './dbTypes';
 
 /**
+ * Playback state shared between the main player and the mini player.
+ * Emitted from the renderer as `player:stateUpdate` and relayed to the
+ * mini player renderer as `miniPlayer:stateChanged`.
+ *
+ * `canGoPrevOrRestart` is true when a click on the previous button would
+ * either navigate to a previous track OR restart the current track (the
+ * button handler picks based on `position > 3`).
+ */
+export interface PlayerPlaybackState {
+  paused: boolean;
+  duration: number;
+  volume: number;
+  position: number;
+  repeatMode: 'off' | 'track' | 'all';
+  shuffleMode: boolean;
+  canGoNext: boolean;
+  canGoPrevOrRestart: boolean;
+}
+
+/**
  * All available IPC channels for the application
  */
 export type Channels =
@@ -203,28 +223,12 @@ export interface IPCRequests {
   'miniPlayer:toggleRepeat': void;
   'miniPlayer:toggleShuffle': void;
   'miniPlayer:trackChanged': Track | null;
-  'miniPlayer:stateChanged': {
-    isPlaying: boolean;
-    duration: number;
-    volume: number;
-    repeatMode: 'off' | 'track' | 'all';
-    shuffleMode: boolean;
-    canGoNext: boolean;
-    canGoPrev: boolean;
-  };
+  'miniPlayer:stateChanged': PlayerPlaybackState;
   'miniPlayer:positionChanged': number;
   'miniPlayer:albumArtChanged': string | null;
 
   // Player-MiniPlayer sync operations
-  'player:stateUpdate': {
-    isPlaying: boolean;
-    duration: number;
-    volume: number;
-    repeatMode: 'off' | 'track' | 'all';
-    shuffleMode: boolean;
-    canGoNext: boolean;
-    canGoPrev: boolean;
-  };
+  'player:stateUpdate': PlayerPlaybackState;
   'player:trackUpdate': Track | null;
   'player:positionUpdate': number;
   'player:pausePlayback': void;

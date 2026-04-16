@@ -310,7 +310,7 @@ export const findPreviousSong = (
   return tracks.find((t) => t.id === previousTrackId);
 };
 
-type BoundaryStateSlice = Pick<
+export type CanGoInputs = Pick<
   SettingsAndPlaybackStore,
   | 'currentTrack'
   | 'position'
@@ -323,13 +323,15 @@ type BoundaryStateSlice = Pick<
 >;
 
 /**
- * Derives whether the Next button should be enabled for the given playback
- * state. Returns false only when we are genuinely at the end of the current
- * view with no repeat and no more shuffle candidates. See findNextSong for the
- * underlying filter/sort/history logic — this wraps it with the repeat/shuffle
- * short-circuits so the UI can bind a boolean directly.
+ * Returns true when the Next button should be enabled. False only when the
+ * click would truly be a no-op — at the end of the filtered view with no
+ * repeat, or with shuffle history exhausted and no repeat='all' to recycle.
+ *
+ * When `repeatMode === 'track'`, clicking Next restarts the current song
+ * (see skipToNextTrack's repeat-track branch), so this returns true — the
+ * click always does something.
  */
-export const computeCanGoNext = (s: BoundaryStateSlice): boolean => {
+export const computeCanGoNext = (s: CanGoInputs): boolean => {
   if (!s.currentTrack) return false;
   if (s.repeatMode !== 'off') return true;
 
@@ -357,13 +359,18 @@ export const computeCanGoNext = (s: BoundaryStateSlice): boolean => {
 };
 
 /**
- * Derives whether the Previous button should be enabled. Mirrors
- * computeCanGoNext. Also returns true when position > 3s, since prev in that
- * case restarts the current song rather than navigating — keeping the button
- * enabled preserves the existing "back to start" affordance even at the first
- * song of the view.
+ * Returns true when the Previous button should be enabled. The button
+ * handles two mutually exclusive actions depending on playback position:
+ *
+ *   - position > 3s: clicking restarts the current track (in-place rewind).
+ *   - position <= 3s: clicking navigates to the previous track, if one
+ *     exists under the current filter/shuffle/repeat context.
+ *
+ * The name reflects that `true` may mean either "restart" or "navigate back"
+ * — consumers should not assume a previous track exists just because this
+ * boolean is true.
  */
-export const computeCanGoPrev = (s: BoundaryStateSlice): boolean => {
+export const computeCanGoPrevOrRestart = (s: CanGoInputs): boolean => {
   if (!s.currentTrack) return false;
   if (s.position > 3) return true;
   if (s.repeatMode !== 'off') return true;

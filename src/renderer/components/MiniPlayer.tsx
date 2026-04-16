@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 import MaterialSymbolIcon from './MaterialSymbolIcon';
 
+import type { PlayerPlaybackState } from '../../types/ipc';
 import { formatDuration } from '../utils/formatters';
 
 // Album art placeholder component
@@ -86,7 +87,7 @@ export default function MiniPlayer() {
   const [repeatMode, setRepeatMode] = useState<'off' | 'track' | 'all'>('off');
   const [shuffleMode, setShuffleMode] = useState(false);
   const [canGoNext, setCanGoNext] = useState(false);
-  const [canGoPrev, setCanGoPrev] = useState(false);
+  const [canGoPrevOrRestart, setCanGoPrevOrRestart] = useState(false);
   const [albumArt, setAlbumArt] = useState<string | null>(null);
   // Add error state for debugging
   const [error, setError] = useState<string | null>(null);
@@ -109,15 +110,15 @@ export default function MiniPlayer() {
       );
 
       const unsubscribeState = window.electron.miniPlayer.onStateChange(
-        (state: any) => {
+        (state: PlayerPlaybackState) => {
           try {
             setPaused(state.paused);
             setDuration(state.duration);
             setVolume(state.volume);
             setRepeatMode(state.repeatMode);
             setShuffleMode(state.shuffleMode);
-            setCanGoNext(Boolean(state.canGoNext));
-            setCanGoPrev(Boolean(state.canGoPrev));
+            setCanGoNext(state.canGoNext);
+            setCanGoPrevOrRestart(state.canGoPrevOrRestart);
           } catch (err) {
             console.error('Error updating state:', err);
             setError(`State update error: ${err}`);
@@ -542,10 +543,10 @@ export default function MiniPlayer() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip title={canGoPrev ? 'Previous' : ''}>
+            <Tooltip title={canGoPrevOrRestart ? 'Previous' : ''}>
               <span>
                 <IconButton
-                  disabled={!canGoPrev}
+                  disabled={!canGoPrevOrRestart}
                   onClick={handlePreviousTrack}
                   size="medium"
                   sx={{ color: 'white', padding: '4px' }}

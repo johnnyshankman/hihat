@@ -37,12 +37,12 @@ test.describe('Rapid Skip Bug Regression', () => {
       }
     });
 
-    // Give the final track time to load and autoplay.
-    await page.waitForTimeout(3000);
-
-    // Verify we landed on the expected track 10 positions ahead.
-    const pageContent = await page.content();
-    expect(pageContent).toContain(expectedLandingTitle!.trim());
+    // Assert the player's now-playing title matches the expected landing
+    // track. Using a scoped locator (not pageContent) avoids false positives
+    // from the track list, which also renders the same title.
+    await expect(
+      page.locator('[data-testid="now-playing-title"]'),
+    ).toContainText(expectedLandingTitle!.trim(), { timeout: 5000 });
 
     // And that audio is actively advancing (not stuck at 0:00).
     await expect(pauseIcon).toBeVisible({ timeout: 5000 });
@@ -85,10 +85,9 @@ test.describe('Rapid Skip Bug Regression', () => {
       }
     });
 
-    await page.waitForTimeout(3000);
-
-    const pageContent = await page.content();
-    expect(pageContent).toContain(expectedLandingTitle!.trim());
+    await expect(
+      page.locator('[data-testid="now-playing-title"]'),
+    ).toContainText(expectedLandingTitle!.trim(), { timeout: 5000 });
     await expect(pauseIcon).toBeVisible({ timeout: 5000 });
 
     await TestHelpers.closeApp(app);

@@ -5,6 +5,8 @@ import { SettingsAndPlaybackStore } from './types';
 import useLibraryStore from './libraryStore';
 import useUIStore from './uiStore';
 import {
+  computeCanGoNext,
+  computeCanGoPrevOrRestart,
   findNextSong,
   findPreviousSong,
   getFilePathFromTrackUrl,
@@ -72,6 +74,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     shuffleMode: false, // shuffle mode
     shuffleHistory: [], // history of shuffled tracks
     shuffleHistoryPosition: -1, // current position in shuffle history (-1 means at the tip)
+    canGoNext: false, // stored boundary — refreshed by refreshBoundaries after mutations
+    canGoPrevOrRestart: false, // true when prev click would navigate OR restart the song
 
     // Internal state (from playbackStore)
     player: null, // the gapless 5 player instance
@@ -388,6 +392,27 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       return set({ silentAudioRef: ref });
     },
 
+    /**
+     * Recompute canGoNext / canGoPrevOrRestart from current state. Call this
+     * after any mutation that might change the answer (new currentTrack,
+     * repeat/shuffle toggle, library change, position crossing 3s). Holding
+     * these as stored fields avoids running the filter/sort in getFiltered...
+     * on every store-update tick, which matters for large libraries.
+     */
+    refreshBoundaries: () => {
+      return set((state) => {
+        const canGoNext = computeCanGoNext(state);
+        const canGoPrevOrRestart = computeCanGoPrevOrRestart(state);
+        if (
+          canGoNext === state.canGoNext &&
+          canGoPrevOrRestart === state.canGoPrevOrRestart
+        ) {
+          return {};
+        }
+        return { canGoNext, canGoPrevOrRestart };
+      });
+    },
+
     setVolume: (volume) => {
       return set((state) => {
         if (state.player) {
@@ -417,7 +442,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
 
     selectSpecificSong: (trackId, playbackSource, playlistId = null) => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while selecting specific song');
         }
@@ -525,10 +550,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackContextBrowserFilter: browserFilter, // Store the browser filter context
         };
       });
+      get().refreshBoundaries();
     },
 
     skipToNextTrack: () => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while skipping to next song');
         }
@@ -831,10 +857,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           duration: nextSong.duration,
         };
       });
+      get().refreshBoundaries();
     },
 
     skipToPreviousTrack: () => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while skipping to previous song');
         }
@@ -979,10 +1006,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: Date.now(),
         };
       });
+      get().refreshBoundaries();
     },
 
     toggleRepeatMode: () => {
-      return set((state) => {
+      set((state) => {
         // Cycle through repeat modes: off -> track -> all -> off
         const modes: ('off' | 'track' | 'all')[] = ['off', 'track', 'all'];
         const currentIndex = modes.indexOf(state.repeatMode);
@@ -1006,16 +1034,18 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         return { repeatMode, player: state.player };
       });
+      get().refreshBoundaries();
     },
 
     toggleShuffleMode: () => {
-      return set((state) => {
+      set((state) => {
         return {
           shuffleMode: !state.shuffleMode,
           shuffleHistory: [],
           shuffleHistoryPosition: -1,
         };
       });
+      get().refreshBoundaries();
     },
 
     setPaused: (paused: boolean) => {
@@ -1141,12 +1171,20 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           const currentPosition = Math.floor(time / 1000);
 
           if (now - lastUpdate >= 1000) {
-            // Update position
+            // Update position (capture prev for threshold detection below)
+            const prevPosition = get().position;
             set({
               lastPositionUpdateRef: now,
               // Convert from milliseconds to seconds
               position: currentPosition,
             });
+
+            // canGoPrevOrRestart flips when position crosses 3s (the "restart
+            // current track" escape hatch). Only refresh on a crossing so we
+            // don't pay for findPreviousSong's sort on every tick.
+            if (prevPosition <= 3 !== currentPosition <= 3) {
+              get().refreshBoundaries();
+            }
 
             // Handle tracking actual playback time for play count
             const currentState = get();
@@ -1190,7 +1228,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
 
     seekToPosition: (position: number) => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while seeking to position');
         }
@@ -1226,10 +1264,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: Date.now(),
         };
       });
+      get().refreshBoundaries();
     },
 
     autoPlayNextTrack: async () => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while auto playing next track');
         }
@@ -1476,6 +1515,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: timeUpdateDelay,
         };
       });
+      get().refreshBoundaries();
     },
   }),
 );
