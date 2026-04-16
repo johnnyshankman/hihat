@@ -389,7 +389,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
     // Playback actions
     setSilentAudioRef: (ref) => {
-      return set({ silentAudioRef: ref });
+      set({ silentAudioRef: ref });
     },
 
     /**
@@ -400,7 +400,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
      * on every store-update tick, which matters for large libraries.
      */
     refreshBoundaries: () => {
-      return set((state) => {
+      set((state) => {
         const canGoNext = computeCanGoNext(state);
         const canGoPrevOrRestart = computeCanGoPrevOrRestart(state);
         if (
@@ -414,7 +414,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
 
     setVolume: (volume) => {
-      return set((state) => {
+      set((state) => {
         if (state.player) {
           state.player.setVolume(volume);
         }
@@ -1049,7 +1049,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
 
     setPaused: (paused: boolean) => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while setting paused');
         }
