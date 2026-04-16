@@ -46,9 +46,9 @@ export default function EditMetadataDialog({
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Code smell: This is sort of an anti pattern. We're reacting to prop changes
-  // in order to reset the internal state which is kind of odd. It's because this
-  // is hidden but still mounted 24/7 so the state never implicitly resets itself.
+  // Reinitialize all stale fields on open.
+  // Needed because dialogs purposely never unmount and just toggle visibility.
+  // They do this to ensure enter and exit animations are not cut off.
   useEffect(() => {
     if (open && trackId) {
       const track = useLibraryStore.getState().getTrackById(trackId);
