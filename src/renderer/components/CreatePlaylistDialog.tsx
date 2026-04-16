@@ -21,10 +21,9 @@ export default function CreatePlaylistDialog({
   // Local state for the input - isolated from parent
   const [name, setName] = useState('');
 
-  // Reset name when dialog opens
-  // Code smell: This is sort of an anti pattern. We're reacting to prop changes
-  // in order to reset the internal state which is kind of odd. It's because this
-  // is hidden but still mounted 24/7 so the state never implicitly resets itself.
+  // Reset all stale fields on open.
+  // Needed because dialogs purposely never unmount and just toggle visibility.
+  // They do this to ensure enter and exit animations are not cut off.
   useEffect(() => {
     if (open) {
       setName('');

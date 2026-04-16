@@ -25,8 +25,9 @@ export default function RenamePlaylistDialog({
   // Local state for the input - isolated from parent
   const [name, setName] = useState(initialName);
 
-  // Update local state when dialog opens with new playlist
-  // Code smell: this does not need to be done in a use effect. could be done declaratively when open is triggered. requires refactor.
+  // Reinitialize all stale fields on open.
+  // Needed because dialogs purposely never unmount and just toggle visibility.
+  // They do this to ensure enter and exit animations are not cut off.
   useEffect(() => {
     if (open) {
       setName(initialName);
