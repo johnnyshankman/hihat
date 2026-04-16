@@ -31,6 +31,10 @@ import {
   toggleIconButtonSx,
 } from '../styles/iconButtonStyles';
 import { playerSliderSx } from '../styles/sliderStyles';
+import {
+  computeCanGoNext,
+  computeCanGoPrev,
+} from '../utils/trackSelectionUtils';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -93,9 +97,8 @@ export default function Player() {
   );
   const repeatMode = useSettingsAndPlaybackStore((state) => state.repeatMode);
   const shuffleMode = useSettingsAndPlaybackStore((state) => state.shuffleMode);
-  const skipInProgress = useSettingsAndPlaybackStore(
-    (state) => state.skipInProgress,
-  );
+  const canGoNext = useSettingsAndPlaybackStore(computeCanGoNext);
+  const canGoPrev = useSettingsAndPlaybackStore(computeCanGoPrev);
 
   // Get actions from the store
   const setPaused = useSettingsAndPlaybackStore((state) => state.setPaused);
@@ -193,8 +196,19 @@ export default function Player() {
       repeatMode,
       shuffleMode,
       position,
+      canGoNext,
+      canGoPrev,
     });
-  }, [paused, duration, position, volume, repeatMode, shuffleMode]);
+  }, [
+    paused,
+    duration,
+    position,
+    volume,
+    repeatMode,
+    shuffleMode,
+    canGoNext,
+    canGoPrev,
+  ]);
 
   // Position-related formatting moved to PositionDisplay component to isolate updates
 
@@ -845,11 +859,11 @@ export default function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip arrow placement="top" title="Previous">
+            <Tooltip arrow placement="top" title={canGoPrev ? 'Previous' : ''}>
               <span>
                 <IconButton
                   data-testid="skip-previous-button"
-                  disabled={!currentTrack || skipInProgress}
+                  disabled={!canGoPrev}
                   onClick={skipToPreviousTrack}
                   size="medium"
                   sx={{
@@ -900,11 +914,11 @@ export default function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip arrow placement="top" title="Next">
+            <Tooltip arrow placement="top" title={canGoNext ? 'Next' : ''}>
               <span>
                 <IconButton
                   data-testid="skip-next-button"
-                  disabled={!currentTrack || skipInProgress}
+                  disabled={!canGoNext}
                   onClick={skipToNextTrack}
                   size="medium"
                   sx={{

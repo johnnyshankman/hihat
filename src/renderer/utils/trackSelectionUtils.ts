@@ -1,5 +1,6 @@
 import { Track } from '../../types/dbTypes';
 import useLibraryStore from '../stores/libraryStore';
+import type { SettingsAndPlaybackStore } from '../stores/types';
 import { getSortingFunction } from './sortingFunctions';
 
 // Define MediaImage interface for TypeScript
@@ -307,4 +308,82 @@ export const findPreviousSong = (
   // return the previous track
   const previousTrackId = trackIds[currentIndex - 1];
   return tracks.find((t) => t.id === previousTrackId);
+};
+
+type BoundaryStateSlice = Pick<
+  SettingsAndPlaybackStore,
+  | 'currentTrack'
+  | 'position'
+  | 'repeatMode'
+  | 'shuffleMode'
+  | 'shuffleHistory'
+  | 'shuffleHistoryPosition'
+  | 'playbackSource'
+  | 'playbackContextBrowserFilter'
+>;
+
+/**
+ * Derives whether the Next button should be enabled for the given playback
+ * state. Returns false only when we are genuinely at the end of the current
+ * view with no repeat and no more shuffle candidates. See findNextSong for the
+ * underlying filter/sort/history logic — this wraps it with the repeat/shuffle
+ * short-circuits so the UI can bind a boolean directly.
+ */
+export const computeCanGoNext = (s: BoundaryStateSlice): boolean => {
+  if (!s.currentTrack) return false;
+  if (s.repeatMode !== 'off') return true;
+
+  const artistFilter = s.playbackContextBrowserFilter?.artist || null;
+  const albumFilter = s.playbackContextBrowserFilter?.album || null;
+
+  if (s.shuffleMode) {
+    const forwardInHistory =
+      s.shuffleHistoryPosition >= 0 &&
+      s.shuffleHistoryPosition < s.shuffleHistory.length - 1;
+    if (forwardInHistory) return true;
+  }
+
+  return (
+    findNextSong(
+      s.currentTrack.id,
+      s.shuffleMode,
+      s.playbackSource,
+      s.repeatMode,
+      artistFilter,
+      s.shuffleHistory,
+      albumFilter,
+    ) !== undefined
+  );
+};
+
+/**
+ * Derives whether the Previous button should be enabled. Mirrors
+ * computeCanGoNext. Also returns true when position > 3s, since prev in that
+ * case restarts the current song rather than navigating — keeping the button
+ * enabled preserves the existing "back to start" affordance even at the first
+ * song of the view.
+ */
+export const computeCanGoPrev = (s: BoundaryStateSlice): boolean => {
+  if (!s.currentTrack) return false;
+  if (s.position > 3) return true;
+  if (s.repeatMode !== 'off') return true;
+
+  if (s.shuffleMode) {
+    return s.shuffleHistoryPosition > 0;
+  }
+
+  const artistFilter = s.playbackContextBrowserFilter?.artist || null;
+  const albumFilter = s.playbackContextBrowserFilter?.album || null;
+
+  return (
+    findPreviousSong(
+      s.currentTrack.id,
+      false,
+      s.playbackSource,
+      s.repeatMode,
+      [],
+      artistFilter,
+      albumFilter,
+    ) !== undefined
+  );
 };

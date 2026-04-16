@@ -63,7 +63,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     // Playback state (from playbackStore)
     currentTrack: null, // the current track playing
     paused: true, // play pause state
-    skipInProgress: false, // true while a skip operation is in-flight
     position: 0, // current position of the playing track in seconds
     duration: 0, // duration of the playing track in seconds
     playbackSource: 'library', // the source of the playback (library or playlist)
@@ -534,11 +533,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           throw new Error('No player found while skipping to next song');
         }
 
-        // Guard against rapid skip clicks while a skip is still loading
-        if (state.skipInProgress) {
-          return {};
-        }
-
         if (state.repeatMode === 'track') {
           // For repeat track mode, start from the beginning
           state.player.setPosition(0);
@@ -608,7 +602,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: nextSong.duration,
                 shuffleHistoryPosition: newPosition,
-                skipInProgress: !state.paused,
               };
             }
           }
@@ -746,7 +739,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             duration: nextSong.duration,
             shuffleHistory,
             shuffleHistoryPosition: shuffleHistory.length - 1, // Now at the new tip
-            skipInProgress: !state.paused,
           };
         }
 
@@ -837,7 +829,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPosition: 0,
           lastPlaybackTimeUpdateRef: Date.now(),
           duration: nextSong.duration,
-          skipInProgress: !state.paused,
         };
       });
     },
@@ -846,11 +837,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       return set((state) => {
         if (!state.player) {
           throw new Error('No player found while skipping to previous song');
-        }
-
-        // Guard against rapid skip clicks while a skip is still loading
-        if (state.skipInProgress) {
-          return {};
         }
 
         // If we're less than 3 seconds into the song, go to previous track
@@ -907,7 +893,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: previousSong.duration,
                 shuffleHistoryPosition: newPosition,
-                skipInProgress: !state.paused,
               };
             }
           }
@@ -978,7 +963,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPosition: 0,
             lastPlaybackTimeUpdateRef: Date.now(),
             duration: previousSong.duration,
-            skipInProgress: !state.paused,
           };
         }
         // Restart the current track
@@ -1119,7 +1103,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         player.onplay = () => {
           set({
             paused: false,
-            skipInProgress: false,
             lastPlaybackTimeUpdateRef: Date.now(),
             lastPosition: get().position,
           });

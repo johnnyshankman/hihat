@@ -209,6 +209,8 @@ export interface IPCRequests {
     volume: number;
     repeatMode: 'off' | 'track' | 'all';
     shuffleMode: boolean;
+    canGoNext: boolean;
+    canGoPrev: boolean;
   };
   'miniPlayer:positionChanged': number;
   'miniPlayer:albumArtChanged': string | null;
@@ -220,6 +222,8 @@ export interface IPCRequests {
     volume: number;
     repeatMode: 'off' | 'track' | 'all';
     shuffleMode: boolean;
+    canGoNext: boolean;
+    canGoPrev: boolean;
   };
   'player:trackUpdate': Track | null;
   'player:positionUpdate': number;

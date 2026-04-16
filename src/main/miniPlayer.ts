@@ -35,6 +35,8 @@ let playbackState = {
   volume: 1,
   repeatMode: 'off' as 'off' | 'track' | 'all',
   shuffleMode: false,
+  canGoNext: false,
+  canGoPrev: false,
 };
 
 // Store window position
