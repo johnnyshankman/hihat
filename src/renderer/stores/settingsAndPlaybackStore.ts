@@ -42,7 +42,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     // Settings state (from settingsStore)
     id: 'app-settings', // db record name never changes
     libraryPath: '',
-    theme: 'light',
+    theme: 'dark',
     lastPlayedSongId: null,
     volume: 1.0,
     columns: {
@@ -146,15 +146,25 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           player.setVolume(volumeValue);
         }
 
+        // Signal the main process that settings are loaded so the window
+        // can be shown with the correct theme. See the "Deferred window
+        // show" comment in main.ts for the full pattern.
+        window.electron.ipcRenderer.sendMessage('app:settingsLoaded');
+
         return appSettings;
       } catch (error) {
         console.error('Error loading settings:', error);
         useUIStore
           .getState()
           .showNotification('Failed to load settings', 'error');
+
+        // Signal even on failure — the window must still show. The store
+        // defaults to 'dark' so the fallback theme is reasonable.
+        window.electron.ipcRenderer.sendMessage('app:settingsLoaded');
+
         return {
           libraryPath: '',
-          theme: 'light',
+          theme: 'dark',
           lastPlayedSongId: null,
           volume: 1.0,
           columns: {
