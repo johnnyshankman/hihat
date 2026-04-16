@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import MinimizeIcon from '@mui/icons-material/Remove';
@@ -7,28 +7,6 @@ import RestoreIcon from '@mui/icons-material/FilterNone';
 
 export default function WindowControls() {
   const [isMaximized, setIsMaximized] = useState(false);
-
-  const checkMaximized = useCallback(async () => {
-    const maximized = await window.electron.window.isMaximized();
-    setIsMaximized(maximized);
-  }, []);
-
-  const handleMaximize = () => {
-    window.electron.window.maximize();
-    setTimeout(checkMaximized, 100);
-  };
-
-  useEffect(() => {
-    checkMaximized();
-    const unsubMaximizedChange = window.electron.window.onMaximizedChange(
-      (maximized) => {
-        setIsMaximized(maximized);
-      },
-    );
-    return () => {
-      unsubMaximizedChange();
-    };
-  }, [checkMaximized]);
 
   return (
     <Box sx={{ display: 'flex', gap: '8px', WebkitAppRegion: 'no-drag' }}>
@@ -88,7 +66,11 @@ export default function WindowControls() {
       </Tooltip>
       <Tooltip title={isMaximized ? 'Restore' : 'Maximize'}>
         <IconButton
-          onClick={handleMaximize}
+          onClick={() => {
+            // NOTE: badly named function, it actually toggles the maximize state, it doesn't just maximize.
+            window.electron.window.maximize();
+            setIsMaximized(!isMaximized);
+          }}
           size="small"
           sx={{
             width: '12px',
