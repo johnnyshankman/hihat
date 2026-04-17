@@ -13,6 +13,7 @@ import {
   updateMediaSession,
 } from '../utils/trackSelectionUtils';
 import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
+import { preloadNextInQueue, syncPlayerQueue } from '../utils/playerQueue';
 
 /**
  * Flush accumulated play-count tracking before a skip operation.
@@ -81,6 +82,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     lastPlaybackTimeUpdateRef: 0, // helps us track actual playback time for play count
     lastPosition: 0, // track the last position to calculate playback time
     silentAudioRef: null, // reference to the silent audio element for MediaSession support
+    preloadedTrack: null, // track sitting at Gapless-5 queue index 1 (store-owned)
+    preloadReady: false, // true once the preloaded track is decoded and ready
 
     // Settings actions
     setLibraryPath: async (libraryPath: Settings['libraryPath']) => {
@@ -506,13 +509,12 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           browserFilter.album,
         );
 
-        state.player.pause();
-        state.player.removeAllTracks();
-        state.player.addTrack(getTrackUrl(selectedTrack.filePath));
-        if (nextSong) {
-          state.player.addTrack(getTrackUrl(nextSong.filePath));
-        }
-        state.player.play();
+        syncPlayerQueue(state.player, {
+          current: selectedTrack,
+          next: nextSong,
+          shouldPlay: true,
+          pauseBeforeLoad: true,
+        });
 
         // Play the silent audio for MediaSession
         if (state.silentAudioRef) {
@@ -542,6 +544,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackSourcePlaylistId:
             playbackSource === 'playlist' ? playlistId : null,
           playbackContextBrowserFilter: browserFilter, // Store the browser filter context
+          preloadedTrack: nextSong ?? null,
+          preloadReady: false,
         };
       });
       get().refreshCanGoNext();
@@ -590,22 +594,16 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               const futureNextSong = state.shuffleHistory[newPosition + 1];
 
               flushPlaybackTracking(state);
-              state.player.removeAllTracks();
+              syncPlayerQueue(state.player, {
+                current: nextSong,
+                next: futureNextSong ?? null,
+                shouldPlay: !state.paused,
+              });
 
-              // Add the next song and future next song if it exists
-              state.player.addTrack(getTrackUrl(nextSong.filePath));
-              if (futureNextSong) {
-                state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-              }
-
-              if (!state.paused) {
-                state.player.play();
-                // Play the silent audio for MediaSession
-                if (state.silentAudioRef) {
-                  state.silentAudioRef.play().catch((error) => {
-                    console.error('Error playing silent audio:', error);
-                  });
-                }
+              if (!state.paused && state.silentAudioRef) {
+                state.silentAudioRef.play().catch((error) => {
+                  console.error('Error playing silent audio:', error);
+                });
               }
 
               updateMediaSession(nextSong);
@@ -623,6 +621,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: nextSong.duration,
                 shuffleHistoryPosition: newPosition,
+                preloadedTrack: futureNextSong ?? null,
+                preloadReady: false,
               };
             }
           }
@@ -726,22 +726,16 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           );
 
           flushPlaybackTracking(state);
-          state.player.removeAllTracks();
+          syncPlayerQueue(state.player, {
+            current: nextSong,
+            next: futureNextSong ?? null,
+            shouldPlay: !state.paused,
+          });
 
-          // Add the next song and future next song
-          state.player.addTrack(getTrackUrl(nextSong.filePath));
-          if (futureNextSong) {
-            state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-          }
-
-          if (!state.paused) {
-            state.player.play();
-            // Play the silent audio for MediaSession
-            if (state.silentAudioRef) {
-              state.silentAudioRef.play().catch((error) => {
-                console.error('Error playing silent audio:', error);
-              });
-            }
+          if (!state.paused && state.silentAudioRef) {
+            state.silentAudioRef.play().catch((error) => {
+              console.error('Error playing silent audio:', error);
+            });
           }
 
           updateMediaSession(nextSong);
@@ -760,6 +754,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             duration: nextSong.duration,
             shuffleHistory,
             shuffleHistoryPosition: shuffleHistory.length - 1, // Now at the new tip
+            preloadedTrack: futureNextSong ?? null,
+            preloadReady: false,
           };
         }
 
@@ -816,18 +812,15 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           state.player.gotoTrack(1);
           state.player.removeTrack(0);
           if (futureNextSong) {
-            state.player.addTrack(getTrackUrl(futureNextSong.filePath));
+            preloadNextInQueue(state.player, futureNextSong);
           }
         } else {
           // SLOW PATH: queue doesn't match, rebuild
-          state.player.removeAllTracks();
-          state.player.addTrack(nextSongUrl);
-          if (futureNextSong) {
-            state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-          }
-          if (!state.paused) {
-            state.player.play();
-          }
+          syncPlayerQueue(state.player, {
+            current: nextSong,
+            next: futureNextSong ?? null,
+            shouldPlay: !state.paused,
+          });
         }
 
         if (!state.paused && state.silentAudioRef) {
@@ -850,6 +843,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPosition: 0,
           lastPlaybackTimeUpdateRef: Date.now(),
           duration: nextSong.duration,
+          preloadedTrack: futureNextSong ?? null,
+          preloadReady: false,
         };
       });
       get().refreshCanGoNext();
@@ -882,22 +877,16 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 state.shuffleHistory[state.shuffleHistoryPosition];
 
               flushPlaybackTracking(state);
-              state.player.removeAllTracks();
+              syncPlayerQueue(state.player, {
+                current: previousSong,
+                next: futureNextSong ?? null,
+                shouldPlay: !state.paused,
+              });
 
-              // Add the previous song and the current song (as the next track)
-              state.player.addTrack(getTrackUrl(previousSong.filePath));
-              if (futureNextSong) {
-                state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-              }
-
-              if (!state.paused) {
-                state.player.play();
-                // Play the silent audio for MediaSession
-                if (state.silentAudioRef) {
-                  state.silentAudioRef.play().catch((error) => {
-                    console.error('Error playing silent audio:', error);
-                  });
-                }
+              if (!state.paused && state.silentAudioRef) {
+                state.silentAudioRef.play().catch((error) => {
+                  console.error('Error playing silent audio:', error);
+                });
               }
 
               updateMediaSession(previousSong);
@@ -915,6 +904,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: previousSong.duration,
                 shuffleHistoryPosition: newPosition,
+                preloadedTrack: futureNextSong ?? null,
+                preloadReady: false,
               };
             }
           }
@@ -956,20 +947,16 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           const futureNextSong = state.currentTrack;
 
           flushPlaybackTracking(state);
-          state.player.removeAllTracks();
+          syncPlayerQueue(state.player, {
+            current: previousSong,
+            next: futureNextSong,
+            shouldPlay: !state.paused,
+          });
 
-          // Add the previous song and the current song (as the next track)
-          state.player.addTrack(getTrackUrl(previousSong.filePath));
-          state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-
-          if (!state.paused) {
-            state.player.play();
-            // Play the silent audio for MediaSession
-            if (state.silentAudioRef) {
-              state.silentAudioRef.play().catch((error) => {
-                console.error('Error playing silent audio:', error);
-              });
-            }
+          if (!state.paused && state.silentAudioRef) {
+            state.silentAudioRef.play().catch((error) => {
+              console.error('Error playing silent audio:', error);
+            });
           }
 
           updateMediaSession(previousSong);
@@ -986,6 +973,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPosition: 0,
             lastPlaybackTimeUpdateRef: Date.now(),
             duration: previousSong.duration,
+            preloadedTrack: futureNextSong,
+            preloadReady: false,
           };
         }
         // Restart the current track
@@ -1321,7 +1310,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             if (nextTrackInHistory) {
               const futureNextSong = state.shuffleHistory[newPosition + 1];
               if (futureNextSong) {
-                state.player.addTrack(getTrackUrl(futureNextSong.filePath));
+                preloadNextInQueue(state.player, futureNextSong);
               }
 
               // Update media session
@@ -1343,6 +1332,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPosition: 0,
                 lastPlaybackTimeUpdateRef: Date.now() - 1000,
                 shuffleHistoryPosition: newPosition,
+                preloadedTrack: futureNextSong ?? null,
+                preloadReady: false,
               };
             }
           }
@@ -1434,7 +1425,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
 
           // Add the FUTURE next song to the player queue
-          state.player.addTrack(getTrackUrl(nextSong.filePath));
+          preloadNextInQueue(state.player, nextSong);
 
           // Update media session
           updateMediaSession(currentTrackThatIsAudiblyPlaying);
@@ -1456,6 +1447,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPlaybackTimeUpdateRef: Date.now() - 1000,
             shuffleHistory,
             shuffleHistoryPosition: shuffleHistory.length - 1, // At the new tip
+            preloadedTrack: nextSong,
+            preloadReady: false,
           };
         }
 
@@ -1479,7 +1472,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
 
         // Add the FUTURE next song to the player queue
-        state.player.addTrack(getTrackUrl(nextSong?.filePath));
+        preloadNextInQueue(state.player, nextSong);
 
         // Update media session
         updateMediaSession(currentTrackThatIsAudiblyPlaying);
@@ -1502,6 +1495,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           position: 0,
           lastPosition: 0,
           lastPlaybackTimeUpdateRef: timeUpdateDelay,
+          preloadedTrack: nextSong,
+          preloadReady: false,
         };
       });
       get().refreshCanGoNext();
