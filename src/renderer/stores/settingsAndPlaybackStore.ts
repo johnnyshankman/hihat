@@ -5,6 +5,8 @@ import { SettingsAndPlaybackStore } from './types';
 import useLibraryStore from './libraryStore';
 import useUIStore from './uiStore';
 import {
+  computeCanGoNext,
+  computeCanGoPrevOrRestart,
   findNextSong,
   findPreviousSong,
   getFilePathFromTrackUrl,
@@ -63,7 +65,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     // Playback state (from playbackStore)
     currentTrack: null, // the current track playing
     paused: true, // play pause state
-    skipInProgress: false, // true while a skip operation is in-flight
     position: 0, // current position of the playing track in seconds
     duration: 0, // duration of the playing track in seconds
     playbackSource: 'library', // the source of the playback (library or playlist)
@@ -73,6 +74,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     shuffleMode: false, // shuffle mode
     shuffleHistory: [], // history of shuffled tracks
     shuffleHistoryPosition: -1, // current position in shuffle history (-1 means at the tip)
+    canGoNext: false, // stored boundary — refreshed by refreshPrevNextBoundaries after mutations
+    canGoPrevOrRestart: false, // true when prev click would navigate OR restart the song
 
     // Internal state (from playbackStore)
     player: null, // the gapless 5 player instance
@@ -386,11 +389,32 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
     // Playback actions
     setSilentAudioRef: (ref) => {
-      return set({ silentAudioRef: ref });
+      set({ silentAudioRef: ref });
+    },
+
+    /**
+     * Recompute canGoNext / canGoPrevOrRestart from current state. Call this
+     * after any mutation that might change the answer (new currentTrack,
+     * repeat/shuffle toggle, library change, position crossing 3s). Holding
+     * these as stored fields avoids running the filter/sort in getFiltered...
+     * on every store-update tick, which matters for large libraries.
+     */
+    refreshPrevNextBoundaries: () => {
+      set((state) => {
+        const canGoNext = computeCanGoNext(state);
+        const canGoPrevOrRestart = computeCanGoPrevOrRestart(state);
+        if (
+          canGoNext === state.canGoNext &&
+          canGoPrevOrRestart === state.canGoPrevOrRestart
+        ) {
+          return {};
+        }
+        return { canGoNext, canGoPrevOrRestart };
+      });
     },
 
     setVolume: (volume) => {
-      return set((state) => {
+      set((state) => {
         if (state.player) {
           state.player.setVolume(volume);
         }
@@ -418,7 +442,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
 
     selectSpecificSong: (trackId, playbackSource, playlistId = null) => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while selecting specific song');
         }
@@ -526,17 +550,13 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackContextBrowserFilter: browserFilter, // Store the browser filter context
         };
       });
+      get().refreshPrevNextBoundaries();
     },
 
     skipToNextTrack: () => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while skipping to next song');
-        }
-
-        // Guard against rapid skip clicks while a skip is still loading
-        if (state.skipInProgress) {
-          return {};
         }
 
         if (state.repeatMode === 'track') {
@@ -608,7 +628,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: nextSong.duration,
                 shuffleHistoryPosition: newPosition,
-                skipInProgress: !state.paused,
               };
             }
           }
@@ -746,7 +765,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             duration: nextSong.duration,
             shuffleHistory,
             shuffleHistoryPosition: shuffleHistory.length - 1, // Now at the new tip
-            skipInProgress: !state.paused,
           };
         }
 
@@ -837,20 +855,15 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPosition: 0,
           lastPlaybackTimeUpdateRef: Date.now(),
           duration: nextSong.duration,
-          skipInProgress: !state.paused,
         };
       });
+      get().refreshPrevNextBoundaries();
     },
 
     skipToPreviousTrack: () => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while skipping to previous song');
-        }
-
-        // Guard against rapid skip clicks while a skip is still loading
-        if (state.skipInProgress) {
-          return {};
         }
 
         // If we're less than 3 seconds into the song, go to previous track
@@ -907,7 +920,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: previousSong.duration,
                 shuffleHistoryPosition: newPosition,
-                skipInProgress: !state.paused,
               };
             }
           }
@@ -978,7 +990,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPosition: 0,
             lastPlaybackTimeUpdateRef: Date.now(),
             duration: previousSong.duration,
-            skipInProgress: !state.paused,
           };
         }
         // Restart the current track
@@ -995,10 +1006,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: Date.now(),
         };
       });
+      get().refreshPrevNextBoundaries();
     },
 
     toggleRepeatMode: () => {
-      return set((state) => {
+      set((state) => {
         // Cycle through repeat modes: off -> track -> all -> off
         const modes: ('off' | 'track' | 'all')[] = ['off', 'track', 'all'];
         const currentIndex = modes.indexOf(state.repeatMode);
@@ -1022,20 +1034,22 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         return { repeatMode, player: state.player };
       });
+      get().refreshPrevNextBoundaries();
     },
 
     toggleShuffleMode: () => {
-      return set((state) => {
+      set((state) => {
         return {
           shuffleMode: !state.shuffleMode,
           shuffleHistory: [],
           shuffleHistoryPosition: -1,
         };
       });
+      get().refreshPrevNextBoundaries();
     },
 
     setPaused: (paused: boolean) => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while setting paused');
         }
@@ -1119,7 +1133,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         player.onplay = () => {
           set({
             paused: false,
-            skipInProgress: false,
             lastPlaybackTimeUpdateRef: Date.now(),
             lastPosition: get().position,
           });
@@ -1158,12 +1171,20 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           const currentPosition = Math.floor(time / 1000);
 
           if (now - lastUpdate >= 1000) {
-            // Update position
+            // Update position (capture prev for threshold detection below)
+            const prevPosition = get().position;
             set({
               lastPositionUpdateRef: now,
               // Convert from milliseconds to seconds
               position: currentPosition,
             });
+
+            // canGoPrevOrRestart flips when position crosses 3s (the "restart
+            // current track" escape hatch). Only refresh on a crossing so we
+            // don't pay for findPreviousSong's sort on every tick.
+            if (prevPosition <= 3 !== currentPosition <= 3) {
+              get().refreshPrevNextBoundaries();
+            }
 
             // Handle tracking actual playback time for play count
             const currentState = get();
@@ -1207,7 +1228,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
 
     seekToPosition: (position: number) => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while seeking to position');
         }
@@ -1243,10 +1264,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: Date.now(),
         };
       });
+      get().refreshPrevNextBoundaries();
     },
 
     autoPlayNextTrack: async () => {
-      return set((state) => {
+      set((state) => {
         if (!state.player) {
           throw new Error('No player found while auto playing next track');
         }
@@ -1493,6 +1515,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: timeUpdateDelay,
         };
       });
+      get().refreshPrevNextBoundaries();
     },
   }),
 );

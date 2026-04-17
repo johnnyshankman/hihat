@@ -93,8 +93,9 @@ export default function Player() {
   );
   const repeatMode = useSettingsAndPlaybackStore((state) => state.repeatMode);
   const shuffleMode = useSettingsAndPlaybackStore((state) => state.shuffleMode);
-  const skipInProgress = useSettingsAndPlaybackStore(
-    (state) => state.skipInProgress,
+  const canGoNext = useSettingsAndPlaybackStore((state) => state.canGoNext);
+  const canGoPrevOrRestart = useSettingsAndPlaybackStore(
+    (state) => state.canGoPrevOrRestart,
   );
 
   // Get actions from the store
@@ -193,8 +194,19 @@ export default function Player() {
       repeatMode,
       shuffleMode,
       position,
+      canGoNext,
+      canGoPrevOrRestart,
     });
-  }, [paused, duration, position, volume, repeatMode, shuffleMode]);
+  }, [
+    paused,
+    duration,
+    position,
+    volume,
+    repeatMode,
+    shuffleMode,
+    canGoNext,
+    canGoPrevOrRestart,
+  ]);
 
   // Position-related formatting moved to PositionDisplay component to isolate updates
 
@@ -733,6 +745,7 @@ export default function Player() {
                 >
                   <Typography
                     component="div"
+                    data-testid="now-playing-title"
                     onClick={handleTrackTitleClick}
                     sx={{
                       cursor: playbackSource ? 'pointer' : 'default',
@@ -845,11 +858,15 @@ export default function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip arrow placement="top" title="Previous">
+            <Tooltip
+              arrow
+              placement="top"
+              title={canGoPrevOrRestart ? 'Previous' : ''}
+            >
               <span>
                 <IconButton
                   data-testid="skip-previous-button"
-                  disabled={!currentTrack || skipInProgress}
+                  disabled={!canGoPrevOrRestart}
                   onClick={skipToPreviousTrack}
                   size="medium"
                   sx={{
@@ -900,11 +917,11 @@ export default function Player() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip arrow placement="top" title="Next">
+            <Tooltip arrow placement="top" title={canGoNext ? 'Next' : ''}>
               <span>
                 <IconButton
                   data-testid="skip-next-button"
-                  disabled={!currentTrack || skipInProgress}
+                  disabled={!canGoNext}
                   onClick={skipToNextTrack}
                   size="medium"
                   sx={{

@@ -1,5 +1,6 @@
 import { Track } from '../../types/dbTypes';
 import useLibraryStore from '../stores/libraryStore';
+import type { SettingsAndPlaybackStore } from '../stores/types';
 import { getSortingFunction } from './sortingFunctions';
 
 // Define MediaImage interface for TypeScript
@@ -307,4 +308,89 @@ export const findPreviousSong = (
   // return the previous track
   const previousTrackId = trackIds[currentIndex - 1];
   return tracks.find((t) => t.id === previousTrackId);
+};
+
+export type CanGoInputs = Pick<
+  SettingsAndPlaybackStore,
+  | 'currentTrack'
+  | 'position'
+  | 'repeatMode'
+  | 'shuffleMode'
+  | 'shuffleHistory'
+  | 'shuffleHistoryPosition'
+  | 'playbackSource'
+  | 'playbackContextBrowserFilter'
+>;
+
+/**
+ * Returns true when the Next button should be enabled. False only when the
+ * click would truly be a no-op — at the end of the filtered view with no
+ * repeat, or with shuffle history exhausted and no repeat='all' to recycle.
+ *
+ * When `repeatMode === 'track'`, clicking Next restarts the current song
+ * (see skipToNextTrack's repeat-track branch), so this returns true — the
+ * click always does something.
+ */
+export const computeCanGoNext = (s: CanGoInputs): boolean => {
+  if (!s.currentTrack) return false;
+  if (s.repeatMode !== 'off') return true;
+
+  const artistFilter = s.playbackContextBrowserFilter?.artist || null;
+  const albumFilter = s.playbackContextBrowserFilter?.album || null;
+
+  if (s.shuffleMode) {
+    const forwardInHistory =
+      s.shuffleHistoryPosition >= 0 &&
+      s.shuffleHistoryPosition < s.shuffleHistory.length - 1;
+    if (forwardInHistory) return true;
+  }
+
+  return (
+    findNextSong(
+      s.currentTrack.id,
+      s.shuffleMode,
+      s.playbackSource,
+      s.repeatMode,
+      artistFilter,
+      s.shuffleHistory,
+      albumFilter,
+    ) !== undefined
+  );
+};
+
+/**
+ * Returns true when the Previous button should be enabled. The button
+ * handles two mutually exclusive actions depending on playback position:
+ *
+ *   - position > 3s: clicking restarts the current track (in-place rewind).
+ *   - position <= 3s: clicking navigates to the previous track, if one
+ *     exists under the current filter/shuffle/repeat context.
+ *
+ * The name reflects that `true` may mean either "restart" or "navigate back"
+ * — consumers should not assume a previous track exists just because this
+ * boolean is true.
+ */
+export const computeCanGoPrevOrRestart = (s: CanGoInputs): boolean => {
+  if (!s.currentTrack) return false;
+  if (s.position > 3) return true;
+  if (s.repeatMode !== 'off') return true;
+
+  if (s.shuffleMode) {
+    return s.shuffleHistoryPosition > 0;
+  }
+
+  const artistFilter = s.playbackContextBrowserFilter?.artist || null;
+  const albumFilter = s.playbackContextBrowserFilter?.album || null;
+
+  return (
+    findPreviousSong(
+      s.currentTrack.id,
+      false,
+      s.playbackSource,
+      s.repeatMode,
+      [],
+      artistFilter,
+      albumFilter,
+    ) !== undefined
+  );
 };
