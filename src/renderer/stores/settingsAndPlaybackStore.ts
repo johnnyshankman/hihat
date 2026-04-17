@@ -15,6 +15,21 @@ import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
 import { preloadNextInQueue, syncPlayerQueue } from '../utils/playerQueue';
 
 /**
+ * Derive Gapless-5's singleMode from our repeatMode. The store's
+ * repeatMode is the single source of truth; player.singleMode is a
+ * pure write target. Gapless-5's native single-track loop is required
+ * here because a programmatic re-queue inside autoPlayNextTrack would
+ * break gapless continuity — the audio library loops the decoded
+ * buffer directly via AudioBufferSourceNode.loop, which we can't match.
+ */
+function applyRepeatModeToPlayer(
+  player: Gapless5,
+  mode: 'off' | 'track' | 'all',
+): void {
+  player.singleMode = mode === 'track';
+}
+
+/**
  * Flush accumulated play-count tracking before a skip operation.
  * This replaces the work that onpause was doing, so we can remove
  * the pause() call from skip paths (which was causing UI flicker).
@@ -996,17 +1011,14 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         const repeatMode = modes[nextIndex];
 
         /**
-         * @important Leverage the Gapless5 player's singleMode to achive perfect
+         * @important Leverage the Gapless5 player's singleMode to achieve perfect
          * repeating in single song repeat mode.
-         * We dont do this programmatically in the autoPlayNextTrack/skipToNextTrack methods
-         * like we do with repeat mode 'all' or 'none' because it would break the gapless playback.
+         * We don't do this programmatically in the autoPlayNextTrack/skipToNextTrack
+         * methods like we do with repeat mode 'all' or 'none' because it would
+         * break the gapless playback.
          */
-        if (repeatMode === 'track') {
-          if (state.player) {
-            state.player.singleMode = true;
-          }
-        } else if (state.player) {
-          state.player.singleMode = false;
+        if (state.player) {
+          applyRepeatModeToPlayer(state.player, repeatMode);
         }
 
         return { repeatMode, player: state.player };
@@ -1091,6 +1103,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           loadLimit: 3, // Load up to 3 tracks at a time
           volume: state.volume,
         });
+
+        // Seed singleMode from the store's repeatMode so the player
+        // reflects state on first construction, not only after a toggle.
+        applyRepeatModeToPlayer(player, state.repeatMode);
 
         // Set up error handler
         player.onerror = (error: string) => {
