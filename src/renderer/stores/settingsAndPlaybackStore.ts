@@ -555,6 +555,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         if (state.repeatMode === 'track') {
           // For repeat track mode, start from the beginning
+          // invariant: update state.position alongside setPosition
           state.player.setPosition(0);
 
           // When restarting the same track, reset our tracking for it
@@ -936,6 +937,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
           if (!previousSong) {
             // If no previous song, restart the current one
+            // invariant: update state.position alongside setPosition
             state.player.setPosition(0);
             // Reset tracking for current track
             if (state.currentTrack) {
@@ -987,6 +989,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           };
         }
         // Restart the current track
+        // invariant: update state.position alongside setPosition
         state.player.setPosition(0);
 
         // Reset tracking for current track
@@ -1243,6 +1246,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
         }
 
+        // invariant: update state.position alongside setPosition
         state.player.setPosition(position * 1000);
         return {
           position,
