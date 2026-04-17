@@ -1505,25 +1505,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
   }),
 );
 
-// Set up event listeners for playback events from the main process
+// Initialize settings on app start
 if (typeof window !== 'undefined') {
-  window.electron.ipcRenderer.on('playback:trackChanged', (data: any) => {
-    useSettingsAndPlaybackStore.setState({ currentTrack: data.track });
-  });
-
-  window.electron.ipcRenderer.on('playback:stateChanged', (data: any) => {
-    useSettingsAndPlaybackStore.setState({ paused: !data.paused });
-  });
-
-  window.electron.ipcRenderer.on('playback:positionChanged', (data: any) => {
-    // Convert from milliseconds to seconds
-    useSettingsAndPlaybackStore.setState({
-      position: data.position / 1000,
-      duration: data.duration / 1000,
-    });
-  });
-
-  // Initialize settings on app start
   useSettingsAndPlaybackStore.getState().loadSettings();
 }
 

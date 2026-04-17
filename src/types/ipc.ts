@@ -81,20 +81,6 @@ export type Channels =
   | 'fileSystem:downloadAlbumArt'
   | 'fileSystem:deleteFile'
 
-  // Playback operations
-  | 'playback:play'
-  | 'playback:pause'
-  | 'playback:resume'
-  | 'playback:stop'
-  | 'playback:next'
-  | 'playback:previous'
-  | 'playback:seek'
-  | 'playback:setVolume'
-  | 'playback:getStatus'
-  | 'playback:trackChanged'
-  | 'playback:stateChanged'
-  | 'playback:positionChanged'
-
   // MiniPlayer operations
   | 'miniPlayer:open'
   | 'miniPlayer:close'
@@ -191,20 +177,6 @@ export interface IPCRequests {
   'fileSystem:showInFinder': { filePath: string };
   'fileSystem:downloadAlbumArt': { track: Track };
   'fileSystem:deleteFile': { filePath: string };
-
-  // Playback operations
-  'playback:play': { trackId: string };
-  'playback:pause': void;
-  'playback:resume': void;
-  'playback:stop': void;
-  'playback:next': void;
-  'playback:previous': void;
-  'playback:seek': { position: number };
-  'playback:setVolume': { volume: number };
-  'playback:getStatus': void;
-  'playback:trackChanged': { track: Track | null };
-  'playback:stateChanged': { isPlaying: boolean };
-  'playback:positionChanged': { position: number; duration: number };
 
   // MiniPlayer operations
   'miniPlayer:open': void;
@@ -344,26 +316,6 @@ export interface IPCResponses {
     message?: string;
   };
 
-  // Playback operations
-  'playback:play': boolean;
-  'playback:pause': boolean;
-  'playback:resume': boolean;
-  'playback:stop': boolean;
-  'playback:next': boolean;
-  'playback:previous': boolean;
-  'playback:seek': boolean;
-  'playback:setVolume': boolean;
-  'playback:getStatus': {
-    isPlaying: boolean;
-    currentTrack: Track | null;
-    position: number;
-    duration: number;
-    volume: number;
-  };
-  'playback:trackChanged': { track: Track | null };
-  'playback:stateChanged': { isPlaying: boolean };
-  'playback:positionChanged': { position: number; duration: number };
-
   // MiniPlayer operations
   'miniPlayer:open': void;
   'miniPlayer:close': void;
@@ -424,9 +376,6 @@ export type IPCInvoker<C extends Channels> = (
  * IPC event channels that are sent from main to renderer
  */
 export type IPCEvents =
-  | 'playback:trackChanged'
-  | 'playback:stateChanged'
-  | 'playback:positionChanged'
   | 'library:scanProgress'
   | 'library:scanComplete'
   | 'backup-library-success'
