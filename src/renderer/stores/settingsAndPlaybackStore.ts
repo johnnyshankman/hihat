@@ -790,23 +790,15 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         flushPlaybackTracking(state);
 
-        // Check if next track is already pre-loaded at queue index 1
-        const queuedTracks = state.player.getTracks();
-        const preloadedUrl = queuedTracks.length > 1 ? queuedTracks[1] : null;
-        const nextSongUrl = getTrackUrl(nextSong.filePath);
+        // Fast path is only safe when the preloaded track is fully decoded:
+        // gotoTrack on a still-loading source silently fails (the source
+        // transitions Loading -> Stop, and play() then tries to play with
+        // no buffered data instead of queuing). state.preloadReady is
+        // flipped true by Gapless-5's onload event in initPlayer below.
+        const isFastPathEligible =
+          state.preloadedTrack?.id === nextSong.id && state.preloadReady;
 
-        // Only use the fast path if the pre-loaded source has finished loading.
-        // If still loading, gotoTrack's internal stopAllTracks transitions the
-        // source from Loading to Stop, causing play() to fail silently because
-        // it tries playAudioFile() with no loaded data instead of queuing.
-        // Gapless5State: None=0, Loading=1, Starting=2, Play=3, Stop=4, Error=5
-        const GAPLESS5_LOADING = 1;
-        const preloadedSource =
-          queuedTracks.length > 1 ? state.player.playlist.sources[1] : null;
-        const isPreloadReady =
-          preloadedSource && preloadedSource.getState() !== GAPLESS5_LOADING;
-
-        if (preloadedUrl === nextSongUrl && isPreloadReady) {
+        if (isFastPathEligible) {
           // FAST PATH: switch to already-buffered track (no load delay)
           state.player.gotoTrack(1);
           state.player.removeTrack(0);
@@ -1103,6 +1095,19 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // Set up error handler
         player.onerror = (error: string) => {
           console.error('Audio player error:', error);
+        };
+
+        // Flip preloadReady when the track we preloaded at index 1
+        // finishes decoding. skipToNextTrack's fast path gates on this
+        // (gotoTrack on a still-loading source silently fails).
+        player.onload = (trackPath: string, fullyLoaded: boolean) => {
+          const { preloadedTrack } = get();
+          if (
+            preloadedTrack &&
+            getTrackUrl(preloadedTrack.filePath) === trackPath
+          ) {
+            set({ preloadReady: fullyLoaded });
+          }
         };
 
         // Set up event handlers
