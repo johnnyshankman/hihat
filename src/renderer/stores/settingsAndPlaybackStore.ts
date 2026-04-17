@@ -8,7 +8,6 @@ import {
   computeCanGoNext,
   findNextSong,
   findPreviousSong,
-  getFilePathFromTrackUrl,
   getTrackUrl,
   updateMediaSession,
 } from '../utils/trackSelectionUtils';
@@ -1277,21 +1276,17 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           };
         }
 
-        // lets understand what song is currently playing
-        const tracks = state.player.getTracks();
-        const index = state.player.getIndex();
-
-        // get the song info of the song that is currently playing
-        const currentlyAutoplayingSongFilePath = getFilePathFromTrackUrl(
-          tracks[index],
-        );
-
-        // get the metadata of the song that is currently playing
-        const currentTrackThatIsAudiblyPlaying = useLibraryStore
-          .getState()
-          .tracks.find((t) => t.filePath === currentlyAutoplayingSongFilePath);
+        // Gapless-5 has auto-advanced to queue index 1, which is the track
+        // we tracked as preloadedTrack when we last mutated the queue. No
+        // need to re-derive that from player.getTracks()/getIndex() — the
+        // store already knows what's playing.
+        const currentTrackThatIsAudiblyPlaying = state.preloadedTrack;
 
         if (!currentTrackThatIsAudiblyPlaying) {
+          // Nothing was preloaded (e.g., reached the end of the source with
+          // no repeat). Let the caller fall through — the downstream
+          // branches will either compute a new song via findNextSong or
+          // bail out cleanly.
           throw new Error('No next track found while auto playing next track');
         }
 
