@@ -203,12 +203,11 @@ export interface SettingsAndPlaybackStore {
   shuffleHistory: Track[];
   shuffleHistoryPosition: number;
 
-  // Derived boundary state: true when the matching skip button should be
-  // enabled. Maintained as stored fields (rather than computed per-render
-  // selectors) so large libraries don't pay O(n log n) filter/sort on
-  // every store update — see refreshPrevNextBoundaries / withBoundaries.
+  // Derived boundary state: true when the Next button should be enabled.
+  // Stored (rather than computed per-render) so large libraries don't pay
+  // O(n log n) filter/sort on every store update — refreshed by
+  // refreshCanGoNext at mutation points that can change the answer.
   canGoNext: boolean;
-  canGoPrevOrRestart: boolean;
 
   // Internal state
   player: Gapless5 | null;
@@ -248,5 +247,5 @@ export interface SettingsAndPlaybackStore {
   toggleShuffleMode: () => void;
   setSilentAudioRef: (ref: HTMLAudioElement | null) => void;
   autoPlayNextTrack: () => Promise<void>;
-  refreshPrevNextBoundaries: () => void;
+  refreshCanGoNext: () => void;
 }

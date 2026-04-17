@@ -87,7 +87,6 @@ export default function MiniPlayer() {
   const [repeatMode, setRepeatMode] = useState<'off' | 'track' | 'all'>('off');
   const [shuffleMode, setShuffleMode] = useState(false);
   const [canGoNext, setCanGoNext] = useState(false);
-  const [canGoPrevOrRestart, setCanGoPrevOrRestart] = useState(false);
   const [albumArt, setAlbumArt] = useState<string | null>(null);
   // Add error state for debugging
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +117,6 @@ export default function MiniPlayer() {
             setRepeatMode(state.repeatMode);
             setShuffleMode(state.shuffleMode);
             setCanGoNext(state.canGoNext);
-            setCanGoPrevOrRestart(state.canGoPrevOrRestart);
           } catch (err) {
             console.error('Error updating state:', err);
             setError(`State update error: ${err}`);
@@ -543,10 +541,10 @@ export default function MiniPlayer() {
                 </IconButton>
               </span>
             </Tooltip>
-            <Tooltip title={canGoPrevOrRestart ? 'Previous' : ''}>
+            <Tooltip title={currentTrack ? 'Previous' : ''}>
               <span>
                 <IconButton
-                  disabled={!canGoPrevOrRestart}
+                  disabled={!currentTrack}
                   onClick={handlePreviousTrack}
                   size="medium"
                   sx={{ color: 'white', padding: '4px' }}

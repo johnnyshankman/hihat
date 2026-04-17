@@ -6,7 +6,6 @@ import useLibraryStore from './libraryStore';
 import useUIStore from './uiStore';
 import {
   computeCanGoNext,
-  computeCanGoPrevOrRestart,
   findNextSong,
   findPreviousSong,
   getFilePathFromTrackUrl,
@@ -74,8 +73,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     shuffleMode: false, // shuffle mode
     shuffleHistory: [], // history of shuffled tracks
     shuffleHistoryPosition: -1, // current position in shuffle history (-1 means at the tip)
-    canGoNext: false, // stored boundary — refreshed by refreshPrevNextBoundaries after mutations
-    canGoPrevOrRestart: false, // true when prev click would navigate OR restart the song
+    canGoNext: false, // stored boundary — refreshed by refreshCanGoNext after mutations
 
     // Internal state (from playbackStore)
     player: null, // the gapless 5 player instance
@@ -393,23 +391,19 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
 
     /**
-     * Recompute canGoNext / canGoPrevOrRestart from current state. Call this
-     * after any mutation that might change the answer (new currentTrack,
-     * repeat/shuffle toggle, library change, position crossing 3s). Holding
-     * these as stored fields avoids running the filter/sort in getFiltered...
-     * on every store-update tick, which matters for large libraries.
+     * Recompute canGoNext from current state. Call this after any mutation
+     * that might change the answer (new currentTrack, repeat/shuffle toggle,
+     * library change). Holding it as a stored field avoids running the
+     * filter/sort in getFilteredAndSortedTrackIds on every store-update tick,
+     * which matters for large libraries.
      */
-    refreshPrevNextBoundaries: () => {
+    refreshCanGoNext: () => {
       set((state) => {
         const canGoNext = computeCanGoNext(state);
-        const canGoPrevOrRestart = computeCanGoPrevOrRestart(state);
-        if (
-          canGoNext === state.canGoNext &&
-          canGoPrevOrRestart === state.canGoPrevOrRestart
-        ) {
+        if (canGoNext === state.canGoNext) {
           return {};
         }
-        return { canGoNext, canGoPrevOrRestart };
+        return { canGoNext };
       });
     },
 
@@ -550,7 +544,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackContextBrowserFilter: browserFilter, // Store the browser filter context
         };
       });
-      get().refreshPrevNextBoundaries();
+      get().refreshCanGoNext();
     },
 
     skipToNextTrack: () => {
@@ -857,7 +851,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           duration: nextSong.duration,
         };
       });
-      get().refreshPrevNextBoundaries();
+      get().refreshCanGoNext();
     },
 
     skipToPreviousTrack: () => {
@@ -1006,7 +1000,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: Date.now(),
         };
       });
-      get().refreshPrevNextBoundaries();
+      get().refreshCanGoNext();
     },
 
     toggleRepeatMode: () => {
@@ -1034,7 +1028,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         return { repeatMode, player: state.player };
       });
-      get().refreshPrevNextBoundaries();
+      get().refreshCanGoNext();
     },
 
     toggleShuffleMode: () => {
@@ -1045,7 +1039,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           shuffleHistoryPosition: -1,
         };
       });
-      get().refreshPrevNextBoundaries();
+      get().refreshCanGoNext();
     },
 
     setPaused: (paused: boolean) => {
@@ -1171,20 +1165,12 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           const currentPosition = Math.floor(time / 1000);
 
           if (now - lastUpdate >= 1000) {
-            // Update position (capture prev for threshold detection below)
-            const prevPosition = get().position;
+            // Update position
             set({
               lastPositionUpdateRef: now,
               // Convert from milliseconds to seconds
               position: currentPosition,
             });
-
-            // canGoPrevOrRestart flips when position crosses 3s (the "restart
-            // current track" escape hatch). Only refresh on a crossing so we
-            // don't pay for findPreviousSong's sort on every tick.
-            if (prevPosition <= 3 !== currentPosition <= 3) {
-              get().refreshPrevNextBoundaries();
-            }
 
             // Handle tracking actual playback time for play count
             const currentState = get();
@@ -1264,7 +1250,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: Date.now(),
         };
       });
-      get().refreshPrevNextBoundaries();
     },
 
     autoPlayNextTrack: async () => {
@@ -1515,7 +1500,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: timeUpdateDelay,
         };
       });
-      get().refreshPrevNextBoundaries();
+      get().refreshCanGoNext();
     },
   }),
 );
