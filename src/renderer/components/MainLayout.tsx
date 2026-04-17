@@ -87,7 +87,7 @@ export default function MainLayout() {
     const handleCustomViewChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ view: string }>;
       const { view } = customEvent.detail;
-      if (view === 'library' || view === 'playlists') {
+      if (view === 'library' || view === 'playlists' || view === 'queue') {
         useUIStore.getState().setCurrentView(view);
       } else if (view === 'settings') {
         setSettingsOpen(true);

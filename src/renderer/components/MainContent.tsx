@@ -2,6 +2,7 @@ import { Box } from '@mui/material';
 import { useUIStore } from '../stores';
 import Library from './Library';
 import Playlists from './Playlists';
+import PlaybackQueue from './PlaybackQueue';
 
 export default function MainContent() {
   const currentView = useUIStore((state) => state.currentView);
@@ -22,6 +23,7 @@ export default function MainContent() {
     >
       {currentView === 'library' && <Library />}
       {currentView === 'playlists' && <Playlists />}
+      {currentView === 'queue' && <PlaybackQueue />}
     </Box>
   );
 }

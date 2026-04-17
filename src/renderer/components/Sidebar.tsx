@@ -14,6 +14,7 @@ import {
   Paper,
 } from '@mui/material';
 import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
+import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -42,6 +43,12 @@ export default function Sidebar() {
   const deletePlaylist = useLibraryStore((state) => state.deletePlaylist);
 
   const theme = useSettingsAndPlaybackStore((state) => state.theme);
+  // Dim the "Playback Queue" entry when nothing has been queued. Reading
+  // queue length here (not currentTrack) so the entry stays usable for a
+  // moment during track transitions when currentTrack briefly mismatches.
+  const hasQueue = useSettingsAndPlaybackStore(
+    (state) => state.queueTrackIds.length > 0,
+  );
 
   const currentView = useUIStore((state) => state.currentView);
   const setCurrentView = useUIStore((state) => state.setCurrentView);
@@ -64,7 +71,7 @@ export default function Sidebar() {
     isSmart?: boolean;
   } | null>(null);
 
-  const handleViewChange = (view: 'library' | 'playlists') => {
+  const handleViewChange = (view: 'library' | 'playlists' | 'queue') => {
     setCurrentView(view);
   };
 
@@ -383,6 +390,59 @@ export default function Sidebar() {
                       sx: {
                         fontSize: '13px',
                         fontWeight: currentView === 'library' ? 600 : 400,
+                      },
+                    },
+                  }}
+                />
+              </ListItemButton>
+              <ListItemButton
+                data-testid="nav-queue"
+                data-view="queue"
+                onClick={() => handleViewChange('queue')}
+                selected={currentView === 'queue'}
+                sx={{
+                  py: 0.25,
+                  px: 1.5,
+                  WebkitAppRegion: 'no-drag',
+                  borderRadius: 1,
+                  mb: 0,
+                  // Dim entire row when nothing is queued — clicking still
+                  // navigates to the empty-state view, but the affordance
+                  // makes it clear there's nothing to see yet.
+                  opacity: hasQueue ? 1 : 0.5,
+                  '&.Mui-selected': {
+                    backgroundColor: (t) =>
+                      t.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0.08)',
+                    '& .MuiListItemText-primary': {
+                      fontWeight: 600,
+                    },
+                    '&:hover': {
+                      backgroundColor: (t) =>
+                        t.palette.mode === 'dark'
+                          ? 'rgba(255, 255, 255, 0.1)'
+                          : 'rgba(0, 0, 0, 0.1)',
+                    },
+                  },
+                  '&:hover': {
+                    backgroundColor: (t) =>
+                      t.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.04)'
+                        : 'rgba(0, 0, 0, 0.04)',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: '24px', opacity: 0.7 }}>
+                  <PlaylistPlayIcon sx={{ fontSize: 16 }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Playback Queue"
+                  slotProps={{
+                    primary: {
+                      sx: {
+                        fontSize: '13px',
+                        fontWeight: currentView === 'queue' ? 600 : 400,
                       },
                     },
                   }}

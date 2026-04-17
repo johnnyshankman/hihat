@@ -144,87 +144,6 @@ export const getFilteredAndSortedTrackIds = (
   return trackIds;
 };
 
-/**
- * Gets the ID of the next track to play based on current playback state.
- * Does not take into account repeat mode as that's not what this function is for.
- *
- * @param currentTrackId - The ID of the current track
- * @param state - The current playback store state
- * @returns The ID of the next track, or null if there is no next track to play
- */
-export const findNextSong = (
-  currentTrackId: string,
-  shuffleMode: boolean,
-  playbackSource: 'library' | 'playlist',
-  repeatMode: 'off' | 'track' | 'all',
-  artistFilter?: string | null,
-  shuffleHistory?: Track[],
-  albumFilter?: string | null,
-): Track | undefined => {
-  if (!currentTrackId) return undefined;
-
-  // Get library state for tracks
-  const libraryState = useLibraryStore.getState();
-  const { tracks } = libraryState;
-
-  // Get the filtered and sorted track IDs
-  const trackIds = getFilteredAndSortedTrackIds(
-    playbackSource,
-    artistFilter,
-    albumFilter,
-  );
-
-  // if shuffle mode is on, return a random track that hasn't been played yet
-  if (shuffleMode) {
-    // Get the set of already played track IDs from shuffle history
-    const playedTrackIds = new Set(shuffleHistory?.map((t) => t.id) || []);
-
-    // Also add the current track to the played set
-    playedTrackIds.add(currentTrackId);
-
-    // Filter out already played tracks from available tracks
-    const availableTrackIds = trackIds.filter((id) => !playedTrackIds.has(id));
-
-    // If no unplayed tracks are available
-    if (availableTrackIds.length === 0) {
-      // If repeat mode is all, we've played all songs, so start over
-      if (repeatMode === 'all') {
-        // Clear history and pick a random track from all tracks
-        const randomIndex = Math.floor(Math.random() * trackIds.length);
-        const randomTrackId = trackIds[randomIndex];
-        return tracks.find((t) => t.id === randomTrackId);
-      }
-      // No more songs to play
-      return undefined;
-    }
-
-    // Pick a random track from the available (unplayed) tracks
-    const randomIndex = Math.floor(Math.random() * availableTrackIds.length);
-    const randomTrackId = availableTrackIds[randomIndex];
-    return tracks.find((t) => t.id === randomTrackId);
-  }
-
-  // Non-shuffle mode remains the same
-  // find the current index of the current track
-  const currentIndex = trackIds.indexOf(currentTrackId);
-
-  // if the current index is the last index
-  if (currentIndex === trackIds.length - 1) {
-    // if repeat mode is all, return the first track
-    if (repeatMode === 'all') {
-      const firstTrackId = trackIds[0];
-      return tracks.find((t) => t.id === firstTrackId);
-    }
-
-    // otherwise, return undefined
-    return undefined;
-  }
-
-  // return the next track
-  const nextTrackId = trackIds[currentIndex + 1];
-  return tracks.find((t) => t.id === nextTrackId);
-};
-
 export const updateMediaSession = async (track: Track) => {
   if (!navigator.mediaSession) {
     console.error('Media session not supported');
@@ -263,99 +182,28 @@ export const updateMediaSession = async (track: Track) => {
   }
 };
 
-export const findPreviousSong = (
-  currentTrackId: string,
-  shuffleMode: boolean,
-  playbackSource: 'library' | 'playlist',
-  repeatMode: 'off' | 'track' | 'all',
-  shuffleHistory?: Track[],
-  artistFilter?: string | null,
-  albumFilter?: string | null,
-): Track | undefined => {
-  if (!currentTrackId) return undefined;
-
-  // If in shuffle mode and we have history, return the last track from history
-  if (shuffleMode && shuffleHistory && shuffleHistory.length > 0) {
-    return shuffleHistory[shuffleHistory.length - 1];
-  }
-
-  // Get library state for tracks
-  const libraryState = useLibraryStore.getState();
-  const { tracks } = libraryState;
-
-  // Get the filtered and sorted track IDs
-  const trackIds = getFilteredAndSortedTrackIds(
-    playbackSource,
-    artistFilter,
-    albumFilter,
-  );
-
-  // find the current index of the current track
-  const currentIndex = trackIds.indexOf(currentTrackId);
-
-  // if the current index is the first index
-  if (currentIndex === 0) {
-    // if repeat mode is all, return the last track
-    if (repeatMode === 'all') {
-      const lastTrackId = trackIds[trackIds.length - 1];
-      return tracks.find((t) => t.id === lastTrackId);
-    }
-
-    // otherwise, return undefined
-    return undefined;
-  }
-
-  // return the previous track
-  const previousTrackId = trackIds[currentIndex - 1];
-  return tracks.find((t) => t.id === previousTrackId);
-};
-
 export type CanGoInputs = Pick<
   SettingsAndPlaybackStore,
   | 'currentTrack'
   | 'position'
   | 'repeatMode'
-  | 'shuffleMode'
-  | 'shuffleHistory'
-  | 'shuffleHistoryPosition'
-  | 'playbackSource'
-  | 'playbackContextBrowserFilter'
+  | 'queueTrackIds'
+  | 'queueCurrentIndex'
 >;
 
 /**
  * Returns true when the Next button should be enabled. False only when the
- * click would truly be a no-op — at the end of the filtered view with no
- * repeat, or with shuffle history exhausted and no repeat='all' to recycle.
+ * click would truly be a no-op — at the end of the queue with no repeat to
+ * recycle.
  *
  * When `repeatMode === 'track'`, clicking Next restarts the current song
  * (see skipToNextTrack's repeat-track branch), so this returns true — the
- * click always does something.
+ * click always does something. Likewise repeat='all' always wraps.
  */
 export const computeCanGoNext = (s: CanGoInputs): boolean => {
   if (!s.currentTrack) return false;
   if (s.repeatMode !== 'off') return true;
-
-  const artistFilter = s.playbackContextBrowserFilter?.artist || null;
-  const albumFilter = s.playbackContextBrowserFilter?.album || null;
-
-  if (s.shuffleMode) {
-    const forwardInHistory =
-      s.shuffleHistoryPosition >= 0 &&
-      s.shuffleHistoryPosition < s.shuffleHistory.length - 1;
-    if (forwardInHistory) return true;
-  }
-
-  return (
-    findNextSong(
-      s.currentTrack.id,
-      s.shuffleMode,
-      s.playbackSource,
-      s.repeatMode,
-      artistFilter,
-      s.shuffleHistory,
-      albumFilter,
-    ) !== undefined
-  );
+  return s.queueCurrentIndex < s.queueTrackIds.length - 1;
 };
 
 /**
@@ -363,8 +211,8 @@ export const computeCanGoNext = (s: CanGoInputs): boolean => {
  * handles two mutually exclusive actions depending on playback position:
  *
  *   - position > 3s: clicking restarts the current track (in-place rewind).
- *   - position <= 3s: clicking navigates to the previous track, if one
- *     exists under the current filter/shuffle/repeat context.
+ *   - position <= 3s: clicking navigates to the previous queue entry if
+ *     one exists, or wraps when repeat='all'.
  *
  * The name reflects that `true` may mean either "restart" or "navigate back"
  * — consumers should not assume a previous track exists just because this
@@ -374,23 +222,5 @@ export const computeCanGoPrevOrRestart = (s: CanGoInputs): boolean => {
   if (!s.currentTrack) return false;
   if (s.position > 3) return true;
   if (s.repeatMode !== 'off') return true;
-
-  if (s.shuffleMode) {
-    return s.shuffleHistoryPosition > 0;
-  }
-
-  const artistFilter = s.playbackContextBrowserFilter?.artist || null;
-  const albumFilter = s.playbackContextBrowserFilter?.album || null;
-
-  return (
-    findPreviousSong(
-      s.currentTrack.id,
-      false,
-      s.playbackSource,
-      s.repeatMode,
-      [],
-      artistFilter,
-      albumFilter,
-    ) !== undefined
-  );
+  return s.queueCurrentIndex > 0;
 };

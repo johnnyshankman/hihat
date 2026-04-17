@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Notification, UIStore } from './types';
+import { AppView, Notification, UIStore } from './types';
 
 // Define the UI store
 const useUIStore = create<UIStore>((set) => ({
@@ -12,7 +12,7 @@ const useUIStore = create<UIStore>((set) => ({
   notificationPanelOpen: false,
 
   // Actions
-  setCurrentView: (view: 'library' | 'playlists') => set({ currentView: view }),
+  setCurrentView: (view: AppView) => set({ currentView: view }),
   setSettingsOpen: (open: boolean) => set({ settingsOpen: open }),
   showNotification: (
     message: string,

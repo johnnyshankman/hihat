@@ -153,6 +153,14 @@
   background-color: var(--vt-bg-selected) !important;
 }
 
+/* Queue view: tracks above the currently-playing one are history. Dim
+ * them so the divide between past and upcoming is obvious without an
+ * extra divider row. The opacity stacks under selected/playing classes
+ * via specificity (the playing/selected backgrounds use !important). */
+.vt-row-queue-past .vt-td {
+  opacity: 0.45;
+}
+
 /* Currently playing track — animated diagonal stripes */
 .vt-row-playing {
   background-color: transparent !important;

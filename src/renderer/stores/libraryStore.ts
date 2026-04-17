@@ -112,6 +112,15 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
         isLoading: false,
         ...indexes,
       });
+
+      // Sync the materialized playback queue against the (possibly
+      // changed) library so a track delete/edit doesn't leave the queue
+      // pointing at vanished IDs. Lazy require avoids a circular import
+      // (libraryStore <-> settingsAndPlaybackStore).
+      // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+      const playbackStore = require('./settingsAndPlaybackStore').default;
+      const validIds = new Set(allTracks.map((t: Track) => t.id));
+      playbackStore.getState().syncQueueWithLibrary(validIds);
     } catch (error) {
       console.error('Error loading library:', error);
       useUIStore.getState().showNotification('Failed to load library', 'error');

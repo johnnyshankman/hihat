@@ -1,5 +1,6 @@
 import { Gapless5 } from '@regosen/gapless-5';
 import { Track, Playlist, Settings } from '../../types/dbTypes';
+import type { QueueSourceSnapshot } from '../utils/playbackQueue';
 
 // Define the notification type
 export interface Notification {
@@ -156,9 +157,11 @@ export interface SettingsStore {
 }
 
 // UI Store Types
+export type AppView = 'library' | 'playlists' | 'queue';
+
 export interface UIStore {
   notifications: Notification[];
-  currentView: 'library' | 'playlists';
+  currentView: AppView;
   settingsOpen: boolean;
   browserOpen: boolean;
   sidebarOpen: boolean;
@@ -170,7 +173,7 @@ export interface UIStore {
   clearAllNotifications: () => void;
   notificationPanelOpen: boolean;
   setNotificationPanelOpen: (open: boolean) => void;
-  setCurrentView: (view: 'library' | 'playlists') => void;
+  setCurrentView: (view: AppView) => void;
   setSettingsOpen: (open: boolean) => void;
   setBrowserOpen: (open: boolean) => void;
   setSidebarOpen: (open: boolean) => void;
@@ -200,8 +203,15 @@ export interface SettingsAndPlaybackStore {
   playbackContextBrowserFilter: BrowserFilter | null;
   repeatMode: 'off' | 'track' | 'all';
   shuffleMode: boolean;
-  shuffleHistory: Track[];
-  shuffleHistoryPosition: number;
+
+  // Materialized playback queue. Past + current + future are all
+  // pre-computed in queueTrackIds; queueCurrentIndex is the pointer.
+  // queueSourceSnapshot records what filtered+sorted source list the
+  // queue was built from so selectSpecificSong can decide between
+  // rebuild and re-pin. See src/renderer/utils/playbackQueue.ts.
+  queueTrackIds: string[];
+  queueCurrentIndex: number;
+  queueSourceSnapshot: QueueSourceSnapshot | null;
 
   // Derived boundary state: true when the matching skip button should be
   // enabled. Maintained as stored fields (rather than computed per-render
@@ -249,4 +259,10 @@ export interface SettingsAndPlaybackStore {
   setSilentAudioRef: (ref: HTMLAudioElement | null) => void;
   autoPlayNextTrack: () => Promise<void>;
   refreshPrevNextBoundaries: () => void;
+
+  // Queue actions used by the PlaybackQueue view (PR 2). Defined here so
+  // PR 1 already exposes the surface area; the view consumes it later.
+  jumpToQueueIndex: (index: number) => void;
+  removeFromQueue: (index: number) => void;
+  syncQueueWithLibrary: (validTrackIds: ReadonlySet<string>) => void;
 }
