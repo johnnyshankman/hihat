@@ -94,9 +94,6 @@ export default function Player() {
   const repeatMode = useSettingsAndPlaybackStore((state) => state.repeatMode);
   const shuffleMode = useSettingsAndPlaybackStore((state) => state.shuffleMode);
   const canGoNext = useSettingsAndPlaybackStore((state) => state.canGoNext);
-  const canGoPrevOrRestart = useSettingsAndPlaybackStore(
-    (state) => state.canGoPrevOrRestart,
-  );
 
   // Get actions from the store
   const setPaused = useSettingsAndPlaybackStore((state) => state.setPaused);
@@ -195,18 +192,8 @@ export default function Player() {
       shuffleMode,
       position,
       canGoNext,
-      canGoPrevOrRestart,
     });
-  }, [
-    paused,
-    duration,
-    position,
-    volume,
-    repeatMode,
-    shuffleMode,
-    canGoNext,
-    canGoPrevOrRestart,
-  ]);
+  }, [paused, duration, position, volume, repeatMode, shuffleMode, canGoNext]);
 
   // Position-related formatting moved to PositionDisplay component to isolate updates
 
@@ -861,12 +848,12 @@ export default function Player() {
             <Tooltip
               arrow
               placement="top"
-              title={canGoPrevOrRestart ? 'Previous' : ''}
+              title={currentTrack ? 'Previous' : ''}
             >
               <span>
                 <IconButton
                   data-testid="skip-previous-button"
-                  disabled={!canGoPrevOrRestart}
+                  disabled={!currentTrack}
                   onClick={skipToPreviousTrack}
                   size="medium"
                   sx={{

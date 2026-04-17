@@ -11,10 +11,6 @@ import { Track, Playlist, Settings, MetadataToWrite } from './dbTypes';
  * Playback state shared between the main player and the mini player.
  * Emitted from the renderer as `player:stateUpdate` and relayed to the
  * mini player renderer as `miniPlayer:stateChanged`.
- *
- * `canGoPrevOrRestart` is true when a click on the previous button would
- * either navigate to a previous track OR restart the current track (the
- * button handler picks based on `position > 3`).
  */
 export interface PlayerPlaybackState {
   paused: boolean;
@@ -24,7 +20,6 @@ export interface PlayerPlaybackState {
   repeatMode: 'off' | 'track' | 'all';
   shuffleMode: boolean;
   canGoNext: boolean;
-  canGoPrevOrRestart: boolean;
 }
 
 /**
