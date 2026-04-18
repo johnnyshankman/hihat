@@ -12,11 +12,7 @@ import {
   updateMediaSession,
 } from '../utils/trackSelectionUtils';
 import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
-import {
-  preloadNextInQueue,
-  scheduleStaleTrackRemoval,
-  syncPlayerQueue,
-} from '../utils/playerQueue';
+import { preloadNextInQueue, syncPlayerQueue } from '../utils/playerQueue';
 
 /**
  * Derive Gapless-5's singleMode from our repeatMode. The store's
@@ -1300,14 +1296,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPlaybackTimeUpdateRef: Date.now(),
           };
         }
-
-        // Past the repeat-track branch, Gapless-5 auto-advanced past the
-        // finished track at index 0 and is now playing index 1. Schedule
-        // removal of the stale index 0 on a microtask so the library's
-        // transition bookkeeping (crossfade tail, ended-event unwind)
-        // finishes before we touch the queue. This keeps the two-slot
-        // invariant (current + preloaded-next) after each auto-advance.
-        scheduleStaleTrackRemoval(state.player);
 
         // Gapless-5 has auto-advanced to queue index 1, which is the track
         // we tracked as preloadedTrack when we last mutated the queue. No
