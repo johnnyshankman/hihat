@@ -1301,6 +1301,13 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // we tracked as preloadedTrack when we last mutated the queue. No
         // need to re-derive that from player.getTracks()/getIndex() — the
         // store already knows what's playing.
+        //
+        // Known leak: the finished track at index 0 is never cleaned up.
+        // Every preloadNextInQueue below grows the Gapless-5 queue by one
+        // entry instead of rotating it. See `assertQueueInvariant` in
+        // playerQueue.ts for the full story — short version is that
+        // removing index 0 mid-transition triggers a Gapless-5 bug that
+        // pauses playback instead of auto-advancing.
         const currentTrackThatIsAudiblyPlaying = state.preloadedTrack;
 
         if (!currentTrackThatIsAudiblyPlaying) {
