@@ -98,6 +98,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     silentAudioRef: null, // reference to the silent audio element for MediaSession support
     preloadedTrack: null, // track sitting at Gapless-5 queue index 1 (store-owned)
     preloadReady: false, // true once the preloaded track is decoded and ready
+    queueLeadingStaleCount: 0, // stale finished tracks at the front of Gapless-5's queue
 
     // Settings actions
     setLibraryPath: async (libraryPath: Settings['libraryPath']) => {
@@ -560,6 +561,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackContextBrowserFilter: browserFilter, // Store the browser filter context
           preloadedTrack: nextSong ?? null,
           preloadReady: false,
+          queueLeadingStaleCount: 0,
         };
       });
       get().refreshCanGoNext();
@@ -637,6 +639,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 shuffleHistoryPosition: newPosition,
                 preloadedTrack: futureNextSong ?? null,
                 preloadReady: false,
+                queueLeadingStaleCount: 0,
               };
             }
           }
@@ -770,6 +773,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             shuffleHistoryPosition: shuffleHistory.length - 1, // Now at the new tip
             preloadedTrack: futureNextSong ?? null,
             preloadReady: false,
+            queueLeadingStaleCount: 0,
           };
         }
 
@@ -814,9 +818,23 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           state.preloadedTrack?.id === nextSong.id && state.preloadReady;
 
         if (isFastPathEligible) {
-          // FAST PATH: switch to already-buffered track (no load delay)
-          state.player.gotoTrack(1);
-          state.player.removeTrack(0);
+          // FAST PATH: switch to the already-buffered preloaded track.
+          //
+          // Jump by URL (not by index) so we're robust to the known leak
+          // where Gapless-5's queue accumulates stale finished tracks at
+          // the front after each auto-advance. `gotoTrack(1)` would land
+          // on whatever sits at index 1, which after N auto-advances is
+          // NOT the preloaded track — it's one of the stale leaders.
+          //
+          // After jumping, remove every track ahead of the new current:
+          // one for each stale leading entry (queueLeadingStaleCount) plus
+          // one for the prior current that's now the old index 0 slot.
+          const nextSongUrl = getTrackUrl(nextSong.filePath);
+          state.player.gotoTrack(nextSongUrl);
+          const removalsBeforeCurrent = state.queueLeadingStaleCount + 1;
+          for (let i = 0; i < removalsBeforeCurrent; i += 1) {
+            state.player.removeTrack(0);
+          }
           if (futureNextSong) {
             preloadNextInQueue(state.player, futureNextSong);
           }
@@ -851,6 +869,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           duration: nextSong.duration,
           preloadedTrack: futureNextSong ?? null,
           preloadReady: false,
+          queueLeadingStaleCount: 0,
         };
       });
       get().refreshCanGoNext();
@@ -912,6 +931,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 shuffleHistoryPosition: newPosition,
                 preloadedTrack: futureNextSong ?? null,
                 preloadReady: false,
+                queueLeadingStaleCount: 0,
               };
             }
           }
@@ -981,6 +1001,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             duration: previousSong.duration,
             preloadedTrack: futureNextSong,
             preloadReady: false,
+            queueLeadingStaleCount: 0,
           };
         }
         // Restart the current track
@@ -1357,6 +1378,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 shuffleHistoryPosition: newPosition,
                 preloadedTrack: futureNextSong ?? null,
                 preloadReady: false,
+                queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
               };
             }
           }
@@ -1472,6 +1494,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             shuffleHistoryPosition: shuffleHistory.length - 1, // At the new tip
             preloadedTrack: nextSong,
             preloadReady: false,
+            queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
           };
         }
 
@@ -1520,6 +1543,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: timeUpdateDelay,
           preloadedTrack: nextSong,
           preloadReady: false,
+          queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
         };
       });
       get().refreshCanGoNext();
@@ -1530,6 +1554,41 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 // Initialize settings on app start
 if (typeof window !== 'undefined') {
   useSettingsAndPlaybackStore.getState().loadSettings();
+
+  // E2E diagnostic hook: lets Playwright specs observe what Gapless-5 is
+  // actually playing versus what the store thinks is playing. This is
+  // the only legitimate consumer of player.getTracks()/getIndex()
+  // outside the dev-only invariant assert. Read-only, no mutation.
+  // eslint-disable-next-line no-underscore-dangle
+  (window as unknown as Record<string, unknown>).__hihat_e2e_getPlayerState =
+    () => {
+      const state = useSettingsAndPlaybackStore.getState();
+      const { player } = state;
+      const urlToFilePath = (url: string | undefined): string | null => {
+        if (!url) return null;
+        return decodeURIComponent(url.replace('hihat-audio://getfile/', ''));
+      };
+      if (!player) {
+        return {
+          storeCurrentTrackFilePath: state.currentTrack?.filePath ?? null,
+          storePreloadedTrackFilePath: state.preloadedTrack?.filePath ?? null,
+          storePreloadReady: state.preloadReady,
+          playerQueueLength: 0,
+          playerIndex: -1,
+          playerCurrentFilePath: null as string | null,
+        };
+      }
+      const tracks = player.getTracks();
+      const index = player.getIndex();
+      return {
+        storeCurrentTrackFilePath: state.currentTrack?.filePath ?? null,
+        storePreloadedTrackFilePath: state.preloadedTrack?.filePath ?? null,
+        storePreloadReady: state.preloadReady,
+        playerQueueLength: tracks.length,
+        playerIndex: index,
+        playerCurrentFilePath: urlToFilePath(tracks[index]),
+      };
+    };
 }
 
 export default useSettingsAndPlaybackStore;
