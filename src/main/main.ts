@@ -26,11 +26,6 @@ import {
 import { ipcHandlers } from './ipc/handlers';
 import { setMainWindow as setLibraryMainWindow } from './library/scanner';
 import {
-  setMainWindow as setPlaybackMainWindow,
-  initPlayback,
-  cleanupPlayback,
-} from './playback';
-import {
   setMainWindow as setMiniPlayerMainWindow,
   setupMiniPlayerHandlers,
 } from './miniPlayer';
@@ -185,9 +180,6 @@ const cleanupResources = () => {
 
   // Close database connection
   closeDatabase();
-
-  // Cleanup playback resources
-  cleanupPlayback();
 };
 
 const createWindow = async () => {
@@ -428,16 +420,12 @@ const createWindow = async () => {
   // Setup IPC handlers before setting window references and initializing playback
   setupIpcHandlers();
 
-  // Set main window reference for scanner and playback
+  // Set main window reference for scanner and mini player
   setLibraryMainWindow(mainWindow);
-  setPlaybackMainWindow(mainWindow);
   setMiniPlayerMainWindow(mainWindow);
 
   // Setup MiniPlayer handlers
   setupMiniPlayerHandlers();
-
-  // Initialize playback service
-  initPlayback();
 
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line no-new
