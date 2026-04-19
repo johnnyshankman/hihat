@@ -530,15 +530,15 @@ export default function Player() {
         return;
       }
 
-      // If marquee is showing, measure the text width against the Typography container
-      if (titleRef2.current) {
-        const container =
-          titleRef2.current.parentElement?.parentElement?.parentElement;
-        if (container) {
-          const textWidth = titleRef2.current.scrollWidth;
-          const containerWidth = container.clientWidth;
-          setIsTitleScrolling(textWidth > containerWidth);
-        }
+      // If marquee is showing, measure the text width against the track-info
+      // container directly. (The previous parentElement.parentElement.parentElement
+      // chain landed inside react-fast-marquee's internal `.rfm-marquee` flex
+      // wrapper, which is at least 2x the single-child width — so the check
+      // was effectively always false.)
+      if (titleRef2.current && trackInfoRef.current) {
+        const textWidth = titleRef2.current.scrollWidth;
+        const containerWidth = trackInfoRef.current.clientWidth;
+        setIsTitleScrolling(textWidth > containerWidth);
       }
     };
 
@@ -572,27 +572,24 @@ export default function Player() {
         return;
       }
 
-      // If marquee is showing, measure the text width against the Typography container
-      if (artistAlbumRef2.current) {
-        const container =
-          artistAlbumRef2.current.parentElement?.parentElement?.parentElement;
-        if (container) {
-          const textWidth = artistAlbumRef2.current.scrollWidth;
-          const containerWidth = container.clientWidth;
-          setIsArtistAlbumScrolling(textWidth > containerWidth);
-        }
+      // If marquee is showing, measure against the track-info container
+      // directly. See note in the title effect for why the previous
+      // parentElement traversal was wrong.
+      if (artistAlbumRef2.current && trackInfoRef.current) {
+        const textWidth = artistAlbumRef2.current.scrollWidth;
+        const containerWidth = trackInfoRef.current.clientWidth;
+        setIsArtistAlbumScrolling(textWidth > containerWidth);
       }
     };
 
     checkArtistAlbumOverflow();
 
-    // Create a ResizeObserver to watch for size changes on the Typography parent container
+    // Observe the Track Info Box which always resizes with the window.
+    // (Previously this resolved to a different element depending on which
+    // ref was populated at effect-mount time, leaving a stale observer
+    // target after state flips.)
     const resizeObserver = new ResizeObserver(checkArtistAlbumOverflow);
-
-    // Observe the Typography component that's always present
-    const typographyContainer =
-      artistAlbumRef.current?.parentElement ||
-      artistAlbumRef2.current?.parentElement?.parentElement?.parentElement;
+    const typographyContainer = trackInfoRef.current;
     if (typographyContainer) {
       resizeObserver.observe(typographyContainer);
     }
@@ -755,7 +752,7 @@ export default function Player() {
                         gradient
                         gradientColor={theme.palette.background.default}
                         gradientWidth={10}
-                        speed={10}
+                        speed={30}
                       >
                         <div ref={titleRef2}>
                           {currentTrack.title}&nbsp;&nbsp;•&nbsp;&nbsp;
@@ -783,7 +780,7 @@ export default function Player() {
                       gradient
                       gradientColor={theme.palette.background.default}
                       gradientWidth={10}
-                      speed={10}
+                      speed={30}
                     >
                       <div ref={artistAlbumRef2}>
                         {currentTrack.artist} • {currentTrack.album}
