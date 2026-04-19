@@ -2,6 +2,29 @@ import { Gapless5 } from '@regosen/gapless-5';
 import { Track } from '../../types/dbTypes';
 import { getTrackUrl } from './trackSelectionUtils';
 
+/**
+ * Queue invariant (temporal):
+ *   Steady state — Gapless-5's queue holds at most two tracks:
+ *     [current, preloaded-next]
+ *   Transient state — between an `autoPlayNextTrack` call and its
+ *   scheduled cleanup firing (~50ms later, past the 25ms crossfade)
+ *   the queue momentarily holds three tracks:
+ *     [finished (stale), current, preloaded-next]
+ *
+ * The stale entry is removed by either:
+ *   - `scheduleStaleCleanup` firing ~50ms after the auto-advance, OR
+ *   - `flushStaleCleanup` running synchronously on pause or on any
+ *     user-initiated queue mutation (skip next/prev, selectSpecificSong).
+ *
+ * We intentionally do NOT assert length <= 2 synchronously: the
+ * transient 3-track window is expected after every auto-advance, so a
+ * sync assertion would spam the console without signal. The scheduled
+ * cleanup's own `length > 2` guard is the only runtime check; beyond
+ * that we rely on the regression spec
+ * (`e2e/playback-autoplay-skip.spec.ts`) to verify that queue length
+ * returns to 2 after an autoplay settles.
+ */
+
 export interface SyncPlayerQueueOptions {
   current: Track;
   next: Track | null | undefined;
@@ -10,29 +33,9 @@ export interface SyncPlayerQueueOptions {
 }
 
 /**
- * Dev-only sanity check that the Gapless-5 queue hasn't grown past
- * the two-slot invariant (current + preloaded-next).
- *
- * Brief length-3 window: after an `autoPlayNextTrack` the queue momentarily
- * holds [finished, current, preloaded]. `scheduleStaleCleanup` drops the
- * finished entry ~50ms later (safely past Gapless-5's 25ms crossfade) or
- * immediately on pause, whichever comes first. If this assertion trips at
- * steady state rather than in that transient window, it means a cleanup
- * was missed somewhere.
- */
-function assertQueueInvariant(player: Gapless5): void {
-  if (process.env.NODE_ENV === 'production') return;
-  const { length } = player.getTracks();
-  if (length > 2) {
-    console.error(
-      `[playerQueue] invariant violation: Gapless-5 holds ${length} tracks, expected <= 2`,
-    );
-  }
-}
-
-/**
  * Rebuild Gapless-5's internal queue to hold the current track (index 0)
- * and optionally a preloaded next track (index 1).
+ * and optionally a preloaded next track (index 1). Post-state is
+ * length 1 or 2.
  *
  * Gapless-5 is a controlled component: this helper is the single place
  * allowed to call removeAllTracks + addTrack in sequence. The Zustand
@@ -54,7 +57,6 @@ export function syncPlayerQueue(
   if (shouldPlay) {
     player.play();
   }
-  assertQueueInvariant(player);
 }
 
 /**
@@ -65,10 +67,12 @@ export function syncPlayerQueue(
  * so the finished track still lingers at index 0 and the queue
  * momentarily has length 3. `scheduleStaleCleanup` is the companion
  * call that drops that finished entry past the crossfade window.
+ *
+ * In `skipToNextTrack`'s fast path, cleanup is already flushed before
+ * this runs, so post-state is length 2.
  */
 export function preloadNextInQueue(player: Gapless5, next: Track): void {
   player.addTrack(getTrackUrl(next.filePath));
-  assertQueueInvariant(player);
 }
 
 /**
