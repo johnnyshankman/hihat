@@ -14,8 +14,8 @@ export interface SyncPlayerQueueOptions {
  * the two-slot invariant (current + preloaded-next).
  *
  * KNOWN LEAK: after each `autoPlayNextTrack` the queue actually holds
- * three entries — the finished track at index 0, the now-playing
- * track at index 1, and the new preload at index 2. The obvious fix
+ * three or more entries — the finished track at index N-1, the now-playing
+ * track at index N, and the new preload at index N+1. The obvious fix
  * (remove index 0 after Gapless-5 auto-advances) was attempted and
  * reverted in 45f4dab / d931896: removing a track mid-transition
  * triggers a Gapless-5 bug where the player pauses instead of
