@@ -13,6 +13,7 @@ import {
 } from '../utils/trackSelectionUtils';
 import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
 import {
+  GAPLESS5_CROSSFADE_MS,
   flushStaleCleanup,
   preloadNextInQueue,
   scheduleStaleCleanup,
@@ -103,7 +104,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     silentAudioRef: null, // reference to the silent audio element for MediaSession support
     preloadedTrack: null, // track sitting at Gapless-5 queue index 1 (store-owned)
     preloadReady: false, // true once the preloaded track is decoded and ready
-    pendingStaleCleanupTimeout: null, // timer that drops the stale finished track after auto-advance
 
     // Settings actions
     setLibraryPath: async (libraryPath: Settings['libraryPath']) => {
@@ -466,7 +466,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         // Run any pending post-crossfade stale cleanup now. Safe here
         // because we're about to rebuild the queue from scratch anyway.
-        flushStaleCleanup(state.player, state.pendingStaleCleanupTimeout);
+        flushStaleCleanup(state.player);
 
         const library = useLibraryStore.getState().tracks;
 
@@ -570,7 +570,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackContextBrowserFilter: browserFilter, // Store the browser filter context
           preloadedTrack: nextSong ?? null,
           preloadReady: false,
-          pendingStaleCleanupTimeout: null,
         };
       });
       get().refreshCanGoNext();
@@ -608,7 +607,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // reaction time (~200ms) is well past the 50ms scheduler, so
         // in practice this is a no-op; it's defensive against the
         // edge case where a user clicks skip within the window.
-        flushStaleCleanup(state.player, state.pendingStaleCleanupTimeout);
+        flushStaleCleanup(state.player);
 
         // If in shuffle mode
         if (state.shuffleMode) {
@@ -655,7 +654,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 shuffleHistoryPosition: newPosition,
                 preloadedTrack: futureNextSong ?? null,
                 preloadReady: false,
-                pendingStaleCleanupTimeout: null,
               };
             }
           }
@@ -789,7 +787,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             shuffleHistoryPosition: shuffleHistory.length - 1, // Now at the new tip
             preloadedTrack: futureNextSong ?? null,
             preloadReady: false,
-            pendingStaleCleanupTimeout: null,
           };
         }
 
@@ -872,7 +869,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           duration: nextSong.duration,
           preloadedTrack: futureNextSong ?? null,
           preloadReady: false,
-          pendingStaleCleanupTimeout: null,
         };
       });
       get().refreshCanGoNext();
@@ -887,7 +883,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // Flush any pending post-crossfade cleanup before we mutate the
         // queue. Every branch below either rebuilds the queue or just
         // seeks, so it's safe to run the deferred removeTrack now.
-        flushStaleCleanup(state.player, state.pendingStaleCleanupTimeout);
+        flushStaleCleanup(state.player);
 
         // If we're less than 3 seconds into the song, go to previous track
         // Otherwise, restart the current track
@@ -939,7 +935,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 shuffleHistoryPosition: newPosition,
                 preloadedTrack: futureNextSong ?? null,
                 preloadReady: false,
-                pendingStaleCleanupTimeout: null,
               };
             }
           }
@@ -1009,7 +1004,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             duration: previousSong.duration,
             preloadedTrack: futureNextSong,
             preloadReady: false,
-            pendingStaleCleanupTimeout: null,
           };
         }
         // Restart the current track
@@ -1127,7 +1121,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       if (!state.player) {
         const player = new Gapless5({
           useHTML5Audio: false,
-          crossfade: 25, // 25ms crossfade between tracks
+          crossfade: GAPLESS5_CROSSFADE_MS,
           exclusive: true, // Only one track can play at a time
           loadLimit: 3, // Load up to 3 tracks at a time
           volume: state.volume,
@@ -1179,10 +1173,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           // Drop the stale track left behind by a recent auto-advance now
           // that we're safely out of any crossfade transition.
           if (currentState.player) {
-            flushStaleCleanup(
-              currentState.player,
-              currentState.pendingStaleCleanupTimeout,
-            );
+            flushStaleCleanup(currentState.player);
           }
 
           // When pausing, update playback tracking
@@ -1206,7 +1197,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             }
           }
 
-          set({ paused: true, pendingStaleCleanupTimeout: null });
+          set({ paused: true });
         };
 
         player.ontimeupdate = (time) => {
@@ -1374,6 +1365,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               if (futureNextSong) {
                 preloadNextInQueue(state.player, futureNextSong);
               }
+              scheduleStaleCleanup(state.player);
 
               // Update media session
               updateMediaSession(currentTrackThatIsAudiblyPlaying);
@@ -1396,7 +1388,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 shuffleHistoryPosition: newPosition,
                 preloadedTrack: futureNextSong ?? null,
                 preloadReady: false,
-                pendingStaleCleanupTimeout: scheduleStaleCleanup(state.player),
               };
             }
           }
@@ -1489,6 +1480,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
           // Add the FUTURE next song to the player queue
           preloadNextInQueue(state.player, nextSong);
+          scheduleStaleCleanup(state.player);
 
           // Update media session
           updateMediaSession(currentTrackThatIsAudiblyPlaying);
@@ -1512,7 +1504,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             shuffleHistoryPosition: shuffleHistory.length - 1, // At the new tip
             preloadedTrack: nextSong,
             preloadReady: false,
-            pendingStaleCleanupTimeout: scheduleStaleCleanup(state.player),
           };
         }
 
@@ -1537,6 +1528,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         // Add the FUTURE next song to the player queue
         preloadNextInQueue(state.player, nextSong);
+        scheduleStaleCleanup(state.player);
 
         // Update media session
         updateMediaSession(currentTrackThatIsAudiblyPlaying);
@@ -1561,7 +1553,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPlaybackTimeUpdateRef: timeUpdateDelay,
           preloadedTrack: nextSong,
           preloadReady: false,
-          pendingStaleCleanupTimeout: scheduleStaleCleanup(state.player),
         };
       });
       get().refreshCanGoNext();

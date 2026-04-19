@@ -3,16 +3,32 @@ import { Track } from '../../types/dbTypes';
 import { getTrackUrl } from './trackSelectionUtils';
 
 /**
+ * Gapless-5's crossfade duration (milliseconds). Passed to the
+ * `Gapless5` constructor as the `crossfade` option. During this window
+ * the library is mid-transition between tracks and `removeTrack(0)`
+ * causes the player to pause instead of continuing (see 45f4dab →
+ * d931896). Any deferred cleanup must wait past this window.
+ */
+export const GAPLESS5_CROSSFADE_MS = 25;
+
+/**
+ * How long to wait after an auto-advance before removing the finished
+ * track at queue index 0. Two crossfade durations is a comfortable
+ * margin — the library's internal transition has fully settled.
+ */
+export const STALE_CLEANUP_DELAY_MS = GAPLESS5_CROSSFADE_MS * 2;
+
+/**
  * Queue invariant (temporal):
  *   Steady state — Gapless-5's queue holds at most two tracks:
  *     [current, preloaded-next]
  *   Transient state — between an `autoPlayNextTrack` call and its
- *   scheduled cleanup firing (~50ms later, past the 25ms crossfade)
- *   the queue momentarily holds three tracks:
+ *   scheduled cleanup firing (~STALE_CLEANUP_DELAY_MS later, past the
+ *   GAPLESS5_CROSSFADE_MS crossfade) the queue momentarily holds three:
  *     [finished (stale), current, preloaded-next]
  *
  * The stale entry is removed by either:
- *   - `scheduleStaleCleanup` firing ~50ms after the auto-advance, OR
+ *   - the scheduled cleanup firing, OR
  *   - `flushStaleCleanup` running synchronously on pause or on any
  *     user-initiated queue mutation (skip next/prev, selectSpecificSong).
  *
@@ -24,6 +40,14 @@ import { getTrackUrl } from './trackSelectionUtils';
  * (`e2e/playback-autoplay-skip.spec.ts`) to verify that queue length
  * returns to 2 after an autoplay settles.
  */
+
+// Module-private timer handle for the pending post-crossfade cleanup.
+// Lives here (not in Zustand) because it's a mutable side-effectful
+// resource, not plain data. The module acts as a singleton manager:
+// there is exactly one Gapless-5 player per renderer, so one handle
+// suffices. Callers schedule/flush via the exported functions and
+// never touch this directly.
+let pendingCleanupHandle: ReturnType<typeof setTimeout> | null = null;
 
 export interface SyncPlayerQueueOptions {
   current: Track;
@@ -77,23 +101,23 @@ export function preloadNextInQueue(player: Gapless5, next: Track): void {
 
 /**
  * Schedule removal of the stale finished track that Gapless-5 leaves at
- * queue index 0 after an auto-advance. Deferred past the 25ms crossfade
+ * queue index 0 after an auto-advance. Deferred past the crossfade
  * window because removing the track mid-transition breaks Gapless-5's
- * internal state and causes the player to pause (see 45f4dab → d931896).
+ * internal state and causes the player to pause.
  *
- * Length-guarded at fire time so scheduling this without a stale track
- * pending is safe. Callers must store the returned handle in
- * `pendingStaleCleanupTimeout` and flush it via `flushStaleCleanup` on
- * pause or any queue-mutating user action.
+ * Replaces any previously scheduled cleanup. Length-guarded at fire
+ * time so scheduling this without a stale track pending is safe.
  */
-export function scheduleStaleCleanup(
-  player: Gapless5,
-): ReturnType<typeof setTimeout> {
-  return setTimeout(() => {
+export function scheduleStaleCleanup(player: Gapless5): void {
+  if (pendingCleanupHandle !== null) {
+    clearTimeout(pendingCleanupHandle);
+  }
+  pendingCleanupHandle = setTimeout(() => {
+    pendingCleanupHandle = null;
     if (player.getTracks().length > 2) {
       player.removeTrack(0);
     }
-  }, 50);
+  }, STALE_CLEANUP_DELAY_MS);
 }
 
 /**
@@ -102,12 +126,10 @@ export function scheduleStaleCleanup(
  * crossfade window — pause and user-initiated queue mutations both
  * qualify.
  */
-export function flushStaleCleanup(
-  player: Gapless5,
-  handle: ReturnType<typeof setTimeout> | null,
-): void {
-  if (handle === null) return;
-  clearTimeout(handle);
+export function flushStaleCleanup(player: Gapless5): void {
+  if (pendingCleanupHandle === null) return;
+  clearTimeout(pendingCleanupHandle);
+  pendingCleanupHandle = null;
   if (player.getTracks().length > 2) {
     player.removeTrack(0);
   }
