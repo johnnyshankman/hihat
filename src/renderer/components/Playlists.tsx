@@ -12,7 +12,6 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
 import { type SortingState, type Row, type Table } from '@tanstack/react-table';
 import { type Virtualizer } from '@tanstack/react-virtual';
-import Marquee from 'react-fast-marquee';
 import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
@@ -201,13 +200,6 @@ export default function Playlists() {
 
   // Ref to track if the table is ready for scrolling
   const tableReadyRef = useRef<boolean>(false);
-
-  // Local state for marquee scrolling
-  const [isPlaylistNameScrolling, setIsPlaylistNameScrolling] = useState(false);
-
-  // Refs for playlist name elements
-  const playlistNameRef = useRef<HTMLDivElement>(null);
-  const playlistNameRef2 = useRef<HTMLDivElement>(null);
 
   // useMemo: playlist lookup + O(n) getTracksByIds via the trackIndex map.
   const playlistTracks = useMemo(() => {
@@ -402,59 +394,6 @@ export default function Playlists() {
       delete window.hihatScrollToPlaylistTrack;
     };
   }, [scrollToTrackWhenReady]);
-
-  // Check if playlist name text overflows its container
-  useEffect(() => {
-    const checkPlaylistNameOverflow = () => {
-      if (playlistNameRef.current) {
-        const isOverflowing =
-          playlistNameRef.current.scrollWidth >
-          playlistNameRef.current.clientWidth;
-        setIsPlaylistNameScrolling(isOverflowing);
-      }
-    };
-
-    checkPlaylistNameOverflow();
-
-    const resizeObserver = new ResizeObserver(checkPlaylistNameOverflow);
-    if (playlistNameRef.current) {
-      resizeObserver.observe(playlistNameRef.current);
-    }
-
-    const currentPlaylistNameRef = playlistNameRef.current;
-    return () => {
-      if (currentPlaylistNameRef) {
-        resizeObserver.unobserve(currentPlaylistNameRef);
-      }
-    };
-  }, [selectedPlaylistId, playlists]);
-
-  // Check if playlist name in marquee overflows
-  useEffect(() => {
-    const checkPlaylistNameOverflow2 = () => {
-      if (playlistNameRef2.current) {
-        const isOverflowing =
-          playlistNameRef2.current.scrollWidth >
-          (playlistNameRef2.current.parentElement?.parentElement?.parentElement
-            ?.clientWidth || 10000000);
-        setIsPlaylistNameScrolling(isOverflowing);
-      }
-    };
-
-    checkPlaylistNameOverflow2();
-
-    const resizeObserver = new ResizeObserver(checkPlaylistNameOverflow2);
-    if (playlistNameRef2.current) {
-      resizeObserver.observe(playlistNameRef2.current);
-    }
-
-    const currentPlaylistNameRef2 = playlistNameRef2.current;
-    return () => {
-      if (currentPlaylistNameRef2) {
-        resizeObserver.unobserve(currentPlaylistNameRef2);
-      }
-    };
-  }, [selectedPlaylistId, playlists]);
 
   // useMemo: stable identity for tanstack's internal row-model memoization
   // and avoids re-allocating column defs each render. Empty deps = once.
@@ -680,28 +619,9 @@ export default function Playlists() {
   // useMemo: deep JSX subtree. Stable element reference lets React skip
   // reconciliation of the toolbar when row clicks re-render the parent.
   const toolbarContent = useMemo(() => {
-    let playlistNameContent;
-
-    if (!selectedPlaylistId) {
-      playlistNameContent = '----';
-    } else if (isPlaylistNameScrolling) {
-      playlistNameContent = (
-        <Marquee delay={0.5} pauseOnHover speed={10}>
-          <div ref={playlistNameRef2}>
-            {playlists.find((p) => p.id === selectedPlaylistId)?.name ||
-              'Playlist'}
-            &nbsp;&nbsp;-&nbsp;&nbsp;
-          </div>
-        </Marquee>
-      );
-    } else {
-      playlistNameContent = (
-        <div ref={playlistNameRef}>
-          {playlists.find((p) => p.id === selectedPlaylistId)?.name ||
-            'Playlist'}
-        </div>
-      );
-    }
+    const playlistNameContent = selectedPlaylistId
+      ? playlists.find((p) => p.id === selectedPlaylistId)?.name || 'Playlist'
+      : '----';
 
     return (
       <Box
@@ -718,14 +638,17 @@ export default function Playlists() {
         <SidebarToggle isOpen={drawerOpen} onToggle={onDrawerToggle} />
         {!drawerOpen && (
           <Typography
-            sx={{
-              maxWidth: window.innerWidth < 768 ? '200px' : '400px',
+            sx={(theme) => ({
+              maxWidth: '200px',
+              [theme.breakpoints.up(768)]: {
+                maxWidth: '400px',
+              },
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               userSelect: 'none',
               flexShrink: showSearch ? 1 : 0,
-            }}
+            })}
             variant="h2"
           >
             {playlistNameContent}
@@ -887,7 +810,6 @@ export default function Playlists() {
     drawerOpen,
     onDrawerToggle,
     selectedPlaylistId,
-    isPlaylistNameScrolling,
     playlists,
     showSearch,
     globalFilter,
