@@ -225,14 +225,13 @@ export interface SettingsAndPlaybackStore {
   // fully decoded and ready for a gapless transition. Reset to false any
   // time preloadedTrack changes.
   preloadReady: boolean;
-  // Count of stale finished tracks sitting at the front of Gapless-5's
-  // queue from prior auto-advances. See the leak note in playerQueue.ts.
-  // Incremented once per auto-advance, reset to 0 on any full rebuild
-  // (syncPlayerQueue) or on the fast-path cleanup in skipToNextTrack.
-  // Used only to tell the fast path how many removeTrack(0) calls it
-  // needs to execute after gotoTrack — never read as authoritative
-  // playback state.
-  queueLeadingStaleCount: number;
+  // Timer handle for the post-crossfade cleanup that drops the stale
+  // finished track at Gapless-5 queue index 0 after an auto-advance.
+  // Non-null between an auto-advance firing preloadNextInQueue and
+  // either the timer firing (~50ms later) or any action flushing it
+  // (pause, skipToNextTrack, skipToPreviousTrack, selectSpecificSong).
+  // See the leak note in playerQueue.ts for why we defer.
+  pendingStaleCleanupTimeout: ReturnType<typeof setTimeout> | null;
 
   // Combined actions
   // Settings actions

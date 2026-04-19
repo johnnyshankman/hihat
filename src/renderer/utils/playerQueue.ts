@@ -13,17 +13,12 @@ export interface SyncPlayerQueueOptions {
  * Dev-only sanity check that the Gapless-5 queue hasn't grown past
  * the two-slot invariant (current + preloaded-next).
  *
- * KNOWN LEAK: after each `autoPlayNextTrack` the queue actually holds
- * three entries — the finished track at index 0, the now-playing
- * track at index 1, and the new preload at index 2. The obvious fix
- * (remove index 0 after Gapless-5 auto-advances) was attempted and
- * reverted in 45f4dab / d931896: removing a track mid-transition
- * triggers a Gapless-5 bug where the player pauses instead of
- * continuing auto-play. Until the upstream library is patched we
- * accept the leak. Functional impact is nil — Gapless-5 tracks its
- * own index and plays the right song — but this assertion will spam
- * the console in dev. loadLimit:3 caps actually-decoded audio memory;
- * only the URL list grows unbounded.
+ * Brief length-3 window: after an `autoPlayNextTrack` the queue momentarily
+ * holds [finished, current, preloaded]. `scheduleStaleCleanup` drops the
+ * finished entry ~50ms later (safely past Gapless-5's 25ms crossfade) or
+ * immediately on pause, whichever comes first. If this assertion trips at
+ * steady state rather than in that transient window, it means a cleanup
+ * was missed somewhere.
  */
 function assertQueueInvariant(player: Gapless5): void {
   if (process.env.NODE_ENV === 'production') return;
@@ -66,14 +61,50 @@ export function syncPlayerQueue(
  * Preload a single next track into Gapless-5 at queue index 1.
  * Assumes index 0 already holds a currently-playing track.
  *
- * In `autoPlayNextTrack` this helper is invoked after Gapless-5 has
- * already auto-advanced past a finished track, so the finished track
- * still lingers at index 0 and we end up at length 3. See the leak
- * note on `assertQueueInvariant` — we intentionally leave the stale
- * track in place because removing it during a transition breaks
- * Gapless-5's auto-play.
+ * In `autoPlayNextTrack` this runs right after Gapless-5 auto-advanced,
+ * so the finished track still lingers at index 0 and the queue
+ * momentarily has length 3. `scheduleStaleCleanup` is the companion
+ * call that drops that finished entry past the crossfade window.
  */
 export function preloadNextInQueue(player: Gapless5, next: Track): void {
   player.addTrack(getTrackUrl(next.filePath));
   assertQueueInvariant(player);
+}
+
+/**
+ * Schedule removal of the stale finished track that Gapless-5 leaves at
+ * queue index 0 after an auto-advance. Deferred past the 25ms crossfade
+ * window because removing the track mid-transition breaks Gapless-5's
+ * internal state and causes the player to pause (see 45f4dab → d931896).
+ *
+ * Length-guarded at fire time so scheduling this without a stale track
+ * pending is safe. Callers must store the returned handle in
+ * `pendingStaleCleanupTimeout` and flush it via `flushStaleCleanup` on
+ * pause or any queue-mutating user action.
+ */
+export function scheduleStaleCleanup(
+  player: Gapless5,
+): ReturnType<typeof setTimeout> {
+  return setTimeout(() => {
+    if (player.getTracks().length > 2) {
+      player.removeTrack(0);
+    }
+  }, 50);
+}
+
+/**
+ * Synchronously run the pending stale cleanup (if any) and cancel the
+ * timer. Safe to call at any time once we're out of the auto-advance
+ * crossfade window — pause and user-initiated queue mutations both
+ * qualify.
+ */
+export function flushStaleCleanup(
+  player: Gapless5,
+  handle: ReturnType<typeof setTimeout> | null,
+): void {
+  if (handle === null) return;
+  clearTimeout(handle);
+  if (player.getTracks().length > 2) {
+    player.removeTrack(0);
+  }
 }
