@@ -216,6 +216,24 @@ export interface SettingsAndPlaybackStore {
   lastPosition: number;
   silentAudioRef: HTMLAudioElement | null;
 
+  // Track preloaded at Gapless-5 queue index 1. Written by every site that
+  // mutates the player queue; read by autoPlayNextTrack (as the new
+  // currentTrack after auto-advance) and by skipToNextTrack's fast-path
+  // eligibility check. Source of truth is the store, not player.getTracks().
+  preloadedTrack: Track | null;
+  // True once Gapless-5's onload event reports the preloaded track as
+  // fully decoded and ready for a gapless transition. Reset to false any
+  // time preloadedTrack changes.
+  preloadReady: boolean;
+  // Count of stale finished tracks sitting at the front of Gapless-5's
+  // queue from prior auto-advances. See the leak note in playerQueue.ts.
+  // Incremented once per auto-advance, reset to 0 on any full rebuild
+  // (syncPlayerQueue) or on the fast-path cleanup in skipToNextTrack.
+  // Used only to tell the fast path how many removeTrack(0) calls it
+  // needs to execute after gotoTrack — never read as authoritative
+  // playback state.
+  queueLeadingStaleCount: number;
+
   // Combined actions
   // Settings actions
   loadSettings: () => Promise<Settings>;

@@ -14,7 +14,6 @@ import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
 import { scanLibrary, importFiles } from '../library/scanner';
 import { writeMetadataToFile } from '../library/tagWriter';
-import playbackHandlers from './playbackHandlers';
 
 /**
  * UI-related IPC handlers
@@ -562,6 +561,5 @@ export const ipcHandlers = {
   ...dialogHandlers,
   ...appHandlers,
   ...uiHandlers,
-  ...playbackHandlers,
   ...fileSystemHandlers,
 };

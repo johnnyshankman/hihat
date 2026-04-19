@@ -8,11 +8,26 @@ import {
   computeCanGoNext,
   findNextSong,
   findPreviousSong,
-  getFilePathFromTrackUrl,
   getTrackUrl,
   updateMediaSession,
 } from '../utils/trackSelectionUtils';
 import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
+import { preloadNextInQueue, syncPlayerQueue } from '../utils/playerQueue';
+
+/**
+ * Derive Gapless-5's singleMode from our repeatMode. The store's
+ * repeatMode is the single source of truth; player.singleMode is a
+ * pure write target. Gapless-5's native single-track loop is required
+ * here because a programmatic re-queue inside autoPlayNextTrack would
+ * break gapless continuity — the audio library loops the decoded
+ * buffer directly via AudioBufferSourceNode.loop, which we can't match.
+ */
+function applyRepeatModeToPlayer(
+  player: Gapless5,
+  mode: 'off' | 'track' | 'all',
+): void {
+  player.singleMode = mode === 'track';
+}
 
 /**
  * Flush accumulated play-count tracking before a skip operation.
@@ -81,6 +96,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     lastPlaybackTimeUpdateRef: 0, // helps us track actual playback time for play count
     lastPosition: 0, // track the last position to calculate playback time
     silentAudioRef: null, // reference to the silent audio element for MediaSession support
+    preloadedTrack: null, // track sitting at Gapless-5 queue index 1 (store-owned)
+    preloadReady: false, // true once the preloaded track is decoded and ready
+    queueLeadingStaleCount: 0, // stale finished tracks at the front of Gapless-5's queue
 
     // Settings actions
     setLibraryPath: async (libraryPath: Settings['libraryPath']) => {
@@ -506,13 +524,12 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           browserFilter.album,
         );
 
-        state.player.pause();
-        state.player.removeAllTracks();
-        state.player.addTrack(getTrackUrl(selectedTrack.filePath));
-        if (nextSong) {
-          state.player.addTrack(getTrackUrl(nextSong.filePath));
-        }
-        state.player.play();
+        syncPlayerQueue(state.player, {
+          current: selectedTrack,
+          next: nextSong,
+          shouldPlay: true,
+          pauseBeforeLoad: true,
+        });
 
         // Play the silent audio for MediaSession
         if (state.silentAudioRef) {
@@ -542,6 +559,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackSourcePlaylistId:
             playbackSource === 'playlist' ? playlistId : null,
           playbackContextBrowserFilter: browserFilter, // Store the browser filter context
+          preloadedTrack: nextSong ?? null,
+          preloadReady: false,
+          queueLeadingStaleCount: 0,
         };
       });
       get().refreshCanGoNext();
@@ -555,6 +575,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         if (state.repeatMode === 'track') {
           // For repeat track mode, start from the beginning
+          // invariant: update state.position alongside setPosition
           state.player.setPosition(0);
 
           // When restarting the same track, reset our tracking for it
@@ -589,22 +610,16 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               const futureNextSong = state.shuffleHistory[newPosition + 1];
 
               flushPlaybackTracking(state);
-              state.player.removeAllTracks();
+              syncPlayerQueue(state.player, {
+                current: nextSong,
+                next: futureNextSong ?? null,
+                shouldPlay: !state.paused,
+              });
 
-              // Add the next song and future next song if it exists
-              state.player.addTrack(getTrackUrl(nextSong.filePath));
-              if (futureNextSong) {
-                state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-              }
-
-              if (!state.paused) {
-                state.player.play();
-                // Play the silent audio for MediaSession
-                if (state.silentAudioRef) {
-                  state.silentAudioRef.play().catch((error) => {
-                    console.error('Error playing silent audio:', error);
-                  });
-                }
+              if (!state.paused && state.silentAudioRef) {
+                state.silentAudioRef.play().catch((error) => {
+                  console.error('Error playing silent audio:', error);
+                });
               }
 
               updateMediaSession(nextSong);
@@ -622,6 +637,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: nextSong.duration,
                 shuffleHistoryPosition: newPosition,
+                preloadedTrack: futureNextSong ?? null,
+                preloadReady: false,
+                queueLeadingStaleCount: 0,
               };
             }
           }
@@ -725,22 +743,16 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           );
 
           flushPlaybackTracking(state);
-          state.player.removeAllTracks();
+          syncPlayerQueue(state.player, {
+            current: nextSong,
+            next: futureNextSong ?? null,
+            shouldPlay: !state.paused,
+          });
 
-          // Add the next song and future next song
-          state.player.addTrack(getTrackUrl(nextSong.filePath));
-          if (futureNextSong) {
-            state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-          }
-
-          if (!state.paused) {
-            state.player.play();
-            // Play the silent audio for MediaSession
-            if (state.silentAudioRef) {
-              state.silentAudioRef.play().catch((error) => {
-                console.error('Error playing silent audio:', error);
-              });
-            }
+          if (!state.paused && state.silentAudioRef) {
+            state.silentAudioRef.play().catch((error) => {
+              console.error('Error playing silent audio:', error);
+            });
           }
 
           updateMediaSession(nextSong);
@@ -759,6 +771,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             duration: nextSong.duration,
             shuffleHistory,
             shuffleHistoryPosition: shuffleHistory.length - 1, // Now at the new tip
+            preloadedTrack: futureNextSong ?? null,
+            preloadReady: false,
+            queueLeadingStaleCount: 0,
           };
         }
 
@@ -794,39 +809,42 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         flushPlaybackTracking(state);
 
-        // Check if next track is already pre-loaded at queue index 1
-        const queuedTracks = state.player.getTracks();
-        const preloadedUrl = queuedTracks.length > 1 ? queuedTracks[1] : null;
-        const nextSongUrl = getTrackUrl(nextSong.filePath);
+        // Fast path is only safe when the preloaded track is fully decoded:
+        // gotoTrack on a still-loading source silently fails (the source
+        // transitions Loading -> Stop, and play() then tries to play with
+        // no buffered data instead of queuing). state.preloadReady is
+        // flipped true by Gapless-5's onload event in initPlayer below.
+        const isFastPathEligible =
+          state.preloadedTrack?.id === nextSong.id && state.preloadReady;
 
-        // Only use the fast path if the pre-loaded source has finished loading.
-        // If still loading, gotoTrack's internal stopAllTracks transitions the
-        // source from Loading to Stop, causing play() to fail silently because
-        // it tries playAudioFile() with no loaded data instead of queuing.
-        // Gapless5State: None=0, Loading=1, Starting=2, Play=3, Stop=4, Error=5
-        const GAPLESS5_LOADING = 1;
-        const preloadedSource =
-          queuedTracks.length > 1 ? state.player.playlist.sources[1] : null;
-        const isPreloadReady =
-          preloadedSource && preloadedSource.getState() !== GAPLESS5_LOADING;
-
-        if (preloadedUrl === nextSongUrl && isPreloadReady) {
-          // FAST PATH: switch to already-buffered track (no load delay)
-          state.player.gotoTrack(1);
-          state.player.removeTrack(0);
+        if (isFastPathEligible) {
+          // FAST PATH: switch to the already-buffered preloaded track.
+          //
+          // Jump by URL (not by index) so we're robust to the known leak
+          // where Gapless-5's queue accumulates stale finished tracks at
+          // the front after each auto-advance. `gotoTrack(1)` would land
+          // on whatever sits at index 1, which after N auto-advances is
+          // NOT the preloaded track — it's one of the stale leaders.
+          //
+          // After jumping, remove every track ahead of the new current:
+          // one for each stale leading entry (queueLeadingStaleCount) plus
+          // one for the prior current that's now the old index 0 slot.
+          const nextSongUrl = getTrackUrl(nextSong.filePath);
+          state.player.gotoTrack(nextSongUrl);
+          const removalsBeforeCurrent = state.queueLeadingStaleCount + 1;
+          for (let i = 0; i < removalsBeforeCurrent; i += 1) {
+            state.player.removeTrack(0);
+          }
           if (futureNextSong) {
-            state.player.addTrack(getTrackUrl(futureNextSong.filePath));
+            preloadNextInQueue(state.player, futureNextSong);
           }
         } else {
           // SLOW PATH: queue doesn't match, rebuild
-          state.player.removeAllTracks();
-          state.player.addTrack(nextSongUrl);
-          if (futureNextSong) {
-            state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-          }
-          if (!state.paused) {
-            state.player.play();
-          }
+          syncPlayerQueue(state.player, {
+            current: nextSong,
+            next: futureNextSong ?? null,
+            shouldPlay: !state.paused,
+          });
         }
 
         if (!state.paused && state.silentAudioRef) {
@@ -849,6 +867,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           lastPosition: 0,
           lastPlaybackTimeUpdateRef: Date.now(),
           duration: nextSong.duration,
+          preloadedTrack: futureNextSong ?? null,
+          preloadReady: false,
+          queueLeadingStaleCount: 0,
         };
       });
       get().refreshCanGoNext();
@@ -881,22 +902,16 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 state.shuffleHistory[state.shuffleHistoryPosition];
 
               flushPlaybackTracking(state);
-              state.player.removeAllTracks();
+              syncPlayerQueue(state.player, {
+                current: previousSong,
+                next: futureNextSong ?? null,
+                shouldPlay: !state.paused,
+              });
 
-              // Add the previous song and the current song (as the next track)
-              state.player.addTrack(getTrackUrl(previousSong.filePath));
-              if (futureNextSong) {
-                state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-              }
-
-              if (!state.paused) {
-                state.player.play();
-                // Play the silent audio for MediaSession
-                if (state.silentAudioRef) {
-                  state.silentAudioRef.play().catch((error) => {
-                    console.error('Error playing silent audio:', error);
-                  });
-                }
+              if (!state.paused && state.silentAudioRef) {
+                state.silentAudioRef.play().catch((error) => {
+                  console.error('Error playing silent audio:', error);
+                });
               }
 
               updateMediaSession(previousSong);
@@ -914,6 +929,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPlaybackTimeUpdateRef: Date.now(),
                 duration: previousSong.duration,
                 shuffleHistoryPosition: newPosition,
+                preloadedTrack: futureNextSong ?? null,
+                preloadReady: false,
+                queueLeadingStaleCount: 0,
               };
             }
           }
@@ -936,6 +954,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
           if (!previousSong) {
             // If no previous song, restart the current one
+            // invariant: update state.position alongside setPosition
             state.player.setPosition(0);
             // Reset tracking for current track
             if (state.currentTrack) {
@@ -954,20 +973,16 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           const futureNextSong = state.currentTrack;
 
           flushPlaybackTracking(state);
-          state.player.removeAllTracks();
+          syncPlayerQueue(state.player, {
+            current: previousSong,
+            next: futureNextSong,
+            shouldPlay: !state.paused,
+          });
 
-          // Add the previous song and the current song (as the next track)
-          state.player.addTrack(getTrackUrl(previousSong.filePath));
-          state.player.addTrack(getTrackUrl(futureNextSong.filePath));
-
-          if (!state.paused) {
-            state.player.play();
-            // Play the silent audio for MediaSession
-            if (state.silentAudioRef) {
-              state.silentAudioRef.play().catch((error) => {
-                console.error('Error playing silent audio:', error);
-              });
-            }
+          if (!state.paused && state.silentAudioRef) {
+            state.silentAudioRef.play().catch((error) => {
+              console.error('Error playing silent audio:', error);
+            });
           }
 
           updateMediaSession(previousSong);
@@ -984,9 +999,13 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPosition: 0,
             lastPlaybackTimeUpdateRef: Date.now(),
             duration: previousSong.duration,
+            preloadedTrack: futureNextSong,
+            preloadReady: false,
+            queueLeadingStaleCount: 0,
           };
         }
         // Restart the current track
+        // invariant: update state.position alongside setPosition
         state.player.setPosition(0);
 
         // Reset tracking for current track
@@ -1013,17 +1032,14 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         const repeatMode = modes[nextIndex];
 
         /**
-         * @important Leverage the Gapless5 player's singleMode to achive perfect
+         * @important Leverage the Gapless5 player's singleMode to achieve perfect
          * repeating in single song repeat mode.
-         * We dont do this programmatically in the autoPlayNextTrack/skipToNextTrack methods
-         * like we do with repeat mode 'all' or 'none' because it would break the gapless playback.
+         * We don't do this programmatically in the autoPlayNextTrack/skipToNextTrack
+         * methods like we do with repeat mode 'all' or 'none' because it would
+         * break the gapless playback.
          */
-        if (repeatMode === 'track') {
-          if (state.player) {
-            state.player.singleMode = true;
-          }
-        } else if (state.player) {
-          state.player.singleMode = false;
+        if (state.player) {
+          applyRepeatModeToPlayer(state.player, repeatMode);
         }
 
         return { repeatMode, player: state.player };
@@ -1109,9 +1125,26 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           volume: state.volume,
         });
 
+        // Seed singleMode from the store's repeatMode so the player
+        // reflects state on first construction, not only after a toggle.
+        applyRepeatModeToPlayer(player, state.repeatMode);
+
         // Set up error handler
         player.onerror = (error: string) => {
           console.error('Audio player error:', error);
+        };
+
+        // Flip preloadReady when the track we preloaded at index 1
+        // finishes decoding. skipToNextTrack's fast path gates on this
+        // (gotoTrack on a still-loading source silently fails).
+        player.onload = (trackPath: string, fullyLoaded: boolean) => {
+          const { preloadedTrack } = get();
+          if (
+            preloadedTrack &&
+            getTrackUrl(preloadedTrack.filePath) === trackPath
+          ) {
+            set({ preloadReady: fullyLoaded });
+          }
         };
 
         // Set up event handlers
@@ -1243,6 +1276,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
         }
 
+        // invariant: update state.position alongside setPosition
         state.player.setPosition(position * 1000);
         return {
           position,
@@ -1284,21 +1318,24 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           };
         }
 
-        // lets understand what song is currently playing
-        const tracks = state.player.getTracks();
-        const index = state.player.getIndex();
-
-        // get the song info of the song that is currently playing
-        const currentlyAutoplayingSongFilePath = getFilePathFromTrackUrl(
-          tracks[index],
-        );
-
-        // get the metadata of the song that is currently playing
-        const currentTrackThatIsAudiblyPlaying = useLibraryStore
-          .getState()
-          .tracks.find((t) => t.filePath === currentlyAutoplayingSongFilePath);
+        // Gapless-5 has auto-advanced to queue index 1, which is the track
+        // we tracked as preloadedTrack when we last mutated the queue. No
+        // need to re-derive that from player.getTracks()/getIndex() — the
+        // store already knows what's playing.
+        //
+        // Known leak: the finished track at index 0 is never cleaned up.
+        // Every preloadNextInQueue below grows the Gapless-5 queue by one
+        // entry instead of rotating it. See `assertQueueInvariant` in
+        // playerQueue.ts for the full story — short version is that
+        // removing index 0 mid-transition triggers a Gapless-5 bug that
+        // pauses playback instead of auto-advancing.
+        const currentTrackThatIsAudiblyPlaying = state.preloadedTrack;
 
         if (!currentTrackThatIsAudiblyPlaying) {
+          // Nothing was preloaded (e.g., reached the end of the source with
+          // no repeat). Let the caller fall through — the downstream
+          // branches will either compute a new song via findNextSong or
+          // bail out cleanly.
           throw new Error('No next track found while auto playing next track');
         }
 
@@ -1317,7 +1354,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             if (nextTrackInHistory) {
               const futureNextSong = state.shuffleHistory[newPosition + 1];
               if (futureNextSong) {
-                state.player.addTrack(getTrackUrl(futureNextSong.filePath));
+                preloadNextInQueue(state.player, futureNextSong);
               }
 
               // Update media session
@@ -1339,6 +1376,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
                 lastPosition: 0,
                 lastPlaybackTimeUpdateRef: Date.now() - 1000,
                 shuffleHistoryPosition: newPosition,
+                preloadedTrack: futureNextSong ?? null,
+                preloadReady: false,
+                queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
               };
             }
           }
@@ -1430,7 +1470,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           }
 
           // Add the FUTURE next song to the player queue
-          state.player.addTrack(getTrackUrl(nextSong.filePath));
+          preloadNextInQueue(state.player, nextSong);
 
           // Update media session
           updateMediaSession(currentTrackThatIsAudiblyPlaying);
@@ -1452,6 +1492,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPlaybackTimeUpdateRef: Date.now() - 1000,
             shuffleHistory,
             shuffleHistoryPosition: shuffleHistory.length - 1, // At the new tip
+            preloadedTrack: nextSong,
+            preloadReady: false,
+            queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
           };
         }
 
@@ -1475,7 +1518,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
 
         // Add the FUTURE next song to the player queue
-        state.player.addTrack(getTrackUrl(nextSong?.filePath));
+        preloadNextInQueue(state.player, nextSong);
 
         // Update media session
         updateMediaSession(currentTrackThatIsAudiblyPlaying);
@@ -1498,6 +1541,9 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           position: 0,
           lastPosition: 0,
           lastPlaybackTimeUpdateRef: timeUpdateDelay,
+          preloadedTrack: nextSong,
+          preloadReady: false,
+          queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
         };
       });
       get().refreshCanGoNext();
@@ -1505,26 +1551,44 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
   }),
 );
 
-// Set up event listeners for playback events from the main process
+// Initialize settings on app start
 if (typeof window !== 'undefined') {
-  window.electron.ipcRenderer.on('playback:trackChanged', (data: any) => {
-    useSettingsAndPlaybackStore.setState({ currentTrack: data.track });
-  });
-
-  window.electron.ipcRenderer.on('playback:stateChanged', (data: any) => {
-    useSettingsAndPlaybackStore.setState({ paused: !data.paused });
-  });
-
-  window.electron.ipcRenderer.on('playback:positionChanged', (data: any) => {
-    // Convert from milliseconds to seconds
-    useSettingsAndPlaybackStore.setState({
-      position: data.position / 1000,
-      duration: data.duration / 1000,
-    });
-  });
-
-  // Initialize settings on app start
   useSettingsAndPlaybackStore.getState().loadSettings();
+
+  // E2E diagnostic hook: lets Playwright specs observe what Gapless-5 is
+  // actually playing versus what the store thinks is playing. This is
+  // the only legitimate consumer of player.getTracks()/getIndex()
+  // outside the dev-only invariant assert. Read-only, no mutation.
+  // eslint-disable-next-line no-underscore-dangle
+  (window as unknown as Record<string, unknown>).__hihat_e2e_getPlayerState =
+    () => {
+      const state = useSettingsAndPlaybackStore.getState();
+      const { player } = state;
+      const urlToFilePath = (url: string | undefined): string | null => {
+        if (!url) return null;
+        return decodeURIComponent(url.replace('hihat-audio://getfile/', ''));
+      };
+      if (!player) {
+        return {
+          storeCurrentTrackFilePath: state.currentTrack?.filePath ?? null,
+          storePreloadedTrackFilePath: state.preloadedTrack?.filePath ?? null,
+          storePreloadReady: state.preloadReady,
+          playerQueueLength: 0,
+          playerIndex: -1,
+          playerCurrentFilePath: null as string | null,
+        };
+      }
+      const tracks = player.getTracks();
+      const index = player.getIndex();
+      return {
+        storeCurrentTrackFilePath: state.currentTrack?.filePath ?? null,
+        storePreloadedTrackFilePath: state.preloadedTrack?.filePath ?? null,
+        storePreloadReady: state.preloadReady,
+        playerQueueLength: tracks.length,
+        playerIndex: index,
+        playerCurrentFilePath: urlToFilePath(tracks[index]),
+      };
+    };
 }
 
 export default useSettingsAndPlaybackStore;
