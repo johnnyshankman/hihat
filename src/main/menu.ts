@@ -49,6 +49,95 @@ function calculateDirectorySize(
   }
 }
 
+const RELEASES_URL = 'https://github.com/johnnyshankman/hihat/releases/latest';
+const RELEASES_API =
+  'https://api.github.com/repos/johnnyshankman/hihat/releases';
+const SEMVER_RE = /^v?(\d+)\.(\d+)\.(\d+)/;
+
+function parseSemver(tag: string): [number, number, number] | null {
+  const m = tag.match(SEMVER_RE);
+  if (!m) return null;
+  return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
+}
+
+function isNewer(
+  latest: [number, number, number],
+  current: [number, number, number],
+): boolean {
+  for (let i = 0; i < 3; i += 1) {
+    if (latest[i] > current[i]) return true;
+    if (latest[i] < current[i]) return false;
+  }
+  return false;
+}
+
+/**
+ * Checks the latest versioned release on GitHub and shows a native dialog
+ * with the result. Offers a download link when the user's build is behind.
+ */
+async function checkForUpdates(mainWindow: BrowserWindow): Promise<void> {
+  const currentRaw = app.getVersion();
+  const current = parseSemver(currentRaw);
+
+  try {
+    const res = await fetch(RELEASES_API, {
+      headers: {
+        'User-Agent': 'hihat',
+        Accept: 'application/vnd.github+json',
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      throw new Error(`GitHub API responded ${res.status}`);
+    }
+    const releases = (await res.json()) as Array<{ tag_name?: string }>;
+    if (!Array.isArray(releases)) {
+      throw new Error('Unexpected releases response shape');
+    }
+
+    const latestRelease = releases.find(
+      (r) =>
+        typeof r?.tag_name === 'string' && parseSemver(r.tag_name) !== null,
+    );
+    const latest = latestRelease?.tag_name
+      ? parseSemver(latestRelease.tag_name)
+      : null;
+    const latestRaw = latestRelease?.tag_name?.replace(/^v/, '') ?? null;
+    if (!latest || !latestRaw) {
+      throw new Error('No versioned releases found');
+    }
+
+    if (current && isNewer(latest, current)) {
+      const { response } = await dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update available',
+        message: 'A new version of hihat is available.',
+        detail: `You have ${currentRaw}. Latest is ${latestRaw}.`,
+        buttons: ['download', 'later'],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (response === 0) {
+        await shell.openExternal(RELEASES_URL);
+      }
+    } else {
+      await dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'hihat is up to date',
+        message: `You are running the latest version (${currentRaw}).`,
+      });
+    }
+  } catch (error) {
+    console.error('check for updates failed:', error);
+    await dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Unable to check for updates',
+      message:
+        'Could not reach GitHub. Check your internet connection and try again.',
+    });
+  }
+}
+
 /**
  * Gets statistics about the music library
  * @returns Object containing songCount, sizeInGB, totalPlays, and totalDurationHours
@@ -165,6 +254,12 @@ Size: ${stats.sizeInGB.toFixed(2)} GB
 Plays: ${stats.totalPlays.toLocaleString()}
 Duration: ${stats.totalDurationHours.toFixed(1)} hours`,
             });
+          },
+        },
+        {
+          label: 'check for updates',
+          click: () => {
+            checkForUpdates(this.mainWindow);
           },
         },
         { type: 'separator' },
