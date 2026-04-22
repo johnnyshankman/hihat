@@ -11,8 +11,6 @@ import {
   TextField,
   InputAdornment,
   IconButton,
-  Snackbar,
-  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -26,7 +24,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
 import BackupIcon from '@mui/icons-material/Backup';
 import CloseIcon from '@mui/icons-material/Close';
-import { useSettingsAndPlaybackStore } from '../stores';
+import { useSettingsAndPlaybackStore, useUIStore } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
 import type { Channels } from '../../types/ipc';
 import useLibraryStore from '../stores/libraryStore';
@@ -58,9 +56,9 @@ export default function Settings({ onClose }: SettingsProps) {
   const scanLibrary = useLibraryStore((state) => state.scanLibrary);
   const importFiles = useLibraryStore((state) => state.importFiles);
   const isScanning = useLibraryStore((state) => state.isScanning);
+  // ui store stuff
+  const showNotification = useUIStore((state) => state.showNotification);
 
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [pathDialogOpen, setPathDialogOpen] = useState(false);
   const [backupDialogOpen, setBackupDialogOpen] = useState(false);
@@ -185,8 +183,7 @@ export default function Settings({ onClose }: SettingsProps) {
       setScanStatus('Complete');
       setScanProgress(100);
       setScanPhase('complete');
-      setSnackbarMessage('Library scan completed successfully');
-      setSnackbarOpen(true);
+      showNotification('Library scan completed successfully', 'success');
 
       // Reset scan state after a delay
       setTimeout(() => {
@@ -218,8 +215,7 @@ export default function Settings({ onClose }: SettingsProps) {
         setBackupProgress(100);
         setProcessedFiles([]);
         processedFilesRef.current = [];
-        setSnackbarMessage('Library backup completed successfully');
-        setSnackbarOpen(true);
+        showNotification('Library backup completed successfully', 'success');
       },
     );
 
@@ -229,8 +225,7 @@ export default function Settings({ onClose }: SettingsProps) {
         const message = args[0] as string;
         setIsBackupInProgress(false);
         setBackupStatus('');
-        setSnackbarMessage(`Backup failed: ${message}`);
-        setSnackbarOpen(true);
+        showNotification(`Backup failed: ${message}`, 'error');
       },
     );
 
@@ -308,7 +303,7 @@ export default function Settings({ onClose }: SettingsProps) {
       unsubBackupError();
       unsubBackupProgress();
     };
-  }, [scanPhase]);
+  }, [scanPhase, showNotification]);
 
   const handleThemeChange = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -326,8 +321,7 @@ export default function Settings({ onClose }: SettingsProps) {
 
   const handleRescanLibrary = async () => {
     if (!libraryPath) {
-      setSnackbarMessage('Please set a library path first');
-      setSnackbarOpen(true);
+      showNotification('Please set a library path first', 'warning');
       return;
     }
 
@@ -348,17 +342,16 @@ export default function Settings({ onClose }: SettingsProps) {
       console.error('Error scanning library:', error);
       setScanStatus('Failed');
       setScanPhase('error');
-      setSnackbarMessage(
+      showNotification(
         error instanceof Error ? error.message : 'Error scanning library',
+        'error',
       );
-      setSnackbarOpen(true);
     }
   };
 
   const handleAddSongs = async () => {
     if (!libraryPath) {
-      setSnackbarMessage('Please set a library path first');
-      setSnackbarOpen(true);
+      showNotification('Please set a library path first', 'warning');
       return;
     }
 
@@ -388,17 +381,16 @@ export default function Settings({ onClose }: SettingsProps) {
       console.error('Error importing files:', error);
       setScanStatus('Failed');
       setScanPhase('error');
-      setSnackbarMessage(
+      showNotification(
         error instanceof Error ? error.message : 'Error importing files',
+        'error',
       );
-      setSnackbarOpen(true);
     }
   };
 
   const handleBackupLibrary = async () => {
     if (!libraryPath) {
-      setSnackbarMessage('Please set a library path first');
-      setSnackbarOpen(true);
+      showNotification('Please set a library path first', 'warning');
       return;
     }
 
@@ -415,8 +407,10 @@ export default function Settings({ onClose }: SettingsProps) {
       const backupPath = result.filePaths[0];
 
       if (backupPath === libraryPath || backupPath.startsWith(libraryPath)) {
-        setSnackbarMessage('Cannot backup to the same folder or its subfolder');
-        setSnackbarOpen(true);
+        showNotification(
+          'Cannot backup to the same folder or its subfolder',
+          'warning',
+        );
         return;
       }
 
@@ -434,10 +428,10 @@ export default function Settings({ onClose }: SettingsProps) {
       console.error('Error backing up library:', error);
       setIsBackupInProgress(false);
       setBackupStatus('');
-      setSnackbarMessage(
+      showNotification(
         error instanceof Error ? error.message : 'Error backing up library',
+        'error',
       );
-      setSnackbarOpen(true);
     }
   };
 
@@ -461,8 +455,7 @@ export default function Settings({ onClose }: SettingsProps) {
         await window.electron.fileSystem.fileExists(newLibraryPath);
 
       if (!pathExists) {
-        setSnackbarMessage('The specified library path does not exist');
-        setSnackbarOpen(true);
+        showNotification('The specified library path does not exist', 'error');
         setLibraryPath(originalPathRef.current);
         return;
       }
@@ -471,8 +464,7 @@ export default function Settings({ onClose }: SettingsProps) {
       setPathDialogOpen(true);
     } catch (error) {
       console.error('Error validating library path:', error);
-      setSnackbarMessage('Error validating library path');
-      setSnackbarOpen(true);
+      showNotification('Error validating library path', 'error');
     }
   };
 
@@ -481,8 +473,7 @@ export default function Settings({ onClose }: SettingsProps) {
     try {
       setPathDialogOpen(false);
 
-      setSnackbarMessage('Library path saved successfully');
-      setSnackbarOpen(true);
+      showNotification('Library path saved successfully', 'success');
 
       try {
         // Reset scan state
@@ -493,8 +484,10 @@ export default function Settings({ onClose }: SettingsProps) {
         const resetResult = await window.electron.library.resetTracks();
         if (!resetResult.success) {
           console.error('Failed to reset tracks:', resetResult.message);
-          setSnackbarMessage(`Failed to reset tracks: ${resetResult.message}`);
-          setSnackbarOpen(true);
+          showNotification(
+            `Failed to reset tracks: ${resetResult.message}`,
+            'error',
+          );
           return;
         }
 
@@ -502,15 +495,14 @@ export default function Settings({ onClose }: SettingsProps) {
       } catch (error) {
         console.error('Error scanning library:', error);
         setScanStatus('Failed');
-        setSnackbarMessage(
+        showNotification(
           error instanceof Error ? error.message : 'Error scanning library',
+          'error',
         );
-        setSnackbarOpen(true);
       }
     } catch (error) {
       console.error('Error saving library path:', error);
-      setSnackbarMessage('Error saving library path');
-      setSnackbarOpen(true);
+      showNotification('Error saving library path', 'error');
     }
   };
 
@@ -519,10 +511,6 @@ export default function Settings({ onClose }: SettingsProps) {
     setPathDialogOpen(false);
     // Revert to the original path
     setLibraryPath(originalPathRef.current);
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
   };
 
   const handleResetDatabase = async () => {
@@ -535,21 +523,24 @@ export default function Settings({ onClose }: SettingsProps) {
       const result = await window.electron.library.resetDatabase();
 
       if (result.success) {
-        setSnackbarMessage('Database reset successfully. Restarting app...');
-        setSnackbarOpen(true);
+        showNotification(
+          'Database reset successfully. Restarting app...',
+          'success',
+        );
 
         // Wait a moment to show the success message before restarting
         setTimeout(async () => {
           await window.electron.app.restart();
         }, 1500);
       } else {
-        setSnackbarMessage(`Failed to reset database: ${result.message}`);
-        setSnackbarOpen(true);
+        showNotification(
+          `Failed to reset database: ${result.message}`,
+          'error',
+        );
       }
     } catch (error) {
       console.error('Error resetting database:', error);
-      setSnackbarMessage('Error resetting database');
-      setSnackbarOpen(true);
+      showNotification('Error resetting database', 'error');
     }
   };
 
@@ -1032,22 +1023,6 @@ export default function Settings({ onClose }: SettingsProps) {
           </Box>
         </DialogContent>
       </Dialog>
-
-      <Snackbar
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        open={snackbarOpen}
-      >
-        <Alert
-          key="settings-alert"
-          onClose={handleCloseSnackbar}
-          severity="success"
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
 
       {/* Library path confirmation dialog */}
       <ConfirmationDialog
