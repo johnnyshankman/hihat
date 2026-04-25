@@ -2,10 +2,6 @@
  * @jest-environment jsdom
  */
 
-// MUST be the first import — stubs window.electron before libraryStore loads.
-// libraryStore registers an ipcRenderer listener and fires initializeLibrary
-// at module load time, so a real window.electron must exist by then.
-import '../test-utils/electronWindowStub';
 import {
   computeCanGoNext,
   findNextSong,
@@ -17,6 +13,15 @@ import {
 } from '../renderer/utils/trackSelectionUtils';
 import useLibraryStore from '../renderer/stores/libraryStore';
 import { Track, Playlist } from '../types/dbTypes';
+
+// Zustand testing pattern (https://docs.pmnd.rs/zustand/guides/testing):
+// snapshot the store's initial state once, then wholesale-replace it after
+// every test so per-test setState calls can never leak across tests.
+const initialLibraryState = useLibraryStore.getState();
+
+afterEach(() => {
+  useLibraryStore.setState(initialLibraryState, true);
+});
 
 const makeTrack = (overrides: Partial<Track>): Track => ({
   id: overrides.id ?? 'x',
@@ -41,19 +46,26 @@ const makeTrack = (overrides: Partial<Track>): Track => ({
   comment: null,
 });
 
-// Reset the library store between tests so each test seeds its own world
-const resetLibraryStore = (
-  overrides: Partial<{
-    tracks: Track[];
-    playlists: Playlist[];
-    libraryViewState: { sorting: any; filtering: string };
-    playlistViewState: {
-      sorting: any;
-      filtering: string;
-      playlistId: string | null;
-    };
-  }> = {},
-) => {
+/**
+ * Seeds the library store with test data using `setState` (the Zustand-
+ * recommended way to drive a real store from tests). The afterEach hook
+ * above restores the snapshot, so per-test seeds don't need to touch every
+ * slice — only the ones the test actually depends on.
+ *
+ * Title-sort default matches the test data shape (tracks identified by
+ * letter titles); override `libraryViewState` / `playlistViewState` for
+ * tests that exercise filtering or playlist selection.
+ */
+const seedLibrary = (overrides: {
+  tracks?: Track[];
+  playlists?: Playlist[];
+  libraryViewState?: { sorting: any; filtering: string };
+  playlistViewState?: {
+    sorting: any;
+    filtering: string;
+    playlistId: string | null;
+  };
+}) => {
   useLibraryStore.setState({
     tracks: overrides.tracks ?? [],
     playlists: overrides.playlists ?? [],
@@ -92,7 +104,7 @@ describe('getTrackUrl / getFilePathFromTrackUrl', () => {
 
 describe('getFilteredAndSortedTrackIds — library source', () => {
   test('returns all track IDs in sorted order', () => {
-    resetLibraryStore({
+    seedLibrary({
       tracks: [
         makeTrack({ id: '2', title: 'Banana' }),
         makeTrack({ id: '1', title: 'Apple' }),
@@ -103,7 +115,7 @@ describe('getFilteredAndSortedTrackIds — library source', () => {
   });
 
   test('applies the artistFilter argument before sorting', () => {
-    resetLibraryStore({
+    seedLibrary({
       tracks: [
         makeTrack({ id: '1', title: 'A', albumArtist: 'X' }),
         makeTrack({ id: '2', title: 'B', albumArtist: 'Y' }),
@@ -114,7 +126,7 @@ describe('getFilteredAndSortedTrackIds — library source', () => {
   });
 
   test('artist filter falls back to artist field when albumArtist is missing', () => {
-    resetLibraryStore({
+    seedLibrary({
       tracks: [
         makeTrack({ id: '1', artist: 'A', albumArtist: '' }),
         makeTrack({ id: '2', artist: 'B', albumArtist: '' }),
@@ -124,7 +136,7 @@ describe('getFilteredAndSortedTrackIds — library source', () => {
   });
 
   test('applies the albumFilter argument', () => {
-    resetLibraryStore({
+    seedLibrary({
       tracks: [
         makeTrack({ id: '1', album: 'Alpha' }),
         makeTrack({ id: '2', album: 'Beta' }),
@@ -136,7 +148,7 @@ describe('getFilteredAndSortedTrackIds — library source', () => {
   });
 
   test('applies the global filtering string from libraryViewState', () => {
-    resetLibraryStore({
+    seedLibrary({
       tracks: [
         makeTrack({ id: '1', title: 'apple pie' }),
         makeTrack({ id: '2', title: 'banana bread', artist: 'apple band' }),
@@ -163,7 +175,7 @@ describe('getFilteredAndSortedTrackIds — playlist source', () => {
       trackIds: ['3', '1', '2'],
       sortPreference: null,
     };
-    resetLibraryStore({
+    seedLibrary({
       tracks: [
         makeTrack({ id: '1', title: 'Apple' }),
         makeTrack({ id: '2', title: 'Banana' }),
@@ -180,7 +192,7 @@ describe('getFilteredAndSortedTrackIds — playlist source', () => {
   });
 
   test('throws when the selected playlist is missing', () => {
-    resetLibraryStore({
+    seedLibrary({
       playlists: [],
       playlistViewState: {
         sorting: [{ id: 'title', desc: false }],
@@ -196,7 +208,7 @@ describe('getFilteredAndSortedTrackIds — playlist source', () => {
 
 describe('findNextSong (non-shuffle)', () => {
   beforeEach(() => {
-    resetLibraryStore({
+    seedLibrary({
       tracks: [
         makeTrack({ id: '1', title: 'A' }),
         makeTrack({ id: '2', title: 'B' }),
@@ -227,7 +239,7 @@ describe('findNextSong (non-shuffle)', () => {
 
 describe('findNextSong (shuffle)', () => {
   beforeEach(() => {
-    resetLibraryStore({
+    seedLibrary({
       tracks: [
         makeTrack({ id: '1' }),
         makeTrack({ id: '2' }),
@@ -284,7 +296,7 @@ describe('findNextSong (shuffle)', () => {
 
 describe('findPreviousSong', () => {
   beforeEach(() => {
-    resetLibraryStore({
+    seedLibrary({
       tracks: [
         makeTrack({ id: '1', title: 'A' }),
         makeTrack({ id: '2', title: 'B' }),
@@ -321,7 +333,7 @@ describe('computeCanGoNext', () => {
   const baseTrack = makeTrack({ id: '1', title: 'A' });
 
   beforeEach(() => {
-    resetLibraryStore({
+    seedLibrary({
       tracks: [baseTrack, makeTrack({ id: '2', title: 'B' })],
     });
   });
@@ -346,7 +358,7 @@ describe('computeCanGoNext', () => {
 
   test('returns true unconditionally when repeatMode is "track"', () => {
     // No next track in library, but repeat-track means Next restarts current
-    resetLibraryStore({ tracks: [baseTrack] });
+    seedLibrary({ tracks: [baseTrack] });
     expect(
       computeCanGoNext(
         baseInputs({ currentTrack: baseTrack, repeatMode: 'track' }),
@@ -355,7 +367,7 @@ describe('computeCanGoNext', () => {
   });
 
   test('returns true unconditionally when repeatMode is "all"', () => {
-    resetLibraryStore({ tracks: [baseTrack] });
+    seedLibrary({ tracks: [baseTrack] });
     expect(
       computeCanGoNext(
         baseInputs({ currentTrack: baseTrack, repeatMode: 'all' }),

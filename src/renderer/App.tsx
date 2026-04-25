@@ -6,7 +6,11 @@ import MainLayout from './components/MainLayout';
 import MiniPlayer from './components/MiniPlayer';
 import MigrationDialog from './components/MigrationDialog';
 import { lightTheme, darkTheme } from './styles/materialTheme';
-import { useLibraryStore, useSettingsAndPlaybackStore } from './stores';
+import {
+  bootstrapLibraryStore,
+  useLibraryStore,
+  useSettingsAndPlaybackStore,
+} from './stores';
 import './App.css';
 
 const isMiniPlayerWindow =
@@ -40,6 +44,7 @@ function ThemedApp() {
 
   useEffect(() => {
     useSettingsAndPlaybackStore.getState().initPlayer();
+    bootstrapLibraryStore();
     document.body.classList.add('draggable');
     return () => {
       document.body.classList.remove('draggable');

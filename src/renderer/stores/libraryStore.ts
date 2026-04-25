@@ -497,8 +497,20 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 }));
 
-// Set up event listener for library scan completion
-if (typeof window !== 'undefined') {
+let libraryBootstrapped = false;
+
+/**
+ * Wires the renderer-process library subsystem: registers the
+ * `library:scanComplete` IPC listener and kicks off the initial library +
+ * playlists load. Call once from the main app's mount effect (not from the
+ * mini-player window, which has no library dependency).
+ *
+ * Idempotent — guarded so accidental double-calls (StrictMode, HMR) are safe.
+ */
+export const bootstrapLibraryStore = (): void => {
+  if (libraryBootstrapped) return;
+  libraryBootstrapped = true;
+
   window.electron.ipcRenderer.on('library:scanComplete', (data: any) => {
     if (data.error) {
       console.warn(`Library scan failed: ${data.error}`);
@@ -527,13 +539,10 @@ if (typeof window !== 'undefined') {
     useLibraryStore.getState().loadPlaylists();
   });
 
-  // Initialize library on app start
-  const initializeLibrary = async () => {
+  (async () => {
     await useLibraryStore.getState().loadPlaylists();
     await useLibraryStore.getState().loadLibrary();
-  };
-
-  initializeLibrary();
-}
+  })();
+};
 
 export default useLibraryStore;
