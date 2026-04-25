@@ -506,6 +506,18 @@ let libraryBootstrapped = false;
  * mini-player window, which has no library dependency).
  *
  * Idempotent — guarded so accidental double-calls (StrictMode, HMR) are safe.
+ *
+ * Fire-and-forget by design. The two initial loads run in parallel and the
+ * function returns synchronously. Callers MUST NOT rely on bootstrap's
+ * return to know "the library is ready" — instead, subscribe to
+ * `useLibraryStore((s) => s.isLoading)` and react when it flips to false.
+ * That's the contract `ThemedApp` already follows (see App.tsx — the second
+ * useEffect runs `selectSpecificSong` once `isLoading` is false).
+ *
+ * If a future caller genuinely needs to await readiness (e.g. a programmatic
+ * startup harness or test setup), convert the signature to
+ * `async (): Promise<void>` and `await Promise.all([...])` the two loads.
+ * Until then, keep this sync to avoid speculative API surface.
  */
 export const bootstrapLibraryStore = (): void => {
   if (libraryBootstrapped) return;
