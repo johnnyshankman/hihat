@@ -307,7 +307,6 @@ tr[draggable="true"] {
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--vt-text-primary);
-  -webkit-app-region: no-drag;
 }
 
 .browser-item:hover {
