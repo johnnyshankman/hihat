@@ -539,10 +539,8 @@ export const bootstrapLibraryStore = (): void => {
     useLibraryStore.getState().loadPlaylists();
   });
 
-  (async () => {
-    await useLibraryStore.getState().loadPlaylists();
-    await useLibraryStore.getState().loadLibrary();
-  })();
+  useLibraryStore.getState().loadPlaylists();
+  useLibraryStore.getState().loadLibrary();
 };
 
 export default useLibraryStore;
