@@ -60,6 +60,10 @@ test.describe('Autoplay → Skip regression', () => {
     // Gapless-5 should actually be playing track 2 (the store's view)
     expect(stateAfterAutoplay.playerCurrentFilePath).toBe(track2FilePath);
 
+    // The scheduled cleanup (50ms) has long since fired — queue settles
+    // to exactly 2 entries (current + preloaded) rather than 3.
+    expect(stateAfterAutoplay.playerQueueLength).toBe(2);
+
     // The preloaded track is track 3 — record it so we can compare after skip
     const track3FilePath = stateAfterAutoplay.storePreloadedTrackFilePath;
     expect(track3FilePath).toBeTruthy();
@@ -76,6 +80,8 @@ test.describe('Autoplay → Skip regression', () => {
     // THIS is the bug-catching assertion: the player must actually be
     // playing track 3, not a restarted track 2.
     expect(stateAfterSkip.playerCurrentFilePath).toBe(track3FilePath);
+    // Post-skip queue is clean (no accumulated stale).
+    expect(stateAfterSkip.playerQueueLength).toBe(2);
 
     await TestHelpers.closeApp(app);
   });
@@ -100,6 +106,9 @@ test.describe('Autoplay → Skip regression', () => {
 
     // Store and player should agree on track 3
     expect(stateAfterAutoplay.playerCurrentFilePath).toBe(track3FilePath);
+    // Queue stays bounded at 2 even after repeated auto-advances —
+    // each scheduled cleanup fires before the next auto-advance.
+    expect(stateAfterAutoplay.playerQueueLength).toBe(2);
 
     // Skip — Gapless-5 should now play track 4.
     await page.locator('[data-testid="skip-next-button"]').click();
@@ -109,6 +118,28 @@ test.describe('Autoplay → Skip regression', () => {
     expect(stateAfterSkip.storeCurrentTrackFilePath).toBe(track4FilePath);
     // Bug-catching assertion:
     expect(stateAfterSkip.playerCurrentFilePath).toBe(track4FilePath);
+    expect(stateAfterSkip.playerQueueLength).toBe(2);
+
+    await TestHelpers.closeApp(app);
+  });
+
+  test('queue settles to 2 within 200ms after auto-advance', async () => {
+    const { app, page } = await TestHelpers.launchApp();
+
+    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+
+    await page.locator('[data-track-id]').nth(0).dblclick();
+    await page.waitForTimeout(1000);
+
+    // Let track 1 auto-advance to track 2 (~10s fixtures) then wait just
+    // past the 50ms scheduled cleanup.
+    await page.waitForTimeout(11000);
+    await page.waitForTimeout(200);
+
+    const state = await readPlayerState(page);
+    expect(state.playerQueueLength).toBe(2);
+    expect(state.storeCurrentTrackFilePath).toBe(state.playerCurrentFilePath);
 
     await TestHelpers.closeApp(app);
   });
