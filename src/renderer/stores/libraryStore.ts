@@ -497,8 +497,32 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 }));
 
-// Set up event listener for library scan completion
-if (typeof window !== 'undefined') {
+let libraryBootstrapped = false;
+
+/**
+ * Wires the renderer-process library subsystem: registers the
+ * `library:scanComplete` IPC listener and kicks off the initial library +
+ * playlists load. Call once from the main app's mount effect (not from the
+ * mini-player window, which has no library dependency).
+ *
+ * Idempotent — guarded so accidental double-calls (StrictMode, HMR) are safe.
+ *
+ * Fire-and-forget by design. The two initial loads run in parallel and the
+ * function returns synchronously. Callers MUST NOT rely on bootstrap's
+ * return to know "the library is ready" — instead, subscribe to
+ * `useLibraryStore((s) => s.isLoading)` and react when it flips to false.
+ * That's the contract `ThemedApp` already follows (see App.tsx — the second
+ * useEffect runs `selectSpecificSong` once `isLoading` is false).
+ *
+ * If a future caller genuinely needs to await readiness (e.g. a programmatic
+ * startup harness or test setup), convert the signature to
+ * `async (): Promise<void>` and `await Promise.all([...])` the two loads.
+ * Until then, keep this sync to avoid speculative API surface.
+ */
+export const bootstrapLibraryStore = (): void => {
+  if (libraryBootstrapped) return;
+  libraryBootstrapped = true;
+
   window.electron.ipcRenderer.on('library:scanComplete', (data: any) => {
     if (data.error) {
       console.warn(`Library scan failed: ${data.error}`);
@@ -527,13 +551,8 @@ if (typeof window !== 'undefined') {
     useLibraryStore.getState().loadPlaylists();
   });
 
-  // Initialize library on app start
-  const initializeLibrary = async () => {
-    await useLibraryStore.getState().loadPlaylists();
-    await useLibraryStore.getState().loadLibrary();
-  };
-
-  initializeLibrary();
-}
+  useLibraryStore.getState().loadPlaylists();
+  useLibraryStore.getState().loadLibrary();
+};
 
 export default useLibraryStore;

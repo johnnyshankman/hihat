@@ -30,6 +30,9 @@ jobs:
     - name: Build
       run: npm run build
 
+    - name: Unit tests
+      run: npm test
+
   changes:
     name: Detect E2E-Relevant Changes
     runs-on: ubuntu-latest

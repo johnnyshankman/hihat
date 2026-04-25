@@ -1,3 +1,11 @@
+// TODO: Extract module-init side effects into an exported `bootstrapSettingsAndPlaybackStore()`
+// function and call it once from App mount, mirroring what was done for libraryStore in PR #87.
+// This file currently runs `loadSettings()` and attaches the `__hihat_e2e_getPlayerState`
+// window global at module load (bottom of file), which couples any importer — including unit
+// tests — to app-startup behavior. Until extracted, unit-testing this store requires stubbing
+// `window.electron` and the e2e harness, which is the same antipattern we just removed from
+// libraryStore. Track of work, not a refactor for this PR.
+
 import { create } from 'zustand';
 import { Gapless5 } from '@regosen/gapless-5';
 import { Track, Settings } from '../../types/dbTypes';

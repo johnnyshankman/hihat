@@ -17,7 +17,7 @@ import { MetadataToWrite } from '../../types/dbTypes';
 
 const SUPPORTED_CONTAINERS = ['MPEG', 'FLAC', 'Ogg'];
 
-function isSupported(container: string, codec?: string): boolean {
+export function isSupported(container: string, codec?: string): boolean {
   return (
     SUPPORTED_CONTAINERS.includes(container) ||
     container.startsWith('MPEG-4') ||
