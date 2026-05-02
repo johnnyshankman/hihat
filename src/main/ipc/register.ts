@@ -38,19 +38,20 @@ export function registerIpcHandler<C extends Channels>(
 
 /**
  * Bulk-register a record of typed handlers, e.g. the `ipcHandlers` map
- * exported from `handlers.ts`. Each key must be a valid `Channels` member
- * and the value must be its `IPCInvokeHandler<C>` shape.
+ * exported from `handlers.ts`. Each entry's individual function carries
+ * its own typed `IPCHandler<C>` cast at the definition site; this map
+ * type accepts the loose `(args, event) => Promise<unknown>` shape so
+ * per-channel handlers stay assignable without forcing union types
+ * onto each handler's `args` parameter.
  */
-export type IPCHandlerMap = Partial<{
-  [C in Channels]: IPCInvokeHandler<C>;
-}>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyIPCHandler = (args: any, event?: any) => Promise<any>;
 
-export function registerIpcHandlers(handlers: IPCHandlerMap): void {
+export function registerIpcHandlers(
+  handlers: Record<string, AnyIPCHandler>,
+): void {
   Object.entries(handlers).forEach(([channel, handler]) => {
-    if (!handler) return;
-    ipcMain.handle(channel, async (event, args) =>
-      (handler as IPCInvokeHandler<Channels>)(args, event),
-    );
+    ipcMain.handle(channel, async (event, args) => handler(args, event));
   });
 }
 

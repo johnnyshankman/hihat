@@ -20,10 +20,7 @@ import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
 import { scanLibrary, importFiles } from '../library/scanner';
 import { writeMetadataToFile } from '../library/tagWriter';
-import {
-  assertHttpUrl,
-  assertTrustedSender,
-} from './validateSender';
+import { assertHttpUrl, assertTrustedSender } from './validateSender';
 
 /**
  * UI-related IPC handlers
@@ -318,10 +315,7 @@ export const libraryHandlers = {
     }
   }) as IPCHandler<'library:restore'>,
 
-  'library:resetDatabase': (async (
-    _req: void,
-    event: IpcMainInvokeEvent,
-  ) => {
+  'library:resetDatabase': (async (_req: void, event: IpcMainInvokeEvent) => {
     assertTrustedSender(event);
     try {
       const success = await db.resetDatabase();
@@ -408,10 +402,7 @@ export const appHandlers = {
     }
   }) as IPCHandler<'app:restart'>,
 
-  'app:open-in-browser': (async (
-    { link },
-    event: IpcMainInvokeEvent,
-  ) => {
+  'app:open-in-browser': (async ({ link }, event: IpcMainInvokeEvent) => {
     assertTrustedSender(event);
     try {
       // Reject non-http(s) URLs before handing them to shell.openExternal.
@@ -551,10 +542,7 @@ export const fileSystemHandlers = {
     }
   }) as IPCHandler<'fileSystem:downloadAlbumArt'>,
 
-  'fileSystem:deleteFile': (async (
-    { filePath },
-    event: IpcMainInvokeEvent,
-  ) => {
+  'fileSystem:deleteFile': (async ({ filePath }, event: IpcMainInvokeEvent) => {
     assertTrustedSender(event);
     try {
       if (!fs.existsSync(filePath)) {

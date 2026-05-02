@@ -1,8 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Settings } from '../../types/dbTypes';
 import useUIStore from '../stores/uiStore';
 import { queryKeys } from './keys';

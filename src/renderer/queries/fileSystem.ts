@@ -23,10 +23,7 @@ export function useDeleteFile() {
       if (!result.success) {
         useUIStore
           .getState()
-          .showNotification(
-            result.message ?? 'Failed to delete file',
-            'error',
-          );
+          .showNotification(result.message ?? 'Failed to delete file', 'error');
       }
     },
     onError: (err) => {

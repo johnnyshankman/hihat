@@ -27,7 +27,8 @@ export function useAlbumArt(
 /** Download album art for a track to the user's Downloads folder. */
 export function useDownloadAlbumArt() {
   return useMutation({
-    mutationFn: (track: Track) => window.electron.fileSystem.downloadAlbumArt(track),
+    mutationFn: (track: Track) =>
+      window.electron.fileSystem.downloadAlbumArt(track),
     onSuccess: (result) => {
       if (!result.success) {
         useUIStore

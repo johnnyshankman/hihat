@@ -1,8 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Playlist, Track } from '../../types/dbTypes';
 import useUIStore from '../stores/uiStore';
 import { queryKeys } from './keys';
@@ -19,7 +15,9 @@ export function usePlaylists() {
  * Get a single playlist by id from the cached `usePlaylists` data.
  * Returns undefined if the playlists query hasn't loaded yet.
  */
-export function usePlaylist(id: string | null | undefined): Playlist | undefined {
+export function usePlaylist(
+  id: string | null | undefined,
+): Playlist | undefined {
   const { data } = usePlaylists();
   if (!id || !data) return undefined;
   return data.find((p) => p.id === id);
@@ -63,7 +61,8 @@ export function useCreatePlaylist() {
 export function useUpdatePlaylist() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (playlist: Playlist) => window.electron.playlists.update(playlist),
+    mutationFn: (playlist: Playlist) =>
+      window.electron.playlists.update(playlist),
     onMutate: async (updated) => {
       await qc.cancelQueries({ queryKey: queryKeys.playlists });
       const prev = qc.getQueryData<Playlist[]>(queryKeys.playlists);

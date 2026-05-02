@@ -275,7 +275,11 @@ export function createMiniPlayerWindow(): void {
       // Immediately send current state to mini player when it's ready
       if (currentTrack) {
         sendIpcEvent(miniPlayerWindow, 'miniPlayer:trackChanged', currentTrack);
-        sendIpcEvent(miniPlayerWindow, 'miniPlayer:stateChanged', playbackState);
+        sendIpcEvent(
+          miniPlayerWindow,
+          'miniPlayer:stateChanged',
+          playbackState,
+        );
         sendIpcEvent(
           miniPlayerWindow,
           'miniPlayer:positionChanged',
@@ -354,9 +358,7 @@ export function updateCurrentTrack(track: Track | null): void {
  * Update playback state
  * @param state - Playback state
  */
-export function updatePlaybackState(
-  state: Partial<PlayerPlaybackState>,
-): void {
+export function updatePlaybackState(state: Partial<PlayerPlaybackState>): void {
   playbackState = { ...playbackState, ...state };
   sendIpcEvent(miniPlayerWindow, 'miniPlayer:stateChanged', playbackState);
 }
@@ -397,7 +399,7 @@ export function setupMiniPlayerHandlers(): void {
   registerIpcHandler('miniPlayer:requestState', async (_req, event) => {
     try {
       assertSenderIsWindow(event, miniPlayerWindow);
-      const sender = event.sender;
+      const { sender } = event;
       sender.send('miniPlayer:trackChanged', currentTrack);
       sender.send('miniPlayer:stateChanged', playbackState);
       sender.send('miniPlayer:positionChanged', playbackState.position);

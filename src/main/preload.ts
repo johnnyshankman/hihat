@@ -266,10 +266,7 @@ const electronHandler = {
      * Subscribe to migration completion. @returns Unsubscribe.
      */
     onComplete(
-      callback: (data: {
-        tracksCount: number;
-        playlistsCount: number;
-      }) => void,
+      callback: (data: { tracksCount: number; playlistsCount: number }) => void,
     ): () => void {
       const subscription = (
         _event: IpcRendererEvent,

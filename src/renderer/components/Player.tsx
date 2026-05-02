@@ -223,7 +223,7 @@ export default function Player() {
       window.electron.player.onPlayPause(() => setPaused(!paused)),
       window.electron.player.onNextTrack(() => skipToNextTrack()),
       window.electron.player.onPreviousTrack(() => skipToPreviousTrack()),
-      window.electron.player.onSeek((position) => seekToPosition(position)),
+      window.electron.player.onSeek((seekPos) => seekToPosition(seekPos)),
       window.electron.player.onSetVolume((newVolume) => setVolume(newVolume)),
       window.electron.player.onToggleRepeat(() => toggleRepeatMode()),
       window.electron.player.onToggleShuffle(() => toggleShuffleMode()),
