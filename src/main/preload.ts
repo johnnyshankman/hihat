@@ -7,29 +7,40 @@
  */
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import { Channels, IPCRequests, IPCResponses } from '../types/ipc';
-import { MetadataToWrite } from '../types/dbTypes';
+import {
+  Channels,
+  IPCRequests,
+  IPCResponses,
+  PlayerPlaybackState,
+} from '../types/ipc';
+import { MetadataToWrite, Track } from '../types/dbTypes';
 
 /**
  * Exposes IPC functions to the renderer process
  */
 const electronHandler = {
   // Generic IPC functions
+  //
+  // NOTE: The `sendMessage`, `on`, and `once` methods below accept untyped
+  // `unknown[]` rest args and bypass the typed namespaced wrappers (e.g.
+  // `library.onScanProgress`, `player.onPlayPause`). Use the namespaced
+  // wrappers in renderer code; these generic methods exist as an internal
+  // escape hatch only.
   ipcRenderer: {
     /**
-     * Send a message to the main process via IPC
-     * @param channel - The IPC channel to send the message on
-     * @param args - Arguments to pass to the main process
+     * @deprecated Use the typed namespaced wrappers instead (e.g.
+     * `window.electron.player.sendStateUpdate(state)`,
+     * `window.electron.backup.start(path)`).
      */
     sendMessage<C extends Channels>(channel: C, ...args: unknown[]) {
       ipcRenderer.send(channel, ...args);
     },
 
     /**
-     * Register a listener for messages from the main process
-     * @param channel - The IPC channel to listen on
-     * @param func - Callback function to handle the message
-     * @returns A function to remove the listener
+     * @deprecated Use the typed namespaced subscription wrappers instead
+     * (e.g. `window.electron.library.onScanProgress(cb)`,
+     * `window.electron.player.onPlayPause(cb)`). They return the same
+     * unsubscribe function and provide typed payloads.
      */
     on<C extends Channels>(
       channel: C,
@@ -45,9 +56,7 @@ const electronHandler = {
     },
 
     /**
-     * Register a one-time listener for messages from the main process
-     * @param channel - The IPC channel to listen on
-     * @param func - Callback function to handle the message
+     * @deprecated Prefer the typed namespaced subscription wrappers.
      */
     once<C extends Channels>(channel: C, func: (...args: unknown[]) => void) {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
@@ -141,7 +150,7 @@ const electronHandler = {
      * @param track - The track to download album art for
      * @returns Promise that resolves to an object with success status
      */
-    downloadAlbumArt(track: any) {
+    downloadAlbumArt(track: Track) {
       return ipcRenderer.invoke('fileSystem:downloadAlbumArt', { track });
     },
 
@@ -419,8 +428,8 @@ const electronHandler = {
      * @param callback - Function to call when the track changes
      * @returns A function to remove the listener
      */
-    onTrackChange(callback: (track: any) => void) {
-      const subscription = (_event: IpcRendererEvent, track: any) =>
+    onTrackChange(callback: (track: Track | null) => void) {
+      const subscription = (_event: IpcRendererEvent, track: Track | null) =>
         callback(track);
       ipcRenderer.on('miniPlayer:trackChanged', subscription);
       return () => {
@@ -433,9 +442,11 @@ const electronHandler = {
      * @param callback - Function to call when the state changes
      * @returns A function to remove the listener
      */
-    onStateChange(callback: (state: any) => void) {
-      const subscription = (_event: IpcRendererEvent, state: any) =>
-        callback(state);
+    onStateChange(callback: (state: PlayerPlaybackState) => void) {
+      const subscription = (
+        _event: IpcRendererEvent,
+        state: PlayerPlaybackState,
+      ) => callback(state);
       ipcRenderer.on('miniPlayer:stateChanged', subscription);
       return () => {
         ipcRenderer.removeListener('miniPlayer:stateChanged', subscription);

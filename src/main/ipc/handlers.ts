@@ -67,10 +67,11 @@ export const trackHandlers = {
 
   'tracks:update': (async (track) => {
     try {
-      return db.updateTrack(track);
+      db.updateTrack(track);
+      return track;
     } catch (error) {
       console.error(`Error updating track with ID ${track.id}:`, error);
-      return false;
+      throw error;
     }
   }) as IPCHandler<'tracks:update'>,
 
@@ -82,7 +83,7 @@ export const trackHandlers = {
         `Error updating play count for track with ID ${id}:`,
         error,
       );
-      return false;
+      throw error;
     }
   }) as IPCHandler<'tracks:updatePlayCount'>,
 
@@ -91,7 +92,7 @@ export const trackHandlers = {
       return db.deleteTrack(id);
     } catch (error) {
       console.error(`Error deleting track with ID ${id}:`, error);
-      return false;
+      throw error;
     }
   }) as IPCHandler<'tracks:delete'>,
 
@@ -189,19 +190,19 @@ export const playlistHandlers = {
 
   'playlists:update': (async (playlist) => {
     try {
-      return db.updatePlaylist(playlist);
+      db.updatePlaylist(playlist);
     } catch (error) {
       console.error(`Error updating playlist with ID ${playlist.id}:`, error);
-      return false;
+      throw error;
     }
   }) as IPCHandler<'playlists:update'>,
 
   'playlists:delete': (async ({ id }) => {
     try {
-      return db.deletePlaylist(id);
+      db.deletePlaylist(id);
     } catch (error) {
       console.error(`Error deleting playlist with ID ${id}:`, error);
-      return false;
+      throw error;
     }
   }) as IPCHandler<'playlists:delete'>,
 
@@ -233,11 +234,15 @@ export const settingsHandlers = {
 
   'settings:update': (async ({ settings }) => {
     try {
-      const result = db.updateSettings(settings);
-      return result;
+      // Partial-merge: read current row, layer the patch on top, persist.
+      // Renderer call sites send only the fields they're changing, so two
+      // concurrent partial writes can no longer overwrite each other's
+      // untouched fields.
+      const current = db.getSettings();
+      const merged = { ...current, ...settings };
+      return db.updateSettings(merged);
     } catch (error) {
       console.error('Error updating settings:', error);
-      // Don't return true on error, let the client know there was a problem
       throw error;
     }
   }) as IPCHandler<'settings:update'>,
@@ -288,20 +293,18 @@ export const libraryHandlers = {
   'library:backup': (async ({ backupPath }) => {
     try {
       await db.backupDatabase(backupPath);
-      return { success: true };
     } catch (error: unknown) {
       console.error(`Error backing up database to ${backupPath}:`, error);
-      return { error: (error as Error).message || 'Unknown error' };
+      throw error;
     }
   }) as IPCHandler<'library:backup'>,
 
   'library:restore': (async ({ restorePath }) => {
     try {
       db.restoreDatabase(restorePath);
-      return { success: true };
     } catch (error: unknown) {
       console.error(`Error restoring database from ${restorePath}:`, error);
-      return { error: (error as Error).message || 'Unknown error' };
+      throw error;
     }
   }) as IPCHandler<'library:restore'>,
 

@@ -24,6 +24,7 @@ import {
   getSettings,
 } from './db';
 import { ipcHandlers } from './ipc/handlers';
+import { registerIpcHandler, registerIpcHandlers, sendIpcEvent } from './ipc/register';
 import { setMainWindow as setLibraryMainWindow } from './library/scanner';
 import {
   setMainWindow as setMiniPlayerMainWindow,
@@ -122,48 +123,35 @@ const installExtensions = async () => {
  * Setup IPC handlers for the main process
  */
 const setupIpcHandlers = () => {
-  // Register all IPC handlers
-  Object.entries(ipcHandlers).forEach(([channel, handler]) => {
-    ipcMain.handle(channel, (event, ...args) => handler(args[0]));
-  });
+  // Bulk-register the typed handler map (tracks, playlists, settings,
+  // library, dialog, app, ui, fileSystem). Each entry is checked by
+  // `IPCHandler<C>` so request/response shapes match the IPC contract.
+  registerIpcHandlers(ipcHandlers);
 
-  // Window control handlers
-  ipcMain.handle('window:minimize', () => {
+  // Window control handlers — closures over `mainWindow` since they need
+  // the live reference, not a one-shot import.
+  registerIpcHandler('window:minimize', async () => {
     if (mainWindow) mainWindow.minimize();
-    return null;
   });
-
-  ipcMain.handle('window:maximize', () => {
+  registerIpcHandler('window:maximize', async () => {
     if (mainWindow) {
-      if (mainWindow.isMaximized()) {
-        mainWindow.unmaximize();
-      } else {
-        mainWindow.maximize();
-      }
+      if (mainWindow.isMaximized()) mainWindow.unmaximize();
+      else mainWindow.maximize();
     }
-    return null;
   });
-
-  ipcMain.handle('window:close', () => {
+  registerIpcHandler('window:close', async () => {
     if (mainWindow) mainWindow.close();
-    return null;
   });
-
-  ipcMain.handle('window:toggleFullscreen', () => {
-    if (mainWindow) {
-      mainWindow.setFullScreen(!mainWindow.isFullScreen());
-    }
-    return null;
+  registerIpcHandler('window:toggleFullscreen', async () => {
+    if (mainWindow) mainWindow.setFullScreen(!mainWindow.isFullScreen());
   });
+  registerIpcHandler('window:isMaximized', async () =>
+    mainWindow ? mainWindow.isMaximized() : false,
+  );
 
-  ipcMain.handle('window:isMaximized', () => {
-    if (mainWindow) {
-      return mainWindow.isMaximized();
-    }
-    return false;
-  });
-
-  // Library backup handlers
+  // Library backup is fire-and-forget with progress events; uses ipcMain.on
+  // (not invoke) so backupLibrary can call event.reply for incremental
+  // updates. Stays as raw `.on` registration.
   ipcMain.on('menu-backup-library', (event, backupPath) => {
     backupLibrary(backupPath, event);
   });
@@ -282,15 +270,11 @@ const createWindow = async () => {
 
   // Add listeners for maximize and unmaximize events
   mainWindow.on('maximize', () => {
-    if (mainWindow) {
-      mainWindow.webContents.send('window:maximized', true);
-    }
+    sendIpcEvent(mainWindow, 'window:maximized', true);
   });
 
   mainWindow.on('unmaximize', () => {
-    if (mainWindow) {
-      mainWindow.webContents.send('window:maximized', false);
-    }
+    sendIpcEvent(mainWindow, 'window:maximized', false);
   });
 
   const menuBuilder = new MenuBuilder(mainWindow);
@@ -345,16 +329,12 @@ const createWindow = async () => {
           );
 
           // Send migration start event to renderer
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('migration:start');
-          }
+          sendIpcEvent(mainWindow, 'migration:start');
 
           // Run migration with progress callbacks
           const migrationData = await migrateV1ToV2((progress) => {
             // Send progress updates to renderer
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('migration:progress', progress);
-            }
+            sendIpcEvent(mainWindow, 'migration:progress', progress);
           });
 
           if (migrationData) {
@@ -366,13 +346,10 @@ const createWindow = async () => {
             const tracksImported = await bulkImportTracksAsync(
               migrationData.tracks,
               (current, total) => {
-                // Send progress updates during import
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.webContents.send('migration:progress', {
-                    phase: 'importing' as const,
-                    message: `Importing tracks: ${current}/${total}...`,
-                  });
-                }
+                sendIpcEvent(mainWindow, 'migration:progress', {
+                  phase: 'importing' as const,
+                  message: `Importing tracks: ${current}/${total}...`,
+                });
               },
             );
             console.warn(`✅ Imported ${tracksImported} tracks from hihat v1`);
@@ -395,12 +372,10 @@ const createWindow = async () => {
             console.warn('🎉 Migration from hihat v1 to hihat2 complete!');
 
             // Send migration complete event to renderer
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('migration:complete', {
-                tracksCount: tracksImported,
-                playlistsCount: playlistsImported,
-              });
-            }
+            sendIpcEvent(mainWindow, 'migration:complete', {
+              tracksCount: tracksImported,
+              playlistsCount: playlistsImported,
+            });
 
             // Note: Window reload is now handled by the MigrationDialog component
             // when the user clicks the "Continue" button
