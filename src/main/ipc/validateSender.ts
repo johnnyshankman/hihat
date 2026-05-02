@@ -25,9 +25,16 @@ import type { BrowserWindow, IpcMainInvokeEvent } from 'electron';
 const trustedWebContentsIds = new Set<number>();
 
 export function trustWindow(window: BrowserWindow): void {
-  trustedWebContentsIds.add(window.webContents.id);
+  // Capture the id eagerly. Reading `window.webContents` from inside the
+  // `closed` listener throws "Object has been destroyed" because by then
+  // the BrowserWindow's webContents has already been torn down — the
+  // exception in the closed-handler bubbles up to the main process and
+  // surfaces as Electron's "A JavaScript error occurred" dialog at app
+  // exit, which blocks subsequent test runs from launching.
+  const { id } = window.webContents;
+  trustedWebContentsIds.add(id);
   window.on('closed', () => {
-    trustedWebContentsIds.delete(window.webContents.id);
+    trustedWebContentsIds.delete(id);
   });
 }
 
