@@ -111,27 +111,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     // Settings actions
     setLibraryPath: async (libraryPath: Settings['libraryPath']) => {
       try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        // Update the settings in the database
-        const updatedSettings = {
-          id: state.id,
-          libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        // Update the settings state
+        await window.electron.settings.update({ libraryPath });
         set({ libraryPath });
       } catch (error) {
         console.error('Error updating library path:', error);
@@ -215,33 +195,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
     setColumnVisibility: async (column: string, isVisible: boolean) => {
       try {
-        const state = get();
-
-        if (!state.columns) {
-          throw new Error('Settings not loaded');
-        }
-
-        // Update the column visibility
         const updatedColumns = {
-          ...state.columns,
+          ...get().columns,
           [column]: isVisible,
         };
-
-        // Update the settings in the database
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: updatedColumns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        // Update the settings state
+        await window.electron.settings.update({ columns: updatedColumns });
         set({ columns: updatedColumns });
       } catch (error) {
         console.error('Error updating column visibility:', error);
@@ -253,25 +211,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
     setColumnWidths: async (columnWidths: Record<string, number>) => {
       try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
+        await window.electron.settings.update({ columnWidths });
         set({ columnWidths });
       } catch (error) {
         console.error('Error updating column widths:', error);
@@ -299,22 +239,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       );
 
       try {
-        const state = get();
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: sorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
+        await window.electron.settings.update({ librarySorting: sorting });
       } catch (error) {
         console.error('Error updating library sorting:', error);
       }
@@ -322,25 +247,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
     setColumnOrder: async (columnOrder: string[]) => {
       try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
+        await window.electron.settings.update({ columnOrder });
         set({ columnOrder });
       } catch (error) {
         console.error('Error updating column order:', error);
@@ -349,27 +256,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
     setTheme: async (theme: 'light' | 'dark') => {
       try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        // Update the settings in the database
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        // Update the settings state
+        await window.electron.settings.update({ theme });
         set({ theme });
       } catch (error) {
         console.error('Error updating theme:', error);
@@ -381,27 +268,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
     setLastPlayedSongId: async (trackId: string | null) => {
       try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        // Update the settings in the database
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: trackId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        // Update the settings state
+        await window.electron.settings.update({ lastPlayedSongId: trackId });
         set({ lastPlayedSongId: trackId });
       } catch (error) {
         console.error('Error updating last played song ID:', error);
@@ -438,25 +305,11 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         if (state.player) {
           state.player.setVolume(volume);
         }
-
-        // Also update volume in settings DB
-        try {
-          const updatedSettings = {
-            id: state.id,
-            libraryPath: state.libraryPath,
-            theme: state.theme,
-            columns: state.columns,
-            lastPlayedSongId: state.lastPlayedSongId,
-            volume,
-            columnWidths: state.columnWidths,
-            librarySorting: state.librarySorting,
-            columnOrder: state.columnOrder,
-          };
-          window.electron.settings.update(updatedSettings);
-        } catch (error) {
+        // Persist via partial-merge; renderer already applied the volume
+        // to the engine synchronously above, so this is fire-and-forget.
+        window.electron.settings.update({ volume }).catch((error: unknown) => {
           console.error('Error updating volume in settings:', error);
-        }
-
+        });
         return { volume };
       });
     },
