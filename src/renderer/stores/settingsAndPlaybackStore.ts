@@ -176,7 +176,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // Signal the main process that settings are loaded so the window
         // can be shown with the correct theme. See the "Deferred window
         // show" comment in main.ts for the full pattern.
-        window.electron.ipcRenderer.sendMessage('app:settingsLoaded');
+        window.electron.app.signalSettingsLoaded();
 
         return appSettings;
       } catch (error) {
@@ -187,7 +187,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
         // Signal even on failure — the window must still show. The store
         // defaults to 'dark' so the fallback theme is reasonable.
-        window.electron.ipcRenderer.sendMessage('app:settingsLoaded');
+        window.electron.app.signalSettingsLoaded();
 
         return {
           libraryPath: '',

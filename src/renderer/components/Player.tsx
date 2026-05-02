@@ -170,21 +170,18 @@ export default function Player() {
         });
 
       // Send track update to main process for mini player sync
-      window.electron.ipcRenderer.sendMessage(
-        'player:trackUpdate',
-        currentTrack,
-      );
+      window.electron.player.sendTrackUpdate(currentTrack);
     } else {
       setAlbumArt(null);
 
       // Send null track update to main process for mini player sync
-      window.electron.ipcRenderer.sendMessage('player:trackUpdate', null);
+      window.electron.player.sendTrackUpdate(null);
     }
   }, [currentTrack]);
 
   // Send playback state updates to main process for mini player sync
   useEffect(() => {
-    window.electron.ipcRenderer.sendMessage('player:stateUpdate', {
+    window.electron.player.sendStateUpdate({
       paused,
       duration,
       volume,
@@ -219,122 +216,30 @@ export default function Player() {
     window.electron.miniPlayer.open();
   };
 
-  // Listen for commands from mini player
+  // Listen for commands from miniPlayer (player.*) and from menu / keyboard
+  // shortcuts (playback.*). Both routes invoke the same store actions.
   useEffect(() => {
-    const unsubscribePlayPause = window.electron.ipcRenderer.on(
-      'player:playPause' as any,
-      () => {
-        setPaused(!paused);
-      },
-    );
+    const unsubs: Array<() => void> = [
+      window.electron.player.onPlayPause(() => setPaused(!paused)),
+      window.electron.player.onNextTrack(() => skipToNextTrack()),
+      window.electron.player.onPreviousTrack(() => skipToPreviousTrack()),
+      window.electron.player.onSeek((position) => seekToPosition(position)),
+      window.electron.player.onSetVolume((newVolume) => setVolume(newVolume)),
+      window.electron.player.onToggleRepeat(() => toggleRepeatMode()),
+      window.electron.player.onToggleShuffle(() => toggleShuffleMode()),
+      window.electron.playback.onNext(() => skipToNextTrack()),
+      window.electron.playback.onPrevious(() => skipToPreviousTrack()),
+      window.electron.playback.onVolumeUp(() =>
+        setVolume(Math.min(volume + 0.1, 1.0)),
+      ),
+      window.electron.playback.onVolumeDown(() =>
+        setVolume(Math.max(volume - 0.1, 0)),
+      ),
+      window.electron.playback.onToggleRepeat(() => toggleRepeatMode()),
+      window.electron.playback.onToggleShuffle(() => toggleShuffleMode()),
+    ];
 
-    const unsubscribeNextTrack = window.electron.ipcRenderer.on(
-      'player:nextTrack' as any,
-      () => {
-        skipToNextTrack();
-      },
-    );
-
-    const unsubscribePreviousTrack = window.electron.ipcRenderer.on(
-      'player:previousTrack' as any,
-      () => {
-        skipToPreviousTrack();
-      },
-    );
-
-    const unsubscribeSeek = window.electron.ipcRenderer.on(
-      'player:seek' as any,
-      (...args: unknown[]) => {
-        if (args.length > 0 && typeof args[0] === 'number') {
-          seekToPosition(args[0]);
-        }
-      },
-    );
-
-    const unsubscribeSetVolume = window.electron.ipcRenderer.on(
-      'player:setVolume' as any,
-      (...args: unknown[]) => {
-        if (args.length > 0 && typeof args[0] === 'number') {
-          setVolume(args[0]);
-        }
-      },
-    );
-
-    const unsubscribeToggleRepeat = window.electron.ipcRenderer.on(
-      'player:toggleRepeat' as any,
-      () => {
-        toggleRepeatMode();
-      },
-    );
-
-    const unsubscribeToggleShuffle = window.electron.ipcRenderer.on(
-      'player:toggleShuffle' as any,
-      () => {
-        toggleShuffleMode();
-      },
-    );
-
-    // Add listeners for menu keyboard shortcuts
-    const unsubscribeMenuNext = window.electron.ipcRenderer.on(
-      'playback:next' as any,
-      () => {
-        skipToNextTrack();
-      },
-    );
-
-    const unsubscribeMenuPrevious = window.electron.ipcRenderer.on(
-      'playback:previous' as any,
-      () => {
-        skipToPreviousTrack();
-      },
-    );
-
-    const unsubscribeVolumeUp = window.electron.ipcRenderer.on(
-      'playback:volumeUp' as any,
-      () => {
-        // Increase volume by 10%, capped at 1.0
-        setVolume(Math.min(volume + 0.1, 1.0));
-      },
-    );
-
-    const unsubscribeVolumeDown = window.electron.ipcRenderer.on(
-      'playback:volumeDown' as any,
-      () => {
-        // Decrease volume by 10%, with minimum of 0
-        setVolume(Math.max(volume - 0.1, 0));
-      },
-    );
-
-    const unsubscribeMenuToggleRepeat = window.electron.ipcRenderer.on(
-      'playback:toggleRepeat' as any,
-      () => {
-        toggleRepeatMode();
-      },
-    );
-
-    const unsubscribeMenuToggleShuffle = window.electron.ipcRenderer.on(
-      'playback:toggleShuffle' as any,
-      () => {
-        toggleShuffleMode();
-      },
-    );
-
-    // Clean up listeners on unmount
-    return () => {
-      unsubscribePlayPause();
-      unsubscribeNextTrack();
-      unsubscribePreviousTrack();
-      unsubscribeSeek();
-      unsubscribeSetVolume();
-      unsubscribeToggleRepeat();
-      unsubscribeToggleShuffle();
-      unsubscribeMenuNext();
-      unsubscribeMenuPrevious();
-      unsubscribeVolumeUp();
-      unsubscribeVolumeDown();
-      unsubscribeMenuToggleRepeat();
-      unsubscribeMenuToggleShuffle();
-    };
+    return () => unsubs.forEach((unsubscribe) => unsubscribe());
   }, [
     skipToNextTrack,
     skipToPreviousTrack,

@@ -132,12 +132,12 @@ const electronHandler = {
       callback: (data: {
         processed: number;
         total: number;
-        currentFile: string;
+        current: string;
       }) => void,
     ): () => void {
       const subscription = (
         _event: IpcRendererEvent,
-        data: { processed: number; total: number; currentFile: string },
+        data: { processed: number; total: number; current: string },
       ) => callback(data);
       ipcRenderer.on('library:scanProgress', subscription);
       return () => {
@@ -648,6 +648,47 @@ const electronHandler = {
       return () => {
         ipcRenderer.removeListener('player:resumePlayback', subscription);
       };
+    },
+  },
+
+  // Menu / keyboard shortcuts for playback. Distinct from player.* (which
+  // routes miniPlayer commands) because the menu builder uses a separate
+  // channel namespace and includes volume up/down which player.* doesn't.
+  playback: {
+    onNext(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('playback:next', subscription);
+      return () => ipcRenderer.removeListener('playback:next', subscription);
+    },
+    onPrevious(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('playback:previous', subscription);
+      return () =>
+        ipcRenderer.removeListener('playback:previous', subscription);
+    },
+    onVolumeUp(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('playback:volumeUp', subscription);
+      return () =>
+        ipcRenderer.removeListener('playback:volumeUp', subscription);
+    },
+    onVolumeDown(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('playback:volumeDown', subscription);
+      return () =>
+        ipcRenderer.removeListener('playback:volumeDown', subscription);
+    },
+    onToggleRepeat(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('playback:toggleRepeat', subscription);
+      return () =>
+        ipcRenderer.removeListener('playback:toggleRepeat', subscription);
+    },
+    onToggleShuffle(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('playback:toggleShuffle', subscription);
+      return () =>
+        ipcRenderer.removeListener('playback:toggleShuffle', subscription);
     },
   },
 

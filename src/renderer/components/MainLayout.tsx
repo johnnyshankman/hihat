@@ -60,19 +60,12 @@ export default function MainLayout() {
   // reuse it and accept the dep — Zustand action references are stable
   // so the effect still only mounts once.
   useEffect(() => {
-    const unsubToggleSidebar = window.electron.ipcRenderer.on(
-      'ui:toggleSidebar',
-      () => {
-        // toggleSidebar is not used in JSX so it actually saves overhead to pull it in during runtime
-        useUIStore.getState().toggleSidebar();
-      },
-    );
-    const unsubOpenSettings = window.electron.ipcRenderer.on(
-      'ui:openSettings',
-      () => {
-        setSettingsOpen(true);
-      },
-    );
+    const unsubToggleSidebar = window.electron.ui.onToggleSidebar(() => {
+      useUIStore.getState().toggleSidebar();
+    });
+    const unsubOpenSettings = window.electron.ui.onOpenSettings(() => {
+      setSettingsOpen(true);
+    });
     return () => {
       unsubToggleSidebar();
       unsubOpenSettings();

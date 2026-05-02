@@ -26,28 +26,20 @@ export default function MigrationDialog() {
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
-    // Listen for migration start event
-    const handleMigrationStart = () => {
+    const unsubscribeStart = window.electron.migration.onStart(() => {
       setOpen(true);
       setIsComplete(false);
       setProgress({
         phase: 'starting',
         message: 'Starting migration from hihat v1...',
       });
-    };
+    });
 
-    // Listen for migration progress events
-    const handleMigrationProgress = (...args: unknown[]) => {
-      const data = args[0] as MigrationProgress;
+    const unsubscribeProgress = window.electron.migration.onProgress((data) => {
       setProgress(data);
-    };
+    });
 
-    // Listen for migration complete event
-    const handleMigrationComplete = (...args: unknown[]) => {
-      const data = args[0] as {
-        tracksCount: number;
-        playlistsCount: number;
-      };
+    const unsubscribeComplete = window.electron.migration.onComplete((data) => {
       setProgress({
         phase: 'complete',
         message: 'Migration complete!',
@@ -55,23 +47,8 @@ export default function MigrationDialog() {
         playlistsCount: data.playlistsCount,
       });
       setIsComplete(true);
-    };
+    });
 
-    // Register IPC listeners - on() returns a cleanup function
-    const unsubscribeStart = window.electron.ipcRenderer.on(
-      'migration:start',
-      handleMigrationStart,
-    );
-    const unsubscribeProgress = window.electron.ipcRenderer.on(
-      'migration:progress',
-      handleMigrationProgress,
-    );
-    const unsubscribeComplete = window.electron.ipcRenderer.on(
-      'migration:complete',
-      handleMigrationComplete,
-    );
-
-    // Cleanup by calling the unsubscribe functions
     return () => {
       unsubscribeStart();
       unsubscribeProgress();

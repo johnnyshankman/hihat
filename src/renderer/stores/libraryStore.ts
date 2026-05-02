@@ -523,7 +523,7 @@ export const bootstrapLibraryStore = (): void => {
   if (libraryBootstrapped) return;
   libraryBootstrapped = true;
 
-  window.electron.ipcRenderer.on('library:scanComplete', (data: any) => {
+  window.electron.library.onScanComplete((data) => {
     if (data.error) {
       console.warn(`Library scan failed: ${data.error}`);
       useUIStore.getState().showNotification(data.error, 'error');

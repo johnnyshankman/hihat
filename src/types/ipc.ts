@@ -118,6 +118,15 @@ export type Channels =
   | 'player:toggleRepeat'
   | 'player:toggleShuffle'
 
+  // Menu-driven playback shortcuts (separate from player:* which carries
+  // miniPlayer commands; these come from the application menu / keyboard).
+  | 'playback:next'
+  | 'playback:previous'
+  | 'playback:volumeUp'
+  | 'playback:volumeDown'
+  | 'playback:toggleRepeat'
+  | 'playback:toggleShuffle'
+
   // Album Art operations
   | 'albumArt:get'
 
@@ -146,7 +155,7 @@ export interface IPCRequests {
   'library:scanProgress': {
     processed: number;
     total: number;
-    currentFile: string;
+    current: string;
   };
   'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
   'library:resetDatabase': void;
@@ -223,6 +232,14 @@ export interface IPCRequests {
   'player:toggleRepeat': void;
   'player:toggleShuffle': void;
 
+  // Menu-driven playback shortcuts
+  'playback:next': void;
+  'playback:previous': void;
+  'playback:volumeUp': void;
+  'playback:volumeDown': void;
+  'playback:toggleRepeat': void;
+  'playback:toggleShuffle': void;
+
   // Album Art operations
   'albumArt:get': string;
 
@@ -280,7 +297,7 @@ export interface IPCResponses {
   'library:scanProgress': {
     processed: number;
     total: number;
-    currentFile: string;
+    current: string;
   };
   'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
   'library:resetDatabase': { success: boolean; message: string };
@@ -369,6 +386,14 @@ export interface IPCResponses {
   'player:toggleRepeat': void;
   'player:toggleShuffle': void;
 
+  // Menu-driven playback shortcuts
+  'playback:next': void;
+  'playback:previous': void;
+  'playback:volumeUp': void;
+  'playback:volumeDown': void;
+  'playback:toggleRepeat': void;
+  'playback:toggleShuffle': void;
+
   // Album Art operations
   'albumArt:get': string | null;
 
@@ -433,7 +458,13 @@ export type IPCEvents =
   | 'migration:start'
   | 'migration:progress'
   | 'migration:complete'
-  | 'window:maximized';
+  | 'window:maximized'
+  | 'playback:next'
+  | 'playback:previous'
+  | 'playback:volumeUp'
+  | 'playback:volumeDown'
+  | 'playback:toggleRepeat'
+  | 'playback:toggleShuffle';
 
 /**
  * Payload types for main → renderer push events.
@@ -444,7 +475,7 @@ export interface IPCEventPayloads {
   'library:scanProgress': {
     processed: number;
     total: number;
-    currentFile: string;
+    current: string;
   };
   'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
   'backup-library-success': void;
@@ -486,6 +517,12 @@ export interface IPCEventPayloads {
     playlistsCount: number;
   };
   'window:maximized': boolean;
+  'playback:next': void;
+  'playback:previous': void;
+  'playback:volumeUp': void;
+  'playback:volumeDown': void;
+  'playback:toggleRepeat': void;
+  'playback:toggleShuffle': void;
 }
 
 /**
