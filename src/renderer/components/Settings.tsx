@@ -28,12 +28,6 @@ import { useSettingsAndPlaybackStore, useUIStore } from '../stores';
 import ConfirmationDialog from './ConfirmationDialog';
 import useLibraryStore from '../stores/libraryStore';
 
-// Define the type for the dialog result
-interface DirectorySelectionResult {
-  canceled: boolean;
-  filePaths: string[];
-}
-
 // Define the props for the Settings component
 interface SettingsProps {
   onClose: () => void;
@@ -395,19 +389,18 @@ export default function Settings({ onClose }: SettingsProps) {
 
   const handleSelectLibraryPath = async () => {
     originalPathRef.current = libraryPath;
-    const result =
-      (await window.electron.dialog.selectDirectory()) as DirectorySelectionResult;
-
-    let newLibraryPath = '';
-    if (!result.canceled && result.filePaths.length > 0) {
-      // eslint-disable-next-line prefer-destructuring
-      newLibraryPath = result.filePaths[0];
-    } else {
-      // reset back to original path
-      newLibraryPath = originalPathRef.current;
-    }
-
     try {
+      const result = await window.electron.dialog.selectDirectory();
+      if ('error' in result) {
+        showNotification(result.error, 'error');
+        return;
+      }
+
+      const newLibraryPath =
+        !result.canceled && result.filePaths.length > 0
+          ? result.filePaths[0]
+          : originalPathRef.current;
+
       // Check if the library path exists
       const pathExists =
         await window.electron.fileSystem.fileExists(newLibraryPath);

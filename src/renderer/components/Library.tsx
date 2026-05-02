@@ -64,12 +64,6 @@ const DEFAULT_LIBRARY_SORTING: SortingState = [
   { id: 'albumArtist', desc: false },
 ];
 
-// Define the type for directory selection result
-interface DirectorySelectionResult {
-  canceled: boolean;
-  filePaths: string[];
-}
-
 export default function Library() {
   // Subscribe directly so the parent doesn't need a drawer prop.
   const drawerOpen = useUIStore((state) => state.sidebarOpen);
@@ -193,24 +187,19 @@ export default function Library() {
 
   const handleSelectFolder = async () => {
     try {
-      const result =
-        (await window.electron.dialog.selectDirectory()) as DirectorySelectionResult;
-      if (
-        result.canceled ||
-        !result.filePaths ||
-        result.filePaths.length === 0
-      ) {
+      const result = await window.electron.dialog.selectDirectory();
+      if ('error' in result) {
+        showNotification(result.error, 'error');
+        return;
+      }
+      if (result.canceled || result.filePaths.length === 0) {
         return;
       }
 
       const libraryPath = result.filePaths[0];
 
-      // Save the library path to settings
-      const localSettings = await window.electron.settings.get();
-      await window.electron.settings.update({
-        ...localSettings,
-        libraryPath,
-      });
+      // Save the library path to settings (partial-merge — Phase 5b).
+      await window.electron.settings.update({ libraryPath });
 
       // Close the dialog
       setDialogOpen(false);
@@ -219,6 +208,7 @@ export default function Library() {
       setScanConfirmOpen(true);
     } catch (error) {
       console.error('Error selecting folder:', error);
+      showNotification('Failed to select folder', 'error');
     }
   };
 

@@ -56,6 +56,24 @@ export default function TrackContextMenu({
   // Add state for the delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const openExternalUrl = (url: string, label: string): void => {
+    window.electron.app
+      .openInBrowser(url)
+      .then((result) => {
+        if (!result.success) {
+          showNotification(
+            `Couldn't open ${label}: ${result.message ?? 'unknown error'}`,
+            'error',
+          );
+        }
+        return result;
+      })
+      .catch((error: unknown) => {
+        console.error(`Failed to open ${label} URL:`, error);
+        showNotification(`Couldn't open ${label}`, 'error');
+      });
+  };
+
   if (!trackId) return null;
 
   const handlePlayTrack = () => {
@@ -86,8 +104,9 @@ export default function TrackContextMenu({
     const urlEncodedTitle = encodeURIComponent(track?.title || '');
     const urlEncodedArtist = encodeURIComponent(track?.albumArtist || '');
 
-    window.electron.app.openInBrowser(
+    openExternalUrl(
       `https://open.spotify.com/search/${urlEncodedTitle}%20artist:${urlEncodedArtist}`,
+      'Spotify',
     );
     onClose();
   };
@@ -98,8 +117,9 @@ export default function TrackContextMenu({
     const urlEncodedTitle = encodeURIComponent(track?.title || '');
     const urlEncodedArtist = encodeURIComponent(track?.albumArtist || '');
 
-    window.electron.app.openInBrowser(
+    openExternalUrl(
       `https://music.apple.com/search?term=${urlEncodedTitle}%20${urlEncodedArtist}`,
+      'Apple Music',
     );
     onClose();
   };
@@ -110,8 +130,9 @@ export default function TrackContextMenu({
     const urlEncodedArtist = encodeURIComponent(track?.albumArtist || '');
     const urlEncodedTitle = encodeURIComponent(track?.title || '');
 
-    window.electron.app.openInBrowser(
+    openExternalUrl(
       `https://tidal.com/search?q=${urlEncodedArtist}%20${urlEncodedTitle}`,
+      'Tidal',
     );
     onClose();
   };
