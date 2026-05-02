@@ -5,7 +5,13 @@
  * It handles requests from the renderer process and returns responses.
  */
 
-import { dialog, app, BrowserWindow, shell } from 'electron';
+import {
+  dialog,
+  app,
+  BrowserWindow,
+  shell,
+  IpcMainInvokeEvent,
+} from 'electron';
 import fs from 'fs';
 import path from 'path';
 import * as mm from 'music-metadata';
@@ -14,6 +20,10 @@ import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
 import { scanLibrary, importFiles } from '../library/scanner';
 import { writeMetadataToFile } from '../library/tagWriter';
+import {
+  assertHttpUrl,
+  assertTrustedSender,
+} from './validateSender';
 
 /**
  * UI-related IPC handlers
@@ -308,7 +318,11 @@ export const libraryHandlers = {
     }
   }) as IPCHandler<'library:restore'>,
 
-  'library:resetDatabase': (async () => {
+  'library:resetDatabase': (async (
+    _req: void,
+    event: IpcMainInvokeEvent,
+  ) => {
+    assertTrustedSender(event);
     try {
       const success = await db.resetDatabase();
       return {
@@ -326,7 +340,8 @@ export const libraryHandlers = {
     }
   }) as IPCHandler<'library:resetDatabase'>,
 
-  'library:resetTracks': (async () => {
+  'library:resetTracks': (async (_req: void, event: IpcMainInvokeEvent) => {
+    assertTrustedSender(event);
     try {
       const success = await db.resetTracks();
       return {
@@ -393,8 +408,17 @@ export const appHandlers = {
     }
   }) as IPCHandler<'app:restart'>,
 
-  'app:open-in-browser': (async ({ link }) => {
+  'app:open-in-browser': (async (
+    { link },
+    event: IpcMainInvokeEvent,
+  ) => {
+    assertTrustedSender(event);
     try {
+      // Reject non-http(s) URLs before handing them to shell.openExternal.
+      // Without this, a buggy or compromised renderer could pass file://,
+      // javascript:, or a custom-protocol URI and trigger arbitrary
+      // local-side behavior.
+      assertHttpUrl(link);
       await shell.openExternal(link);
       return { success: true };
     } catch (error: unknown) {
@@ -527,7 +551,11 @@ export const fileSystemHandlers = {
     }
   }) as IPCHandler<'fileSystem:downloadAlbumArt'>,
 
-  'fileSystem:deleteFile': (async ({ filePath }) => {
+  'fileSystem:deleteFile': (async (
+    { filePath },
+    event: IpcMainInvokeEvent,
+  ) => {
+    assertTrustedSender(event);
     try {
       if (!fs.existsSync(filePath)) {
         return {

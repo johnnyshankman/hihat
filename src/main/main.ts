@@ -24,7 +24,12 @@ import {
   getSettings,
 } from './db';
 import { ipcHandlers } from './ipc/handlers';
-import { registerIpcHandler, registerIpcHandlers, sendIpcEvent } from './ipc/register';
+import {
+  registerIpcHandler,
+  registerIpcHandlers,
+  sendIpcEvent,
+} from './ipc/register';
+import { trustWindow } from './ipc/validateSender';
 import { setMainWindow as setLibraryMainWindow } from './library/scanner';
 import {
   setMainWindow as setMiniPlayerMainWindow,
@@ -220,6 +225,11 @@ const createWindow = async () => {
       backgroundThrottling: !isTest, // Disable throttling in test mode so hidden window renders normally
     },
   });
+
+  // Register the main window as a trusted IPC sender so destructive
+  // handlers (library:resetDatabase, fileSystem:deleteFile, etc.) accept
+  // its calls. The trust mark is dropped automatically on `closed`.
+  trustWindow(mainWindow);
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 

@@ -14,6 +14,7 @@ import { resolveHtmlPath } from './util';
 import { Track } from '../types/dbTypes';
 import { PlayerPlaybackState } from '../types/ipc';
 import { registerIpcHandler, sendIpcEvent } from './ipc/register';
+import { assertSenderIsWindow, trustWindow } from './ipc/validateSender';
 
 // Detect test mode so the preload path resolves to the built preload.js
 // (same pattern as main.ts). Without this, test mode falls through to the
@@ -204,6 +205,11 @@ export function createMiniPlayerWindow(): void {
     // Load the mini player HTML with a specific query parameter to indicate it's a mini player
     miniPlayerWindow.loadURL(miniPlayerUrl);
 
+    // Mark the miniPlayer window as a trusted IPC sender (its preload
+    // exposes the same window.electron API as the main window). The
+    // trust mark is removed automatically on `closed`.
+    trustWindow(miniPlayerWindow);
+
     // Log any webContents errors
     miniPlayerWindow.webContents.on(
       'did-fail-load',
@@ -386,17 +392,11 @@ export function setupMiniPlayerHandlers(): void {
     }
   });
 
-  // Request current state — caller is the miniPlayer renderer responding to
-  // its own mount; respond directly to event.sender (the requesting window)
-  // rather than broadcasting to all renderers.
+  // Request current state — caller must be the miniPlayer renderer
+  // responding to its own mount; reject calls from any other window.
   registerIpcHandler('miniPlayer:requestState', async (_req, event) => {
     try {
-      if (!miniPlayerWindow || event.sender !== miniPlayerWindow.webContents) {
-        console.warn(
-          'Request state called from non-mini player window or mini player is null',
-        );
-        return;
-      }
+      assertSenderIsWindow(event, miniPlayerWindow);
       const sender = event.sender;
       sender.send('miniPlayer:trackChanged', currentTrack);
       sender.send('miniPlayer:stateChanged', playbackState);
