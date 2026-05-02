@@ -123,6 +123,163 @@ const electronHandler = {
     resetTracks() {
       return ipcRenderer.invoke('library:resetTracks');
     },
+
+    /**
+     * Subscribe to library scan progress events.
+     * @returns Unsubscribe function. Call it on cleanup to remove the listener.
+     */
+    onScanProgress(
+      callback: (data: {
+        processed: number;
+        total: number;
+        currentFile: string;
+      }) => void,
+    ): () => void {
+      const subscription = (
+        _event: IpcRendererEvent,
+        data: { processed: number; total: number; currentFile: string },
+      ) => callback(data);
+      ipcRenderer.on('library:scanProgress', subscription);
+      return () => {
+        ipcRenderer.removeListener('library:scanProgress', subscription);
+      };
+    },
+
+    /**
+     * Subscribe to library scan completion. Fires once per scan.
+     * @returns Unsubscribe function.
+     */
+    onScanComplete(
+      callback: (data: {
+        tracksAdded: number;
+        tracksRemoved: number;
+        // `error` is included for backward-compat with the existing scanner
+        // event payload (scanner emits `{ error: string }` on failure).
+        error?: string;
+      }) => void,
+    ): () => void {
+      const subscription = (
+        _event: IpcRendererEvent,
+        data: { tracksAdded: number; tracksRemoved: number; error?: string },
+      ) => callback(data);
+      ipcRenderer.on('library:scanComplete', subscription);
+      return () => {
+        ipcRenderer.removeListener('library:scanComplete', subscription);
+      };
+    },
+  },
+
+  // Library backup (kebab-case channels for legacy reasons)
+  backup: {
+    /**
+     * Trigger a library backup. Fire-and-forget — progress and completion
+     * arrive over the `onProgress`, `onSuccess`, and `onError` events.
+     */
+    start(backupPath: string) {
+      ipcRenderer.send('menu-backup-library', backupPath);
+    },
+
+    /**
+     * Subscribe to backup completion (success). @returns Unsubscribe.
+     */
+    onSuccess(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('backup-library-success', subscription);
+      return () => {
+        ipcRenderer.removeListener('backup-library-success', subscription);
+      };
+    },
+
+    /**
+     * Subscribe to backup errors. @returns Unsubscribe.
+     */
+    onError(callback: (message: string) => void): () => void {
+      const subscription = (_event: IpcRendererEvent, message: string) =>
+        callback(message);
+      ipcRenderer.on('backup-library-error', subscription);
+      return () => {
+        ipcRenderer.removeListener('backup-library-error', subscription);
+      };
+    },
+
+    /**
+     * Subscribe to backup progress events. @returns Unsubscribe.
+     */
+    onProgress(
+      callback: (data: {
+        phase: string;
+        status: string;
+        currentFile?: string;
+        progress?: number;
+        currentTransfer?: number;
+        remaining?: number;
+        total?: number;
+        transferSpeed?: string;
+        filesProcessed?: number;
+        totalFiles?: number;
+      }) => void,
+    ): () => void {
+      const subscription = (
+        _event: IpcRendererEvent,
+        data: Parameters<typeof callback>[0],
+      ) => callback(data);
+      ipcRenderer.on('backup-library-progress', subscription);
+      return () => {
+        ipcRenderer.removeListener('backup-library-progress', subscription);
+      };
+    },
+  },
+
+  // Migration (v1 → v2) functions
+  migration: {
+    /**
+     * Subscribe to migration start. @returns Unsubscribe.
+     */
+    onStart(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('migration:start', subscription);
+      return () => {
+        ipcRenderer.removeListener('migration:start', subscription);
+      };
+    },
+
+    /**
+     * Subscribe to migration progress. @returns Unsubscribe.
+     */
+    onProgress(
+      callback: (data: {
+        phase: 'starting' | 'reading' | 'converting' | 'importing' | 'complete';
+        message: string;
+      }) => void,
+    ): () => void {
+      const subscription = (
+        _event: IpcRendererEvent,
+        data: Parameters<typeof callback>[0],
+      ) => callback(data);
+      ipcRenderer.on('migration:progress', subscription);
+      return () => {
+        ipcRenderer.removeListener('migration:progress', subscription);
+      };
+    },
+
+    /**
+     * Subscribe to migration completion. @returns Unsubscribe.
+     */
+    onComplete(
+      callback: (data: {
+        tracksCount: number;
+        playlistsCount: number;
+      }) => void,
+    ): () => void {
+      const subscription = (
+        _event: IpcRendererEvent,
+        data: { tracksCount: number; playlistsCount: number },
+      ) => callback(data);
+      ipcRenderer.on('migration:complete', subscription);
+      return () => {
+        ipcRenderer.removeListener('migration:complete', subscription);
+      };
+    },
   },
 
   // File system operations
@@ -337,6 +494,15 @@ const electronHandler = {
     getLogFilePath() {
       return ipcRenderer.invoke('app:getLogFilePath');
     },
+
+    /**
+     * Signal to the main process that the renderer has finished loading
+     * settings. Used to defer the window's first paint until the theme is
+     * applied (avoids a flash of the default theme).
+     */
+    signalSettingsLoaded() {
+      ipcRenderer.send('app:settingsLoaded');
+    },
   },
 
   // UI functions
@@ -346,6 +512,142 @@ const electronHandler = {
      */
     toggleSidebar() {
       return ipcRenderer.invoke('ui:toggleSidebar');
+    },
+
+    /**
+     * Subscribe to "toggle sidebar" events from the menu / keyboard
+     * shortcut. @returns Unsubscribe.
+     */
+    onToggleSidebar(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('ui:toggleSidebar', subscription);
+      return () => {
+        ipcRenderer.removeListener('ui:toggleSidebar', subscription);
+      };
+    },
+
+    /**
+     * Subscribe to "open settings" events from the menu / keyboard
+     * shortcut. @returns Unsubscribe.
+     */
+    onOpenSettings(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('ui:openSettings', subscription);
+      return () => {
+        ipcRenderer.removeListener('ui:openSettings', subscription);
+      };
+    },
+  },
+
+  // Player command relay (main → renderer for menu/keyboard/miniPlayer
+  // commands; renderer → main for state broadcast to the miniPlayer).
+  player: {
+    /**
+     * Broadcast playback state to the main process so the miniPlayer can
+     * stay in sync. Fire-and-forget.
+     */
+    sendStateUpdate(state: PlayerPlaybackState) {
+      ipcRenderer.send('player:stateUpdate', state);
+    },
+
+    /**
+     * Broadcast a track change. Fire-and-forget.
+     */
+    sendTrackUpdate(track: Track | null) {
+      ipcRenderer.send('player:trackUpdate', track);
+    },
+
+    /**
+     * Broadcast a position update (e.g. on seek or natural progression).
+     * Fire-and-forget.
+     */
+    sendPositionUpdate(position: number) {
+      ipcRenderer.send('player:positionUpdate', position);
+    },
+
+    /**
+     * Subscribe to a play/pause command from menu, keyboard, or miniPlayer.
+     */
+    onPlayPause(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('player:playPause', subscription);
+      return () => {
+        ipcRenderer.removeListener('player:playPause', subscription);
+      };
+    },
+
+    /** Subscribe to a "next track" command. */
+    onNextTrack(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('player:nextTrack', subscription);
+      return () => {
+        ipcRenderer.removeListener('player:nextTrack', subscription);
+      };
+    },
+
+    /** Subscribe to a "previous track" command. */
+    onPreviousTrack(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('player:previousTrack', subscription);
+      return () => {
+        ipcRenderer.removeListener('player:previousTrack', subscription);
+      };
+    },
+
+    /** Subscribe to a "seek to position" command. */
+    onSeek(callback: (position: number) => void): () => void {
+      const subscription = (_event: IpcRendererEvent, position: number) =>
+        callback(position);
+      ipcRenderer.on('player:seek', subscription);
+      return () => {
+        ipcRenderer.removeListener('player:seek', subscription);
+      };
+    },
+
+    /** Subscribe to a "set volume" command. */
+    onSetVolume(callback: (volume: number) => void): () => void {
+      const subscription = (_event: IpcRendererEvent, volume: number) =>
+        callback(volume);
+      ipcRenderer.on('player:setVolume', subscription);
+      return () => {
+        ipcRenderer.removeListener('player:setVolume', subscription);
+      };
+    },
+
+    /** Subscribe to a "toggle repeat" command. */
+    onToggleRepeat(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('player:toggleRepeat', subscription);
+      return () => {
+        ipcRenderer.removeListener('player:toggleRepeat', subscription);
+      };
+    },
+
+    /** Subscribe to a "toggle shuffle" command. */
+    onToggleShuffle(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('player:toggleShuffle', subscription);
+      return () => {
+        ipcRenderer.removeListener('player:toggleShuffle', subscription);
+      };
+    },
+
+    /** Subscribe to an explicit pause command. */
+    onPausePlayback(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('player:pausePlayback', subscription);
+      return () => {
+        ipcRenderer.removeListener('player:pausePlayback', subscription);
+      };
+    },
+
+    /** Subscribe to an explicit resume command. */
+    onResumePlayback(callback: () => void): () => void {
+      const subscription = () => callback();
+      ipcRenderer.on('player:resumePlayback', subscription);
+      return () => {
+        ipcRenderer.removeListener('player:resumePlayback', subscription);
+      };
     },
   },
 
