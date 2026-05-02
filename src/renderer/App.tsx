@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { QueryClientProvider } from '@tanstack/react-query';
 import MainLayout from './components/MainLayout';
 import MiniPlayer from './components/MiniPlayer';
 import MigrationDialog from './components/MigrationDialog';
@@ -11,6 +12,7 @@ import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
 } from './stores';
+import { queryClient, useScanCompleteInvalidator } from './queries';
 import './App.css';
 
 const isMiniPlayerWindow =
@@ -37,9 +39,7 @@ function MiniPlayerApp() {
   );
 }
 
-function ThemedApp() {
-  const theme = useSettingsAndPlaybackStore((state) => state.theme);
-  const themeToProvide = theme === 'light' ? lightTheme : darkTheme;
+function ThemedAppContent() {
   const isLoading = useLibraryStore((state) => state.isLoading);
 
   useEffect(() => {
@@ -50,6 +50,9 @@ function ThemedApp() {
       document.body.classList.remove('draggable');
     };
   }, []);
+
+  // Bridge `library:scanComplete` → TanStack Query cache invalidation.
+  useScanCompleteInvalidator();
 
   useEffect(() => {
     if (isLoading) return;
@@ -69,8 +72,7 @@ function ThemedApp() {
   }, [isLoading]);
 
   return (
-    <ThemeProvider theme={themeToProvide}>
-      <CssBaseline />
+    <>
       <MigrationDialog />
       <Router>
         <Routes>
@@ -78,6 +80,20 @@ function ThemedApp() {
           <Route element={<MiniPlayer />} path="/mini-player" />
         </Routes>
       </Router>
+    </>
+  );
+}
+
+function ThemedApp() {
+  const theme = useSettingsAndPlaybackStore((state) => state.theme);
+  const themeToProvide = theme === 'light' ? lightTheme : darkTheme;
+
+  return (
+    <ThemeProvider theme={themeToProvide}>
+      <CssBaseline />
+      <QueryClientProvider client={queryClient}>
+        <ThemedAppContent />
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }
