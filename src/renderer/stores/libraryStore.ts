@@ -206,19 +206,33 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   updatePlaylist: async (playlist: Playlist) => {
+    // Snapshot the previous playlist row so we can revert on persist failure.
+    // Pre-refactor this function set state AFTER the IPC succeeded (no
+    // optimistic update, no rollback risk). The audit asked for optimistic
+    // semantics with proper rollback so user-visible UI matches reality.
+    const { playlists } = get();
+    const prev = playlists.find((p) => p.id === playlist.id) ?? null;
+
+    set((state) => ({
+      playlists: state.playlists.map((p) =>
+        p.id === playlist.id ? playlist : p,
+      ),
+    }));
+
     try {
       await window.electron.playlists.update(playlist);
-
-      set((state) => ({
-        playlists: state.playlists.map((p) =>
-          p.id === playlist.id ? playlist : p,
-        ),
-      }));
-
       useUIStore
         .getState()
         .showNotification(`Playlist "${playlist.name}" updated`, 'success');
     } catch (error) {
+      // Revert the optimistic write so the UI reflects DB truth.
+      if (prev) {
+        set((state) => ({
+          playlists: state.playlists.map((p) =>
+            p.id === playlist.id ? prev : p,
+          ),
+        }));
+      }
       console.error('Error updating playlist:', error);
       useUIStore
         .getState()
@@ -228,31 +242,40 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   deletePlaylist: async (playlistId: string) => {
+    const { playlists } = get();
+    const deletedPlaylist = playlists.find((p) => p.id === playlistId);
+
+    // Prevent deletion of smart playlists
+    if (deletedPlaylist?.isSmart) {
+      useUIStore
+        .getState()
+        .showNotification('Smart playlists cannot be deleted', 'warning');
+      return;
+    }
+    if (!deletedPlaylist) return;
+
+    // Snapshot index so we can reinsert on failure.
+    const prevIndex = playlists.findIndex((p) => p.id === playlistId);
+
+    set((state) => ({
+      playlists: state.playlists.filter((p) => p.id !== playlistId),
+    }));
+
     try {
-      const { playlists } = get();
-      const deletedPlaylist = playlists.find((p) => p.id === playlistId);
-
-      // Prevent deletion of smart playlists
-      if (deletedPlaylist?.isSmart) {
-        useUIStore
-          .getState()
-          .showNotification('Smart playlists cannot be deleted', 'warning');
-        return;
-      }
-
       await window.electron.playlists.delete(playlistId);
-
-      set((state) => ({
-        playlists: state.playlists.filter((p) => p.id !== playlistId),
-      }));
-
       useUIStore
         .getState()
         .showNotification(
-          `Playlist "${deletedPlaylist?.name || playlistId}" deleted`,
+          `Playlist "${deletedPlaylist.name}" deleted`,
           'success',
         );
     } catch (error) {
+      // Reinsert at the original index on failure.
+      set((state) => {
+        const next = [...state.playlists];
+        next.splice(prevIndex, 0, deletedPlaylist);
+        return { playlists: next };
+      });
       console.error('Error deleting playlist:', error);
       useUIStore
         .getState()
@@ -262,40 +285,32 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   addTrackToPlaylist: async (trackId: string, playlistId: string) => {
+    const { playlists, tracks } = get();
+    const playlist = playlists.find((p) => p.id === playlistId);
+    if (!playlist) {
+      throw new Error(`Playlist with ID ${playlistId} not found`);
+    }
+    if (playlist.trackIds.includes(trackId)) {
+      useUIStore
+        .getState()
+        .showNotification('Track is already in this playlist', 'info');
+      return;
+    }
+
+    const updatedPlaylist = {
+      ...playlist,
+      trackIds: [...playlist.trackIds, trackId],
+    };
+
+    // Optimistic update first so the UI feels instant.
+    set((state) => ({
+      playlists: state.playlists.map((p) =>
+        p.id === playlistId ? updatedPlaylist : p,
+      ),
+    }));
+
     try {
-      const { playlists, tracks } = get();
-
-      // Find the playlist
-      const playlist = playlists.find((p) => p.id === playlistId);
-      if (!playlist) {
-        throw new Error(`Playlist with ID ${playlistId} not found`);
-      }
-
-      // Check if the track is already in the playlist
-      if (playlist.trackIds.includes(trackId)) {
-        useUIStore
-          .getState()
-          .showNotification('Track is already in this playlist', 'info');
-        return;
-      }
-
-      // Add the track to the playlist
-      const updatedPlaylist = {
-        ...playlist,
-        trackIds: [...playlist.trackIds, trackId],
-      };
-
-      // Update the playlist in the database
       await window.electron.playlists.update(updatedPlaylist);
-
-      // Update the playlists state
-      set((state) => ({
-        playlists: state.playlists.map((p) =>
-          p.id === playlistId ? updatedPlaylist : p,
-        ),
-      }));
-
-      // Find the track name for the notification
       const track = tracks.find((t) => t.id === trackId);
       useUIStore
         .getState()
@@ -304,6 +319,12 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
           'success',
         );
     } catch (error) {
+      // Revert the optimistic add.
+      set((state) => ({
+        playlists: state.playlists.map((p) =>
+          p.id === playlistId ? playlist : p,
+        ),
+      }));
       console.error('Error adding track to playlist:', error);
       useUIStore
         .getState()
@@ -442,10 +463,12 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   ) => {
     if (!sorting || sorting.length === 0) return;
 
-    // Update the session cache (do NOT update playlists array to avoid
-    // triggering re-renders that cause infinite loops in Playlists.tsx).
-    // If this playlist is the currently-selected one, also mirror the
-    // sort into playlistViewState so trackSelectionUtils sees it.
+    // Snapshot the previous in-memory sort so we can revert on persist
+    // failure. Pre-refactor this swallowed errors silently (the
+    // .catch() just logged), leaving the user with a sort that wasn't
+    // saved without any indication.
+    const prevSort = get().playlistSortPreferences[playlistId];
+
     set((state) => {
       const playlistSortPreferences = {
         ...state.playlistSortPreferences,
@@ -464,14 +487,33 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
       return { playlistSortPreferences };
     });
 
-    // Persist to DB (fire-and-forget)
     const { playlists } = get();
     const playlist = playlists.find((p) => p.id === playlistId);
     if (playlist) {
       window.electron.playlists
         .update({ ...playlist, sortPreference: sorting })
         .catch((err: unknown) => {
+          // Revert the in-memory sort and surface the error.
+          set((state) => {
+            const next = { ...state.playlistSortPreferences };
+            if (prevSort) next[playlistId] = prevSort;
+            else delete next[playlistId];
+            if (playlistId === state.selectedPlaylistId) {
+              return {
+                playlistSortPreferences: next,
+                playlistViewState: {
+                  ...state.playlistViewState,
+                  sorting: prevSort ?? state.playlistViewState.sorting,
+                  playlistId,
+                },
+              };
+            }
+            return { playlistSortPreferences: next };
+          });
           console.error('Error persisting playlist sort preference:', err);
+          useUIStore
+            .getState()
+            .showNotification('Failed to save sort preference', 'error');
         });
     }
   },
