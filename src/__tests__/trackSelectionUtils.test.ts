@@ -17,10 +17,11 @@ import { queryKeys } from '../renderer/queries/keys';
 import { buildIndexes } from '../renderer/utils/trackIndexes';
 import { Track, Playlist } from '../types/dbTypes';
 
-// Phase 5c: tracks + playlists are TanStack Query server state, not
-// Zustand state. Seed via queryClient.setQueryData. The libraryStore
-// snapshot still gets restored after each test for view-state slices
-// (sorting, filtering, selectedPlaylistId).
+// Tracks and playlists are TanStack Query server state — seed via
+// queryClient.setQueryData. View-state slices (sorting, filtering,
+// selectedPlaylistId) live in libraryStore; snapshot the initial
+// store state and restore it after each test so per-test setState
+// calls don't leak across tests.
 const initialLibraryState = useLibraryStore.getState();
 
 afterEach(() => {
@@ -72,9 +73,9 @@ const seedLibrary = (overrides: {
     playlistId: string | null;
   };
 }) => {
-  // Tracks + playlists go to the TanStack Query cache (matches what
-  // trackSelectionUtils now reads via getTracksSnapshot /
-  // getPlaylistsSnapshot at call time).
+  // Tracks and playlists are TanStack Query server state, so seed the
+  // cache directly — that's what trackSelectionUtils reads via
+  // getTracksSnapshot / getPlaylistsSnapshot at call time.
   const tracks = overrides.tracks ?? [];
   queryClient.setQueryData(queryKeys.tracks, {
     tracks,
@@ -82,7 +83,7 @@ const seedLibrary = (overrides: {
   });
   queryClient.setQueryData(queryKeys.playlists, overrides.playlists ?? []);
 
-  // View-state lives in Zustand.
+  // View-state (filter / sort / selected playlist) lives in Zustand.
   useLibraryStore.setState({
     libraryViewState: overrides.libraryViewState ?? {
       sorting: [{ id: 'title', desc: false }],

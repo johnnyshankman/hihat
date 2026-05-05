@@ -11,9 +11,8 @@ export interface TrackIndexes {
 /**
  * Build O(1)-lookup indexes over a tracks array.
  *
- * Used by the `useTracks` query (so all consumers share one set of
- * indexes computed once at fetch time) and — until Phase 5c strips it —
- * by the existing `libraryStore` server-state cache.
+ * Computed once inside the `useTracks` queryFn so every consumer
+ * shares one set of Maps without each component rebuilding its own.
  */
 export function buildIndexes(tracks: Track[]): TrackIndexes {
   const trackIndex = new Map<string, Track>();

@@ -24,13 +24,11 @@ export interface BrowserFilter {
 
 // Library Store Types
 //
-// After Phase 5c the libraryStore holds only client/UI state. Server
-// state (tracks, playlists, settings) is owned by TanStack Query — see
-// src/renderer/queries/. Components reach for `useTracks()`,
-// `usePlaylists()`, `useSettings()` for reads and the corresponding
-// mutation hooks (useCreatePlaylist, useUpdatePlaylist,
-// useDeletePlaylist, useAddTrackToPlaylist, useScanLibrary,
-// useImportFiles, useUpdateTrackMetadata, useDeleteTrack, …) for writes.
+// libraryStore holds only client/UI state. Server state (tracks,
+// playlists, settings) lives in TanStack Query — see
+// src/renderer/queries/. Components consume `useTracks()`,
+// `usePlaylists()`, `useSettings()` for reads and the matching
+// mutation hooks for writes.
 export interface LibraryStore {
   // ── UI / view state ─────────────────────────────────────────────
   selectedPlaylistId: string | null;

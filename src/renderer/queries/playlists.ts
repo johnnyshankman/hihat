@@ -216,8 +216,6 @@ export function useUpdatePlaylistSortPreference() {
     },
     onError: (err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(queryKeys.playlists, ctx.prev);
-      // Per audit (libraryStore.ts:471-475), this used to swallow errors.
-      // Now they surface to the user.
       console.error('Failed to persist playlist sort preference:', err);
       useUIStore
         .getState()

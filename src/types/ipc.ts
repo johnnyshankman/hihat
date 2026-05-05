@@ -420,11 +420,11 @@ export interface IPCResponses {
 /**
  * Type for IPC handler functions.
  *
- * The `event` parameter is optional in practice — most handlers don't use
- * it — but is typed here as `unknown` so call sites that need it (sender
- * validation, replying to a specific window) can narrow with a cast or
- * by re-typing locally. Phase 2's `registerIpcHandler<C>` accepts a
- * fully-typed `(req, event: IpcMainInvokeEvent)` handler.
+ * The `event` parameter is optional and typed `unknown` so call sites
+ * that need it (sender validation, replying to a specific window) can
+ * narrow with a local cast. The `registerIpcHandler<C>` helper in
+ * src/main/ipc/register.ts exposes the fully-typed
+ * `(req, event: IpcMainInvokeEvent)` shape for new handlers.
  */
 export type IPCHandler<C extends Channels> = (
   args: IPCRequests[C],

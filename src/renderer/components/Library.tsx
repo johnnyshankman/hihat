@@ -223,7 +223,7 @@ export default function Library() {
 
       const libraryPath = result.filePaths[0];
 
-      // Save the library path to settings (partial-merge — Phase 5b).
+      // Persist as a partial — settings:update merges on the main side.
       await window.electron.settings.update({ libraryPath });
 
       // Close the dialog

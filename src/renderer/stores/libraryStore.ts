@@ -134,11 +134,9 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   /**
-   * Update the session sort cache + persist via TanStack Query mutation.
-   *
-   * Rolls back the cache on persist failure so the UI never lies about
-   * what was saved. Pre-Phase-5c this swallowed errors silently —
-   * fixed inline here.
+   * Update the session sort cache and persist via the playlists IPC.
+   * Rolls back the in-memory state and surfaces an error toast if the
+   * persist fails so the UI never shows a sort that wasn't saved.
    */
   setPlaylistSortPreference: (playlistId, sorting) => {
     if (!sorting || sorting.length === 0) return;
