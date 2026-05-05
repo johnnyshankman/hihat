@@ -143,6 +143,27 @@ npm run test:e2e       # Playwright E2E tests
 npm run package        # Build + package Electron app
 ```
 
+## Version Bumps
+
+A global version bump touches **exactly four files**, no more and no less:
+
+- `package.json` (root)
+- `package-lock.json` (root)
+- `release/app/package.json`
+- `release/app/package-lock.json`
+
+The root pair is what tooling, dev scripts, and CI read. The `release/app/` pair is what `electron-builder` reads when producing the packaged app — if you forget to bump it, `npm run package` will happily produce artifacts named with the **old** version.
+
+Easiest path:
+
+```bash
+npm version <patch|minor|major> --no-git-tag-version           # bumps root pair
+(cd release/app && npm version <same> --no-git-tag-version)    # bumps inner pair
+npm install                                                    # sanity-check both lockfiles
+```
+
+The final `npm install` is just a sanity check that both `package.json` / `package-lock.json` pairs are well-formed; it should be a no-op aside from re-validating the lockfile.
+
 ## CI/CD
 
 - **PR Check** (`.github/workflows/prcheck.yml`): runs on `pull_request` to `main`, macOS runner
