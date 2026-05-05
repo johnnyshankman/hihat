@@ -22,11 +22,19 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
 import { type SortingState, type Row, type Table } from '@tanstack/react-table';
 import { type Virtualizer } from '@tanstack/react-virtual';
+import type { Track } from '../../types/dbTypes';
 import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
   useUIStore,
 } from '../stores';
+import {
+  useTracks,
+  useDeleteTrack,
+  useUpdatePlaylist,
+  useDeleteFile,
+  getPlaylistsSnapshot,
+} from '../queries';
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
@@ -64,14 +72,31 @@ const DEFAULT_LIBRARY_SORTING: SortingState = [
   { id: 'albumArtist', desc: false },
 ];
 
+// Stable empty array used as the fallback for `useTracks().data?.tracks`.
+// Module-level constant so a missing cache doesn't allocate a new []
+// every render, which would bust downstream useMemo dependencies.
+const EMPTY_TRACKS: Track[] = [];
+
 export default function Library() {
   // Subscribe directly so the parent doesn't need a drawer prop.
   const drawerOpen = useUIStore((state) => state.sidebarOpen);
   const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
 
-  // Get state from library store
-  const tracks = useLibraryStore((state) => state.tracks);
-  const getTrackById = useLibraryStore((state) => state.getTrackById);
+  // Server state (tracks) lives in TanStack Query; libraryStore keeps
+  // only UI/view state. The error path doesn't need to render inline
+  // here — MainLayout already toasts the failure for both queries; the
+  // empty array fallback below renders the empty-state CTA.
+  const { data: tracksData } = useTracks();
+  const tracks = tracksData?.tracks ?? EMPTY_TRACKS;
+  const getTrackById = (id: string | null | undefined) =>
+    id ? tracksData?.indexes.trackIndex.get(id) : undefined;
+  // Mutation hooks for the bulk-delete flow at the bottom of this file.
+  // isPending isn't currently surfaced to a button (the bulk delete is
+  // a confirm-then-execute flow), but the error path shows toasts via
+  // the mutation's onError.
+  const deleteTrackMutation = useDeleteTrack();
+  const updatePlaylistMutation = useUpdatePlaylist();
+  const deleteFileMutation = useDeleteFile();
   const lastViewedTrackId = useLibraryStore((state) => state.lastViewedTrackId);
   const setLastViewedTrackId = useLibraryStore(
     (state) => state.setLastViewedTrackId,
@@ -414,7 +439,9 @@ export default function Library() {
         }
       }
 
-      const allPlaylists = await window.electron.playlists.getAll();
+      // Use the cached playlists snapshot — the playlists query is
+      // already in the cache from MainLayout / Sidebar mounts.
+      const allPlaylists = getPlaylistsSnapshot() ?? [];
 
       // eslint-disable-next-line no-restricted-syntax
       for (const trackId of selectedTrackIds) {
@@ -429,19 +456,18 @@ export default function Library() {
 
         // eslint-disable-next-line no-await-in-loop
         await Promise.all(
-          playlistsToUpdate.map((playlist) => {
-            const updatedPlaylist = {
+          playlistsToUpdate.map((playlist) =>
+            updatePlaylistMutation.mutateAsync({
               ...playlist,
               trackIds: playlist.trackIds.filter((id) => id !== trackId),
-            };
-            return window.electron.playlists.update(updatedPlaylist);
-          }),
+            }),
+          ),
         );
 
-        // eslint-disable-next-line no-await-in-loop
-        const dbDeleteResult = await window.electron.tracks.delete(trackId);
-
-        if (!dbDeleteResult) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await deleteTrackMutation.mutateAsync(trackId);
+        } catch {
           showNotification(`Failed to delete track: ${track.title}`, 'error');
           // eslint-disable-next-line no-continue
           continue;
@@ -449,11 +475,11 @@ export default function Library() {
 
         if (track.filePath) {
           // eslint-disable-next-line no-await-in-loop
-          const fileDeleteResult = await window.electron.fileSystem.deleteFile(
+          const fileDeleteResult = await deleteFileMutation.mutateAsync(
             track.filePath,
           );
 
-          if (!fileDeleteResult) {
+          if (!fileDeleteResult.success) {
             showNotification(
               `Failed to delete file for: ${track.title}`,
               'warning',
@@ -462,7 +488,8 @@ export default function Library() {
         }
       }
 
-      await useLibraryStore.getState().loadLibrary(false);
+      // Mutation hooks already invalidate tracks/playlists on success;
+      // nothing else to do here.
 
       setSelectedTracks({});
 

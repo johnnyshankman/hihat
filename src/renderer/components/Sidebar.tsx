@@ -26,6 +26,12 @@ import {
   useSettingsAndPlaybackStore,
   useUIStore,
 } from '../stores';
+import {
+  usePlaylists,
+  useAddTrackToPlaylist,
+  useDeletePlaylist,
+  useUpdatePlaylist,
+} from '../queries';
 import WindowControls from './WindowControls';
 import RenamePlaylistDialog from './RenamePlaylistDialog';
 import CreatePlaylistDialog from './CreatePlaylistDialog';
@@ -34,12 +40,24 @@ import { mutedIconButtonSx } from '../styles/iconButtonStyles';
 const drawerWidth = 200;
 
 export default function Sidebar() {
-  const playlists = useLibraryStore((state) => state.playlists);
+  // Server state via TanStack Query; we explicitly ignore the loading
+  // state here because the Sidebar should still render its window
+  // chrome / Library link while playlists are still in flight. The
+  // playlist list just shows empty in the meantime.
+  const { data: playlistsData } = usePlaylists();
+  const playlists = playlistsData ?? [];
+
+  // Mutation hooks for playlist CUD. Each owns its optimistic update +
+  // rollback + invalidation; surface isPending to the user via toasts
+  // (handled inside the hooks).
+  const addTrackToPlaylistMutation = useAddTrackToPlaylist();
+  const deletePlaylistMutation = useDeletePlaylist();
+  const updatePlaylistMutation = useUpdatePlaylist();
+
   const selectedPlaylistId = useLibraryStore(
     (state) => state.selectedPlaylistId,
   );
   const selectPlaylist = useLibraryStore((state) => state.selectPlaylist);
-  const deletePlaylist = useLibraryStore((state) => state.deletePlaylist);
 
   const theme = useSettingsAndPlaybackStore((state) => state.theme);
 
@@ -99,9 +117,13 @@ export default function Sidebar() {
       setContextMenu(null);
       return;
     }
-    await deletePlaylist(contextMenu.playlistId);
-    if (selectedPlaylistId === contextMenu.playlistId) {
-      selectPlaylist(null);
+    try {
+      await deletePlaylistMutation.mutateAsync(contextMenu.playlistId);
+      if (selectedPlaylistId === contextMenu.playlistId) {
+        selectPlaylist(null);
+      }
+    } catch {
+      // Mutation hook already toasts via uiStore on failure.
     }
     setContextMenu(null);
   };
@@ -173,15 +195,23 @@ export default function Sidebar() {
 
     if (!Array.isArray(trackIds) || trackIds.length === 0) return;
 
-    const { addTrackToPlaylist } = useLibraryStore.getState();
-
     if (trackIds.length === 1) {
-      await addTrackToPlaylist(trackIds[0], playlistId);
+      try {
+        await addTrackToPlaylistMutation.mutateAsync({
+          trackId: trackIds[0],
+          playlistId,
+        });
+      } catch {
+        // Hook already toasts on error / "already in playlist".
+      }
       return;
     }
 
-    const currentPlaylists = useLibraryStore.getState().playlists;
-    const playlist = currentPlaylists.find((p) => p.id === playlistId);
+    // Bulk add: use the cached snapshot to compute the new trackIds set
+    // and route the persist + cache update through the updatePlaylist
+    // mutation so optimistic + rollback semantics are consistent with
+    // single-track adds.
+    const playlist = playlists.find((p) => p.id === playlistId);
     if (!playlist) return;
 
     const existingSet = new Set(playlist.trackIds);
@@ -196,23 +226,20 @@ export default function Sidebar() {
       return;
     }
 
-    const updatedPlaylist = {
-      ...playlist,
-      trackIds: [...playlist.trackIds, ...newTrackIds],
-    };
-
-    await window.electron.playlists.update(updatedPlaylist);
-    useLibraryStore.setState((state) => ({
-      playlists: state.playlists.map((p) =>
-        p.id === playlistId ? updatedPlaylist : p,
-      ),
-    }));
-
-    const dupeMsg = dupeCount > 0 ? ` (${dupeCount} already in playlist)` : '';
-    showNotification(
-      `Added ${newTrackIds.length} track${newTrackIds.length > 1 ? 's' : ''} to "${playlist.name}"${dupeMsg}`,
-      'success',
-    );
+    try {
+      await updatePlaylistMutation.mutateAsync({
+        ...playlist,
+        trackIds: [...playlist.trackIds, ...newTrackIds],
+      });
+      const dupeMsg =
+        dupeCount > 0 ? ` (${dupeCount} already in playlist)` : '';
+      showNotification(
+        `Added ${newTrackIds.length} track${newTrackIds.length > 1 ? 's' : ''} to "${playlist.name}"${dupeMsg}`,
+        'success',
+      );
+    } catch {
+      // Mutation hook already toasts on failure.
+    }
   };
 
   useEffect(() => {

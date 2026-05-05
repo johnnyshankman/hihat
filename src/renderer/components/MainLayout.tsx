@@ -7,6 +7,7 @@ import {
   useSettingsAndPlaybackStore,
   useUIStore,
 } from '../stores';
+import { useLibraryReady } from '../queries';
 import Sidebar from './Sidebar';
 import MainContent from './MainContent';
 import Settings from './Settings';
@@ -48,8 +49,21 @@ const PlayerWrapper = styled('div')(() => ({
 }));
 
 export default function MainLayout() {
-  const isLoading = useLibraryStore((state) => state.isLoading);
+  const { isLoading, isError, error } = useLibraryReady();
   const theme = useSettingsAndPlaybackStore((state) => state.theme);
+  const showNotification = useUIStore((state) => state.showNotification);
+
+  // Surface a query error as a toast once. The query layer also stays
+  // in error state until the user re-triggers, but the splash unblocks
+  // so the user can navigate to Settings and re-scan.
+  useEffect(() => {
+    if (isError && error) {
+      showNotification(
+        `Failed to load library: ${error.message ?? 'unknown error'}`,
+        'error',
+      );
+    }
+  }, [isError, error, showNotification]);
   const settingsOpen = useUIStore((state) => state.settingsOpen);
   const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);

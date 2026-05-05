@@ -2,11 +2,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Track } from '../../types/dbTypes';
 import { buildIndexes, TrackIndexes } from '../utils/trackIndexes';
 import useUIStore from '../stores/uiStore';
+import { queryClient } from './client';
 import { queryKeys } from './keys';
 
 export interface TracksData {
   tracks: Track[];
   indexes: TrackIndexes;
+}
+
+/**
+ * Non-hook snapshot of the tracks cache. Use only from non-React code
+ * paths (utility modules, callbacks fired from outside the React tree)
+ * — components should call `useTracks()` so they re-render when the
+ * cache changes.
+ */
+export function getTracksSnapshot(): TracksData | undefined {
+  return queryClient.getQueryData<TracksData>(queryKeys.tracks);
 }
 
 /**

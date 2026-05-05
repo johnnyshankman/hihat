@@ -7,12 +7,13 @@ import MainLayout from './components/MainLayout';
 import MiniPlayer from './components/MiniPlayer';
 import MigrationDialog from './components/MigrationDialog';
 import { lightTheme, darkTheme } from './styles/materialTheme';
+import { useLibraryStore, useSettingsAndPlaybackStore } from './stores';
 import {
-  bootstrapLibraryStore,
-  useLibraryStore,
-  useSettingsAndPlaybackStore,
-} from './stores';
-import { queryClient, useScanCompleteInvalidator } from './queries';
+  queryClient,
+  useScanCompleteInvalidator,
+  useLibraryReady,
+} from './queries';
+import { usePlaylists } from './queries/playlists';
 import './App.css';
 
 const isMiniPlayerWindow =
@@ -40,18 +41,33 @@ function MiniPlayerApp() {
 }
 
 function ThemedAppContent() {
-  const isLoading = useLibraryStore((state) => state.isLoading);
+  // Aggregate loading state: tracks + playlists must both resolve before
+  // we restore the last-played song. The two queries fire in parallel
+  // on mount thanks to TQ's automatic dedup.
+  const { isLoading } = useLibraryReady();
+
+  // Seed the per-playlist sort-pref session cache from playlists data
+  // when it first loads. The cache is in libraryStore so rapid sort
+  // changes don't loop subscribers; the seed is here so the cache is
+  // populated from server data on every cold mount.
+  const { data: playlistsData } = usePlaylists();
+  const seedPlaylistSortPreferences = useLibraryStore(
+    (state) => state.seedPlaylistSortPreferences,
+  );
+  useEffect(() => {
+    if (playlistsData) seedPlaylistSortPreferences(playlistsData);
+  }, [playlistsData, seedPlaylistSortPreferences]);
 
   useEffect(() => {
     useSettingsAndPlaybackStore.getState().initPlayer();
-    bootstrapLibraryStore();
     document.body.classList.add('draggable');
     return () => {
       document.body.classList.remove('draggable');
     };
   }, []);
 
-  // Bridge `library:scanComplete` → TanStack Query cache invalidation.
+  // Bridge `library:scanComplete` → TanStack Query cache invalidation
+  // (and surface the user-facing notification with adds/removes).
   useScanCompleteInvalidator();
 
   useEffect(() => {

@@ -12,11 +12,13 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
 import { type SortingState, type Row, type Table } from '@tanstack/react-table';
 import { type Virtualizer } from '@tanstack/react-virtual';
+import type { Playlist, Track } from '../../types/dbTypes';
 import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
   useUIStore,
 } from '../stores';
+import { useTracks, usePlaylists, useUpdatePlaylist } from '../queries';
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
@@ -53,14 +55,30 @@ const DEFAULT_PLAYLIST_SORTING: SortingState = [
   { id: 'albumArtist', desc: false },
 ];
 
+// Stable empty arrays for the TQ cache fallbacks (avoids allocating a
+// fresh [] every render when the cache hasn't loaded yet).
+const EMPTY_PLAYLISTS: Playlist[] = [];
+const EMPTY_TRACKS: Track[] = [];
+
 export default function Playlists() {
   // Subscribe directly so the parent doesn't need a drawer prop.
   const drawerOpen = useUIStore((state) => state.sidebarOpen);
   const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
 
-  // Get state from library store
-  const playlists = useLibraryStore((state) => state.playlists);
-  const tracks = useLibraryStore((state) => state.tracks);
+  // Server state via TanStack Query; libraryStore keeps only UI state.
+  // Falls back to module-level empty arrays so an unloaded cache
+  // doesn't allocate fresh [] each render and bust downstream useMemo
+  // dependencies.
+  const { data: playlistsData } = usePlaylists();
+  const playlists = playlistsData ?? EMPTY_PLAYLISTS;
+  const { data: tracksData } = useTracks();
+  const tracks = tracksData?.tracks ?? EMPTY_TRACKS;
+
+  // Mutation hook for the remove-from-playlist flow further down. The
+  // hook owns optimistic update + rollback on failure (see
+  // src/renderer/queries/playlists.ts).
+  const updatePlaylistMutation = useUpdatePlaylist();
+
   const selectedPlaylistId = useLibraryStore(
     (state) => state.selectedPlaylistId,
   );
@@ -74,7 +92,14 @@ export default function Playlists() {
   const sorting = useLibraryStore((state) => {
     const pid = state.selectedPlaylistId;
     if (!pid) return DEFAULT_PLAYLIST_SORTING;
-    return state.playlistSortPreferences[pid] ?? DEFAULT_PLAYLIST_SORTING;
+    return (
+      state.playlistSortPreferences[pid] ??
+      // Fall back to the persisted preference on the playlist row before
+      // resorting to the global default — covers the very first render
+      // before App.tsx's seed effect runs.
+      playlistsData?.find((p) => p.id === pid)?.sortPreference ??
+      DEFAULT_PLAYLIST_SORTING
+    );
   });
   const globalFilter = useLibraryStore((state) => {
     const pid = state.selectedPlaylistId;
@@ -201,13 +226,18 @@ export default function Playlists() {
   // Ref to track if the table is ready for scrolling
   const tableReadyRef = useRef<boolean>(false);
 
-  // useMemo: playlist lookup + O(n) getTracksByIds via the trackIndex map.
+  // useMemo: playlist lookup + O(n) trackIndex lookup. Indexes are
+  // computed once inside the useTracks queryFn so this is cheap; no
+  // separate Zustand getTracksByIds function needed.
   const playlistTracks = useMemo(() => {
-    if (!selectedPlaylistId || !playlists) return [];
+    if (!selectedPlaylistId || !playlists.length) return [];
     const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
-    if (!selectedPlaylist) return [];
-    return useLibraryStore.getState().getTracksByIds(selectedPlaylist.trackIds);
-  }, [selectedPlaylistId, playlists]);
+    if (!selectedPlaylist || !tracksData) return [];
+    const { trackIndex } = tracksData.indexes;
+    return selectedPlaylist.trackIds
+      .map((id) => trackIndex.get(id))
+      .filter((t): t is NonNullable<typeof t> => !!t);
+  }, [selectedPlaylistId, playlists, tracksData]);
 
   const handlePlayTrack = (trackId: string) => {
     // No manual updatePlaylistViewState call needed — the store keeps
@@ -265,23 +295,20 @@ export default function Playlists() {
     const track = tracks.find((t) => t.id === removeTrackId);
 
     try {
-      const updatedPlaylist = {
+      // useUpdatePlaylist owns optimistic update + rollback + invalidate
+      // on settle, so the UI updates instantly and reverts on failure.
+      await updatePlaylistMutation.mutateAsync({
         ...selectedPlaylist,
         trackIds: selectedPlaylist.trackIds.filter(
           (id) => id !== removeTrackId,
         ),
-      };
-
-      await window.electron.playlists.update(updatedPlaylist);
-      await useLibraryStore.getState().loadPlaylists();
-
+      });
       showNotification(
         `Successfully removed "${track?.title}" from "${selectedPlaylist.name}"`,
         'success',
       );
-    } catch (error) {
-      console.error('Error removing track from playlist:', error);
-      showNotification('Failed to remove track from playlist', 'error');
+    } catch {
+      // Mutation already shows an error toast via uiStore on failure.
     }
 
     setRemoveTrackId(null);
@@ -309,25 +336,19 @@ export default function Playlists() {
     if (!selectedPlaylist) return;
 
     try {
-      const updatedPlaylist = {
+      await updatePlaylistMutation.mutateAsync({
         ...selectedPlaylist,
         trackIds: selectedPlaylist.trackIds.filter(
           (id) => !selectedTrackIds.includes(id),
         ),
-      };
-
-      await window.electron.playlists.update(updatedPlaylist);
-      await useLibraryStore.getState().loadPlaylists();
-
+      });
       setSelectedTracks({});
-
       showNotification(
         `Successfully removed ${selectedTrackIds.length} track${selectedTrackIds.length > 1 ? 's' : ''} from "${selectedPlaylist.name}"`,
         'success',
       );
-    } catch (error) {
-      console.error('Error removing tracks from playlist:', error);
-      showNotification('Failed to remove tracks from playlist', 'error');
+    } catch {
+      // Mutation already shows an error toast via uiStore on failure.
     }
   };
 

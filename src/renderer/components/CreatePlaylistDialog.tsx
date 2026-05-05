@@ -7,7 +7,7 @@ import {
   TextField,
   Button,
 } from '@mui/material';
-import { useLibraryStore } from '../stores';
+import { useCreatePlaylist } from '../queries';
 
 interface CreatePlaylistDialogProps {
   open: boolean;
@@ -21,23 +21,39 @@ export default function CreatePlaylistDialog({
   // Local state for the input - isolated from parent
   const [name, setName] = useState('');
 
-  // Reset all stale fields on open.
+  // Mutation hook owns optimistic insert + rollback + invalidation.
+  // isPending drives the Create button's disabled state below so the
+  // user can't double-submit.
+  const createPlaylist = useCreatePlaylist();
+
+  // Reset the input on every open.
   // Needed because dialogs purposely never unmount and just toggle visibility.
   // They do this to ensure enter and exit animations are not cut off.
+  //
+  // We deliberately don't include `createPlaylist` in the deps: the
+  // mutation object reference is fresh every render, so depending on
+  // it would re-fire this effect on every render and reset the input
+  // out from under the user's typing. The mutation's stale error state
+  // is fine to leave between opens — it gets cleared on the next mutate.
   useEffect(() => {
-    if (open) {
-      setName('');
-    }
+    if (open) setName('');
   }, [open]);
 
   const handleCreate = async () => {
-    if (name.trim()) {
-      try {
-        await useLibraryStore.getState().createPlaylist(name.trim());
-        onClose();
-      } catch (error) {
-        console.error('Error creating playlist:', error);
-      }
+    if (!name.trim()) return;
+    try {
+      await createPlaylist.mutateAsync({
+        name: name.trim(),
+        trackIds: [],
+        isSmart: false,
+        smartPlaylistId: null,
+        ruleSet: null,
+        sortPreference: null,
+      });
+      onClose();
+    } catch {
+      // Hook surfaced the error toast; keep dialog open so the user
+      // can retry without losing what they typed.
     }
   };
 
@@ -70,9 +86,10 @@ export default function CreatePlaylistDialog({
         <Button
           color="primary"
           data-testid="create-playlist-button"
+          disabled={createPlaylist.isPending || !name.trim()}
           onClick={handleCreate}
         >
-          Create
+          {createPlaylist.isPending ? 'Creating…' : 'Create'}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,6 +1,7 @@
 import { Track } from '../../types/dbTypes';
 import useLibraryStore from '../stores/libraryStore';
 import type { SettingsAndPlaybackStore } from '../stores/types';
+import { getTracksSnapshot, getPlaylistsSnapshot } from '../queries';
 import { getSortingFunction } from './sortingFunctions';
 
 // Define MediaImage interface for TypeScript
@@ -32,10 +33,12 @@ export const getFilteredAndSortedTrackIds = (
   artistFilter?: string | null,
   albumFilter?: string | null,
 ): string[] => {
-  // Get library state for tracks, playlists, and view states
-  const libraryState = useLibraryStore.getState();
-  const { tracks, playlists, libraryViewState, playlistViewState } =
-    libraryState;
+  // View state (filter / sort) lives in libraryStore as UI state.
+  // Tracks and playlists are server state owned by TanStack Query —
+  // read via the queryClient snapshot helpers from non-React code.
+  const { libraryViewState, playlistViewState } = useLibraryStore.getState();
+  const tracks = getTracksSnapshot()?.tracks ?? [];
+  const playlists = getPlaylistsSnapshot() ?? [];
 
   // Get the appropriate track IDs array based on the playback source
   let trackIds: string[] = [];
@@ -163,9 +166,8 @@ export const findNextSong = (
 ): Track | undefined => {
   if (!currentTrackId) return undefined;
 
-  // Get library state for tracks
-  const libraryState = useLibraryStore.getState();
-  const { tracks } = libraryState;
+  // Tracks via TanStack Query snapshot (non-React read path).
+  const tracks = getTracksSnapshot()?.tracks ?? [];
 
   // Get the filtered and sorted track IDs
   const trackIds = getFilteredAndSortedTrackIds(
@@ -279,9 +281,8 @@ export const findPreviousSong = (
     return shuffleHistory[shuffleHistory.length - 1];
   }
 
-  // Get library state for tracks
-  const libraryState = useLibraryStore.getState();
-  const { tracks } = libraryState;
+  // Tracks via TanStack Query snapshot (non-React read path).
+  const tracks = getTracksSnapshot()?.tracks ?? [];
 
   // Get the filtered and sorted track IDs
   const trackIds = getFilteredAndSortedTrackIds(

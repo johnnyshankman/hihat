@@ -8,11 +8,14 @@ import {
   Button,
   Box,
 } from '@mui/material';
+import { useSettingsAndPlaybackStore, useUIStore } from '../stores';
 import {
-  useLibraryStore,
-  useSettingsAndPlaybackStore,
-  useUIStore,
-} from '../stores';
+  useUpdateTrackMetadata,
+  getTracksSnapshot,
+  queryClient,
+  queryKeys,
+  type TracksData,
+} from '../queries';
 
 interface EditMetadataDialogProps {
   open: boolean;
@@ -46,12 +49,14 @@ export default function EditMetadataDialog({
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const updateMetadataMutation = useUpdateTrackMetadata();
+
   // Reinitialize all stale fields on open.
   // Needed because dialogs purposely never unmount and just toggle visibility.
   // They do this to ensure enter and exit animations are not cut off.
   useEffect(() => {
     if (open && trackId) {
-      const track = useLibraryStore.getState().getTrackById(trackId);
+      const track = getTracksSnapshot()?.indexes.trackIndex.get(trackId);
       if (track) {
         setTitle(track.title || '');
         setArtist(track.artist || '');
@@ -95,16 +100,21 @@ export default function EditMetadataDialog({
         comment: comment || null,
       };
 
-      const result = await window.electron.tracks.updateMetadata(
-        trackId,
+      const result = await updateMetadataMutation.mutateAsync({
+        id: trackId,
         metadata,
-      );
+      });
 
       if (result.success) {
-        const updatedTrack = await window.electron.tracks.getById(trackId);
-        if (updatedTrack) {
-          useLibraryStore.getState().updateTrackInPlace(updatedTrack);
+        // The mutation onSuccess marks tracks as stale; force an
+        // immediate refetch so the cache reflects the new metadata
+        // before we read it back into settingsAndPlaybackStore.
+        await queryClient.refetchQueries({ queryKey: queryKeys.tracks });
+        const updatedTrack = queryClient
+          .getQueryData<TracksData>(queryKeys.tracks)
+          ?.indexes.trackIndex.get(trackId);
 
+        if (updatedTrack) {
           const { currentTrack } = useSettingsAndPlaybackStore.getState();
           if (currentTrack && currentTrack.id === trackId) {
             useSettingsAndPlaybackStore.setState({
@@ -138,9 +148,8 @@ export default function EditMetadataDialog({
       onClose();
     } catch (error) {
       console.error('Error saving metadata:', error);
-      useUIStore
-        .getState()
-        .showNotification('Failed to update metadata', 'error');
+      // Mutation hook already toasts on its own onError; this catch
+      // covers throws after the mutation succeeded.
     } finally {
       setSaving(false);
     }

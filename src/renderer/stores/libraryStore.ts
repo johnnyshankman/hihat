@@ -1,154 +1,43 @@
 import { create } from 'zustand';
-import { Track, Playlist } from '../../types/dbTypes';
-import { LibraryStore, SearchIndexData } from './types';
+import type { Playlist } from '../../types/dbTypes';
+import { LibraryStore } from './types';
+import { queryClient } from '../queries/client';
+import { queryKeys } from '../queries/keys';
 import useUIStore from './uiStore';
 
-// Helper function to build indexes from tracks
-function buildIndexes(tracks: Track[]) {
-  const trackIndex = new Map<string, Track>();
-  const artistIndex = new Map<string, Set<string>>();
-  const albumIndex = new Map<string, Set<string>>();
-  const searchIndex = new Map<string, SearchIndexData>();
-
-  tracks.forEach((track) => {
-    // Build track index for O(1) lookup
-    trackIndex.set(track.id, track);
-
-    // Build artist index
-    const artist = track.albumArtist || track.artist || 'Unknown Artist';
-    if (!artistIndex.has(artist)) {
-      artistIndex.set(artist, new Set());
-    }
-    artistIndex.get(artist)!.add(track.id);
-
-    // Build album index
-    const album = track.album || 'Unknown Album';
-    if (!albumIndex.has(album)) {
-      albumIndex.set(album, new Set());
-    }
-    albumIndex.get(album)!.add(track.id);
-
-    // Build search index with pre-computed lowercase strings
-    searchIndex.set(track.id, {
-      titleLower: (track.title || '').toLowerCase(),
-      artistLower: (track.artist || '').toLowerCase(),
-      albumLower: (track.album || '').toLowerCase(),
-      genreLower: (track.genre || '').toLowerCase(),
-    });
-  });
-
-  return { trackIndex, artistIndex, albumIndex, searchIndex };
-}
-
-// Define the library store
+/**
+ * libraryStore holds UI / view state only. Server state (tracks,
+ * playlists) is owned by TanStack Query — see `src/renderer/queries/`.
+ *
+ * The store keeps the in-flight UI bits that don't belong in a server
+ * cache: which playlist is selected, sort/filter for each view, the
+ * browser-panel artist/album filter, the search box value, and a
+ * session cache for per-playlist sort preferences (separate from the
+ * persisted `playlist.sortPreference` so rapid sort changes don't loop
+ * the playlists subscribers).
+ */
 const useLibraryStore = create<LibraryStore>((set, get) => ({
-  // State
-  tracks: [],
-  playlists: [],
-  isLoading: true,
-  isScanning: false,
+  // ── State ───────────────────────────────────────────────────────
   selectedPlaylistId: null,
   selectedTrackId: null,
+  lastViewedTrackId: null,
+
   libraryViewState: {
     sorting: [{ id: 'albumArtist', desc: false }],
     filtering: '',
   },
-  browserFilters: {},
-  searchFilters: {},
   playlistViewState: {
     sorting: [{ id: 'albumArtist', desc: false }],
     filtering: '',
     playlistId: null,
   },
-  lastViewedTrackId: null,
+
+  browserFilters: {},
+  searchFilters: {},
   playlistSortPreferences: {},
 
-  // Initialize empty indexes
-  trackIndex: new Map(),
-  artistIndex: new Map(),
-  albumIndex: new Map(),
-  searchIndex: new Map(),
-
-  // Actions
-  loadLibrary: async (isInitialLoad = true) => {
-    // Only show loading screen on initial app load, not during library refreshes
-    if (isInitialLoad) {
-      set({ isLoading: true });
-    }
-
-    let allTracks: Track[] = [];
-    try {
-      const tracks = await window.electron.tracks.getAll();
-      console.warn(
-        'Loaded tracks from database:',
-        tracks.length,
-        'tracks found',
-      );
-
-      // Process tracks to ensure duration is properly set
-      const processedTracks = tracks.map((track: any) => {
-        // Ensure duration is a number
-        let duration = 0;
-        if (typeof track.duration === 'number') {
-          duration = track.duration;
-        } else if (track.duration) {
-          // Try to convert to number if it's a string or other type
-          duration = Number(track.duration);
-        }
-
-        return {
-          ...track,
-          duration,
-        };
-      });
-
-      allTracks = processedTracks;
-
-      // Build indexes for O(1) lookups
-      const indexes = buildIndexes(allTracks);
-
-      set({
-        tracks: allTracks,
-        isLoading: false,
-        ...indexes,
-      });
-    } catch (error) {
-      console.error('Error loading library:', error);
-      useUIStore.getState().showNotification('Failed to load library', 'error');
-      set({ isLoading: false });
-    }
-  },
-
-  loadPlaylists: async () => {
-    try {
-      const allPlaylists = await window.electron.playlists.getAll();
-      console.warn('Loaded playlists from database:', allPlaylists);
-
-      // Populate per-playlist sort preferences from DB
-      const sortPrefs: Record<
-        string,
-        Array<{ id: string; desc: boolean }>
-      > = {};
-      allPlaylists.forEach((p) => {
-        if (p.sortPreference) {
-          sortPrefs[p.id] = p.sortPreference;
-        }
-      });
-
-      set({ playlists: allPlaylists, playlistSortPreferences: sortPrefs });
-    } catch (error) {
-      console.error('Error loading playlists:', error);
-      useUIStore
-        .getState()
-        .showNotification('Failed to load playlists', 'error');
-    }
-  },
-
+  // ── Actions ─────────────────────────────────────────────────────
   selectPlaylist: (playlistId: string | null) => {
-    // Reset playlistViewState to the new playlist's saved sort/filter
-    // so trackSelectionUtils (used by next/prev track math) always sees
-    // the view state matching the currently-selected playlist, even in
-    // the brief window before the component renders.
     set((state) => {
       if (!playlistId) {
         return {
@@ -177,200 +66,8 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     set({ selectedTrackId: trackId });
   },
 
-  createPlaylist: async (name: string) => {
-    try {
-      const newPlaylist = await window.electron.playlists.create({
-        name,
-        trackIds: [],
-        isSmart: false,
-        smartPlaylistId: null,
-        ruleSet: null,
-        sortPreference: null,
-      });
-
-      set((state) => ({
-        playlists: [...state.playlists, newPlaylist],
-      }));
-
-      useUIStore
-        .getState()
-        .showNotification(`Playlist "${name}" created`, 'success');
-      return newPlaylist;
-    } catch (error) {
-      console.error('Error creating playlist:', error);
-      useUIStore
-        .getState()
-        .showNotification('Failed to create playlist', 'error');
-      throw error;
-    }
-  },
-
-  updatePlaylist: async (playlist: Playlist) => {
-    // Snapshot the previous playlist row so we can revert on persist failure.
-    // Pre-refactor this function set state AFTER the IPC succeeded (no
-    // optimistic update, no rollback risk). The audit asked for optimistic
-    // semantics with proper rollback so user-visible UI matches reality.
-    const { playlists } = get();
-    const prev = playlists.find((p) => p.id === playlist.id) ?? null;
-
-    set((state) => ({
-      playlists: state.playlists.map((p) =>
-        p.id === playlist.id ? playlist : p,
-      ),
-    }));
-
-    try {
-      await window.electron.playlists.update(playlist);
-      useUIStore
-        .getState()
-        .showNotification(`Playlist "${playlist.name}" updated`, 'success');
-    } catch (error) {
-      // Revert the optimistic write so the UI reflects DB truth.
-      if (prev) {
-        set((state) => ({
-          playlists: state.playlists.map((p) =>
-            p.id === playlist.id ? prev : p,
-          ),
-        }));
-      }
-      console.error('Error updating playlist:', error);
-      useUIStore
-        .getState()
-        .showNotification('Failed to update playlist', 'error');
-      throw error;
-    }
-  },
-
-  deletePlaylist: async (playlistId: string) => {
-    const { playlists } = get();
-    const deletedPlaylist = playlists.find((p) => p.id === playlistId);
-
-    // Prevent deletion of smart playlists
-    if (deletedPlaylist?.isSmart) {
-      useUIStore
-        .getState()
-        .showNotification('Smart playlists cannot be deleted', 'warning');
-      return;
-    }
-    if (!deletedPlaylist) return;
-
-    // Snapshot index so we can reinsert on failure.
-    const prevIndex = playlists.findIndex((p) => p.id === playlistId);
-
-    set((state) => ({
-      playlists: state.playlists.filter((p) => p.id !== playlistId),
-    }));
-
-    try {
-      await window.electron.playlists.delete(playlistId);
-      useUIStore
-        .getState()
-        .showNotification(
-          `Playlist "${deletedPlaylist.name}" deleted`,
-          'success',
-        );
-    } catch (error) {
-      // Reinsert at the original index on failure.
-      set((state) => {
-        const next = [...state.playlists];
-        next.splice(prevIndex, 0, deletedPlaylist);
-        return { playlists: next };
-      });
-      console.error('Error deleting playlist:', error);
-      useUIStore
-        .getState()
-        .showNotification('Failed to delete playlist', 'error');
-      throw error;
-    }
-  },
-
-  addTrackToPlaylist: async (trackId: string, playlistId: string) => {
-    const { playlists, tracks } = get();
-    const playlist = playlists.find((p) => p.id === playlistId);
-    if (!playlist) {
-      throw new Error(`Playlist with ID ${playlistId} not found`);
-    }
-    if (playlist.trackIds.includes(trackId)) {
-      useUIStore
-        .getState()
-        .showNotification('Track is already in this playlist', 'info');
-      return;
-    }
-
-    const updatedPlaylist = {
-      ...playlist,
-      trackIds: [...playlist.trackIds, trackId],
-    };
-
-    // Optimistic update first so the UI feels instant.
-    set((state) => ({
-      playlists: state.playlists.map((p) =>
-        p.id === playlistId ? updatedPlaylist : p,
-      ),
-    }));
-
-    try {
-      await window.electron.playlists.update(updatedPlaylist);
-      const track = tracks.find((t) => t.id === trackId);
-      useUIStore
-        .getState()
-        .showNotification(
-          `Added "${track?.title || 'Track'}" to "${playlist.name}"`,
-          'success',
-        );
-    } catch (error) {
-      // Revert the optimistic add.
-      set((state) => ({
-        playlists: state.playlists.map((p) =>
-          p.id === playlistId ? playlist : p,
-        ),
-      }));
-      console.error('Error adding track to playlist:', error);
-      useUIStore
-        .getState()
-        .showNotification('Failed to add track to playlist', 'error');
-      throw error;
-    }
-  },
-
-  scanLibrary: async (libraryPath: string) => {
-    try {
-      set({ isScanning: true });
-      // this will trigger UX stuff (i hope)
-      await window.electron.library.scan(libraryPath);
-      // The scan complete event will trigger a library reload
-      set({ isScanning: false });
-    } catch (error) {
-      set({ isScanning: false });
-      console.error('Error scanning library:', error);
-      useUIStore.getState().showNotification('Failed to scan library', 'error');
-      throw error;
-    }
-  },
-
-  importFiles: async (files: string[]) => {
-    try {
-      set({ isScanning: true });
-      await window.electron.library.import(files);
-      set({ isScanning: false });
-      useUIStore
-        .getState()
-        .showNotification(`Processed ${files.length} files`, 'success');
-    } catch (error) {
-      console.error('Error importing files:', error);
-      useUIStore.getState().showNotification('Failed to import files', 'error');
-      set({ isScanning: false });
-      throw error;
-    }
-  },
-
   updateLibraryViewState: (sorting: any, filtering: string) => {
-    set({
-      libraryViewState: {
-        sorting,
-        filtering,
-      },
-    });
+    set({ libraryViewState: { sorting, filtering } });
   },
 
   updatePlaylistViewState: (
@@ -378,33 +75,24 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     filtering: string,
     playlistId: string | null,
   ) => {
-    set({
-      playlistViewState: {
-        sorting,
-        filtering,
-        playlistId,
-      },
-    });
+    set({ playlistViewState: { sorting, filtering, playlistId } });
   },
 
   setLastViewedTrackId: (trackId: string | null) => {
     set({ lastViewedTrackId: trackId });
   },
 
-  setBrowserFilter: (viewId: string, filter) => {
+  setBrowserFilter: (viewId, filter) => {
     set((state) => ({
-      browserFilters: {
-        ...state.browserFilters,
-        [viewId]: filter,
-      },
+      browserFilters: { ...state.browserFilters, [viewId]: filter },
     }));
   },
 
-  clearBrowserFilter: (viewId: string) => {
+  clearBrowserFilter: (viewId) => {
     set((state) => {
-      const newFilters = { ...state.browserFilters };
-      delete newFilters[viewId];
-      return { browserFilters: newFilters };
+      const next = { ...state.browserFilters };
+      delete next[viewId];
+      return { browserFilters: next };
     });
   },
 
@@ -412,32 +100,21 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     set({ browserFilters: {} });
   },
 
-  getBrowserFilter: (viewId: string) => {
-    const { browserFilters } = get();
-    return browserFilters[viewId] || { artist: null, album: null };
+  getBrowserFilter: (viewId) => {
+    return get().browserFilters[viewId] || { artist: null, album: null };
   },
 
-  setSearchFilter: (viewId: string, filter: string) => {
+  setSearchFilter: (viewId, filter) => {
     set((state) => {
-      const searchFilters = {
-        ...state.searchFilters,
-        [viewId]: filter,
-      };
-      // Keep libraryViewState.filtering in sync for the library view so
-      // trackSelectionUtils (used for next/prev track math) sees the
-      // current filter immediately without any component-side fan-out.
+      const searchFilters = { ...state.searchFilters, [viewId]: filter };
+      // Mirror into the matching view state so trackSelectionUtils sees
+      // the user's filter immediately without a fan-out from JSX.
       if (viewId === 'library') {
         return {
           searchFilters,
-          libraryViewState: {
-            ...state.libraryViewState,
-            filtering: filter,
-          },
+          libraryViewState: { ...state.libraryViewState, filtering: filter },
         };
       }
-      // For a playlist view ID that matches the currently-selected
-      // playlist, mirror the filter into playlistViewState so next/prev
-      // track math follows what the user sees.
       if (viewId === state.selectedPlaylistId) {
         return {
           searchFilters,
@@ -452,21 +129,20 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
     });
   },
 
-  getSearchFilter: (viewId: string) => {
-    const { searchFilters } = get();
-    return searchFilters[viewId] || '';
+  getSearchFilter: (viewId) => {
+    return get().searchFilters[viewId] || '';
   },
 
-  setPlaylistSortPreference: (
-    playlistId: string,
-    sorting: Array<{ id: string; desc: boolean }>,
-  ) => {
+  /**
+   * Update the session sort cache + persist via TanStack Query mutation.
+   *
+   * Rolls back the cache on persist failure so the UI never lies about
+   * what was saved. Pre-Phase-5c this swallowed errors silently —
+   * fixed inline here.
+   */
+  setPlaylistSortPreference: (playlistId, sorting) => {
     if (!sorting || sorting.length === 0) return;
 
-    // Snapshot the previous in-memory sort so we can revert on persist
-    // failure. Pre-refactor this swallowed errors silently (the
-    // .catch() just logged), leaving the user with a sort that wasn't
-    // saved without any indication.
     const prevSort = get().playlistSortPreferences[playlistId];
 
     set((state) => {
@@ -487,114 +163,66 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
       return { playlistSortPreferences };
     });
 
-    const { playlists } = get();
-    const playlist = playlists.find((p) => p.id === playlistId);
-    if (playlist) {
-      window.electron.playlists
-        .update({ ...playlist, sortPreference: sorting })
-        .catch((err: unknown) => {
-          // Revert the in-memory sort and surface the error.
-          set((state) => {
-            const next = { ...state.playlistSortPreferences };
-            if (prevSort) next[playlistId] = prevSort;
-            else delete next[playlistId];
-            if (playlistId === state.selectedPlaylistId) {
-              return {
-                playlistSortPreferences: next,
-                playlistViewState: {
-                  ...state.playlistViewState,
-                  sorting: prevSort ?? state.playlistViewState.sorting,
-                  playlistId,
-                },
-              };
-            }
-            return { playlistSortPreferences: next };
-          });
-          console.error('Error persisting playlist sort preference:', err);
-          useUIStore
-            .getState()
-            .showNotification('Failed to save sort preference', 'error');
-        });
-    }
-  },
+    // Persist via TanStack Query: optimistic write to cache, then IPC.
+    // We drive this from the store (instead of a hook) because
+    // setPlaylistSortPreference is invoked from a non-component
+    // callback path (table sort handler).
+    const playlists = queryClient.getQueryData<Playlist[]>(queryKeys.playlists);
+    const playlist = playlists?.find((p) => p.id === playlistId);
+    if (!playlist) return;
 
-  // NEW: Efficient data access methods using indexes
-  getTrackById: (id: string) => {
-    return get().trackIndex.get(id);
-  },
-
-  getTracksByIds: (ids: string[]) => {
-    const { trackIndex } = get();
-    return ids
-      .map((id) => trackIndex.get(id))
-      .filter((track): track is Track => !!track);
-  },
-
-  updateTrackInPlace: (updatedTrack: Track) => {
-    const newTracks = get().tracks.map((t) =>
-      t.id === updatedTrack.id ? updatedTrack : t,
+    const updated: Playlist = { ...playlist, sortPreference: sorting };
+    const prevPlaylists = playlists;
+    queryClient.setQueryData<Playlist[]>(queryKeys.playlists, (old) =>
+      old ? old.map((p) => (p.id === playlistId ? updated : p)) : old,
     );
-    const indexes = buildIndexes(newTracks);
-    set({ tracks: newTracks, ...indexes });
+
+    window.electron.playlists.update(updated).catch((err: unknown) => {
+      // Revert both the session cache and the TQ cache.
+      set((state) => {
+        const next = { ...state.playlistSortPreferences };
+        if (prevSort) next[playlistId] = prevSort;
+        else delete next[playlistId];
+        if (playlistId === state.selectedPlaylistId) {
+          return {
+            playlistSortPreferences: next,
+            playlistViewState: {
+              ...state.playlistViewState,
+              sorting: prevSort ?? state.playlistViewState.sorting,
+              playlistId,
+            },
+          };
+        }
+        return { playlistSortPreferences: next };
+      });
+      if (prevPlaylists) {
+        queryClient.setQueryData(queryKeys.playlists, prevPlaylists);
+      }
+      console.error('Error persisting playlist sort preference:', err);
+      useUIStore
+        .getState()
+        .showNotification('Failed to save sort preference', 'error');
+    });
+  },
+
+  /**
+   * Seed the session sort-pref cache from the playlists query data.
+   * Idempotent — only fills entries that aren't already cached, so a
+   * user's mid-session sort change isn't clobbered by a refetch.
+   */
+  seedPlaylistSortPreferences: (playlists) => {
+    set((state) => {
+      const next = { ...state.playlistSortPreferences };
+      let mutated = false;
+      playlists.forEach((p) => {
+        if (p.sortPreference && !next[p.id]) {
+          next[p.id] = p.sortPreference;
+          mutated = true;
+        }
+      });
+      return mutated ? { playlistSortPreferences: next } : state;
+    });
   },
 }));
-
-let libraryBootstrapped = false;
-
-/**
- * Wires the renderer-process library subsystem: registers the
- * `library:scanComplete` IPC listener and kicks off the initial library +
- * playlists load. Call once from the main app's mount effect (not from the
- * mini-player window, which has no library dependency).
- *
- * Idempotent — guarded so accidental double-calls (StrictMode, HMR) are safe.
- *
- * Fire-and-forget by design. The two initial loads run in parallel and the
- * function returns synchronously. Callers MUST NOT rely on bootstrap's
- * return to know "the library is ready" — instead, subscribe to
- * `useLibraryStore((s) => s.isLoading)` and react when it flips to false.
- * That's the contract `ThemedApp` already follows (see App.tsx — the second
- * useEffect runs `selectSpecificSong` once `isLoading` is false).
- *
- * If a future caller genuinely needs to await readiness (e.g. a programmatic
- * startup harness or test setup), convert the signature to
- * `async (): Promise<void>` and `await Promise.all([...])` the two loads.
- * Until then, keep this sync to avoid speculative API surface.
- */
-export const bootstrapLibraryStore = (): void => {
-  if (libraryBootstrapped) return;
-  libraryBootstrapped = true;
-
-  window.electron.library.onScanComplete((data) => {
-    if (data.error) {
-      console.warn(`Library scan failed: ${data.error}`);
-      useUIStore.getState().showNotification(data.error, 'error');
-      return;
-    }
-
-    const added = data.tracksAdded || 0;
-    const removed = data.tracksRemoved || 0;
-
-    let message = 'Library scan complete: ';
-    const parts: string[] = [];
-    if (added > 0)
-      parts.push(`${added} new track${added !== 1 ? 's' : ''} added`);
-    if (removed > 0)
-      parts.push(`${removed} stale track${removed !== 1 ? 's' : ''} removed`);
-    message += parts.length > 0 ? parts.join(', ') : 'No changes';
-
-    console.warn(message);
-    useUIStore.getState().showNotification(message, 'success');
-
-    // Reload the library to get the updated tracks
-    // Pass false to avoid showing loading screen during refresh
-    useLibraryStore.getState().loadLibrary(false);
-    // Reload the playlists to update the smart playlists
-    useLibraryStore.getState().loadPlaylists();
-  });
-
-  useLibraryStore.getState().loadPlaylists();
-  useLibraryStore.getState().loadLibrary();
-};
 
 export default useLibraryStore;

@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Playlist, Track } from '../../types/dbTypes';
 import useUIStore from '../stores/uiStore';
+import { queryClient } from './client';
 import { queryKeys } from './keys';
+
+/**
+ * Non-hook snapshot of the playlists cache. See getTracksSnapshot for
+ * usage notes.
+ */
+export function getPlaylistsSnapshot(): Playlist[] | undefined {
+  return queryClient.getQueryData<Playlist[]>(queryKeys.playlists);
+}
 
 /** Read all playlists. */
 export function usePlaylists() {
@@ -116,8 +125,12 @@ export function useDeletePlaylist() {
 export function useAddTrackToPlaylist() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      trackId,
+    // The optimistic update in onMutate is the source of truth for the
+    // post-write trackIds list. mutationFn just persists whatever the
+    // cache says — idempotent in the "already present" case (cache is
+    // unchanged, IPC write is a no-op).
+    mutationFn: async ({
+      trackId: _trackId,
       playlistId,
     }: {
       trackId: string;
@@ -126,26 +139,30 @@ export function useAddTrackToPlaylist() {
       const playlists = qc.getQueryData<Playlist[]>(queryKeys.playlists);
       const playlist = playlists?.find((p) => p.id === playlistId);
       if (!playlist) {
-        return Promise.reject(
-          new Error(`Playlist with ID ${playlistId} not found`),
-        );
+        throw new Error(`Playlist with ID ${playlistId} not found`);
       }
-      if (playlist.trackIds.includes(trackId)) {
-        return Promise.reject(new Error('TRACK_ALREADY_PRESENT'));
-      }
-      const updated: Playlist = {
-        ...playlist,
-        trackIds: [...playlist.trackIds, trackId],
-      };
-      return window.electron.playlists.update(updated).then(() => updated);
+      await window.electron.playlists.update(playlist);
+      return playlist;
     },
     onMutate: async ({ trackId, playlistId }) => {
       await qc.cancelQueries({ queryKey: queryKeys.playlists });
       const prev = qc.getQueryData<Playlist[]>(queryKeys.playlists);
+
+      // Detect "already present" up front and surface the info toast,
+      // but let the mutation continue as a no-op write so callers
+      // don't have to special-case the result.
+      const existing = prev?.find((p) => p.id === playlistId);
+      if (existing?.trackIds.includes(trackId)) {
+        useUIStore
+          .getState()
+          .showNotification('Track is already in this playlist', 'info');
+        return { prev };
+      }
+
       qc.setQueryData<Playlist[]>(queryKeys.playlists, (old) =>
         old
           ? old.map((p) =>
-              p.id === playlistId && !p.trackIds.includes(trackId)
+              p.id === playlistId
                 ? { ...p, trackIds: [...p.trackIds, trackId] }
                 : p,
             )
@@ -155,13 +172,6 @@ export function useAddTrackToPlaylist() {
     },
     onError: (err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(queryKeys.playlists, ctx.prev);
-      // Treat "already present" as an info, not an error.
-      if (err instanceof Error && err.message === 'TRACK_ALREADY_PRESENT') {
-        useUIStore
-          .getState()
-          .showNotification('Track is already in this playlist', 'info');
-        return;
-      }
       console.error('Failed to add track to playlist:', err);
       useUIStore
         .getState()

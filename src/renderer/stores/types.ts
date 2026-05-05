@@ -23,44 +23,45 @@ export interface BrowserFilter {
 }
 
 // Library Store Types
+//
+// After Phase 5c the libraryStore holds only client/UI state. Server
+// state (tracks, playlists, settings) is owned by TanStack Query — see
+// src/renderer/queries/. Components reach for `useTracks()`,
+// `usePlaylists()`, `useSettings()` for reads and the corresponding
+// mutation hooks (useCreatePlaylist, useUpdatePlaylist,
+// useDeletePlaylist, useAddTrackToPlaylist, useScanLibrary,
+// useImportFiles, useUpdateTrackMetadata, useDeleteTrack, …) for writes.
 export interface LibraryStore {
-  tracks: Track[];
-  playlists: Playlist[];
-  isLoading: boolean;
-  isScanning: boolean;
+  // ── UI / view state ─────────────────────────────────────────────
   selectedPlaylistId: string | null;
   selectedTrackId: string | null;
+  lastViewedTrackId: string | null;
+
   libraryViewState: {
     sorting: any;
     filtering: string;
   };
-  browserFilters: Record<string, BrowserFilter>; // keyed by 'library' or playlist ID
   playlistViewState: {
     sorting: any;
     filtering: string;
     playlistId: string | null;
   };
-  lastViewedTrackId: string | null;
 
-  // NEW: Indexed data structures for O(1) lookups
-  trackIndex: Map<string, Track>; // trackId -> Track
-  artistIndex: Map<string, Set<string>>; // artist -> Set<trackIds>
-  albumIndex: Map<string, Set<string>>; // album -> Set<trackIds>
-  searchIndex: Map<string, SearchIndexData>; // trackId -> pre-computed search data
+  // Per-view browser filters (keyed by 'library' or playlist ID)
+  browserFilters: Record<string, BrowserFilter>;
+  // Per-view search filters (keyed by 'library' or playlist ID)
+  searchFilters: Record<string, string>;
 
-  // Actions
-  // import related actions
-  loadLibrary: (isInitialLoad?: boolean) => Promise<void>;
-  loadPlaylists: () => Promise<void>;
-  scanLibrary: (libraryPath: string) => Promise<void>;
-  importFiles: (files: string[]) => Promise<void>;
-  // user actions
+  // Per-playlist sort preferences. Session cache so the user's in-flight
+  // sort changes don't trigger re-renders of the playlists query data
+  // (which would loop). The setter persists to the DB via TanStack Query
+  // mutation under the hood and rolls back on failure.
+  playlistSortPreferences: Record<string, Array<{ id: string; desc: boolean }>>;
+
+  // ── Actions ─────────────────────────────────────────────────────
   selectPlaylist: (playlistId: string | null) => void;
   selectTrack: (trackId: string | null) => void;
-  createPlaylist: (name: string) => Promise<void>;
-  updatePlaylist: (playlist: Playlist) => Promise<void>;
-  deletePlaylist: (playlistId: string) => Promise<void>;
-  addTrackToPlaylist: (trackId: string, playlistId: string) => Promise<void>;
+
   updateLibraryViewState: (sorting: any, filtering: string) => void;
   updatePlaylistViewState: (
     sorting: any,
@@ -68,27 +69,25 @@ export interface LibraryStore {
     playlistId: string | null,
   ) => void;
   setLastViewedTrackId: (trackId: string | null) => void;
+
   setBrowserFilter: (viewId: string, filter: BrowserFilter) => void;
   clearBrowserFilter: (viewId: string) => void;
   clearAllBrowserFilters: () => void;
   getBrowserFilter: (viewId: string) => BrowserFilter;
 
-  // Per-view search filters (keyed by 'library' or playlist ID)
-  searchFilters: Record<string, string>;
   setSearchFilter: (viewId: string, filter: string) => void;
   getSearchFilter: (viewId: string) => string;
 
-  // Per-playlist sort preferences (session cache + DB backed)
-  playlistSortPreferences: Record<string, Array<{ id: string; desc: boolean }>>;
   setPlaylistSortPreference: (
     playlistId: string,
     sorting: Array<{ id: string; desc: boolean }>,
   ) => void;
 
-  // NEW: Efficient data access methods
-  getTrackById: (id: string) => Track | undefined;
-  getTracksByIds: (ids: string[]) => Track[];
-  updateTrackInPlace: (updatedTrack: Track) => void;
+  // Seed the session sort-pref cache from playlists data when the
+  // playlists query first resolves. Called once from a top-level effect
+  // in `App.tsx` rather than fetched directly by the store (the store
+  // doesn't import the queries layer to avoid circular deps).
+  seedPlaylistSortPreferences: (playlists: Playlist[]) => void;
 }
 
 // Playback Store Types

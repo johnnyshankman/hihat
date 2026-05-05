@@ -12,6 +12,7 @@ import { Track, Settings } from '../../types/dbTypes';
 import { SettingsAndPlaybackStore } from './types';
 import useLibraryStore from './libraryStore';
 import useUIStore from './uiStore';
+import { getTracksSnapshot, getPlaylistsSnapshot } from '../queries';
 import {
   computeCanGoNext,
   findNextSong,
@@ -320,7 +321,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           throw new Error('No player found while selecting specific song');
         }
 
-        const library = useLibraryStore.getState().tracks;
+        // Tracks are server state owned by TanStack Query; the store
+        // doesn't keep its own copy. Reads outside React (like this
+        // playback path) go through the queryClient snapshot.
+        const library = getTracksSnapshot()?.tracks ?? [];
 
         const selectedTrack = library.find((t) => t.id === trackId);
 
@@ -527,8 +531,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
           // Check if we need to clear history (when all songs have been played with repeat all)
           // Get total available tracks to determine if we've played them all
-          const library = useLibraryStore.getState().tracks;
-          const { playlists } = useLibraryStore.getState();
+          const library = getTracksSnapshot()?.tracks ?? [];
+          const playlists = getPlaylistsSnapshot() ?? [];
           let totalAvailableTracks = 0;
 
           if (state.playbackSource === 'library') {
@@ -1266,8 +1270,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
           // Check if we need to clear history (when all songs have been played with repeat all)
           // Get total available tracks to determine if we've played them all
-          const library = useLibraryStore.getState().tracks;
-          const { playlists } = useLibraryStore.getState();
+          const library = getTracksSnapshot()?.tracks ?? [];
+          const playlists = getPlaylistsSnapshot() ?? [];
           let totalAvailableTracks = 0;
 
           if (state.playbackSource === 'library') {

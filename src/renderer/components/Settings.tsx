@@ -25,8 +25,13 @@ import AddIcon from '@mui/icons-material/Add';
 import BackupIcon from '@mui/icons-material/Backup';
 import CloseIcon from '@mui/icons-material/Close';
 import { useSettingsAndPlaybackStore, useUIStore } from '../stores';
+import {
+  useScanLibrary,
+  useImportFiles,
+  useResetDatabase,
+  useResetTracks,
+} from '../queries';
 import ConfirmationDialog from './ConfirmationDialog';
-import useLibraryStore from '../stores/libraryStore';
 
 // Define the props for the Settings component
 interface SettingsProps {
@@ -45,10 +50,16 @@ export default function Settings({ onClose }: SettingsProps) {
     (state) => state.setLibraryPath,
   );
   const updateTheme = useSettingsAndPlaybackStore((state) => state.setTheme);
-  // library store stuff
-  const scanLibrary = useLibraryStore((state) => state.scanLibrary);
-  const importFiles = useLibraryStore((state) => state.importFiles);
-  const isScanning = useLibraryStore((state) => state.isScanning);
+  // Library / scan / reset mutations via TanStack Query. Each hook
+  // owns success/error toasts and cache invalidation so the rest of
+  // this component just drives UI off `isPending`.
+  const scanLibraryMutation = useScanLibrary();
+  const importFilesMutation = useImportFiles();
+  const resetDatabaseMutation = useResetDatabase();
+  const resetTracksMutation = useResetTracks();
+  const isScanning =
+    scanLibraryMutation.isPending || importFilesMutation.isPending;
+
   // ui store stuff
   const showNotification = useUIStore((state) => state.showNotification);
 
@@ -290,16 +301,15 @@ export default function Settings({ onClose }: SettingsProps) {
       scanProcessedFilesRef.current = [];
       scanStartTime.current = 0;
 
-      // Start the scan
-      await scanLibrary(libraryPath);
+      // Start the scan via the mutation. isScanning above flips on
+      // automatically; the scan-complete push event invalidates the
+      // tracks query and shows the success notification.
+      await scanLibraryMutation.mutateAsync(libraryPath);
     } catch (error) {
       console.error('Error scanning library:', error);
       setScanStatus('Failed');
       setScanPhase('error');
-      showNotification(
-        error instanceof Error ? error.message : 'Error scanning library',
-        'error',
-      );
+      // Hook already toasts via uiStore on failure.
     }
   };
 
@@ -329,16 +339,14 @@ export default function Settings({ onClose }: SettingsProps) {
       scanProcessedFilesRef.current = [];
       scanStartTime.current = 0;
 
-      // Import the selected files
-      await importFiles(result.filePaths);
+      // Import the selected files via the mutation. Hook invalidates
+      // tracks + playlists on success.
+      await importFilesMutation.mutateAsync(result.filePaths);
     } catch (error) {
       console.error('Error importing files:', error);
       setScanStatus('Failed');
       setScanPhase('error');
-      showNotification(
-        error instanceof Error ? error.message : 'Error importing files',
-        'error',
-      );
+      // Hook already toasts via uiStore on failure.
     }
   };
 
@@ -431,8 +439,8 @@ export default function Settings({ onClose }: SettingsProps) {
         setScanProgress(0);
         setScanStatus('');
 
-        // First, reset tracks in the database
-        const resetResult = await window.electron.library.resetTracks();
+        // First, reset tracks in the database via the mutation.
+        const resetResult = await resetTracksMutation.mutateAsync();
         if (!resetResult.success) {
           console.error('Failed to reset tracks:', resetResult.message);
           showNotification(
@@ -442,7 +450,7 @@ export default function Settings({ onClose }: SettingsProps) {
           return;
         }
 
-        await scanLibrary(libraryPath);
+        await scanLibraryMutation.mutateAsync(libraryPath);
       } catch (error) {
         console.error('Error scanning library:', error);
         setScanStatus('Failed');
@@ -471,7 +479,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const handleConfirmReset = async () => {
     try {
       setResetDialogOpen(false);
-      const result = await window.electron.library.resetDatabase();
+      const result = await resetDatabaseMutation.mutateAsync();
 
       if (result.success) {
         showNotification(

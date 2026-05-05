@@ -114,8 +114,13 @@ export class PlaybackTracker {
 export const playbackTracker = new PlaybackTracker();
 
 /**
- * Updates the play count for a track in the database
- * @param trackId - ID of the track to update
+ * Updates the play count for a track in the database, optimistically
+ * mirrors the change into the TanStack Query tracks cache (incl. its
+ * indexes), and invalidates the playlists query so smart playlists
+ * (which sort by playCount / lastPlayed) reflect the new data.
+ *
+ * Called from non-React code (the playback engine), so we read/write
+ * the cache through the queryClient singleton rather than hooks.
  */
 export async function updatePlayCount(trackId: string): Promise<void> {
   try {
@@ -123,48 +128,48 @@ export async function updatePlayCount(trackId: string): Promise<void> {
       `PlaybackTracker: Play count threshold reached - updating play count for track ${trackId}`,
     );
 
-    if (typeof window !== 'undefined' && window.electron) {
-      // Update the database via IPC
-      await window.electron.tracks.updatePlayCount(
-        trackId,
-        new Date().toISOString(),
-      );
+    if (typeof window === 'undefined' || !window.electron) return;
 
-      // Now update the track in the LibraryStore to reflect the change in the UI
-      // Import the LibraryStore (dynamic import to avoid circular dependency)
-      const { default: useLibraryStore } = await import(
-        '../stores/libraryStore'
-      );
+    await window.electron.tracks.updatePlayCount(
+      trackId,
+      new Date().toISOString(),
+    );
 
-      // Get the current tracks array
-      const { tracks } = useLibraryStore.getState();
+    // Lazy import keeps this util dependency-light at module load and
+    // avoids a circular import (queries/* eventually pulls in stores).
+    const [{ queryClient }, { queryKeys }, { buildIndexes }] =
+      await Promise.all([
+        import('../queries/client'),
+        import('../queries/keys'),
+        import('./trackIndexes'),
+      ]);
 
-      // Find the track and create an updated version with incremented play count
-      const trackIndex = tracks.findIndex((track) => track.id === trackId);
+    type TracksData = {
+      tracks: import('../../types/dbTypes').Track[];
+      indexes: ReturnType<typeof buildIndexes>;
+    };
 
-      if (trackIndex !== -1) {
-        const updatedTracks = [...tracks];
-        const track = updatedTracks[trackIndex];
+    queryClient.setQueryData<TracksData>(queryKeys.tracks, (old) => {
+      if (!old) return old;
+      const idx = old.tracks.findIndex((t) => t.id === trackId);
+      if (idx === -1) return old;
+      const updatedTrack = {
+        ...old.tracks[idx],
+        playCount: (old.tracks[idx].playCount || 0) + 1,
+        lastPlayed: new Date().toISOString(),
+      };
+      const updatedTracks = [...old.tracks];
+      updatedTracks[idx] = updatedTrack;
+      return { tracks: updatedTracks, indexes: buildIndexes(updatedTracks) };
+    });
 
-        // Create a new track object with incremented play count and updated lastPlayed
-        updatedTracks[trackIndex] = {
-          ...track,
-          playCount: (track.playCount || 0) + 1,
-          lastPlayed: new Date().toISOString(),
-        };
+    // Smart playlists derive from track stats (playCount, lastPlayed),
+    // so invalidating ensures the next mount of usePlaylists refetches.
+    queryClient.invalidateQueries({ queryKey: queryKeys.playlists });
 
-        // Update the state in the LibraryStore
-        useLibraryStore.setState({ tracks: updatedTracks });
-
-        // Refresh playlists to update smart playlists
-        // This will cause smart playlists to be refreshed with the new play count data
-        useLibraryStore.getState().loadPlaylists();
-
-        console.warn(
-          `PlaybackTracker: Updated track in LibraryStore - new play count: ${updatedTracks[trackIndex].playCount}`,
-        );
-      }
-    }
+    console.warn(
+      `PlaybackTracker: TQ tracks cache updated for play count of ${trackId}`,
+    );
   } catch (error) {
     console.error(`Failed to update play count for track ${trackId}:`, error);
   }

@@ -10,6 +10,14 @@ import {
   useUIStore,
   useLibraryStore,
 } from '../stores';
+import {
+  useTracks,
+  useDeleteTrack,
+  useDeleteFile,
+  useDownloadAlbumArt,
+  useUpdatePlaylist,
+  getPlaylistsSnapshot,
+} from '../queries';
 import ConfirmationDialog from './ConfirmationDialog';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 
@@ -49,9 +57,20 @@ export default function TrackContextMenu({
   const selectedPlaylistId = useLibraryStore(
     (state) => state.selectedPlaylistId,
   );
-  const getTrackById = useLibraryStore((state) => state.getTrackById);
-  const loadLibrary = useLibraryStore((state) => state.loadLibrary);
-  const loadPlaylists = useLibraryStore((state) => state.loadPlaylists);
+
+  // Server-state lookups via TanStack Query.
+  const { data: tracksData } = useTracks();
+  const getTrackById = (id: string | null) =>
+    id ? tracksData?.indexes.trackIndex.get(id) : undefined;
+
+  // Mutation hooks. Each owns optimistic update + rollback +
+  // invalidation; their isPending and error states aren't surfaced to
+  // a button here (the menu closes immediately after click) but error
+  // toasts come through uiStore via the hooks' onError.
+  const deleteTrackMutation = useDeleteTrack();
+  const deleteFileMutation = useDeleteFile();
+  const downloadAlbumArtMutation = useDownloadAlbumArt();
+  const updatePlaylistMutation = useUpdatePlaylist();
 
   // Add state for the delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -140,13 +159,12 @@ export default function TrackContextMenu({
   const handlerDownloadAlbumArt = async () => {
     const track = getTrackById(trackId);
     if (track) {
+      // Mutation hook owns the toast on failure; we await so the menu
+      // doesn't close on top of a still-running download.
       try {
-        const result = await window.electron.fileSystem.downloadAlbumArt(track);
-        if (!result.success) {
-          console.error('Failed to download album art:', result.message);
-        }
-      } catch (error) {
-        console.error('Error downloading album art:', error);
+        await downloadAlbumArtMutation.mutateAsync(track);
+      } catch {
+        // hook already notified
       }
     }
     onClose();
@@ -210,56 +228,48 @@ export default function TrackContextMenu({
         setPaused(true);
       }
 
-      // Step 1: Get all playlists that might contain this track
-      const allPlaylists = await window.electron.playlists.getAll();
+      // Step 1: Get all playlists from the cache (already populated by
+      // Sidebar's usePlaylists subscription).
+      const allPlaylists = getPlaylistsSnapshot() ?? [];
 
-      // Step 2: Remove the track from all playlists that contain it
+      // Step 2: Remove the track from each playlist via the mutation
+      // hook so cache updates and rollback semantics stay consistent.
       const playlistsToUpdate = allPlaylists.filter(
         (playlist) => !playlist.isSmart && playlist.trackIds.includes(trackId),
       );
-
-      // Update all playlists in parallel using Promise.all
       await Promise.all(
-        playlistsToUpdate.map((playlist) => {
-          const updatedPlaylist = {
+        playlistsToUpdate.map((playlist) =>
+          updatePlaylistMutation.mutateAsync({
             ...playlist,
             trackIds: playlist.trackIds.filter((id) => id !== trackId),
-          };
-
-          return window.electron.playlists.update(updatedPlaylist);
-        }),
+          }),
+        ),
       );
 
-      // Step 3: Delete the track from the database
-      const dbDeleteResult = await window.electron.tracks.delete(trackId);
-
-      if (!dbDeleteResult) {
+      // Step 3: Delete the track from the database. The mutation hook
+      // invalidates tracks + playlists on success; on failure it
+      // throws and we surface the error.
+      try {
+        await deleteTrackMutation.mutateAsync(trackId);
+      } catch {
         showNotification('Failed to delete track from database', 'error');
         setDeleteDialogOpen(false);
         return;
       }
 
-      // Step 4: Delete the actual file from the filesystem
+      // Step 4: Delete the file from the filesystem.
       if (track.filePath) {
-        const fileDeleteResult = await window.electron.fileSystem.deleteFile(
+        const fileDeleteResult = await deleteFileMutation.mutateAsync(
           track.filePath,
         );
-
         if (!fileDeleteResult.success) {
           showNotification(
             `File deletion warning: ${fileDeleteResult.message}`,
             'warning',
           );
-          // Continue with UI updates even if file deletion fails
+          // Continue with UI updates even if file deletion fails.
         }
       }
-
-      // Step 5: Update the UI
-      // Reload the library to reflect the deleted track
-      await loadLibrary(false);
-
-      // Reload playlists to reflect any changes
-      await loadPlaylists();
 
       showNotification(
         `Track "${track.title}" has been removed and moved to Trash`,
@@ -267,7 +277,7 @@ export default function TrackContextMenu({
       );
       setDeleteDialogOpen(false);
 
-      // Step 6: Scroll to the target track if it exists
+      // Step 5: Scroll to the target track if it exists.
       if (targetTrackId) {
         window.hihatScrollToLibraryTrack?.(targetTrackId);
       }

@@ -12,15 +12,21 @@ import {
   type CanGoInputs,
 } from '../renderer/utils/trackSelectionUtils';
 import useLibraryStore from '../renderer/stores/libraryStore';
+import { queryClient } from '../renderer/queries/client';
+import { queryKeys } from '../renderer/queries/keys';
+import { buildIndexes } from '../renderer/utils/trackIndexes';
 import { Track, Playlist } from '../types/dbTypes';
 
-// Zustand testing pattern (https://docs.pmnd.rs/zustand/guides/testing):
-// snapshot the store's initial state once, then wholesale-replace it after
-// every test so per-test setState calls can never leak across tests.
+// Phase 5c: tracks + playlists are TanStack Query server state, not
+// Zustand state. Seed via queryClient.setQueryData. The libraryStore
+// snapshot still gets restored after each test for view-state slices
+// (sorting, filtering, selectedPlaylistId).
 const initialLibraryState = useLibraryStore.getState();
 
 afterEach(() => {
   useLibraryStore.setState(initialLibraryState, true);
+  queryClient.removeQueries({ queryKey: queryKeys.tracks });
+  queryClient.removeQueries({ queryKey: queryKeys.playlists });
 });
 
 const makeTrack = (overrides: Partial<Track>): Track => ({
@@ -66,9 +72,18 @@ const seedLibrary = (overrides: {
     playlistId: string | null;
   };
 }) => {
+  // Tracks + playlists go to the TanStack Query cache (matches what
+  // trackSelectionUtils now reads via getTracksSnapshot /
+  // getPlaylistsSnapshot at call time).
+  const tracks = overrides.tracks ?? [];
+  queryClient.setQueryData(queryKeys.tracks, {
+    tracks,
+    indexes: buildIndexes(tracks),
+  });
+  queryClient.setQueryData(queryKeys.playlists, overrides.playlists ?? []);
+
+  // View-state lives in Zustand.
   useLibraryStore.setState({
-    tracks: overrides.tracks ?? [],
-    playlists: overrides.playlists ?? [],
     libraryViewState: overrides.libraryViewState ?? {
       sorting: [{ id: 'title', desc: false }],
       filtering: '',
