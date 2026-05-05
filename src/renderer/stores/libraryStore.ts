@@ -334,7 +334,10 @@ const useLibraryStore = create<LibraryStore>((set, get) => ({
       set({ isScanning: false });
       useUIStore
         .getState()
-        .showNotification(`Processed ${files.length} files`, 'success');
+        .showNotification(
+          `Processed ${files.length} ${files.length === 1 ? 'file' : 'files'}`,
+          'success',
+        );
     } catch (error) {
       console.error('Error importing files:', error);
       useUIStore.getState().showNotification('Failed to import files', 'error');
@@ -533,13 +536,13 @@ export const bootstrapLibraryStore = (): void => {
     const added = data.tracksAdded || 0;
     const removed = data.tracksRemoved || 0;
 
-    let message = 'Library scan complete: ';
+    let message = 'Library scan completed: ';
     const parts: string[] = [];
     if (added > 0)
       parts.push(`${added} new track${added !== 1 ? 's' : ''} added`);
     if (removed > 0)
       parts.push(`${removed} stale track${removed !== 1 ? 's' : ''} removed`);
-    message += parts.length > 0 ? parts.join(', ') : 'No changes';
+    message += parts.length > 0 ? parts.join(', ') : 'no changes';
 
     console.warn(message);
     useUIStore.getState().showNotification(message, 'success');
