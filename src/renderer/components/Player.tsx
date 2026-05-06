@@ -25,6 +25,7 @@ import {
   useUIStore,
   useLibraryStore,
 } from '../stores';
+import { useSettings } from '../queries';
 import PositionDisplay from './PositionDisplay';
 import {
   mutedIconButtonSx,
@@ -87,7 +88,11 @@ export default function Player() {
   const paused = useSettingsAndPlaybackStore((state) => state.paused);
   const position = useSettingsAndPlaybackStore((state) => state.position);
   const duration = useSettingsAndPlaybackStore((state) => state.duration);
-  const volume = useSettingsAndPlaybackStore((state) => state.volume);
+  // Volume is server state via TanStack Query. setVolume on the
+  // playback store still owns the write-side (it applies to the
+  // Gapless-5 engine synchronously, then mirrors into the TQ cache
+  // and persists via IPC).
+  const volume = useSettings().data?.volume ?? 1.0;
   const playbackSource = useSettingsAndPlaybackStore(
     (state) => state.playbackSource,
   );

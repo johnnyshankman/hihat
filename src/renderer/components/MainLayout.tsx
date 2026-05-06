@@ -2,12 +2,8 @@ import { useEffect } from 'react';
 import { styled } from '@mui/material/styles';
 import { Box, Drawer, Typography, CssBaseline } from '@mui/material';
 import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
-import {
-  useLibraryStore,
-  useSettingsAndPlaybackStore,
-  useUIStore,
-} from '../stores';
-import { useLibraryReady } from '../queries';
+import { useLibraryStore, useUIStore } from '../stores';
+import { useLibraryReady, useSettings } from '../queries';
 import Sidebar from './Sidebar';
 import MainContent from './MainContent';
 import Settings from './Settings';
@@ -50,7 +46,7 @@ const PlayerWrapper = styled('div')(() => ({
 
 export default function MainLayout() {
   const { isLoading, isError, error } = useLibraryReady();
-  const theme = useSettingsAndPlaybackStore((state) => state.theme);
+  const theme = useSettings().data?.theme ?? 'dark';
   const showNotification = useUIStore((state) => state.showNotification);
 
   // Surface a query error as a toast once. The query layer also stays

@@ -1,5 +1,5 @@
 import { Gapless5 } from '@regosen/gapless-5';
-import { Track, Playlist, Settings } from '../../types/dbTypes';
+import { Track, Playlist } from '../../types/dbTypes';
 
 // Define the notification type
 export interface Notification {
@@ -132,26 +132,6 @@ export interface PlaybackStore {
   autoPlayNextTrack: () => Promise<void>;
 }
 
-// Settings Store Types
-export interface SettingsStore {
-  libraryPath: Settings['libraryPath'];
-  theme: Settings['theme'];
-  columns: Settings['columns'];
-  id: Settings['id'];
-  lastPlayedSongId: Settings['lastPlayedSongId'];
-  volume: Settings['volume'];
-  columnWidths: Settings['columnWidths'];
-
-  // Actions
-  loadSettings: () => Promise<void>;
-  setColumnVisibility: (column: string, isVisible: boolean) => Promise<void>;
-  setColumnWidths: (columnWidths: Record<string, number>) => Promise<void>;
-  setTheme: (theme: 'light' | 'dark') => Promise<void>;
-  setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
-  setLastPlayedSongId: (trackId: string | null) => Promise<void>;
-  setVolume: (volume: number) => Promise<void>;
-}
-
 // UI Store Types
 export interface UIStore {
   notifications: Notification[];
@@ -175,23 +155,19 @@ export interface UIStore {
 }
 
 // Combined Settings and Playback Store Types
+//
+// Settings (libraryPath / theme / columns / columnWidths /
+// librarySorting / columnOrder / lastPlayedSongId / volume) are server
+// state owned by TanStack Query — see src/renderer/queries/settings.ts.
+// This interface holds only the playback runtime (current track,
+// position, queue, shuffle, etc.) plus the imperative Gapless-5
+// engine handle.
 export interface SettingsAndPlaybackStore {
-  // Settings state
-  libraryPath: Settings['libraryPath'];
-  theme: Settings['theme'];
-  columns: Settings['columns'];
-  id: Settings['id'];
-  lastPlayedSongId: Settings['lastPlayedSongId'];
-  columnWidths: Settings['columnWidths'];
-  librarySorting: Settings['librarySorting'];
-  columnOrder: Settings['columnOrder'];
-
   // Playback state
   currentTrack: Track | null;
   paused: boolean;
   position: number;
   duration: number;
-  volume: number; // Shared state between settings and playback
   playbackSource: 'library' | 'playlist';
   playbackSourcePlaylistId: string | null;
   playbackContextBrowserFilter: BrowserFilter | null;
@@ -231,20 +207,10 @@ export interface SettingsAndPlaybackStore {
   // playback state.
   queueLeadingStaleCount: number;
 
-  // Combined actions
-  // Settings actions
-  loadSettings: () => Promise<Settings>;
-  setColumnVisibility: (column: string, isVisible: boolean) => Promise<void>;
-  setColumnWidths: (columnWidths: Record<string, number>) => Promise<void>;
-  setLibrarySorting: (
-    sorting: Array<{ id: string; desc: boolean }>,
-  ) => Promise<void>;
-  setColumnOrder: (columnOrder: string[]) => Promise<void>;
-  setTheme: (theme: 'light' | 'dark') => Promise<void>;
-  setLibraryPath: (libraryPath: Settings['libraryPath']) => Promise<void>;
-  setLastPlayedSongId: (trackId: string | null) => Promise<void>;
-
-  // Volume is shared between settings and playback
+  // Volume action: applies to the audio engine synchronously and
+  // mirrors into the TanStack Query settings cache + IPC. The Zustand
+  // store no longer holds the volume value — read via useSettings()
+  // or getSettingsSnapshot().
   setVolume: (volume: number) => void;
 
   // Playback actions

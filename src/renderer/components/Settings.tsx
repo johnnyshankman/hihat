@@ -24,12 +24,16 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
 import BackupIcon from '@mui/icons-material/Backup';
 import CloseIcon from '@mui/icons-material/Close';
-import { useSettingsAndPlaybackStore, useUIStore } from '../stores';
+import { useUIStore } from '../stores';
 import {
   useScanLibrary,
   useImportFiles,
   useResetDatabase,
   useResetTracks,
+  useSettings,
+  useUpdateSettings,
+  getSettingsSnapshot,
+  DEFAULT_COLUMNS,
 } from '../queries';
 import ConfirmationDialog from './ConfirmationDialog';
 
@@ -39,17 +43,13 @@ interface SettingsProps {
 }
 
 export default function Settings({ onClose }: SettingsProps) {
-  // settings store stuff
-  const libraryPath = useSettingsAndPlaybackStore((state) => state.libraryPath);
-  const theme = useSettingsAndPlaybackStore((state) => state.theme);
-  const columns = useSettingsAndPlaybackStore((state) => state.columns);
-  const updateColumnVisibility = useSettingsAndPlaybackStore(
-    (state) => state.setColumnVisibility,
-  );
-  const setLibraryPath = useSettingsAndPlaybackStore(
-    (state) => state.setLibraryPath,
-  );
-  const updateTheme = useSettingsAndPlaybackStore((state) => state.setTheme);
+  // Settings come from TanStack Query. Module-level fallbacks keep
+  // first-render UI consistent before the cache resolves.
+  const settings = useSettings().data;
+  const libraryPath = settings?.libraryPath ?? '';
+  const theme = settings?.theme ?? 'dark';
+  const columns = settings?.columns ?? DEFAULT_COLUMNS;
+  const updateSettings = useUpdateSettings();
   // Library / scan / reset mutations via TanStack Query. Each hook
   // owns success/error toasts and cache invalidation so the rest of
   // this component just drives UI off `isPending`.
@@ -272,16 +272,17 @@ export default function Settings({ onClose }: SettingsProps) {
 
   const handleThemeChange = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
-
-    // Update in store and save to database immediately
-    updateTheme(newTheme);
+    updateSettings.mutate({ theme: newTheme });
   };
 
   const handleColumnVisibilityChange = (column: keyof typeof columns) => {
-    const newValue = !columns[column];
-
-    // Update in store and save to database immediately
-    updateColumnVisibility(column, newValue);
+    // Read current columns at click time from the cache (post-onMutate
+    // optimistic merge) so rapid checkbox clicks see the previous
+    // optimistic state instead of stale closure data.
+    const current = getSettingsSnapshot()?.columns ?? columns;
+    updateSettings.mutate({
+      columns: { ...current, [column]: !current[column] },
+    });
   };
 
   const handleRescanLibrary = async () => {
@@ -415,11 +416,11 @@ export default function Settings({ onClose }: SettingsProps) {
 
       if (!pathExists) {
         showNotification('The specified library path does not exist', 'error');
-        setLibraryPath(originalPathRef.current);
+        updateSettings.mutate({ libraryPath: originalPathRef.current });
         return;
       }
 
-      setLibraryPath(newLibraryPath);
+      updateSettings.mutate({ libraryPath: newLibraryPath });
       setPathDialogOpen(true);
     } catch (error) {
       console.error('Error validating library path:', error);
@@ -469,7 +470,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const handleCancelPathChange = () => {
     setPathDialogOpen(false);
     // Revert to the original path
-    setLibraryPath(originalPathRef.current);
+    updateSettings.mutate({ libraryPath: originalPathRef.current });
   };
 
   const handleResetDatabase = async () => {

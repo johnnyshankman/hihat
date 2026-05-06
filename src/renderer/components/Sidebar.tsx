@@ -21,16 +21,13 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import ViewSidebarRoundedIcon from '@mui/icons-material/ViewSidebarRounded';
-import {
-  useLibraryStore,
-  useSettingsAndPlaybackStore,
-  useUIStore,
-} from '../stores';
+import { useLibraryStore, useUIStore } from '../stores';
 import {
   usePlaylists,
   useAddTrackToPlaylist,
   useDeletePlaylist,
   useUpdatePlaylist,
+  useSettings,
 } from '../queries';
 import WindowControls from './WindowControls';
 import RenamePlaylistDialog from './RenamePlaylistDialog';
@@ -59,7 +56,7 @@ export default function Sidebar() {
   );
   const selectPlaylist = useLibraryStore((state) => state.selectPlaylist);
 
-  const theme = useSettingsAndPlaybackStore((state) => state.theme);
+  const theme = useSettings().data?.theme ?? 'dark';
 
   const currentView = useUIStore((state) => state.currentView);
   const setCurrentView = useUIStore((state) => state.setCurrentView);

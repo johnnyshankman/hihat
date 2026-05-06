@@ -34,6 +34,9 @@ import {
   useUpdatePlaylist,
   useDeleteFile,
   getPlaylistsSnapshot,
+  useSettings,
+  useUpdateSettings,
+  DEFAULT_COLUMNS,
 } from '../queries';
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
@@ -107,31 +110,19 @@ export default function Library() {
   const globalFilter = useLibraryStore(
     (state) => state.searchFilters.library ?? '',
   );
-  // Get state from settings store
-  const columnVisibility = useSettingsAndPlaybackStore(
-    (state) => state.columns,
-  );
-  const updateColumnVisibility = useSettingsAndPlaybackStore(
-    (state) => state.setColumnVisibility,
-  );
-  const columnWidths = useSettingsAndPlaybackStore(
-    (state) => state.columnWidths,
-  );
-  const setColumnWidths = useSettingsAndPlaybackStore(
-    (state) => state.setColumnWidths,
-  );
-  const setLibrarySorting = useSettingsAndPlaybackStore(
-    (state) => state.setLibrarySorting,
-  );
-  // Sort preference lives in settingsAndPlaybackStore and is persisted to
-  // DB. setLibrarySorting internally fans out to libraryViewState, so the
-  // component just reads and writes this one value.
-  const sorting = useSettingsAndPlaybackStore(
-    (state) => state.librarySorting ?? DEFAULT_LIBRARY_SORTING,
-  );
-  const columnOrder = useSettingsAndPlaybackStore((state) => state.columnOrder);
-  const setColumnOrder = useSettingsAndPlaybackStore(
-    (state) => state.setColumnOrder,
+  // Settings live in TanStack Query. updateSettings.mutate is the
+  // unified write surface; the cross-store fan-out from sort changes
+  // (into libraryStore.libraryViewState so trackSelectionUtils sees
+  // the new sort for next/prev math) happens explicitly at the call
+  // site below.
+  const settings = useSettings().data;
+  const updateSettings = useUpdateSettings();
+  const columnVisibility = settings?.columns ?? DEFAULT_COLUMNS;
+  const columnWidths = settings?.columnWidths ?? null;
+  const sorting = settings?.librarySorting ?? DEFAULT_LIBRARY_SORTING;
+  const columnOrder = settings?.columnOrder ?? null;
+  const updateLibraryViewState = useLibraryStore(
+    (state) => state.updateLibraryViewState,
   );
 
   // Get state from playback store
@@ -366,17 +357,21 @@ export default function Library() {
     [setSearchFilter, scrollToTrack],
   );
 
-  // Resolve Tanstack's updater-or-value to a plain value for
-  // setLibrarySorting (fan-outs to state + viewState + DB). No
-  // useCallback — VirtualTable isn't memoized.
+  // Resolve Tanstack's updater-or-value to a plain value, persist via
+  // useUpdateSettings, and explicitly fan out to libraryViewState so
+  // trackSelectionUtils sees the new sort for next/prev track math.
+  // The fan-out used to live inside the Zustand setter; with settings
+  // in TQ it's the call site's responsibility. No useCallback —
+  // VirtualTable isn't memoized.
   const handleSortingChange = (
     updater: SortingState | ((old: SortingState) => SortingState),
   ) => {
-    const current =
-      useSettingsAndPlaybackStore.getState().librarySorting ??
-      DEFAULT_LIBRARY_SORTING;
+    const current = sorting;
     const next = typeof updater === 'function' ? updater(current) : updater;
-    setLibrarySorting(next);
+    if (!next || next.length === 0) return;
+    const { filtering } = useLibraryStore.getState().libraryViewState;
+    updateLibraryViewState(next, filtering);
+    updateSettings.mutate({ librarySorting: next });
   };
 
   // Expose the scrollToTrack function to the window object
@@ -689,15 +684,17 @@ export default function Library() {
   };
 
   const handleColumnVisibilityToggle = (columnId: string, visible: boolean) => {
-    updateColumnVisibility(columnId, visible);
+    updateSettings.mutate({
+      columns: { ...columnVisibility, [columnId]: visible },
+    });
   };
 
   const handleColumnSizingPersist = (sizing: Record<string, number>) => {
-    setColumnWidths(sizing);
+    updateSettings.mutate({ columnWidths: sizing });
   };
 
   const handleColumnOrderChange = (newOrder: string[]) => {
-    setColumnOrder(newOrder);
+    updateSettings.mutate({ columnOrder: newOrder });
   };
 
   const handleRowDragStart = (

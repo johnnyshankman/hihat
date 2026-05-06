@@ -18,7 +18,14 @@ import {
   useSettingsAndPlaybackStore,
   useUIStore,
 } from '../stores';
-import { useTracks, usePlaylists, useUpdatePlaylist } from '../queries';
+import {
+  useTracks,
+  usePlaylists,
+  useUpdatePlaylist,
+  useSettings,
+  useUpdateSettings,
+  DEFAULT_COLUMNS,
+} from '../queries';
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
@@ -107,23 +114,14 @@ export default function Playlists() {
     return state.searchFilters[pid] ?? '';
   });
 
-  // Get state from settings store
-  const columnVisibility = useSettingsAndPlaybackStore(
-    (state) => state.columns,
-  );
-  const updateColumnVisibility = useSettingsAndPlaybackStore(
-    (state) => state.setColumnVisibility,
-  );
-  const columnWidths = useSettingsAndPlaybackStore(
-    (state) => state.columnWidths,
-  );
-  const setColumnWidths = useSettingsAndPlaybackStore(
-    (state) => state.setColumnWidths,
-  );
-  const columnOrder = useSettingsAndPlaybackStore((state) => state.columnOrder);
-  const setColumnOrder = useSettingsAndPlaybackStore(
-    (state) => state.setColumnOrder,
-  );
+  // Settings via TanStack Query. updateSettings.mutate is the unified
+  // write surface; per-playlist sort prefs are separate and live on
+  // the playlist row itself (useUpdatePlaylistSortPreference).
+  const settings = useSettings().data;
+  const updateSettings = useUpdateSettings();
+  const columnVisibility = settings?.columns ?? DEFAULT_COLUMNS;
+  const columnWidths = settings?.columnWidths ?? null;
+  const columnOrder = settings?.columnOrder ?? null;
   const currentTrack = useSettingsAndPlaybackStore(
     (state) => state.currentTrack,
   );
@@ -616,15 +614,17 @@ export default function Playlists() {
   };
 
   const handleColumnVisibilityToggle = (columnId: string, visible: boolean) => {
-    updateColumnVisibility(columnId, visible);
+    updateSettings.mutate({
+      columns: { ...columnVisibility, [columnId]: visible },
+    });
   };
 
   const handleColumnSizingPersist = (sizing: Record<string, number>) => {
-    setColumnWidths(sizing);
+    updateSettings.mutate({ columnWidths: sizing });
   };
 
   const handleColumnOrderChange = (newOrder: string[]) => {
-    setColumnOrder(newOrder);
+    updateSettings.mutate({ columnOrder: newOrder });
   };
 
   const handleRowDragStart = (
