@@ -3,6 +3,7 @@ import { Playlist, Track } from '../../types/dbTypes';
 import useUIStore from '../stores/uiStore';
 import { queryClient } from './client';
 import { queryKeys } from './keys';
+import type { TracksData } from './tracks';
 
 /**
  * Non-hook snapshot of the playlists cache. See getTracksSnapshot for
@@ -169,6 +170,21 @@ export function useAddTrackToPlaylist() {
           : old,
       );
       return { prev };
+    },
+    onSuccess: (playlist, { trackId }, ctx) => {
+      // Suppress when onMutate already surfaced the duplicate-detection
+      // info toast — otherwise the user sees two stacked notifications
+      // ("already in this playlist" + "Added X to Y") for one click.
+      const wasAlreadyIn = ctx?.prev
+        ?.find((p) => p.id === playlist.id)
+        ?.trackIds.includes(trackId);
+      if (wasAlreadyIn) return;
+
+      const tracks = qc.getQueryData<TracksData>(queryKeys.tracks);
+      const title = tracks?.indexes.trackIndex.get(trackId)?.title ?? 'Track';
+      useUIStore
+        .getState()
+        .showNotification(`Added "${title}" to "${playlist.name}"`, 'success');
     },
     onError: (err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(queryKeys.playlists, ctx.prev);
