@@ -14,7 +14,7 @@
  *     invoke-handler registry in `handlers.ts`
  *
  * Anything else that needs the same long-running, progress-streaming
- * shape belongs alongside this — not in `handlers.ts`.
+ * shape belongs in its own similar file/module — not in `handlers.ts`.
  */
 
 import path from 'path';
