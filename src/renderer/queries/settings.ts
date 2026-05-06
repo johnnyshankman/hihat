@@ -1,7 +1,42 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Settings } from '../../types/dbTypes';
 import useUIStore from '../stores/uiStore';
+import { queryClient } from './client';
 import { queryKeys } from './keys';
+
+/**
+ * Stable default `columns` visibility map for components that render
+ * before the settings query resolves. Matches the in-memory initial
+ * state the Zustand `settingsAndPlaybackStore` used to ship with so
+ * cold-render visibility looks identical pre/post-refactor.
+ */
+export const DEFAULT_COLUMNS: Settings['columns'] = {
+  title: true,
+  artist: true,
+  album: true,
+  albumArtist: true,
+  genre: true,
+  duration: true,
+  playCount: true,
+  dateAdded: true,
+  lastPlayed: false,
+};
+
+/**
+ * Non-hook snapshot of the settings cache. Use only from non-React
+ * code paths (utility modules, callbacks fired from outside the React
+ * tree, store actions) — components should call `useSettings()` so
+ * they re-render when the cache changes.
+ *
+ * Returns `undefined` (rather than a default Settings object) on
+ * purpose so callers can later differentiate "cache hasn't loaded
+ * yet" from "loaded, here's the data" if a use case ever needs that
+ * distinction. Today every consumer falls back to a stable default
+ * when the cache hasn't warmed.
+ */
+export function getSettingsSnapshot(): Settings | undefined {
+  return queryClient.getQueryData<Settings>(queryKeys.settings);
+}
 
 /** Read the application settings. */
 export function useSettings() {

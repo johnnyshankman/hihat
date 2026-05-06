@@ -29,7 +29,12 @@ export {
 } from './playlists';
 
 // Settings
-export { useSettings, useUpdateSettings } from './settings';
+export {
+  useSettings,
+  useUpdateSettings,
+  getSettingsSnapshot,
+  DEFAULT_COLUMNS,
+} from './settings';
 
 // Library scan / import / backup / restore / reset
 export {
