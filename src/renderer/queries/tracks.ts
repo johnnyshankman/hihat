@@ -15,6 +15,11 @@ export interface TracksData {
  * paths (utility modules, callbacks fired from outside the React tree)
  * — components should call `useTracks()` so they re-render when the
  * cache changes.
+ *
+ * Returns `undefined` (rather than an empty `TracksData`) on purpose so
+ * callers can later differentiate "cache hasn't loaded yet" from
+ * "loaded, library is empty" if a use case ever needs that distinction.
+ * Today every consumer just does `?.tracks ?? []`.
  */
 export function getTracksSnapshot(): TracksData | undefined {
   return queryClient.getQueryData<TracksData>(queryKeys.tracks);

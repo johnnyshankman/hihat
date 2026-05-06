@@ -8,6 +8,11 @@ import type { TracksData } from './tracks';
 /**
  * Non-hook snapshot of the playlists cache. See getTracksSnapshot for
  * usage notes.
+ *
+ * Returns `undefined` (rather than `[]`) on purpose so callers can
+ * later differentiate "cache hasn't loaded yet" from "loaded, no
+ * playlists exist" if a use case ever needs that distinction. Today
+ * every consumer just does `?? []`.
  */
 export function getPlaylistsSnapshot(): Playlist[] | undefined {
   return queryClient.getQueryData<Playlist[]>(queryKeys.playlists);
