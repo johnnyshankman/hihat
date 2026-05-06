@@ -185,7 +185,6 @@ export default function Settings({ onClose }: SettingsProps) {
       setScanStatus('Complete');
       setScanProgress(100);
       setScanPhase('complete');
-      showNotification('Library scan completed successfully', 'success');
 
       // Reset scan state after a delay
       setTimeout(() => {

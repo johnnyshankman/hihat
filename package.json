@@ -1,7 +1,7 @@
 {
   "description": "The minimalist offline music library player for macOS",
   "license": "MIT",
-  "version": "2.2.1",
+  "version": "2.2.3",
   "name": "hihat",
   "main": "./.erb/dll/main.bundle.dev.js",
   "scripts": {

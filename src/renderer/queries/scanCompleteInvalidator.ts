@@ -32,8 +32,8 @@ export function useScanCompleteInvalidator(): void {
         parts.push(`${added} new track${added !== 1 ? 's' : ''} added`);
       if (removed > 0)
         parts.push(`${removed} stale track${removed !== 1 ? 's' : ''} removed`);
-      const message = `Library scan complete: ${
-        parts.length > 0 ? parts.join(', ') : 'No changes'
+      const message = `Library scan completed: ${
+        parts.length > 0 ? parts.join(', ') : 'no changes'
       }`;
       console.warn(message);
       useUIStore.getState().showNotification(message, 'success');

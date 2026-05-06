@@ -26,11 +26,12 @@ export function useImportFiles() {
     onSuccess: (result, files) => {
       qc.invalidateQueries({ queryKey: queryKeys.tracks });
       qc.invalidateQueries({ queryKey: queryKeys.playlists });
+      const fileNoun = files.length === 1 ? 'file' : 'files';
       useUIStore
         .getState()
         .showNotification(
           result.success
-            ? `Imported ${result.tracksAdded} of ${files.length} files`
+            ? `Imported ${result.tracksAdded} of ${files.length} ${fileNoun}`
             : result.message,
           result.success ? 'success' : 'error',
         );
