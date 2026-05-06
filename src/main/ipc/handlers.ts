@@ -552,6 +552,31 @@ export const fileSystemHandlers = {
   'fileSystem:deleteFile': (async ({ filePath }, event: IpcMainInvokeEvent) => {
     assertTrustedSender(event);
     try {
+      // Constrain deletes to files inside the configured library path
+      // so a stray IPC call can't trash arbitrary user files (e.g.
+      // /etc/hosts, ~/Documents/...). Recoverable since this is
+      // shell.trashItem rather than unlinkSync, but the prefix check
+      // is the cheap defense-in-depth that makes the constraint
+      // explicit at the boundary.
+      const { libraryPath } = db.getSettings();
+      if (!libraryPath) {
+        return {
+          success: false,
+          message: 'Library path is not set; refusing to delete',
+        };
+      }
+      const resolvedTarget = path.resolve(filePath);
+      const resolvedRoot = path.resolve(libraryPath);
+      if (
+        resolvedTarget !== resolvedRoot &&
+        !resolvedTarget.startsWith(resolvedRoot + path.sep)
+      ) {
+        return {
+          success: false,
+          message: 'Refusing to delete a file outside the library path',
+        };
+      }
+
       if (!fs.existsSync(filePath)) {
         return {
           success: false,

@@ -1,24 +1,32 @@
 /**
  * IPC sender validation helpers.
  *
- * The threat model for hihat is narrow — single user, local SQLite,
- * trusted main process — but the destructive handlers
- * (`library:resetDatabase`, `library:resetTracks`, `fileSystem:deleteFile`,
- * `app:open-in-browser`) can wipe data or shell out to arbitrary URIs.
+ * Hihat's threat model is narrow (single user, local SQLite, two known
+ * BrowserWindows, no webviews / iframes), but the destructive handlers
+ * — `library:resetDatabase`, `library:resetTracks`,
+ * `fileSystem:deleteFile`, `app:open-in-browser` — can still wipe data
+ * or shell out to arbitrary URIs if a stray frame ever talks to them.
  *
- * If the renderer ever expands to include a webview, an embedded iframe,
- * or anything else that loads the preload, those handlers should reject
- * the call rather than serve it.
+ * Pattern: register windows with `trustWindow()` at creation; gate
+ * destructive handlers with `assertTrustedSender(event)` (any trusted
+ * window) or `assertSenderIsWindow(event, win)` (a specific window).
  *
- * Pattern:
- *   - On window creation, register the BrowserWindow as trusted via
- *     `trustWindow(window)`.
- *   - On window close, deregister with `untrustWindow(window)`.
- *   - In destructive handlers, call `assertTrustedSender(event)` first.
+ * Lines up with Electron's official IPC-security guidance with two
+ * intentional divergences:
  *
- * For handlers that should only accept calls from a specific window
- * (e.g. miniPlayer requesting its own state), use
- * `assertSenderIsWindow(event, window)` instead.
+ *   1. ID allowlist instead of `event.senderFrame.url` validation.
+ *      Tighter for our shape — only windows we explicitly register can
+ *      talk to privileged APIs, regardless of what URL they load.
+ *      Caveat: `event.sender.id` is the top-level webContents id, so
+ *      an iframe nested inside a trusted window would inherit access.
+ *      We have no iframes today; if any are added, revisit this file.
+ *
+ *   2. No runtime arg validation across the board (no zod). TS at the
+ *      boundary is sufficient for the trusted-renderer threat model.
+ *      The exception is destructive handlers: arg shape that names an
+ *      external resource (filesystem path, URL) is validated inline at
+ *      the call site (see `assertHttpUrl`, and the libraryPath-prefix
+ *      check in the `fileSystem:deleteFile` handler).
  */
 
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron';
@@ -26,12 +34,8 @@ import type { BrowserWindow, IpcMainInvokeEvent } from 'electron';
 const trustedWebContentsIds = new Set<number>();
 
 export function trustWindow(window: BrowserWindow): void {
-  // Capture the id eagerly. Reading `window.webContents` from inside the
-  // `closed` listener throws "Object has been destroyed" because by then
-  // the BrowserWindow's webContents has already been torn down — the
-  // exception in the closed-handler bubbles up to the main process and
-  // surfaces as Electron's "A JavaScript error occurred" dialog at app
-  // exit, which blocks subsequent test runs from launching.
+  // Capture the id eagerly: `window.webContents` is gone by the time
+  // the `closed` handler runs and reading it would throw at app exit.
   const { id } = window.webContents;
   trustedWebContentsIds.add(id);
   window.on('closed', () => {
@@ -56,11 +60,7 @@ export function assertSenderIsWindow(
   }
 }
 
-/**
- * Validate that a URL uses http(s). Used by `app:open-in-browser` to
- * prevent arbitrary URI schemes (file://, javascript:, custom protocols)
- * from being passed to `shell.openExternal`.
- */
+/** Reject non-http(s) URI schemes (file://, javascript:, custom). */
 export function assertHttpUrl(url: string): void {
   if (!/^https?:\/\//i.test(url)) {
     throw new Error('Invalid URL: only http(s) protocols are allowed');
