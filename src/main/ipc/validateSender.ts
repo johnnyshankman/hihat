@@ -5,6 +5,7 @@
  * trusted main process — but the destructive handlers
  * (`library:resetDatabase`, `library:resetTracks`, `fileSystem:deleteFile`,
  * `app:open-in-browser`) can wipe data or shell out to arbitrary URIs.
+ *
  * If the renderer ever expands to include a webview, an embedded iframe,
  * or anything else that loads the preload, those handlers should reject
  * the call rather than serve it.

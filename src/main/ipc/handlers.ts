@@ -1,8 +1,15 @@
 /**
  * IPC Handlers
  *
- * This module implements the IPC handlers for the main process.
- * It handles requests from the renderer process and returns responses.
+ * Request/response (invoke-shaped) IPC handlers for the main process.
+ * Each entry registers via `ipcMain.handle` and is typed as
+ * `IPCHandler<C>` so the renderer's `window.electron.<domain>.<method>(...)`
+ * call resolves to a single typed response (or rejects with an Error).
+ *
+ * Streaming / fire-and-forget event handlers (e.g. rsync progress
+ * during library backup) live in a sibling file because they use
+ * `ipcMain.on` + `event.reply()` and don't fit the typed invoke shape.
+ * See `backupHandlers.ts`.
  */
 
 import {

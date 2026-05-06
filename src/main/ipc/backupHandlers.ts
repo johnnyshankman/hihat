@@ -1,7 +1,20 @@
 /**
  * Backup Handlers
  *
- * This module provides handlers for backing up music library files using rsync.
+ * Library backup via rsync. Lives in its own file (separate from
+ * `handlers.ts`) because the IPC shape is fundamentally different:
+ *   - registers via `ipcMain.on('menu-backup-library', …)`, not
+ *     `ipcMain.handle`
+ *   - streams progress to the renderer via `event.reply()` repeatedly
+ *     over the lifetime of the rsync subprocess (counting → scanning →
+ *     transferring → success/error), rather than returning a single
+ *     typed response
+ *   - parses rsync's stdout (~250 lines below) to derive structured
+ *     progress events, which has nothing to do with the typed
+ *     invoke-handler registry in `handlers.ts`
+ *
+ * Anything else that needs the same long-running, progress-streaming
+ * shape belongs alongside this — not in `handlers.ts`.
  */
 
 import path from 'path';

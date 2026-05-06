@@ -62,7 +62,7 @@ export function registerIpcHandlers(
  * when the channel's payload is `void`:
  *   sendIpcEvent(win, 'player:playPause');             // ok (void payload)
  *   sendIpcEvent(win, 'player:seek', 42);              // ok (number payload)
- *   sendIpcEvent(win, 'player:seek');                  // type error
+ *   sendIpcEvent(win, 'player:seek');                  // type error missing payload
  */
 export function sendIpcEvent<E extends IPCEvents>(
   win: BrowserWindow | null | undefined,
