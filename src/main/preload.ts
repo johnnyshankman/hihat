@@ -7,75 +7,13 @@
  */
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import {
-  Channels,
-  IPCRequests,
-  IPCResponses,
-  PlayerPlaybackState,
-} from '../types/ipc';
+import { IPCRequests, IPCResponses, PlayerPlaybackState } from '../types/ipc';
 import { MetadataToWrite, Track } from '../types/dbTypes';
 
 /**
- * Exposes IPC functions to the renderer process
+ * Exposes secure IPC wrapper functions to the renderer process
  */
 const electronHandler = {
-  // Generic IPC functions
-  //
-  // NOTE: The `sendMessage`, `on`, and `once` methods below accept untyped
-  // `unknown[]` rest args and bypass the typed namespaced wrappers (e.g.
-  // `library.onScanProgress`, `player.onPlayPause`). Use the namespaced
-  // wrappers in renderer code; these generic methods exist as an internal
-  // escape hatch only.
-  ipcRenderer: {
-    /**
-     * @deprecated Use the typed namespaced wrappers instead (e.g.
-     * `window.electron.player.sendStateUpdate(state)`,
-     * `window.electron.backup.start(path)`).
-     */
-    sendMessage<C extends Channels>(channel: C, ...args: unknown[]) {
-      ipcRenderer.send(channel, ...args);
-    },
-
-    /**
-     * @deprecated Use the typed namespaced subscription wrappers instead
-     * (e.g. `window.electron.library.onScanProgress(cb)`,
-     * `window.electron.player.onPlayPause(cb)`). They return the same
-     * unsubscribe function and provide typed payloads.
-     */
-    on<C extends Channels>(
-      channel: C,
-      func: (...args: unknown[]) => void,
-    ): () => void {
-      const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
-        func(...args);
-      ipcRenderer.on(channel, subscription);
-
-      return () => {
-        ipcRenderer.removeListener(channel, subscription);
-      };
-    },
-
-    /**
-     * @deprecated Prefer the typed namespaced subscription wrappers.
-     */
-    once<C extends Channels>(channel: C, func: (...args: unknown[]) => void) {
-      ipcRenderer.once(channel, (_event, ...args) => func(...args));
-    },
-
-    /**
-     * Invoke a function in the main process and wait for a response
-     * @param channel - The IPC channel to invoke
-     * @param args - Arguments to pass to the main process
-     * @returns A promise that resolves with the response from the main process
-     */
-    invoke<C extends Channels>(
-      channel: C,
-      args?: IPCRequests[C] | undefined,
-    ): Promise<IPCResponses[C]> {
-      return ipcRenderer.invoke(channel, args);
-    },
-  },
-
   // Library management functions
   library: {
     /**
