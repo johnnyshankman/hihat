@@ -2,36 +2,40 @@
 
 ## Project Overview
 
-**hihat** is a minimalist offline music library player for macOS built with Electron 26, React 18, and TypeScript. It targets audiophiles who want a modern, dark-mode, ad-free iTunes replacement with gapless playback and large library support.
+**hihat** is a minimalist offline music library player for macOS built with Electron 35, React 19, and TypeScript. It targets audiophiles who want a modern, dark-mode, ad-free iTunes replacement with gapless playback and large library support.
 
 - **Repository**: `johnnyshankman/hihat`
 - **License**: MIT
-- **Dev branch**: `hihat2` (main development); **PR target**: `main`
+- **Default branch / PR target**: `main` (active development happens directly on `main` via feature branches)
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Desktop runtime | Electron 26 (frameless window, custom title bar) |
-| Frontend | React 18, MUI 6, Tailwind CSS 3 |
-| State management | Zustand 5 (3 stores: library, settingsAndPlayback, ui) |
-| Audio engine | Gapless-5 (custom fork `@regosen/gapless-5`) |
+| Desktop runtime | Electron 35 (frameless window, custom title bar) |
+| Frontend | React 19, MUI 9 (`@mui/material`, `@mui/icons-material`) |
+| Routing | React Router 7 |
+| Server state | TanStack Query 5 (`@tanstack/react-query`) — owns all DB-backed IPC data |
+| Client state | Zustand 5 (3 stores: library, settingsAndPlayback, ui) — UI/playback runtime only |
+| Table / virtualization | `@tanstack/react-table` + `@tanstack/react-virtual` (renderer-side, custom `VirtualTable`) |
+| Audio engine | Gapless-5 (custom fork `@regosen/gapless-5`, runs in renderer) |
+| Tag writing | `node-taglib-sharp` (main process) |
 | Database | sql.js (in-memory SQLite compiled to WASM, persists to disk on every write) |
-| Build tooling | Webpack 5, TypeScript 5, Electron React Boilerplate |
-| Testing | Jest (unit), Playwright (E2E with Electron) |
-| Package manager | npm 10+ / Node 20+ |
+| Build tooling | Webpack 5, TypeScript 5.8, Electron React Boilerplate |
+| Testing | Jest + Testing Library (unit), Playwright (E2E with Electron) |
+| Package manager | npm 10+ / Node 22+ |
 
 ## Project Structure
 
 ```
 src/
   main/                     # Electron main process
-    db/index.ts             # sql.js database wrapper (adapts to better-sqlite3 API)
-    ipc/handlers.ts         # All IPC handler registrations
+    db/index.ts             # sql.js database wrapper (adapts to better-sqlite3-like API)
+    ipc/handlers.ts         # Domain handler implementations (tracks, playlists, settings, etc.)
+    ipc/register.ts         # Typed IPC dispatch — single source of truth for channel registration
+    ipc/validateSender.ts   # Sender-frame validation for every ipcMain.handle call
     ipc/backupHandlers.ts   # Library backup via rsync
-    ipc/playbackHandlers.ts # Playback control IPC handlers
     library/scanner.ts      # Music file scanner and metadata extractor
-    playback/index.ts       # Main-process playback service
     migration/v1ToV2.ts     # v1 -> v2 data migration
     main.ts                 # App entry, window creation, protocol registration
     menu.ts                 # macOS menu bar
@@ -39,23 +43,31 @@ src/
     preload.ts              # contextBridge exposing window.electron.*
     util.ts                 # Path resolution utilities
   renderer/                 # React renderer process
-    components/             # React components (Library, Player, Settings, etc.)
-    stores/                 # Zustand stores
-      libraryStore.ts       # Track/playlist state, indexed lookups
-      settingsAndPlaybackStore.ts  # Combined settings + playback state
-      uiStore.ts            # Notifications, view state, artist browser
-      types.ts              # Store type definitions
+    components/             # React components (Library, Player, Settings, VirtualTable, etc.)
+    queries/                # TanStack Query hooks — server state owner
+      client.ts             # QueryClient setup
+      keys.ts               # Centralized query key factory
+      tracks.ts, playlists.ts, settings.ts, library.ts, albumArt.ts,
+      fileSystem.ts, dialogs.ts, app.ts                # Per-domain query/mutation hooks
+      scanCompleteInvalidator.ts                       # Cross-cutting cache invalidation
+      useLibraryReady.ts                               # Library bootstrap gating
+    stores/                 # Zustand stores (UI/playback runtime state only — NOT server data)
+      libraryStore.ts                # Library/playlist view state, artist filter, indexed lookups
+      settingsAndPlaybackStore.ts    # Playback runtime (currentTrack, position, shuffle/repeat),
+                                     # Gapless-5 player instance, in-memory settings cache
+      uiStore.ts                     # Notifications, currentView, artistBrowserOpen
+      types.ts                       # Store type definitions
     utils/                  # Utility modules
       audioPlayer.ts        # Audio player utilities
       playbackTracker.ts    # Play count threshold tracking
       sortingFunctions.ts   # Table sorting logic
-      tableConfig.tsx       # MRT column definitions
+      tableConfig.tsx       # @tanstack/react-table column definitions
       trackSelectionUtils.ts # Next/prev track finding, shuffle, MediaSession
       formatters.ts         # Duration/date formatting
     styles/                 # Theme and CSS
   types/                    # Shared TypeScript types
     dbTypes.ts              # Track, Playlist, Settings interfaces
-    ipc.ts                  # IPC channel names, request/response types
+    ipc.ts                  # IPC channel names, request/response types (typed end-to-end contract)
     smartPlaylists.ts       # Smart playlist definitions with stable IDs
 e2e/                        # Playwright E2E tests
   fixtures/                 # SQL fixture files and test audio files
@@ -66,8 +78,15 @@ e2e/                        # Playwright E2E tests
 
 ### IPC Communication
 - Renderer accesses main process exclusively through `window.electron.*` (exposed via `contextBridge` in `preload.ts`)
-- All IPC channels are typed in `src/types/ipc.ts` with `IPCRequests` and `IPCResponses` interfaces
-- Handlers registered in `src/main/ipc/handlers.ts`, dispatched in `main.ts` via `ipcMain.handle()`
+- All IPC channels are typed end-to-end in `src/types/ipc.ts` (`IPCRequests` / `IPCResponses`). Adding a channel without updating these types will fail typecheck.
+- Handlers implemented in `src/main/ipc/handlers.ts`, registered through the typed dispatcher in `src/main/ipc/register.ts`
+- Every `ipcMain.handle` is wrapped by `validateSender.ts` to reject calls from non-trusted frames
+
+### Server State (TanStack Query)
+- **All DB-backed data lives in TanStack Query, never Zustand.** Tracks, playlists, settings rows, smart playlist contents, album art, etc. — fetched and cached via hooks in `src/renderer/queries/`.
+- Query keys are centralized in `queries/keys.ts` so invalidation patterns stay consistent.
+- Mutations call `window.electron.*` IPC, then invalidate the relevant keys. The `scanCompleteInvalidator` listens for `library:scanComplete` and invalidates the right keys when scans finish.
+- Zustand stores must not duplicate or shadow query data. If you find yourself copying server data into a store, you're in the wrong place — read it from the query.
 
 ### Database
 - sql.js loads SQLite into WASM (no native bindings needed)
@@ -78,9 +97,11 @@ e2e/                        # Playwright E2E tests
 - Migrations run on startup via `addColumnIfNotExists()`
 - Smart playlists use stable `smartPlaylistId` for identification (prevents duplicates on rename)
 
-### State Management (Zustand 5)
-- **libraryStore**: tracks array, playlists, indexed lookups (Map-based O(1)), library/playlist view state, artist filter
-- **settingsAndPlaybackStore**: settings (theme, columns, libraryPath, volume), playback state (currentTrack, position, shuffle/repeat), Gapless-5 player instance
+### Client State (Zustand 5)
+Zustand stores hold **UI and playback runtime state only**. Server-owned data (tracks, playlists, settings rows) lives in TanStack Query — see the section above.
+
+- **libraryStore**: library/playlist view state, artist filter, indexed lookups (Map-based O(1)) over the currently-rendered track list
+- **settingsAndPlaybackStore**: playback runtime (currentTrack, position, shuffle/repeat, history), Gapless-5 player instance, in-memory caches of settings rows that need synchronous reads from non-React contexts
 - **uiStore**: notifications, currentView, artistBrowserOpen
 
 #### When to subscribe (`useXStore(selector)`) vs read at call time (`useXStore.getState()`)
@@ -108,12 +129,13 @@ When a component pulls anything out of a Zustand store — whether that's readin
 **Cross-store reads:** stores access other stores exclusively via `useXStore.getState()` (lazy `require()` if a circular import is involved — see `uiStore.setBrowserOpen`). React hooks aren't available inside store modules, so `getState()` is the only option there.
 
 ### Audio Playback
-- Gapless-5 player initialized lazily in `initPlayer()`
+- Gapless-5 player runs in the **renderer process** (owned by `settingsAndPlaybackStore`); there is no main-process playback service.
+- Player initialized lazily in `initPlayer()`
 - Two-track queue pattern: current track + pre-loaded next track for gapless transitions
-- Custom `hihat-audio://` protocol registered in main process for file access
+- Custom `hihat-audio://` protocol registered in main process for file access (`hihat-audio://getfile/{encodedPath}`)
 - Play count tracked via `playbackTracker.ts` with duration-based threshold (not simple play/complete)
 - MediaSession API integration for OS media controls (silent audio element trick)
-- Repeat modes: `off`, `track` (Gapless5 `singleMode`), `all`
+- Repeat modes: `off`, `track`, `all`. `track` is implemented via Gapless-5's native `singleMode` — we cannot replicate it on top of Gapless-5 without breaking gapless continuity (the library loops the decoded buffer directly via `AudioBufferSourceNode.loop`).
 - Shuffle with navigable history (up to 100 tracks)
 
 ### Smart Playlists
@@ -192,13 +214,21 @@ This pairs directly with the rebuild rule above: because e2e runs against the co
 
 ## Important Conventions
 
-1. **Never use `console.log`** - use `console.error` for errors, `console.warn` for informational logging
-2. **Sort JSX props alphabetically** - enforced by ESLint
+1. **Never use `console.log`** — use `console.error` for errors, `console.warn` for informational logging
+2. **Sort JSX props alphabetically** — enforced by ESLint
 3. **IPC namespace pattern**: `window.electron.{domain}.{method}()` (e.g., `window.electron.tracks.getAll()`)
-4. **Settings persistence**: always update both Zustand state AND database when changing settings
-5. **Frameless window**: custom title bar component, `frame: false` in BrowserWindow config
-6. **Audio protocol**: files served via `hihat-audio://getfile/{encodedPath}`
-7. **Database writes are synchronous and blocking** - every `exec()` and `run()` call writes to disk immediately
+4. **Server state lives in TanStack Query, not Zustand.** DB-backed IPC data (tracks, playlists, settings rows) is read via hooks in `src/renderer/queries/`. Stores are for UI/playback runtime only. If a feature needs both, the source of truth is the query.
+5. **Settings mutations** flow through query mutation hooks in `queries/settings.ts` — they update the DB via IPC and invalidate the cache. Don't write through stores.
+6. **Frameless window**: custom title bar component, `frame: false` in BrowserWindow config
+7. **Audio protocol**: files served via `hihat-audio://getfile/{encodedPath}`
+8. **Database writes are synchronous and blocking** — every `exec()` and `run()` call writes to disk immediately
+9. **No responsive sizing on the player bar.** Transport icons and spacing must be constant across all window widths — no `isXsScreen` logic, no MUI breakpoint objects on transport controls.
+10. **Refactor branches branch from `main`, not from in-flight feature branches.** Multi-step refactors land as a single bundled PR, not stacked diffs.
+
+### Visual / behavioral verification
+- Frontend changes are verified through Playwright + `TestHelpers.takeScreenshot` against the built `dist/` bundle. Reading source, eyeballing `npm run start`, or "checking in dev" do not count.
+- For refactors, run a targeted subset (`npx playwright test e2e/<spec>.spec.ts`) rather than the full suite, unless the change is broad enough to warrant it.
+- Don't add e2e regression specs for one-shot bug fixes by default — judge recurrence risk first.
 
 ## Context Summary
 
