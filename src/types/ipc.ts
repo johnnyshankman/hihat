@@ -3,6 +3,16 @@
  *
  * This file defines TypeScript types for Inter-Process Communication (IPC)
  * between the main Electron process and the renderer process.
+ *
+ * The contract is split into three maps:
+ *   - `IPCRequests` / `IPCResponses` — invoke-shaped channels (request/response).
+ *   - `IPCEventPayloads`             — main → renderer push channels (no response).
+ *
+ * Note on naming inconsistency: the backup-related channels use kebab-case
+ * (`backup-library-success`/`-error`/`-progress`, `menu-backup-library`)
+ * instead of the `domain:method` colon convention used elsewhere. Renaming
+ * is cosmetic only and would require lockstep main+renderer changes, so the
+ * legacy names are preserved.
  */
 
 import { Track, Playlist, Settings, MetadataToWrite } from './dbTypes';
@@ -108,13 +118,30 @@ export type Channels =
   | 'player:toggleRepeat'
   | 'player:toggleShuffle'
 
+  // Menu-driven playback shortcuts (separate from player:* which carries
+  // miniPlayer commands; these come from the application menu / keyboard).
+  | 'playback:next'
+  | 'playback:previous'
+  | 'playback:volumeUp'
+  | 'playback:volumeDown'
+  | 'playback:toggleRepeat'
+  | 'playback:toggleShuffle'
+
   // Album Art operations
   | 'albumArt:get'
 
   // Migration operations
   | 'migration:start'
   | 'migration:progress'
-  | 'migration:complete';
+  | 'migration:complete'
+
+  // Window control operations
+  | 'window:minimize'
+  | 'window:maximize'
+  | 'window:close'
+  | 'window:toggleFullscreen'
+  | 'window:isMaximized'
+  | 'window:maximized';
 
 /**
  * Request types for each IPC channel
@@ -128,7 +155,7 @@ export interface IPCRequests {
   'library:scanProgress': {
     processed: number;
     total: number;
-    currentFile: string;
+    current: string;
   };
   'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
   'library:resetDatabase': void;
@@ -156,7 +183,7 @@ export interface IPCRequests {
 
   // Settings operations
   'settings:get': void;
-  'settings:update': { settings: Settings };
+  'settings:update': { settings: Partial<Settings> };
 
   // Dialog operations
   'dialog:select-directory': void;
@@ -205,6 +232,14 @@ export interface IPCRequests {
   'player:toggleRepeat': void;
   'player:toggleShuffle': void;
 
+  // Menu-driven playback shortcuts
+  'playback:next': void;
+  'playback:previous': void;
+  'playback:volumeUp': void;
+  'playback:volumeDown': void;
+  'playback:toggleRepeat': void;
+  'playback:toggleShuffle': void;
+
   // Album Art operations
   'albumArt:get': string;
 
@@ -219,7 +254,7 @@ export interface IPCRequests {
     playlistsCount: number;
   };
 
-  // New channels
+  // Backup channels (kebab-case for legacy reasons)
   'menu-backup-library': string;
   'backup-library-success': void;
   'backup-library-error': string;
@@ -235,6 +270,14 @@ export interface IPCRequests {
     filesProcessed?: number;
     totalFiles?: number;
   };
+
+  // Window control operations
+  'window:minimize': void;
+  'window:maximize': void;
+  'window:close': void;
+  'window:toggleFullscreen': void;
+  'window:isMaximized': void;
+  'window:maximized': boolean;
 }
 
 /**
@@ -249,12 +292,12 @@ export interface IPCResponses {
     tracksRemoved: number;
   };
   'library:import': { success: boolean; message: string; tracksAdded: number };
-  'library:backup': { success: boolean } | { error: string };
-  'library:restore': { success: boolean } | { error: string };
+  'library:backup': void;
+  'library:restore': void;
   'library:scanProgress': {
     processed: number;
     total: number;
-    currentFile: string;
+    current: string;
   };
   'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
   'library:resetDatabase': { success: boolean; message: string };
@@ -264,7 +307,7 @@ export interface IPCResponses {
   'tracks:getAll': Track[];
   'tracks:getById': Track | null;
   'tracks:add': Track;
-  'tracks:update': boolean;
+  'tracks:update': Track;
   'tracks:updateMetadata': {
     success: boolean;
     fileWriteSuccess: boolean;
@@ -277,8 +320,8 @@ export interface IPCResponses {
   'playlists:getAll': Playlist[];
   'playlists:getById': Playlist | null;
   'playlists:create': Playlist;
-  'playlists:update': boolean;
-  'playlists:delete': boolean;
+  'playlists:update': void;
+  'playlists:delete': void;
   'playlists:getSmartTracks': Track[];
 
   // Settings operations
@@ -343,6 +386,14 @@ export interface IPCResponses {
   'player:toggleRepeat': void;
   'player:toggleShuffle': void;
 
+  // Menu-driven playback shortcuts
+  'playback:next': void;
+  'playback:previous': void;
+  'playback:volumeUp': void;
+  'playback:volumeDown': void;
+  'playback:toggleRepeat': void;
+  'playback:toggleShuffle': void;
+
   // Album Art operations
   'albumArt:get': string | null;
 
@@ -351,18 +402,33 @@ export interface IPCResponses {
   'migration:progress': void;
   'migration:complete': void;
 
-  // New channels
+  // Backup channels
   'menu-backup-library': void;
   'backup-library-success': void;
   'backup-library-error': void;
   'backup-library-progress': void;
+
+  // Window control operations
+  'window:minimize': void;
+  'window:maximize': void;
+  'window:close': void;
+  'window:toggleFullscreen': void;
+  'window:isMaximized': boolean;
+  'window:maximized': void;
 }
 
 /**
- * Type for IPC handler functions
+ * Type for IPC handler functions.
+ *
+ * The `event` parameter is optional and typed `unknown` so call sites
+ * that need it (sender validation, replying to a specific window) can
+ * narrow with a local cast. The `registerIpcHandler<C>` helper in
+ * src/main/ipc/register.ts exposes the fully-typed
+ * `(req, event: IpcMainInvokeEvent)` shape for new handlers.
  */
 export type IPCHandler<C extends Channels> = (
   args: IPCRequests[C],
+  event?: unknown,
 ) => Promise<IPCResponses[C]>;
 
 /**
@@ -398,7 +464,73 @@ export type IPCEvents =
   | 'miniPlayer:albumArtChanged'
   | 'migration:start'
   | 'migration:progress'
-  | 'migration:complete';
+  | 'migration:complete'
+  | 'window:maximized'
+  | 'playback:next'
+  | 'playback:previous'
+  | 'playback:volumeUp'
+  | 'playback:volumeDown'
+  | 'playback:toggleRepeat'
+  | 'playback:toggleShuffle';
+
+/**
+ * Payload types for main → renderer push events.
+ * Use this with `sendIpcEvent(win, event, payload)` and the typed
+ * `on*(cb)` wrappers in preload.ts.
+ */
+export interface IPCEventPayloads {
+  'library:scanProgress': {
+    processed: number;
+    total: number;
+    current: string;
+  };
+  'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
+  'backup-library-success': void;
+  'backup-library-error': string;
+  'backup-library-progress': {
+    phase: string;
+    status: string;
+    currentFile?: string;
+    progress?: number;
+    currentTransfer?: number;
+    remaining?: number;
+    total?: number;
+    transferSpeed?: string;
+    filesProcessed?: number;
+    totalFiles?: number;
+  };
+  'ui:toggleSidebar': void;
+  'ui:openSettings': void;
+  'player:playPause': void;
+  'player:nextTrack': void;
+  'player:previousTrack': void;
+  'player:seek': number;
+  'player:setVolume': number;
+  'player:toggleRepeat': void;
+  'player:toggleShuffle': void;
+  'player:pausePlayback': void;
+  'player:resumePlayback': void;
+  'miniPlayer:trackChanged': Track | null;
+  'miniPlayer:stateChanged': PlayerPlaybackState;
+  'miniPlayer:positionChanged': number;
+  'miniPlayer:albumArtChanged': string | null;
+  'migration:start': void;
+  'migration:progress': {
+    phase: 'starting' | 'reading' | 'converting' | 'importing' | 'complete';
+    message: string;
+  };
+  'migration:complete': {
+    tracksCount: number;
+    playlistsCount: number;
+  };
+  'window:maximized': boolean;
+  'playback:next': void;
+  'playback:previous': void;
+  'playback:volumeUp': void;
+  'playback:volumeDown': void;
+  'playback:toggleRepeat': void;
+  'playback:toggleShuffle': void;
+}
 
 /**
  * Union type for all IPC channels

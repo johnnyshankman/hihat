@@ -11,6 +11,10 @@ import path from 'path';
 import * as mm from 'music-metadata';
 import fs from 'fs';
 import { resolveHtmlPath } from './util';
+import { Track } from '../types/dbTypes';
+import { PlayerPlaybackState } from '../types/ipc';
+import { registerIpcHandler, sendIpcEvent } from './ipc/register';
+import { assertSenderIsWindow, trustWindow } from './ipc/validateSender';
 
 // Detect test mode so the preload path resolves to the built preload.js
 // (same pattern as main.ts). Without this, test mode falls through to the
@@ -27,13 +31,13 @@ let miniPlayerWindow: BrowserWindow | null = null;
 let mainWindow: BrowserWindow | null = null;
 
 // Current track and playback state - only used for syncing UI
-let currentTrack: any = null;
-let playbackState = {
+let currentTrack: Track | null = null;
+let playbackState: PlayerPlaybackState = {
   paused: false,
   position: 0,
   duration: 0,
   volume: 1,
-  repeatMode: 'off' as 'off' | 'track' | 'all',
+  repeatMode: 'off',
   shuffleMode: false,
   canGoNext: false,
 };
@@ -201,6 +205,11 @@ export function createMiniPlayerWindow(): void {
     // Load the mini player HTML with a specific query parameter to indicate it's a mini player
     miniPlayerWindow.loadURL(miniPlayerUrl);
 
+    // Mark the miniPlayer window as a trusted IPC sender (its preload
+    // exposes the same window.electron API as the main window). The
+    // trust mark is removed automatically on `closed`.
+    trustWindow(miniPlayerWindow);
+
     // Log any webContents errors
     miniPlayerWindow.webContents.on(
       'did-fail-load',
@@ -265,15 +274,14 @@ export function createMiniPlayerWindow(): void {
 
       // Immediately send current state to mini player when it's ready
       if (currentTrack) {
-        miniPlayerWindow.webContents.send(
-          'miniPlayer:trackChanged',
-          currentTrack,
-        );
-        miniPlayerWindow.webContents.send(
+        sendIpcEvent(miniPlayerWindow, 'miniPlayer:trackChanged', currentTrack);
+        sendIpcEvent(
+          miniPlayerWindow,
           'miniPlayer:stateChanged',
           playbackState,
         );
-        miniPlayerWindow.webContents.send(
+        sendIpcEvent(
+          miniPlayerWindow,
           'miniPlayer:positionChanged',
           playbackState.position,
         );
@@ -282,12 +290,11 @@ export function createMiniPlayerWindow(): void {
         if (currentTrack.filePath) {
           extractAlbumArt(currentTrack.filePath)
             .then((artData) => {
-              if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
-                miniPlayerWindow.webContents.send(
-                  'miniPlayer:albumArtChanged',
-                  artData,
-                );
-              }
+              sendIpcEvent(
+                miniPlayerWindow,
+                'miniPlayer:albumArtChanged',
+                artData,
+              );
               return null;
             })
             .catch((error) => {
@@ -329,29 +336,21 @@ export function closeMiniPlayerWindow(): void {
  * Update the current track
  * @param track - Track data
  */
-export function updateCurrentTrack(track: any): void {
+export function updateCurrentTrack(track: Track | null): void {
   currentTrack = track;
 
-  // Send track data to mini player if it exists
-  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
-    miniPlayerWindow.webContents.send('miniPlayer:trackChanged', track);
+  sendIpcEvent(miniPlayerWindow, 'miniPlayer:trackChanged', track);
 
-    // Extract and send album art
-    if (track && track.filePath) {
-      extractAlbumArt(track.filePath)
-        .then((artData) => {
-          if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
-            miniPlayerWindow.webContents.send(
-              'miniPlayer:albumArtChanged',
-              artData,
-            );
-          }
-          return null;
-        })
-        .catch((error) => {
-          console.error('Error extracting album art:', error);
-        });
-    }
+  // Extract and send album art
+  if (track && track.filePath && miniPlayerWindow) {
+    extractAlbumArt(track.filePath)
+      .then((artData) => {
+        sendIpcEvent(miniPlayerWindow, 'miniPlayer:albumArtChanged', artData);
+        return null;
+      })
+      .catch((error) => {
+        console.error('Error extracting album art:', error);
+      });
   }
 }
 
@@ -359,15 +358,9 @@ export function updateCurrentTrack(track: any): void {
  * Update playback state
  * @param state - Playback state
  */
-export function updatePlaybackState(
-  state: Partial<typeof playbackState>,
-): void {
+export function updatePlaybackState(state: Partial<PlayerPlaybackState>): void {
   playbackState = { ...playbackState, ...state };
-
-  // Send state to mini player if it exists
-  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
-    miniPlayerWindow.webContents.send('miniPlayer:stateChanged', playbackState);
-  }
+  sendIpcEvent(miniPlayerWindow, 'miniPlayer:stateChanged', playbackState);
 }
 
 /**
@@ -376,22 +369,7 @@ export function updatePlaybackState(
  */
 export function updatePosition(position: number): void {
   playbackState.position = position;
-
-  // Send position to mini player if it exists
-  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
-    miniPlayerWindow.webContents.send('miniPlayer:positionChanged', position);
-  }
-}
-
-/**
- * Forward a command from mini player to main window
- * @param command - Command to forward
- * @param args - Arguments for the command
- */
-function forwardCommandToMainWindow(command: string, args?: any): void {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(command, args);
-  }
+  sendIpcEvent(miniPlayerWindow, 'miniPlayer:positionChanged', position);
 }
 
 /**
@@ -399,7 +377,7 @@ function forwardCommandToMainWindow(command: string, args?: any): void {
  */
 export function setupMiniPlayerHandlers(): void {
   // Open mini player
-  ipcMain.handle('miniPlayer:open', () => {
+  registerIpcHandler('miniPlayer:open', async () => {
     try {
       createMiniPlayerWindow();
     } catch (error) {
@@ -408,7 +386,7 @@ export function setupMiniPlayerHandlers(): void {
   });
 
   // Close mini player
-  ipcMain.handle('miniPlayer:close', () => {
+  registerIpcHandler('miniPlayer:close', async () => {
     try {
       closeMiniPlayerWindow();
     } catch (error) {
@@ -416,99 +394,77 @@ export function setupMiniPlayerHandlers(): void {
     }
   });
 
-  // Request current state
-  ipcMain.handle('miniPlayer:requestState', (event) => {
+  // Request current state — caller must be the miniPlayer renderer
+  // responding to its own mount; reject calls from any other window.
+  registerIpcHandler('miniPlayer:requestState', async (_req, event) => {
     try {
-      // Check if the request is coming from the mini player window
-      if (miniPlayerWindow && event.sender === miniPlayerWindow.webContents) {
-        // Ensure we have a valid track object or send null explicitly
-        const trackToSend = currentTrack || null;
-        event.sender.send('miniPlayer:trackChanged', trackToSend);
-        event.sender.send('miniPlayer:stateChanged', playbackState);
-        event.sender.send('miniPlayer:positionChanged', playbackState.position);
+      assertSenderIsWindow(event, miniPlayerWindow);
+      const { sender } = event;
+      sender.send('miniPlayer:trackChanged', currentTrack);
+      sender.send('miniPlayer:stateChanged', playbackState);
+      sender.send('miniPlayer:positionChanged', playbackState.position);
 
-        // Send album art if there's a current track
-        if (currentTrack && currentTrack.filePath) {
-          extractAlbumArt(currentTrack.filePath)
-            .then((artData) => {
-              if (event.sender && !event.sender.isDestroyed()) {
-                event.sender.send('miniPlayer:albumArtChanged', artData);
-              }
-              return null;
-            })
-            .catch((error) => {
-              console.error('Error extracting album art:', error);
-              // Send null to prevent waiting for art indefinitely
-              if (event.sender && !event.sender.isDestroyed()) {
-                event.sender.send('miniPlayer:albumArtChanged', null);
-              }
-            });
-        } else {
-          // No track or no file path, send null for album art
-          event.sender.send('miniPlayer:albumArtChanged', null);
+      if (currentTrack && currentTrack.filePath) {
+        try {
+          const artData = await extractAlbumArt(currentTrack.filePath);
+          if (!sender.isDestroyed()) {
+            sender.send('miniPlayer:albumArtChanged', artData);
+          }
+        } catch (error) {
+          console.error('Error extracting album art:', error);
+          if (!sender.isDestroyed()) {
+            sender.send('miniPlayer:albumArtChanged', null);
+          }
         }
       } else {
-        console.warn(
-          'Request state called from non-mini player window or mini player is null',
-        );
+        sender.send('miniPlayer:albumArtChanged', null);
       }
     } catch (error) {
       console.error('Error handling mini player request state:', error);
     }
   });
 
-  // All playback controls are now just forwarded to the main window
-
-  // Play/pause
-  ipcMain.handle('miniPlayer:playPause', () => {
-    forwardCommandToMainWindow('player:playPause');
+  // All playback controls forward typed events to the main window.
+  registerIpcHandler('miniPlayer:playPause', async () => {
+    sendIpcEvent(mainWindow, 'player:playPause');
+  });
+  registerIpcHandler('miniPlayer:nextTrack', async () => {
+    sendIpcEvent(mainWindow, 'player:nextTrack');
+  });
+  registerIpcHandler('miniPlayer:previousTrack', async () => {
+    sendIpcEvent(mainWindow, 'player:previousTrack');
+  });
+  registerIpcHandler('miniPlayer:seek', async (position) => {
+    sendIpcEvent(mainWindow, 'player:seek', position);
+  });
+  registerIpcHandler('miniPlayer:setVolume', async (volume) => {
+    sendIpcEvent(mainWindow, 'player:setVolume', volume);
+  });
+  registerIpcHandler('miniPlayer:toggleRepeat', async () => {
+    sendIpcEvent(mainWindow, 'player:toggleRepeat');
+  });
+  registerIpcHandler('miniPlayer:toggleShuffle', async () => {
+    sendIpcEvent(mainWindow, 'player:toggleShuffle');
   });
 
-  // Next track
-  ipcMain.handle('miniPlayer:nextTrack', () => {
-    forwardCommandToMainWindow('player:nextTrack');
-  });
-
-  // Previous track
-  ipcMain.handle('miniPlayer:previousTrack', () => {
-    forwardCommandToMainWindow('player:previousTrack');
-  });
-
-  // Seek
-  ipcMain.handle('miniPlayer:seek', (_, position: number) => {
-    forwardCommandToMainWindow('player:seek', position);
-  });
-
-  // Set volume
-  ipcMain.handle('miniPlayer:setVolume', (_, volume: number) => {
-    forwardCommandToMainWindow('player:setVolume', volume);
-  });
-
-  // Toggle repeat mode
-  ipcMain.handle('miniPlayer:toggleRepeat', () => {
-    forwardCommandToMainWindow('player:toggleRepeat');
-  });
-
-  // Toggle shuffle mode
-  ipcMain.handle('miniPlayer:toggleShuffle', () => {
-    forwardCommandToMainWindow('player:toggleShuffle');
-  });
-
-  // Get album art
-  ipcMain.handle('albumArt:get', async (_, filePath: string) => {
+  // Get album art — keyed by file path; the renderer wraps this in a TQ
+  // query for caching (`useAlbumArt(filePath)`).
+  registerIpcHandler('albumArt:get', async (filePath) => {
     return extractAlbumArt(filePath);
   });
 
-  // Listen for events from the main window to sync with mini player
-  ipcMain.on('player:stateUpdate', (_, state) => {
+  // Listen for events from the main window to sync with mini player.
+  // These three are fire-and-forget broadcasts (`ipcMain.on`, not `.handle`)
+  // and remain so by design — the renderer doesn't await them.
+  ipcMain.on('player:stateUpdate', (_, state: PlayerPlaybackState) => {
     updatePlaybackState(state);
   });
 
-  ipcMain.on('player:trackUpdate', (_, track) => {
+  ipcMain.on('player:trackUpdate', (_, track: Track | null) => {
     updateCurrentTrack(track);
   });
 
-  ipcMain.on('player:positionUpdate', (_, position) => {
+  ipcMain.on('player:positionUpdate', (_, position: number) => {
     updatePosition(position);
   });
 }

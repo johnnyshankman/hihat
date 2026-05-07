@@ -22,11 +22,22 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import SearchOffRoundedIcon from '@mui/icons-material/SearchOffRounded';
 import { type SortingState, type Row, type Table } from '@tanstack/react-table';
 import { type Virtualizer } from '@tanstack/react-virtual';
+import type { Track } from '../../types/dbTypes';
 import {
   useLibraryStore,
   useSettingsAndPlaybackStore,
   useUIStore,
 } from '../stores';
+import {
+  useTracks,
+  useDeleteTrack,
+  useUpdatePlaylist,
+  useDeleteFile,
+  getPlaylistsSnapshot,
+  useSettings,
+  useUpdateSettings,
+  DEFAULT_COLUMNS,
+} from '../queries';
 import TrackContextMenu from './TrackContextMenu';
 import MultiSelectContextMenu from './MultiSelectContextMenu';
 import PlaylistSelectionDialog from './PlaylistSelectionDialog';
@@ -64,20 +75,31 @@ const DEFAULT_LIBRARY_SORTING: SortingState = [
   { id: 'albumArtist', desc: false },
 ];
 
-// Define the type for directory selection result
-interface DirectorySelectionResult {
-  canceled: boolean;
-  filePaths: string[];
-}
+// Stable empty array used as the fallback for `useTracks().data?.tracks`.
+// Module-level constant so a missing cache doesn't allocate a new []
+// every render, which would bust downstream useMemo dependencies.
+const EMPTY_TRACKS: Track[] = [];
 
 export default function Library() {
   // Subscribe directly so the parent doesn't need a drawer prop.
   const drawerOpen = useUIStore((state) => state.sidebarOpen);
   const onDrawerToggle = useUIStore((state) => state.toggleSidebar);
 
-  // Get state from library store
-  const tracks = useLibraryStore((state) => state.tracks);
-  const getTrackById = useLibraryStore((state) => state.getTrackById);
+  // Server state (tracks) lives in TanStack Query; libraryStore keeps
+  // only UI/view state. The error path doesn't need to render inline
+  // here — MainLayout already toasts the failure for both queries; the
+  // empty array fallback below renders the empty-state CTA.
+  const { data: tracksData } = useTracks();
+  const tracks = tracksData?.tracks ?? EMPTY_TRACKS;
+  const getTrackById = (id: string | null | undefined) =>
+    id ? tracksData?.indexes.trackIndex.get(id) : undefined;
+  // Mutation hooks for the bulk-delete flow at the bottom of this file.
+  // isPending isn't currently surfaced to a button (the bulk delete is
+  // a confirm-then-execute flow), but the error path shows toasts via
+  // the mutation's onError.
+  const deleteTrackMutation = useDeleteTrack();
+  const updatePlaylistMutation = useUpdatePlaylist();
+  const deleteFileMutation = useDeleteFile();
   const lastViewedTrackId = useLibraryStore((state) => state.lastViewedTrackId);
   const setLastViewedTrackId = useLibraryStore(
     (state) => state.setLastViewedTrackId,
@@ -88,31 +110,19 @@ export default function Library() {
   const globalFilter = useLibraryStore(
     (state) => state.searchFilters.library ?? '',
   );
-  // Get state from settings store
-  const columnVisibility = useSettingsAndPlaybackStore(
-    (state) => state.columns,
-  );
-  const updateColumnVisibility = useSettingsAndPlaybackStore(
-    (state) => state.setColumnVisibility,
-  );
-  const columnWidths = useSettingsAndPlaybackStore(
-    (state) => state.columnWidths,
-  );
-  const setColumnWidths = useSettingsAndPlaybackStore(
-    (state) => state.setColumnWidths,
-  );
-  const setLibrarySorting = useSettingsAndPlaybackStore(
-    (state) => state.setLibrarySorting,
-  );
-  // Sort preference lives in settingsAndPlaybackStore and is persisted to
-  // DB. setLibrarySorting internally fans out to libraryViewState, so the
-  // component just reads and writes this one value.
-  const sorting = useSettingsAndPlaybackStore(
-    (state) => state.librarySorting ?? DEFAULT_LIBRARY_SORTING,
-  );
-  const columnOrder = useSettingsAndPlaybackStore((state) => state.columnOrder);
-  const setColumnOrder = useSettingsAndPlaybackStore(
-    (state) => state.setColumnOrder,
+  // Settings live in TanStack Query. updateSettings.mutate is the
+  // unified write surface; the cross-store fan-out from sort changes
+  // (into libraryStore.libraryViewState so trackSelectionUtils sees
+  // the new sort for next/prev math) happens explicitly at the call
+  // site below.
+  const settings = useSettings().data;
+  const updateSettings = useUpdateSettings();
+  const columnVisibility = settings?.columns ?? DEFAULT_COLUMNS;
+  const columnWidths = settings?.columnWidths ?? null;
+  const sorting = settings?.librarySorting ?? DEFAULT_LIBRARY_SORTING;
+  const columnOrder = settings?.columnOrder ?? null;
+  const updateLibraryViewState = useLibraryStore(
+    (state) => state.updateLibraryViewState,
   );
 
   // Get state from playback store
@@ -193,24 +203,19 @@ export default function Library() {
 
   const handleSelectFolder = async () => {
     try {
-      const result =
-        (await window.electron.dialog.selectDirectory()) as DirectorySelectionResult;
-      if (
-        result.canceled ||
-        !result.filePaths ||
-        result.filePaths.length === 0
-      ) {
+      const result = await window.electron.dialog.selectDirectory();
+      if ('error' in result) {
+        showNotification(result.error, 'error');
+        return;
+      }
+      if (result.canceled || result.filePaths.length === 0) {
         return;
       }
 
       const libraryPath = result.filePaths[0];
 
-      // Save the library path to settings
-      const localSettings = await window.electron.settings.get();
-      await window.electron.settings.update({
-        ...localSettings,
-        libraryPath,
-      });
+      // Persist as a partial — settings:update merges on the main side.
+      await window.electron.settings.update({ libraryPath });
 
       // Close the dialog
       setDialogOpen(false);
@@ -219,6 +224,7 @@ export default function Library() {
       setScanConfirmOpen(true);
     } catch (error) {
       console.error('Error selecting folder:', error);
+      showNotification('Failed to select folder', 'error');
     }
   };
 
@@ -351,17 +357,21 @@ export default function Library() {
     [setSearchFilter, scrollToTrack],
   );
 
-  // Resolve Tanstack's updater-or-value to a plain value for
-  // setLibrarySorting (fan-outs to state + viewState + DB). No
-  // useCallback — VirtualTable isn't memoized.
+  // Resolve Tanstack's updater-or-value to a plain value, persist via
+  // useUpdateSettings, and explicitly fan out to libraryViewState so
+  // trackSelectionUtils sees the new sort for next/prev track math.
+  // The fan-out used to live inside the Zustand setter; with settings
+  // in TQ it's the call site's responsibility. No useCallback —
+  // VirtualTable isn't memoized.
   const handleSortingChange = (
     updater: SortingState | ((old: SortingState) => SortingState),
   ) => {
-    const current =
-      useSettingsAndPlaybackStore.getState().librarySorting ??
-      DEFAULT_LIBRARY_SORTING;
+    const current = sorting;
     const next = typeof updater === 'function' ? updater(current) : updater;
-    setLibrarySorting(next);
+    if (!next || next.length === 0) return;
+    const { filtering } = useLibraryStore.getState().libraryViewState;
+    updateLibraryViewState(next, filtering);
+    updateSettings.mutate({ librarySorting: next });
   };
 
   // Expose the scrollToTrack function to the window object
@@ -424,7 +434,9 @@ export default function Library() {
         }
       }
 
-      const allPlaylists = await window.electron.playlists.getAll();
+      // Use the cached playlists snapshot — the playlists query is
+      // already in the cache from MainLayout / Sidebar mounts.
+      const allPlaylists = getPlaylistsSnapshot() ?? [];
 
       // eslint-disable-next-line no-restricted-syntax
       for (const trackId of selectedTrackIds) {
@@ -439,19 +451,18 @@ export default function Library() {
 
         // eslint-disable-next-line no-await-in-loop
         await Promise.all(
-          playlistsToUpdate.map((playlist) => {
-            const updatedPlaylist = {
+          playlistsToUpdate.map((playlist) =>
+            updatePlaylistMutation.mutateAsync({
               ...playlist,
               trackIds: playlist.trackIds.filter((id) => id !== trackId),
-            };
-            return window.electron.playlists.update(updatedPlaylist);
-          }),
+            }),
+          ),
         );
 
-        // eslint-disable-next-line no-await-in-loop
-        const dbDeleteResult = await window.electron.tracks.delete(trackId);
-
-        if (!dbDeleteResult) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await deleteTrackMutation.mutateAsync(trackId);
+        } catch {
           showNotification(`Failed to delete track: ${track.title}`, 'error');
           // eslint-disable-next-line no-continue
           continue;
@@ -459,11 +470,11 @@ export default function Library() {
 
         if (track.filePath) {
           // eslint-disable-next-line no-await-in-loop
-          const fileDeleteResult = await window.electron.fileSystem.deleteFile(
+          const fileDeleteResult = await deleteFileMutation.mutateAsync(
             track.filePath,
           );
 
-          if (!fileDeleteResult) {
+          if (!fileDeleteResult.success) {
             showNotification(
               `Failed to delete file for: ${track.title}`,
               'warning',
@@ -472,7 +483,8 @@ export default function Library() {
         }
       }
 
-      await useLibraryStore.getState().loadLibrary(false);
+      // Mutation hooks already invalidate tracks/playlists on success;
+      // nothing else to do here.
 
       setSelectedTracks({});
 
@@ -672,15 +684,17 @@ export default function Library() {
   };
 
   const handleColumnVisibilityToggle = (columnId: string, visible: boolean) => {
-    updateColumnVisibility(columnId, visible);
+    updateSettings.mutate({
+      columns: { ...columnVisibility, [columnId]: visible },
+    });
   };
 
   const handleColumnSizingPersist = (sizing: Record<string, number>) => {
-    setColumnWidths(sizing);
+    updateSettings.mutate({ columnWidths: sizing });
   };
 
   const handleColumnOrderChange = (newOrder: string[]) => {
-    setColumnOrder(newOrder);
+    updateSettings.mutate({ columnOrder: newOrder });
   };
 
   const handleRowDragStart = (

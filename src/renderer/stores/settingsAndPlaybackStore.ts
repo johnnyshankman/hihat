@@ -1,17 +1,15 @@
-// TODO: Extract module-init side effects into an exported `bootstrapSettingsAndPlaybackStore()`
-// function and call it once from App mount, mirroring what was done for libraryStore in PR #87.
-// This file currently runs `loadSettings()` and attaches the `__hihat_e2e_getPlayerState`
-// window global at module load (bottom of file), which couples any importer — including unit
-// tests — to app-startup behavior. Until extracted, unit-testing this store requires stubbing
-// `window.electron` and the e2e harness, which is the same antipattern we just removed from
-// libraryStore. Track of work, not a refactor for this PR.
-
 import { create } from 'zustand';
 import { Gapless5 } from '@regosen/gapless-5';
-import { Track, Settings } from '../../types/dbTypes';
+import type { Track, Settings } from '../../types/dbTypes';
 import { SettingsAndPlaybackStore } from './types';
 import useLibraryStore from './libraryStore';
-import useUIStore from './uiStore';
+import {
+  getTracksSnapshot,
+  getPlaylistsSnapshot,
+  getSettingsSnapshot,
+  queryClient,
+  queryKeys,
+} from '../queries';
 import {
   computeCanGoNext,
   findNextSong,
@@ -21,6 +19,26 @@ import {
 } from '../utils/trackSelectionUtils';
 import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
 import { preloadNextInQueue, syncPlayerQueue } from '../utils/playerQueue';
+
+/**
+ * Persist `lastPlayedSongId` to the DB and reflect it in the TanStack
+ * Query settings cache. The store no longer mirrors settings, so all
+ * the internal playback paths that used to call
+ * `persistLastPlayedSongId(id)` route through this helper. Optimistic
+ * cache write keeps `useSettings()` consumers in sync without waiting
+ * on the IPC roundtrip; failures log only — the user has visibility on
+ * playback state via the player UI itself, no toast needed.
+ */
+function persistLastPlayedSongId(id: string | null): void {
+  queryClient.setQueryData<Settings>(queryKeys.settings, (old) =>
+    old ? { ...old, lastPlayedSongId: id } : old,
+  );
+  window.electron.settings
+    .update({ lastPlayedSongId: id })
+    .catch((err: unknown) => {
+      console.error('Error persisting last played song ID:', err);
+    });
+}
 
 /**
  * Derive Gapless-5's singleMode from our repeatMode. The store's
@@ -63,28 +81,11 @@ function flushPlaybackTracking(state: SettingsAndPlaybackStore) {
 // Define the settings and playback store
 const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
   (set, get) => ({
-    // Settings state (from settingsStore)
-    id: 'app-settings', // db record name never changes
-    libraryPath: '',
-    theme: 'dark',
-    lastPlayedSongId: null,
-    volume: 1.0,
-    columns: {
-      title: true,
-      artist: true,
-      album: true,
-      albumArtist: true,
-      genre: true,
-      duration: true,
-      playCount: true,
-      dateAdded: true,
-      lastPlayed: false,
-    },
-    columnWidths: null,
-    librarySorting: null,
-    columnOrder: null,
-
-    // Playback state (from playbackStore)
+    // Playback runtime state. Settings (libraryPath / theme / columns /
+    // columnWidths / librarySorting / columnOrder / lastPlayedSongId /
+    // volume) are server state owned by TanStack Query — see
+    // src/renderer/queries/settings.ts. Reads via useSettings() in
+    // components or getSettingsSnapshot() in non-React paths.
     currentTrack: null, // the current track playing
     paused: true, // play pause state
     position: 0, // current position of the playing track in seconds
@@ -107,309 +108,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     preloadedTrack: null, // track sitting at Gapless-5 queue index 1 (store-owned)
     preloadReady: false, // true once the preloaded track is decoded and ready
     queueLeadingStaleCount: 0, // stale finished tracks at the front of Gapless-5's queue
-
-    // Settings actions
-    setLibraryPath: async (libraryPath: Settings['libraryPath']) => {
-      try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        // Update the settings in the database
-        const updatedSettings = {
-          id: state.id,
-          libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        // Update the settings state
-        set({ libraryPath });
-      } catch (error) {
-        console.error('Error updating library path:', error);
-        useUIStore
-          .getState()
-          .showNotification('Failed to update library path', 'error');
-      }
-    },
-
-    loadSettings: async () => {
-      try {
-        const appSettings = await window.electron.settings.get();
-        set({
-          libraryPath: appSettings.libraryPath,
-          theme: appSettings.theme,
-          columns: appSettings.columns,
-          lastPlayedSongId: appSettings.lastPlayedSongId || null,
-          volume: appSettings.volume !== null ? appSettings.volume : 1.0,
-          columnWidths: appSettings.columnWidths || null,
-          librarySorting: appSettings.librarySorting || null,
-          columnOrder: appSettings.columnOrder || null,
-        });
-
-        // Propagate persisted library sorting to libraryStore
-        if (appSettings.librarySorting) {
-          useLibraryStore
-            .getState()
-            .updateLibraryViewState(
-              appSettings.librarySorting,
-              useLibraryStore.getState().libraryViewState.filtering,
-            );
-        }
-
-        // Also make sure we initialize the volume for the player if it exists
-        const { player } = get();
-        if (player) {
-          const volumeValue =
-            appSettings.volume !== null ? appSettings.volume : 1.0;
-          player.setVolume(volumeValue);
-        }
-
-        // Signal the main process that settings are loaded so the window
-        // can be shown with the correct theme. See the "Deferred window
-        // show" comment in main.ts for the full pattern.
-        window.electron.ipcRenderer.sendMessage('app:settingsLoaded');
-
-        return appSettings;
-      } catch (error) {
-        console.error('Error loading settings:', error);
-        useUIStore
-          .getState()
-          .showNotification('Failed to load settings', 'error');
-
-        // Signal even on failure — the window must still show. The store
-        // defaults to 'dark' so the fallback theme is reasonable.
-        window.electron.ipcRenderer.sendMessage('app:settingsLoaded');
-
-        return {
-          libraryPath: '',
-          theme: 'dark',
-          lastPlayedSongId: null,
-          volume: 1.0,
-          columns: {
-            title: true,
-            artist: true,
-            album: true,
-            albumArtist: false,
-            genre: true,
-            duration: true,
-            playCount: true,
-            dateAdded: true,
-            lastPlayed: false,
-          },
-          id: 'app-settings',
-          columnWidths: null,
-          librarySorting: null,
-          columnOrder: null,
-        };
-      }
-    },
-
-    setColumnVisibility: async (column: string, isVisible: boolean) => {
-      try {
-        const state = get();
-
-        if (!state.columns) {
-          throw new Error('Settings not loaded');
-        }
-
-        // Update the column visibility
-        const updatedColumns = {
-          ...state.columns,
-          [column]: isVisible,
-        };
-
-        // Update the settings in the database
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: updatedColumns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        // Update the settings state
-        set({ columns: updatedColumns });
-      } catch (error) {
-        console.error('Error updating column visibility:', error);
-        useUIStore
-          .getState()
-          .showNotification('Failed to update column visibility', 'error');
-      }
-    },
-
-    setColumnWidths: async (columnWidths: Record<string, number>) => {
-      try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        set({ columnWidths });
-      } catch (error) {
-        console.error('Error updating column widths:', error);
-      }
-    },
-
-    setLibrarySorting: async (
-      sorting: Array<{ id: string; desc: boolean }>,
-    ) => {
-      // Guard: never clear the persisted sort via this path. Callers that
-      // want "no sort" would regress to the default on next launch, which
-      // is surprising. If that's ever needed, add a dedicated method.
-      if (!sorting || sorting.length === 0) return;
-
-      // Optimistic in-memory update first: the UI (component subscribers)
-      // and trackSelectionUtils (libraryViewState) respond immediately,
-      // before the DB round-trip completes. Errors in the DB write are
-      // logged but do not revert the UI — the user sees the sort they
-      // asked for and can retry the action.
-      set({ librarySorting: sorting });
-      const libState = useLibraryStore.getState();
-      libState.updateLibraryViewState(
-        sorting,
-        libState.libraryViewState.filtering,
-      );
-
-      try {
-        const state = get();
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: sorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-      } catch (error) {
-        console.error('Error updating library sorting:', error);
-      }
-    },
-
-    setColumnOrder: async (columnOrder: string[]) => {
-      try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        set({ columnOrder });
-      } catch (error) {
-        console.error('Error updating column order:', error);
-      }
-    },
-
-    setTheme: async (theme: 'light' | 'dark') => {
-      try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        // Update the settings in the database
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme,
-          columns: state.columns,
-          lastPlayedSongId: state.lastPlayedSongId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        // Update the settings state
-        set({ theme });
-      } catch (error) {
-        console.error('Error updating theme:', error);
-        useUIStore
-          .getState()
-          .showNotification('Failed to update theme', 'error');
-      }
-    },
-
-    setLastPlayedSongId: async (trackId: string | null) => {
-      try {
-        const state = get();
-
-        if (!state.id) {
-          throw new Error('Settings not loaded');
-        }
-
-        // Update the settings in the database
-        const updatedSettings = {
-          id: state.id,
-          libraryPath: state.libraryPath,
-          theme: state.theme,
-          columns: state.columns,
-          lastPlayedSongId: trackId,
-          volume: state.volume,
-          columnWidths: state.columnWidths,
-          librarySorting: state.librarySorting,
-          columnOrder: state.columnOrder,
-        };
-        await window.electron.settings.update(updatedSettings);
-
-        // Update the settings state
-        set({ lastPlayedSongId: trackId });
-      } catch (error) {
-        console.error('Error updating last played song ID:', error);
-        useUIStore
-          .getState()
-          .showNotification('Failed to update last played song', 'error');
-      }
-    },
 
     // Playback actions
     setSilentAudioRef: (ref) => {
@@ -434,30 +132,19 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
 
     setVolume: (volume) => {
-      set((state) => {
-        if (state.player) {
-          state.player.setVolume(volume);
-        }
-
-        // Also update volume in settings DB
-        try {
-          const updatedSettings = {
-            id: state.id,
-            libraryPath: state.libraryPath,
-            theme: state.theme,
-            columns: state.columns,
-            lastPlayedSongId: state.lastPlayedSongId,
-            volume,
-            columnWidths: state.columnWidths,
-            librarySorting: state.librarySorting,
-            columnOrder: state.columnOrder,
-          };
-          window.electron.settings.update(updatedSettings);
-        } catch (error) {
-          console.error('Error updating volume in settings:', error);
-        }
-
-        return { volume };
+      // Apply to the audio engine synchronously so the user hears the
+      // change at click-time, then mirror into the TanStack Query
+      // settings cache for `useSettings()` consumers, then persist via
+      // partial-merge IPC. Fire-and-forget on the persist — the engine
+      // is already updated and the next reader sees the optimistic
+      // cache write either way.
+      const { player } = get();
+      if (player) player.setVolume(volume);
+      queryClient.setQueryData<Settings>(queryKeys.settings, (old) =>
+        old ? { ...old, volume } : old,
+      );
+      window.electron.settings.update({ volume }).catch((error: unknown) => {
+        console.error('Error updating volume in settings:', error);
       });
     },
 
@@ -467,7 +154,10 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           throw new Error('No player found while selecting specific song');
         }
 
-        const library = useLibraryStore.getState().tracks;
+        // Tracks are server state owned by TanStack Query; the store
+        // doesn't keep its own copy. Reads outside React (like this
+        // playback path) go through the queryClient snapshot.
+        const library = getTracksSnapshot()?.tracks ?? [];
 
         const selectedTrack = library.find((t) => t.id === trackId);
 
@@ -552,7 +242,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         playbackTracker.startTrackingTrack(trackId);
 
         // Save the track ID as the last played song
-        get().setLastPlayedSongId(trackId);
+        persistLastPlayedSongId(trackId);
 
         return {
           currentTrack: selectedTrack,
@@ -636,7 +326,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               playbackTracker.startTrackingTrack(nextSong.id);
 
               // Save the track ID as the last played song
-              get().setLastPlayedSongId(nextSong.id);
+              persistLastPlayedSongId(nextSong.id);
 
               return {
                 currentTrack: nextSong,
@@ -674,8 +364,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
           // Check if we need to clear history (when all songs have been played with repeat all)
           // Get total available tracks to determine if we've played them all
-          const library = useLibraryStore.getState().tracks;
-          const { playlists } = useLibraryStore.getState();
+          const library = getTracksSnapshot()?.tracks ?? [];
+          const playlists = getPlaylistsSnapshot() ?? [];
           let totalAvailableTracks = 0;
 
           if (state.playbackSource === 'library') {
@@ -769,7 +459,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackTracker.startTrackingTrack(nextSong.id);
 
           // Save the track ID as the last played song
-          get().setLastPlayedSongId(nextSong.id);
+          persistLastPlayedSongId(nextSong.id);
 
           return {
             currentTrack: nextSong,
@@ -867,7 +557,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         playbackTracker.startTrackingTrack(nextSong.id);
 
         // Save the track ID as the last played song
-        get().setLastPlayedSongId(nextSong.id);
+        persistLastPlayedSongId(nextSong.id);
 
         return {
           currentTrack: nextSong,
@@ -928,7 +618,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               playbackTracker.startTrackingTrack(previousSong.id);
 
               // Save the track ID as the last played song
-              get().setLastPlayedSongId(previousSong.id);
+              persistLastPlayedSongId(previousSong.id);
 
               return {
                 currentTrack: previousSong,
@@ -999,7 +689,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           playbackTracker.startTrackingTrack(previousSong.id);
 
           // Save the track ID as the last played song
-          get().setLastPlayedSongId(previousSong.id);
+          persistLastPlayedSongId(previousSong.id);
 
           return {
             currentTrack: previousSong,
@@ -1125,13 +815,48 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
       // lazily initialize the player
       if (!state.player) {
+        // Volume comes from the TanStack Query settings cache. If the
+        // query hasn't resolved yet (rare — local IPC is sub-ms but
+        // not zero), fall back to 1.0; the reconcile-volume effect in
+        // App.tsx applies the persisted value once useSettings settles.
+        const initialVolume = getSettingsSnapshot()?.volume ?? 1.0;
         const player = new Gapless5({
           useHTML5Audio: false,
           crossfade: 25, // 25ms crossfade between tracks
           exclusive: true, // Only one track can play at a time
           loadLimit: 3, // Load up to 3 tracks at a time
-          volume: state.volume,
+          volume: initialVolume,
         });
+
+        // E2E diagnostic hook: lets Playwright specs observe what
+        // Gapless-5 is actually playing versus what the store thinks
+        // is playing. Installed lazily on first player creation (no
+        // module-load side effects), the only legitimate consumer of
+        // player.getTracks()/getIndex() outside the dev-only invariant
+        // assert. Read-only, no mutation.
+        // eslint-disable-next-line no-underscore-dangle
+        (
+          window as unknown as Record<string, unknown>
+        ).__hihat_e2e_getPlayerState = () => {
+          const s = get();
+          const p = s.player ?? player;
+          const urlToFilePath = (url: string | undefined): string | null => {
+            if (!url) return null;
+            return decodeURIComponent(
+              url.replace('hihat-audio://getfile/', ''),
+            );
+          };
+          const tracks = p.getTracks();
+          const index = p.getIndex();
+          return {
+            storeCurrentTrackFilePath: s.currentTrack?.filePath ?? null,
+            storePreloadedTrackFilePath: s.preloadedTrack?.filePath ?? null,
+            storePreloadReady: s.preloadReady,
+            playerQueueLength: tracks.length,
+            playerIndex: index,
+            playerCurrentFilePath: urlToFilePath(tracks[index]),
+          };
+        };
 
         // Seed singleMode from the store's repeatMode so the player
         // reflects state on first construction, not only after a toggle.
@@ -1374,7 +1099,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               );
 
               // Save the track ID as the last played song
-              get().setLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
+              persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
 
               return {
                 currentTrack: currentTrackThatIsAudiblyPlaying,
@@ -1413,8 +1138,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
 
           // Check if we need to clear history (when all songs have been played with repeat all)
           // Get total available tracks to determine if we've played them all
-          const library = useLibraryStore.getState().tracks;
-          const { playlists } = useLibraryStore.getState();
+          const library = getTracksSnapshot()?.tracks ?? [];
+          const playlists = getPlaylistsSnapshot() ?? [];
           let totalAvailableTracks = 0;
 
           if (state.playbackSource === 'library') {
@@ -1489,7 +1214,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           );
 
           // Save the track ID as the last played song
-          get().setLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
+          persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
 
           return {
             currentTrack: currentTrackThatIsAudiblyPlaying,
@@ -1535,7 +1260,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         playbackTracker.startTrackingTrack(currentTrackThatIsAudiblyPlaying.id);
 
         // Save the track ID as the last played song
-        get().setLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
+        persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
 
         // We need to create a small delay between track changes to avoid the 2-second offset issue
         // The player is already playing the next track at this point
@@ -1558,45 +1283,5 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
   }),
 );
-
-// Initialize settings on app start
-if (typeof window !== 'undefined') {
-  useSettingsAndPlaybackStore.getState().loadSettings();
-
-  // E2E diagnostic hook: lets Playwright specs observe what Gapless-5 is
-  // actually playing versus what the store thinks is playing. This is
-  // the only legitimate consumer of player.getTracks()/getIndex()
-  // outside the dev-only invariant assert. Read-only, no mutation.
-  // eslint-disable-next-line no-underscore-dangle
-  (window as unknown as Record<string, unknown>).__hihat_e2e_getPlayerState =
-    () => {
-      const state = useSettingsAndPlaybackStore.getState();
-      const { player } = state;
-      const urlToFilePath = (url: string | undefined): string | null => {
-        if (!url) return null;
-        return decodeURIComponent(url.replace('hihat-audio://getfile/', ''));
-      };
-      if (!player) {
-        return {
-          storeCurrentTrackFilePath: state.currentTrack?.filePath ?? null,
-          storePreloadedTrackFilePath: state.preloadedTrack?.filePath ?? null,
-          storePreloadReady: state.preloadReady,
-          playerQueueLength: 0,
-          playerIndex: -1,
-          playerCurrentFilePath: null as string | null,
-        };
-      }
-      const tracks = player.getTracks();
-      const index = player.getIndex();
-      return {
-        storeCurrentTrackFilePath: state.currentTrack?.filePath ?? null,
-        storePreloadedTrackFilePath: state.preloadedTrack?.filePath ?? null,
-        storePreloadReady: state.preloadReady,
-        playerQueueLength: tracks.length,
-        playerIndex: index,
-        playerCurrentFilePath: urlToFilePath(tracks[index]),
-      };
-    };
-}
 
 export default useSettingsAndPlaybackStore;

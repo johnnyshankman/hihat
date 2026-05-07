@@ -1,11 +1,24 @@
 /**
  * IPC Handlers
  *
- * This module implements the IPC handlers for the main process.
- * It handles requests from the renderer process and returns responses.
+ * Request/response (invoke-shaped) IPC handlers for the main process.
+ * Each entry registers via `ipcMain.handle` and is typed as
+ * `IPCHandler<C>` so the renderer's `window.electron.<domain>.<method>(...)`
+ * call resolves to a single typed response (or rejects with an Error).
+ *
+ * Streaming / fire-and-forget event handlers (e.g. rsync progress
+ * during library backup) live in a sibling file because they use
+ * `ipcMain.on` + `event.reply()` and don't fit the typed invoke shape.
+ * See `backupHandlers.ts`.
  */
 
-import { dialog, app, BrowserWindow, shell } from 'electron';
+import {
+  dialog,
+  app,
+  BrowserWindow,
+  shell,
+  IpcMainInvokeEvent,
+} from 'electron';
 import fs from 'fs';
 import path from 'path';
 import * as mm from 'music-metadata';
@@ -14,6 +27,7 @@ import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
 import { scanLibrary, importFiles } from '../library/scanner';
 import { writeMetadataToFile } from '../library/tagWriter';
+import { assertHttpUrl, assertTrustedSender } from './validateSender';
 
 /**
  * UI-related IPC handlers
@@ -67,10 +81,11 @@ export const trackHandlers = {
 
   'tracks:update': (async (track) => {
     try {
-      return db.updateTrack(track);
+      db.updateTrack(track);
+      return track;
     } catch (error) {
       console.error(`Error updating track with ID ${track.id}:`, error);
-      return false;
+      throw error;
     }
   }) as IPCHandler<'tracks:update'>,
 
@@ -82,7 +97,7 @@ export const trackHandlers = {
         `Error updating play count for track with ID ${id}:`,
         error,
       );
-      return false;
+      throw error;
     }
   }) as IPCHandler<'tracks:updatePlayCount'>,
 
@@ -91,7 +106,7 @@ export const trackHandlers = {
       return db.deleteTrack(id);
     } catch (error) {
       console.error(`Error deleting track with ID ${id}:`, error);
-      return false;
+      throw error;
     }
   }) as IPCHandler<'tracks:delete'>,
 
@@ -189,19 +204,19 @@ export const playlistHandlers = {
 
   'playlists:update': (async (playlist) => {
     try {
-      return db.updatePlaylist(playlist);
+      db.updatePlaylist(playlist);
     } catch (error) {
       console.error(`Error updating playlist with ID ${playlist.id}:`, error);
-      return false;
+      throw error;
     }
   }) as IPCHandler<'playlists:update'>,
 
   'playlists:delete': (async ({ id }) => {
     try {
-      return db.deletePlaylist(id);
+      db.deletePlaylist(id);
     } catch (error) {
       console.error(`Error deleting playlist with ID ${id}:`, error);
-      return false;
+      throw error;
     }
   }) as IPCHandler<'playlists:delete'>,
 
@@ -233,11 +248,15 @@ export const settingsHandlers = {
 
   'settings:update': (async ({ settings }) => {
     try {
-      const result = db.updateSettings(settings);
-      return result;
+      // Partial-merge: read current row, layer the patch on top, persist.
+      // Renderer call sites send only the fields they're changing, so two
+      // concurrent partial writes can no longer overwrite each other's
+      // untouched fields.
+      const current = db.getSettings();
+      const merged = { ...current, ...settings };
+      return db.updateSettings(merged);
     } catch (error) {
       console.error('Error updating settings:', error);
-      // Don't return true on error, let the client know there was a problem
       throw error;
     }
   }) as IPCHandler<'settings:update'>,
@@ -288,24 +307,23 @@ export const libraryHandlers = {
   'library:backup': (async ({ backupPath }) => {
     try {
       await db.backupDatabase(backupPath);
-      return { success: true };
     } catch (error: unknown) {
       console.error(`Error backing up database to ${backupPath}:`, error);
-      return { error: (error as Error).message || 'Unknown error' };
+      throw error;
     }
   }) as IPCHandler<'library:backup'>,
 
   'library:restore': (async ({ restorePath }) => {
     try {
       db.restoreDatabase(restorePath);
-      return { success: true };
     } catch (error: unknown) {
       console.error(`Error restoring database from ${restorePath}:`, error);
-      return { error: (error as Error).message || 'Unknown error' };
+      throw error;
     }
   }) as IPCHandler<'library:restore'>,
 
-  'library:resetDatabase': (async () => {
+  'library:resetDatabase': (async (_req: void, event: IpcMainInvokeEvent) => {
+    assertTrustedSender(event);
     try {
       const success = await db.resetDatabase();
       return {
@@ -323,7 +341,8 @@ export const libraryHandlers = {
     }
   }) as IPCHandler<'library:resetDatabase'>,
 
-  'library:resetTracks': (async () => {
+  'library:resetTracks': (async (_req: void, event: IpcMainInvokeEvent) => {
+    assertTrustedSender(event);
     try {
       const success = await db.resetTracks();
       return {
@@ -390,8 +409,14 @@ export const appHandlers = {
     }
   }) as IPCHandler<'app:restart'>,
 
-  'app:open-in-browser': (async ({ link }) => {
+  'app:open-in-browser': (async ({ link }, event: IpcMainInvokeEvent) => {
+    assertTrustedSender(event);
     try {
+      // Reject non-http(s) URLs before handing them to shell.openExternal.
+      // Without this, a buggy or compromised renderer could pass file://,
+      // javascript:, or a custom-protocol URI and trigger arbitrary
+      // local-side behavior.
+      assertHttpUrl(link);
       await shell.openExternal(link);
       return { success: true };
     } catch (error: unknown) {
@@ -524,8 +549,34 @@ export const fileSystemHandlers = {
     }
   }) as IPCHandler<'fileSystem:downloadAlbumArt'>,
 
-  'fileSystem:deleteFile': (async ({ filePath }) => {
+  'fileSystem:deleteFile': (async ({ filePath }, event: IpcMainInvokeEvent) => {
+    assertTrustedSender(event);
     try {
+      // Constrain deletes to files inside the configured library path
+      // so a stray IPC call can't trash arbitrary user files (e.g.
+      // /etc/hosts, ~/Documents/...). Recoverable since this is
+      // shell.trashItem rather than unlinkSync, but the prefix check
+      // is the cheap defense-in-depth that makes the constraint
+      // explicit at the boundary.
+      const { libraryPath } = db.getSettings();
+      if (!libraryPath) {
+        return {
+          success: false,
+          message: 'Library path is not set; refusing to delete',
+        };
+      }
+      const resolvedTarget = path.resolve(filePath);
+      const resolvedRoot = path.resolve(libraryPath);
+      if (
+        resolvedTarget !== resolvedRoot &&
+        !resolvedTarget.startsWith(resolvedRoot + path.sep)
+      ) {
+        return {
+          success: false,
+          message: 'Refusing to delete a file outside the library path',
+        };
+      }
+
       if (!fs.existsSync(filePath)) {
         return {
           success: false,

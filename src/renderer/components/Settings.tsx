@@ -24,16 +24,18 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
 import BackupIcon from '@mui/icons-material/Backup';
 import CloseIcon from '@mui/icons-material/Close';
-import { useSettingsAndPlaybackStore, useUIStore } from '../stores';
+import { useUIStore } from '../stores';
+import {
+  useScanLibrary,
+  useImportFiles,
+  useResetDatabase,
+  useResetTracks,
+  useSettings,
+  useUpdateSettings,
+  getSettingsSnapshot,
+  DEFAULT_COLUMNS,
+} from '../queries';
 import ConfirmationDialog from './ConfirmationDialog';
-import type { Channels } from '../../types/ipc';
-import useLibraryStore from '../stores/libraryStore';
-
-// Define the type for the dialog result
-interface DirectorySelectionResult {
-  canceled: boolean;
-  filePaths: string[];
-}
 
 // Define the props for the Settings component
 interface SettingsProps {
@@ -41,21 +43,23 @@ interface SettingsProps {
 }
 
 export default function Settings({ onClose }: SettingsProps) {
-  // settings store stuff
-  const libraryPath = useSettingsAndPlaybackStore((state) => state.libraryPath);
-  const theme = useSettingsAndPlaybackStore((state) => state.theme);
-  const columns = useSettingsAndPlaybackStore((state) => state.columns);
-  const updateColumnVisibility = useSettingsAndPlaybackStore(
-    (state) => state.setColumnVisibility,
-  );
-  const setLibraryPath = useSettingsAndPlaybackStore(
-    (state) => state.setLibraryPath,
-  );
-  const updateTheme = useSettingsAndPlaybackStore((state) => state.setTheme);
-  // library store stuff
-  const scanLibrary = useLibraryStore((state) => state.scanLibrary);
-  const importFiles = useLibraryStore((state) => state.importFiles);
-  const isScanning = useLibraryStore((state) => state.isScanning);
+  // Settings come from TanStack Query. Module-level fallbacks keep
+  // first-render UI consistent before the cache resolves.
+  const settings = useSettings().data;
+  const libraryPath = settings?.libraryPath ?? '';
+  const theme = settings?.theme ?? 'dark';
+  const columns = settings?.columns ?? DEFAULT_COLUMNS;
+  const updateSettings = useUpdateSettings();
+  // Library / scan / reset mutations via TanStack Query. Each hook
+  // owns success/error toasts and cache invalidation so the rest of
+  // this component just drives UI off `isPending`.
+  const scanLibraryMutation = useScanLibrary();
+  const importFilesMutation = useImportFiles();
+  const resetDatabaseMutation = useResetDatabase();
+  const resetTracksMutation = useResetTracks();
+  const isScanning =
+    scanLibraryMutation.isPending || importFilesMutation.isPending;
+
   // ui store stuff
   const showNotification = useUIStore((state) => state.showNotification);
 
@@ -104,13 +108,11 @@ export default function Settings({ onClose }: SettingsProps) {
     // Throttle updates to once every 1000ms (1 second)
     const updateThreshold = 1000; // milliseconds
 
-    const handleScanProgress = (...args: unknown[]) => {
-      const data = args[0] as {
-        total: number;
-        processed: number;
-        current: string;
-      };
-
+    const handleScanProgress = (data: {
+      total: number;
+      processed: number;
+      current: string;
+    }) => {
       const now = Date.now();
 
       // Only update the UI if enough time has passed since the last update
@@ -193,108 +195,71 @@ export default function Settings({ onClose }: SettingsProps) {
       }, 3000);
     };
 
-    // Register event listeners
-    const unsubScanProgress = window.electron.ipcRenderer.on(
-      'library:scanProgress' as Channels,
-      handleScanProgress,
-    );
-
-    const unsubScanComplete = window.electron.ipcRenderer.on(
-      'library:scanComplete' as Channels,
-      handleScanComplete,
-    );
+    // Register event listeners via the typed preload wrappers.
+    const unsubScanProgress =
+      window.electron.library.onScanProgress(handleScanProgress);
+    const unsubScanComplete =
+      window.electron.library.onScanComplete(handleScanComplete);
 
     // Listen for backup success or failure
-    const unsubBackupSuccess = window.electron.ipcRenderer.on(
-      'backup-library-success' as Channels,
-      () => {
-        setBackupDialogOpen(false);
-        setIsBackupInProgress(false);
-        setBackupStatus('');
-        setBackupProgress(100);
-        setProcessedFiles([]);
-        processedFilesRef.current = [];
-        showNotification('Library backup completed successfully', 'success');
-      },
-    );
+    const unsubBackupSuccess = window.electron.backup.onSuccess(() => {
+      setBackupDialogOpen(false);
+      setIsBackupInProgress(false);
+      setBackupStatus('');
+      setBackupProgress(100);
+      setProcessedFiles([]);
+      processedFilesRef.current = [];
+      showNotification('Library backup completed successfully', 'success');
+    });
 
-    const unsubBackupError = window.electron.ipcRenderer.on(
-      'backup-library-error' as Channels,
-      (...args: unknown[]) => {
-        const message = args[0] as string;
-        setIsBackupInProgress(false);
-        setBackupStatus('');
-        showNotification(`Backup failed: ${message}`, 'error');
-      },
-    );
+    const unsubBackupError = window.electron.backup.onError((message) => {
+      setIsBackupInProgress(false);
+      setBackupStatus('');
+      showNotification(`Backup failed: ${message}`, 'error');
+    });
 
     // Listen for backup progress updates
-    const unsubBackupProgress = window.electron.ipcRenderer.on(
-      'backup-library-progress' as Channels,
-      (...args: unknown[]) => {
-        const data = args[0] as {
-          phase: string;
-          status: string;
-          currentFile?: string;
-          progress?: number;
-          currentTransfer?: number;
-          remaining?: number;
-          total?: number;
-          transferSpeed?: string;
-          filesProcessed?: number;
-          totalFiles?: number;
-        };
+    const unsubBackupProgress = window.electron.backup.onProgress((data) => {
+      setBackupStatus(data.status);
+      setBackupPhase(data.phase);
 
-        // Update backup status
-        setBackupStatus(data.status);
-        setBackupPhase(data.phase);
+      if (data.phase === 'transferring') {
+        if (data.currentFile) {
+          setBackupCurrentFile(data.currentFile);
 
-        // Handle different phases
-        if (data.phase === 'transferring') {
-          // Update current file if provided
-          if (data.currentFile) {
-            setBackupCurrentFile(data.currentFile);
-
-            // Add to processed files (but limit to last 20 for performance)
-            if (!processedFilesRef.current.includes(data.currentFile)) {
-              const updatedFiles = [
-                data.currentFile,
-                ...processedFilesRef.current,
-              ].slice(0, 20);
-              processedFilesRef.current = updatedFiles;
-              setProcessedFiles(updatedFiles);
-            }
+          if (!processedFilesRef.current.includes(data.currentFile)) {
+            const updatedFiles = [
+              data.currentFile,
+              ...processedFilesRef.current,
+            ].slice(0, 20);
+            processedFilesRef.current = updatedFiles;
+            setProcessedFiles(updatedFiles);
           }
-
-          // Update progress if provided
-          if (data.progress !== undefined) {
-            setBackupProgress(data.progress);
-          }
-
-          // Update transfer info if provided
-          if (
-            data.currentTransfer !== undefined &&
-            data.total !== undefined &&
-            data.remaining !== undefined
-          ) {
-            setBackupTransferInfo({
-              current: data.currentTransfer,
-              total: data.total,
-              remaining: data.remaining,
-              speed: data.transferSpeed || '',
-            });
-          }
-        } else if (data.phase === 'counting' && data.totalFiles) {
-          // Just update status for counting phase
-          setBackupStatus(`Found ${data.totalFiles} files to backup`);
-        } else if (data.phase === 'scanning' && data.filesProcessed) {
-          // Update status for scanning phase
-          setBackupStatus(`Scanning files: ${data.filesProcessed} processed`);
         }
-      },
-    );
 
-    // Clean up event listeners
+        if (data.progress !== undefined) {
+          setBackupProgress(data.progress);
+        }
+
+        if (
+          data.currentTransfer !== undefined &&
+          data.total !== undefined &&
+          data.remaining !== undefined
+        ) {
+          setBackupTransferInfo({
+            current: data.currentTransfer,
+            total: data.total,
+            remaining: data.remaining,
+            speed: data.transferSpeed || '',
+          });
+        }
+      } else if (data.phase === 'counting' && data.totalFiles) {
+        setBackupStatus(`Found ${data.totalFiles} files to backup`);
+      } else if (data.phase === 'scanning' && data.filesProcessed) {
+        setBackupStatus(`Scanning files: ${data.filesProcessed} processed`);
+      }
+    });
+
     return () => {
       unsubScanProgress();
       unsubScanComplete();
@@ -306,16 +271,17 @@ export default function Settings({ onClose }: SettingsProps) {
 
   const handleThemeChange = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
-
-    // Update in store and save to database immediately
-    updateTheme(newTheme);
+    updateSettings.mutate({ theme: newTheme });
   };
 
   const handleColumnVisibilityChange = (column: keyof typeof columns) => {
-    const newValue = !columns[column];
-
-    // Update in store and save to database immediately
-    updateColumnVisibility(column, newValue);
+    // Read current columns at click time from the cache (post-onMutate
+    // optimistic merge) so rapid checkbox clicks see the previous
+    // optimistic state instead of stale closure data.
+    const current = getSettingsSnapshot()?.columns ?? columns;
+    updateSettings.mutate({
+      columns: { ...current, [column]: !current[column] },
+    });
   };
 
   const handleRescanLibrary = async () => {
@@ -335,16 +301,15 @@ export default function Settings({ onClose }: SettingsProps) {
       scanProcessedFilesRef.current = [];
       scanStartTime.current = 0;
 
-      // Start the scan
-      await scanLibrary(libraryPath);
+      // Start the scan via the mutation. isScanning above flips on
+      // automatically; the scan-complete push event invalidates the
+      // tracks query and shows the success notification.
+      await scanLibraryMutation.mutateAsync(libraryPath);
     } catch (error) {
       console.error('Error scanning library:', error);
       setScanStatus('Failed');
       setScanPhase('error');
-      showNotification(
-        error instanceof Error ? error.message : 'Error scanning library',
-        'error',
-      );
+      // Hook already toasts via uiStore on failure.
     }
   };
 
@@ -374,16 +339,14 @@ export default function Settings({ onClose }: SettingsProps) {
       scanProcessedFilesRef.current = [];
       scanStartTime.current = 0;
 
-      // Import the selected files
-      await importFiles(result.filePaths);
+      // Import the selected files via the mutation. Hook invalidates
+      // tracks + playlists on success.
+      await importFilesMutation.mutateAsync(result.filePaths);
     } catch (error) {
       console.error('Error importing files:', error);
       setScanStatus('Failed');
       setScanPhase('error');
-      showNotification(
-        error instanceof Error ? error.message : 'Error importing files',
-        'error',
-      );
+      // Hook already toasts via uiStore on failure.
     }
   };
 
@@ -418,11 +381,9 @@ export default function Settings({ onClose }: SettingsProps) {
       setIsBackupInProgress(true);
       setBackupStatus('Backing up library...');
 
-      // Send IPC message to backup the library
-      window.electron.ipcRenderer.sendMessage(
-        'menu-backup-library',
-        backupPath,
-      );
+      // Trigger the backup; progress / success / error arrive via the
+      // backup.on* subscriptions above.
+      window.electron.backup.start(backupPath);
     } catch (error) {
       console.error('Error backing up library:', error);
       setIsBackupInProgress(false);
@@ -436,30 +397,29 @@ export default function Settings({ onClose }: SettingsProps) {
 
   const handleSelectLibraryPath = async () => {
     originalPathRef.current = libraryPath;
-    const result =
-      (await window.electron.dialog.selectDirectory()) as DirectorySelectionResult;
-
-    let newLibraryPath = '';
-    if (!result.canceled && result.filePaths.length > 0) {
-      // eslint-disable-next-line prefer-destructuring
-      newLibraryPath = result.filePaths[0];
-    } else {
-      // reset back to original path
-      newLibraryPath = originalPathRef.current;
-    }
-
     try {
+      const result = await window.electron.dialog.selectDirectory();
+      if ('error' in result) {
+        showNotification(result.error, 'error');
+        return;
+      }
+
+      const newLibraryPath =
+        !result.canceled && result.filePaths.length > 0
+          ? result.filePaths[0]
+          : originalPathRef.current;
+
       // Check if the library path exists
       const pathExists =
         await window.electron.fileSystem.fileExists(newLibraryPath);
 
       if (!pathExists) {
         showNotification('The specified library path does not exist', 'error');
-        setLibraryPath(originalPathRef.current);
+        updateSettings.mutate({ libraryPath: originalPathRef.current });
         return;
       }
 
-      setLibraryPath(newLibraryPath);
+      updateSettings.mutate({ libraryPath: newLibraryPath });
       setPathDialogOpen(true);
     } catch (error) {
       console.error('Error validating library path:', error);
@@ -479,8 +439,8 @@ export default function Settings({ onClose }: SettingsProps) {
         setScanProgress(0);
         setScanStatus('');
 
-        // First, reset tracks in the database
-        const resetResult = await window.electron.library.resetTracks();
+        // First, reset tracks in the database via the mutation.
+        const resetResult = await resetTracksMutation.mutateAsync();
         if (!resetResult.success) {
           console.error('Failed to reset tracks:', resetResult.message);
           showNotification(
@@ -490,7 +450,7 @@ export default function Settings({ onClose }: SettingsProps) {
           return;
         }
 
-        await scanLibrary(libraryPath);
+        await scanLibraryMutation.mutateAsync(libraryPath);
       } catch (error) {
         console.error('Error scanning library:', error);
         setScanStatus('Failed');
@@ -509,7 +469,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const handleCancelPathChange = () => {
     setPathDialogOpen(false);
     // Revert to the original path
-    setLibraryPath(originalPathRef.current);
+    updateSettings.mutate({ libraryPath: originalPathRef.current });
   };
 
   const handleResetDatabase = async () => {
@@ -519,7 +479,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const handleConfirmReset = async () => {
     try {
       setResetDialogOpen(false);
-      const result = await window.electron.library.resetDatabase();
+      const result = await resetDatabaseMutation.mutateAsync();
 
       if (result.success) {
         showNotification(

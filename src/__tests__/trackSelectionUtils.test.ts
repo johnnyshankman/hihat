@@ -12,15 +12,22 @@ import {
   type CanGoInputs,
 } from '../renderer/utils/trackSelectionUtils';
 import useLibraryStore from '../renderer/stores/libraryStore';
+import { queryClient } from '../renderer/queries/client';
+import { queryKeys } from '../renderer/queries/keys';
+import { buildIndexes } from '../renderer/utils/trackIndexes';
 import { Track, Playlist } from '../types/dbTypes';
 
-// Zustand testing pattern (https://docs.pmnd.rs/zustand/guides/testing):
-// snapshot the store's initial state once, then wholesale-replace it after
-// every test so per-test setState calls can never leak across tests.
+// Tracks and playlists are TanStack Query server state — seed via
+// queryClient.setQueryData. View-state slices (sorting, filtering,
+// selectedPlaylistId) live in libraryStore; snapshot the initial
+// store state and restore it after each test so per-test setState
+// calls don't leak across tests.
 const initialLibraryState = useLibraryStore.getState();
 
 afterEach(() => {
   useLibraryStore.setState(initialLibraryState, true);
+  queryClient.removeQueries({ queryKey: queryKeys.tracks });
+  queryClient.removeQueries({ queryKey: queryKeys.playlists });
 });
 
 const makeTrack = (overrides: Partial<Track>): Track => ({
@@ -66,9 +73,18 @@ const seedLibrary = (overrides: {
     playlistId: string | null;
   };
 }) => {
+  // Tracks and playlists are TanStack Query server state, so seed the
+  // cache directly — that's what trackSelectionUtils reads via
+  // getTracksSnapshot / getPlaylistsSnapshot at call time.
+  const tracks = overrides.tracks ?? [];
+  queryClient.setQueryData(queryKeys.tracks, {
+    tracks,
+    indexes: buildIndexes(tracks),
+  });
+  queryClient.setQueryData(queryKeys.playlists, overrides.playlists ?? []);
+
+  // View-state (filter / sort / selected playlist) lives in Zustand.
   useLibraryStore.setState({
-    tracks: overrides.tracks ?? [],
-    playlists: overrides.playlists ?? [],
     libraryViewState: overrides.libraryViewState ?? {
       sorting: [{ id: 'title', desc: false }],
       filtering: '',

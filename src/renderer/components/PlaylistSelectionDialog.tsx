@@ -13,7 +13,14 @@ import {
   Typography,
   Divider,
 } from '@mui/material';
-import { useLibraryStore } from '../stores';
+import type { Playlist } from '../../types/dbTypes';
+import {
+  usePlaylists,
+  useCreatePlaylist,
+  useAddTrackToPlaylist,
+} from '../queries';
+
+const EMPTY_PLAYLISTS: Playlist[] = [];
 
 interface PlaylistSelectionDialogProps {
   open: boolean;
@@ -28,11 +35,15 @@ export default function PlaylistSelectionDialog({
   trackId = undefined,
   trackIds = undefined,
 }: PlaylistSelectionDialogProps) {
-  const playlists = useLibraryStore((state) => state.playlists);
-  const addTrackToPlaylist = useLibraryStore(
-    (state) => state.addTrackToPlaylist,
-  );
-  const createPlaylist = useLibraryStore((state) => state.createPlaylist);
+  // Server state via TanStack Query. The `addTrackToPlaylist` and
+  // `createPlaylist` mutation hooks own optimistic update + rollback +
+  // invalidation; their isPending state drives the button labels below.
+  // Stable empty fallback so the userPlaylists useMemo dep stays the
+  // same reference when the cache is empty.
+  const { data: playlistsData } = usePlaylists();
+  const playlists = playlistsData ?? EMPTY_PLAYLISTS;
+  const addTrackToPlaylist = useAddTrackToPlaylist();
+  const createPlaylist = useCreatePlaylist();
 
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [showNewPlaylistInput, setShowNewPlaylistInput] = useState(false);
@@ -48,45 +59,45 @@ export default function PlaylistSelectionDialog({
 
   const handleAddToPlaylist = async (playlistId: string) => {
     try {
-      // Add all tracks to the playlist
       // eslint-disable-next-line no-restricted-syntax
       for (const id of tracksToAdd) {
         // eslint-disable-next-line no-await-in-loop
-        await addTrackToPlaylist(id, playlistId);
+        await addTrackToPlaylist.mutateAsync({ trackId: id, playlistId });
       }
       onClose();
-    } catch (error) {
-      console.error('Error adding tracks to playlist:', error);
+    } catch {
+      // Hook already toasts on failure / "track already in playlist".
     }
   };
 
   const handleCreatePlaylist = async () => {
-    if (newPlaylistName.trim()) {
-      try {
-        // Create the playlist
-        await createPlaylist(newPlaylistName.trim());
+    if (!newPlaylistName.trim()) return;
+    try {
+      // useCreatePlaylist returns the created Playlist (with its id) on
+      // success — we don't need to re-fetch the playlists list.
+      const newPlaylist = await createPlaylist.mutateAsync({
+        name: newPlaylistName.trim(),
+        trackIds: [],
+        isSmart: false,
+        smartPlaylistId: null,
+        ruleSet: null,
+        sortPreference: null,
+      });
 
-        // Find the newly created playlist
-        const updatedPlaylists = await window.electron.playlists.getAll();
-        const newPlaylist = updatedPlaylists.find(
-          (playlist) => playlist.name === newPlaylistName.trim(),
-        );
-
-        if (newPlaylist && newPlaylist.id) {
-          // Add all tracks to the new playlist
-          // eslint-disable-next-line no-restricted-syntax
-          for (const id of tracksToAdd) {
-            // eslint-disable-next-line no-await-in-loop
-            await addTrackToPlaylist(id, newPlaylist.id);
-          }
-        }
-
-        setNewPlaylistName('');
-        setShowNewPlaylistInput(false);
-        onClose();
-      } catch (error) {
-        console.error('Error creating playlist:', error);
+      // eslint-disable-next-line no-restricted-syntax
+      for (const id of tracksToAdd) {
+        // eslint-disable-next-line no-await-in-loop
+        await addTrackToPlaylist.mutateAsync({
+          trackId: id,
+          playlistId: newPlaylist.id,
+        });
       }
+
+      setNewPlaylistName('');
+      setShowNewPlaylistInput(false);
+      onClose();
+    } catch {
+      // Hook already toasts on failure.
     }
   };
 
@@ -155,11 +166,17 @@ export default function PlaylistSelectionDialog({
               </Button>
               <Button
                 color="primary"
-                disabled={!newPlaylistName.trim()}
+                disabled={
+                  !newPlaylistName.trim() ||
+                  createPlaylist.isPending ||
+                  addTrackToPlaylist.isPending
+                }
                 onClick={handleCreatePlaylist}
                 variant="contained"
               >
-                Create & Add
+                {createPlaylist.isPending || addTrackToPlaylist.isPending
+                  ? 'Adding…'
+                  : 'Create & Add'}
               </Button>
             </Box>
           </Box>

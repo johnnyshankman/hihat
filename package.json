@@ -1,7 +1,7 @@
 {
   "description": "The minimalist offline music library player for macOS",
   "license": "MIT",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "name": "hihat",
   "main": "./.erb/dll/main.bundle.dev.js",
   "scripts": {
@@ -70,6 +70,7 @@
     "testPathIgnorePatterns": [
       "release/app/dist",
       ".erb/dll",
+      ".claude/",
       "e2e/"
     ],
     "transform": {
@@ -83,6 +84,7 @@
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
     "@regosen/gapless-5": "github:johnnyshankman/Gapless-5",
+    "@tanstack/react-query": "^5.100.8",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.23",
     "electron-debug": "^4.1.0",
@@ -114,8 +116,8 @@
     "@types/react-dom": "^19.0.4",
     "@types/react-test-renderer": "^19.0.0",
     "@types/rsync": "^0.4.36",
-    "@types/uuid": "^10.0.0",
     "@types/terser-webpack-plugin": "^5.0.4",
+    "@types/uuid": "^10.0.0",
     "@types/webpack-bundle-analyzer": "^4.6.0",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",

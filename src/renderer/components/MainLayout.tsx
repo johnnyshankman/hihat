@@ -2,11 +2,8 @@ import { useEffect } from 'react';
 import { styled } from '@mui/material/styles';
 import { Box, Drawer, Typography, CssBaseline } from '@mui/material';
 import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
-import {
-  useLibraryStore,
-  useSettingsAndPlaybackStore,
-  useUIStore,
-} from '../stores';
+import { useLibraryStore, useUIStore } from '../stores';
+import { useLibraryReady, useSettings } from '../queries';
 import Sidebar from './Sidebar';
 import MainContent from './MainContent';
 import Settings from './Settings';
@@ -48,8 +45,21 @@ const PlayerWrapper = styled('div')(() => ({
 }));
 
 export default function MainLayout() {
-  const isLoading = useLibraryStore((state) => state.isLoading);
-  const theme = useSettingsAndPlaybackStore((state) => state.theme);
+  const { isLoading, isError, error } = useLibraryReady();
+  const theme = useSettings().data?.theme ?? 'dark';
+  const showNotification = useUIStore((state) => state.showNotification);
+
+  // Surface a query error as a toast once. The query layer also stays
+  // in error state until the user re-triggers, but the splash unblocks
+  // so the user can navigate to Settings and re-scan.
+  useEffect(() => {
+    if (isError && error) {
+      showNotification(
+        `Failed to load library: ${error.message ?? 'unknown error'}`,
+        'error',
+      );
+    }
+  }, [isError, error, showNotification]);
   const settingsOpen = useUIStore((state) => state.settingsOpen);
   const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
@@ -60,19 +70,12 @@ export default function MainLayout() {
   // reuse it and accept the dep — Zustand action references are stable
   // so the effect still only mounts once.
   useEffect(() => {
-    const unsubToggleSidebar = window.electron.ipcRenderer.on(
-      'ui:toggleSidebar',
-      () => {
-        // toggleSidebar is not used in JSX so it actually saves overhead to pull it in during runtime
-        useUIStore.getState().toggleSidebar();
-      },
-    );
-    const unsubOpenSettings = window.electron.ipcRenderer.on(
-      'ui:openSettings',
-      () => {
-        setSettingsOpen(true);
-      },
-    );
+    const unsubToggleSidebar = window.electron.ui.onToggleSidebar(() => {
+      useUIStore.getState().toggleSidebar();
+    });
+    const unsubOpenSettings = window.electron.ui.onOpenSettings(() => {
+      setSettingsOpen(true);
+    });
     return () => {
       unsubToggleSidebar();
       unsubOpenSettings();

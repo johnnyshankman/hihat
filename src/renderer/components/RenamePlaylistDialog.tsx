@@ -7,7 +7,7 @@ import {
   TextField,
   Button,
 } from '@mui/material';
-import { useLibraryStore } from '../stores';
+import { usePlaylists, useUpdatePlaylist } from '../queries';
 
 interface RenamePlaylistDialogProps {
   open: boolean;
@@ -25,33 +25,26 @@ export default function RenamePlaylistDialog({
   // Local state for the input - isolated from parent
   const [name, setName] = useState(initialName);
 
-  // Reinitialize all stale fields on open.
-  // Needed because dialogs purposely never unmount and just toggle visibility.
-  // They do this to ensure enter and exit animations are not cut off.
+  const { data: playlists } = usePlaylists();
+  const updatePlaylist = useUpdatePlaylist();
+
+  // Reinitialize the input on open / when the target playlist changes.
+  // Same reason as CreatePlaylistDialog: don't include the mutation
+  // object in the deps — its reference churns every render and would
+  // reset the input out from under the user's typing.
   useEffect(() => {
-    if (open) {
-      setName(initialName);
-    }
+    if (open) setName(initialName);
   }, [open, initialName]);
 
   const handleConfirm = async () => {
-    if (playlistId && name.trim()) {
-      try {
-        // Get the playlist directly from the store
-        const { playlists } = useLibraryStore.getState();
-        const playlist = playlists.find((p) => p.id === playlistId);
-
-        if (playlist) {
-          const updatedPlaylist = {
-            ...playlist,
-            name: name.trim(),
-          };
-          await useLibraryStore.getState().updatePlaylist(updatedPlaylist);
-        }
-        onClose();
-      } catch (error) {
-        console.error('Error renaming playlist:', error);
-      }
+    if (!playlistId || !name.trim()) return;
+    const playlist = playlists?.find((p) => p.id === playlistId);
+    if (!playlist) return;
+    try {
+      await updatePlaylist.mutateAsync({ ...playlist, name: name.trim() });
+      onClose();
+    } catch {
+      // Hook already surfaced the error toast.
     }
   };
 
@@ -87,10 +80,11 @@ export default function RenamePlaylistDialog({
         </Button>
         <Button
           data-testid="confirm-rename-button"
+          disabled={updatePlaylist.isPending || !name.trim()}
           disableElevation
           onClick={handleConfirm}
         >
-          Rename
+          {updatePlaylist.isPending ? 'Renaming…' : 'Rename'}
         </Button>
       </DialogActions>
     </Dialog>
