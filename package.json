@@ -70,6 +70,7 @@
     "testPathIgnorePatterns": [
       "release/app/dist",
       ".erb/dll",
+      ".claude/",
       "e2e/"
     ],
     "transform": {
