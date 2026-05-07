@@ -833,30 +833,35 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // is playing. Installed lazily on first player creation (no
         // module-load side effects), the only legitimate consumer of
         // player.getTracks()/getIndex() outside the dev-only invariant
-        // assert. Read-only, no mutation.
-        // eslint-disable-next-line no-underscore-dangle
-        (
-          window as unknown as Record<string, unknown>
-        ).__hihat_e2e_getPlayerState = () => {
-          const s = get();
-          const p = s.player ?? player;
-          const urlToFilePath = (url: string | undefined): string | null => {
-            if (!url) return null;
-            return decodeURIComponent(
-              url.replace('hihat-audio://getfile/', ''),
-            );
+        // assert. Read-only, no mutation. Gated behind TEST_MODE
+        // (forwarded by webpack EnvironmentPlugin) so the assignment
+        // and closure dead-strip from dev and packaged production
+        // builds.
+        if (process.env.TEST_MODE === 'true') {
+          // eslint-disable-next-line no-underscore-dangle
+          (
+            window as unknown as Record<string, unknown>
+          ).__hihat_e2e_getPlayerState = () => {
+            const s = get();
+            const p = s.player ?? player;
+            const urlToFilePath = (url: string | undefined): string | null => {
+              if (!url) return null;
+              return decodeURIComponent(
+                url.replace('hihat-audio://getfile/', ''),
+              );
+            };
+            const tracks = p.getTracks();
+            const index = p.getIndex();
+            return {
+              storeCurrentTrackFilePath: s.currentTrack?.filePath ?? null,
+              storePreloadedTrackFilePath: s.preloadedTrack?.filePath ?? null,
+              storePreloadReady: s.preloadReady,
+              playerQueueLength: tracks.length,
+              playerIndex: index,
+              playerCurrentFilePath: urlToFilePath(tracks[index]),
+            };
           };
-          const tracks = p.getTracks();
-          const index = p.getIndex();
-          return {
-            storeCurrentTrackFilePath: s.currentTrack?.filePath ?? null,
-            storePreloadedTrackFilePath: s.preloadedTrack?.filePath ?? null,
-            storePreloadReady: s.preloadReady,
-            playerQueueLength: tracks.length,
-            playerIndex: index,
-            playerCurrentFilePath: urlToFilePath(tracks[index]),
-          };
-        };
+        }
 
         // Seed singleMode from the store's repeatMode so the player
         // reflects state on first construction, not only after a toggle.
