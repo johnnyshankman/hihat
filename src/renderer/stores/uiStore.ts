@@ -62,12 +62,13 @@ const useUIStore = create<UIStore>((set) => ({
 
 // E2E diagnostic hook: lets Playwright specs seed notifications and
 // toggle the panel without driving real user actions. Gated behind
-// TEST_MODE (forwarded by webpack EnvironmentPlugin) so the entire
-// branch dead-strips from dev and packaged production builds.
+// `window.electron.isTestMode` (set by preload from the main-process
+// runtime env) so the assignment never fires in dev or production —
+// only when the app was launched with NODE_ENV=test or TEST_MODE=true.
 // Mirrors the `__hihat_e2e_getPlayerState` pattern in
 // settingsAndPlaybackStore — new E2E-only window hooks should follow
 // the same gate.
-if (typeof window !== 'undefined' && process.env.TEST_MODE === 'true') {
+if (typeof window !== 'undefined' && window.electron?.isTestMode) {
   (window as unknown as Record<string, unknown>).HIHAT_E2E_UI_STORE =
     useUIStore;
 }

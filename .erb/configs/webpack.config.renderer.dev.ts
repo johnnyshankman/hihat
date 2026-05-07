@@ -141,11 +141,6 @@ const configuration: webpack.Configuration = {
      */
     new webpack.EnvironmentPlugin({
       NODE_ENV: 'development',
-      // Forwards Playwright's TEST_MODE env var into the renderer bundle so
-      // E2E-only window hooks (HIHAT_E2E_UI_STORE, __hihat_e2e_getPlayerState)
-      // can gate on `process.env.TEST_MODE === 'true'`. Default 'false' makes
-      // the gate dead-strip in normal dev/prod builds.
-      TEST_MODE: 'false',
     }),
 
     new webpack.LoaderOptionsPlugin({

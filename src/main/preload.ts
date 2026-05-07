@@ -14,6 +14,19 @@ import { MetadataToWrite, Track } from '../types/dbTypes';
  * Exposes secure IPC wrapper functions to the renderer process
  */
 const electronHandler = {
+  /**
+   * True when the app was launched in E2E test mode (Playwright sets
+   * NODE_ENV=test and TEST_MODE=true via e2e/electron-helper.ts). The
+   * renderer reads this via `window.electron.isTestMode` to gate the
+   * E2E-only diagnostic window hooks (HIHAT_E2E_UI_STORE,
+   * __hihat_e2e_getPlayerState). Captured at preload-load time from the
+   * main process env, frozen on the contextBridge — renderer code can't
+   * mutate it, and an attacker who can run renderer JS can't forge it.
+   * Mirrors the `isTest` check in main.ts.
+   */
+  isTestMode:
+    process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true',
+
   // Library management functions
   library: {
     /**

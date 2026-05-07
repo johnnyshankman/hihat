@@ -833,11 +833,12 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // is playing. Installed lazily on first player creation (no
         // module-load side effects), the only legitimate consumer of
         // player.getTracks()/getIndex() outside the dev-only invariant
-        // assert. Read-only, no mutation. Gated behind TEST_MODE
-        // (forwarded by webpack EnvironmentPlugin) so the assignment
-        // and closure dead-strip from dev and packaged production
-        // builds.
-        if (process.env.TEST_MODE === 'true') {
+        // assert. Read-only, no mutation. Gated behind
+        // `window.electron.isTestMode` (set by preload from the
+        // main-process runtime env) so the assignment never fires in
+        // dev or production — only when the app was launched with
+        // NODE_ENV=test or TEST_MODE=true.
+        if (window.electron?.isTestMode) {
           // eslint-disable-next-line no-underscore-dangle
           (
             window as unknown as Record<string, unknown>

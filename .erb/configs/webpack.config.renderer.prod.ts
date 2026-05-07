@@ -114,11 +114,6 @@ const configuration: webpack.Configuration = {
     new webpack.EnvironmentPlugin({
       NODE_ENV: 'production',
       DEBUG_PROD: false,
-      // Forwards Playwright's TEST_MODE env var into the renderer bundle so
-      // E2E-only window hooks (HIHAT_E2E_UI_STORE, __hihat_e2e_getPlayerState)
-      // can gate on `process.env.TEST_MODE === 'true'`. Default 'false' makes
-      // the gate dead-strip from packaged production builds.
-      TEST_MODE: 'false',
     }),
 
     new MiniCssExtractPlugin({
