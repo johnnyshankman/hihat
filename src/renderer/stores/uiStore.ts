@@ -60,4 +60,12 @@ const useUIStore = create<UIStore>((set) => ({
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 }));
 
+// E2E diagnostic hook: lets Playwright specs seed notifications and
+// toggle the panel without driving real user actions. Mirrors the
+// `__hihat_e2e_getPlayerState` pattern in settingsAndPlaybackStore.
+if (typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).HIHAT_E2E_UI_STORE =
+    useUIStore;
+}
+
 export default useUIStore;

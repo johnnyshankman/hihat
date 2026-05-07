@@ -269,7 +269,7 @@ export default function NotificationSystem() {
               data-testid="notification-item"
               sx={{
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-start',
                 gap: '8px',
                 px: '8px',
                 py: '6px',
@@ -301,11 +301,8 @@ export default function NotificationSystem() {
                   fontSize: '13px',
                   color: 'text.primary',
                   flex: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  overflowWrap: 'anywhere',
                 }}
-                title={notification.message}
                 variant="body2"
               >
                 {notification.message}

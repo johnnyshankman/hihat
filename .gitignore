@@ -31,6 +31,10 @@ npm-debug.log.*
 # Claude Code settings
 .claude
 
+# Ralph workflow (autonomous agent loop) — runner files, per-run state, and PRD drafts live locally only
+scripts/ralph/
+tasks/
+
 # E2E Testing
 e2e/screenshots/
 playwright-report/
