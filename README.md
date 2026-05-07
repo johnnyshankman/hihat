@@ -56,7 +56,7 @@
 
 ## About The Project
 
-**hihat** is a free, minimalist, open-source music player for macOS. It plays every major audio format with true gapless playback, manages libraries of any size, and comes with with a sleek responsive interface. 
+**hihat** is a free, minimalist, open-source music player for macOS. It plays every major audio format with true gapless playback, manages libraries of any size, and comes with a sleek responsive interface. 
 
 No ads, no accounts, no internet — just your music.
 
@@ -337,9 +337,9 @@ See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full
 * [![Typescript][Typescript.js]][Typescript-url]
 * [![Google Material UI][MaterialUI.js]][MaterialUI-url]
 * [![zustand][zustand.js]][zustand-url]
-* [![Tailwind][Tailwind.js]][Tailwind-url]
-* [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
+* [![TanStack Query][TanStackQuery.js]][TanStackQuery-url]
 * [![TanStack Table][TanStackTable.js]][TanStackTable-url]
+* [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
 * [![Gapless 5][Gapless5.js]][Gapless5-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -436,8 +436,6 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [React-url]: https://reactjs.org/
 [Electron.js]: https://img.shields.io/badge/Electron-20232A?style=for-the-badge&logo=electron&logoColor=61DAFB
 [Electron-url]: https://www.electronjs.org/
-[Tailwind.js]: https://img.shields.io/badge/Tailwind-20232A?style=for-the-badge&logo=tailwindcss&logoColor=61DAFB
-[Tailwind-url]: https://tailwindcss.com/
 [ElectronReactBoilerplate.js]: https://img.shields.io/badge/ElectronReactBoilerplate-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
 [ElectronReactBoilerplate-url]: https://electron-react-boilerplate.js.org/
 [MusicMetadata.js]: https://img.shields.io/badge/MusicMetadata-20232A?style=for-the-badge&logo=javascript&logoColor=61DAFB
@@ -448,6 +446,8 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [Typescript-url]: https://typescriptlang.org
 [zustand.js]: https://img.shields.io/badge/Zustand-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
 [zustand-url]: https://github.com/pmndrs/zustand
+[TanStackQuery.js]: https://img.shields.io/badge/TanStack_Query-20232A?style=for-the-badge&logo=reactquery&logoColor=FF4154
+[TanStackQuery-url]: https://tanstack.com/query
 [TanStackTable.js]: https://img.shields.io/badge/TanStack_Table-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
 [TanStackTable-url]: https://tanstack.com/table
 [Gapless5.js]: https://img.shields.io/badge/Gapless5-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
