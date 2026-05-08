@@ -542,8 +542,14 @@ export default function Library() {
   }, [lastViewedTrackId, tracks.length, scrollToTrackWhenReady]);
 
   // useMemo: stable identity for tanstack's internal row-model memoization
-  // and avoids re-allocating column defs each render. Empty deps = once.
-  const columns = useMemo(() => getCommonColumnDefs(), []);
+  // and avoids re-allocating column defs each render. The Artist column's
+  // comparator depends on `sortArtistByAlbumArtist` so the table re-sorts
+  // when the toggle flips.
+  const sortArtistByAlbumArtist = settings?.sortArtistByAlbumArtist ?? true;
+  const columns = useMemo(
+    () => getCommonColumnDefs({ sortArtistByAlbumArtist }),
+    [sortArtistByAlbumArtist],
+  );
 
   // useMemo: O(n) filter + map over potentially thousands of tracks.
   const data = useMemo<TableData[]>(() => {

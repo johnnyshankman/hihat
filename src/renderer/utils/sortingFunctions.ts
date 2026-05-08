@@ -59,6 +59,50 @@ export function sortByArtist(
 }
 
 /**
+ * Sort tracks by album-artist semantics with fallback to raw artist when
+ * albumArtist is empty. Used for the Artist column when the
+ * `sortArtistByAlbumArtist` setting is on, so featured-artist tracks stay
+ * grouped under their album artist instead of drifting to a separate row.
+ */
+export function sortByArtistSmart(
+  trackA: TrackWithOptionalFields,
+  trackB: TrackWithOptionalFields,
+  isDescending: boolean,
+): number {
+  // Primary key: prefer albumArtist, fall back to raw artist tag.
+  // Normalized identically to the other artist comparators.
+  const primaryA = trackA.albumArtist || trackA.artist || '';
+  const primaryB = trackB.albumArtist || trackB.artist || '';
+  const normalizedArtistA = primaryA.toLowerCase().replace(/^the /, '');
+  const normalizedArtistB = primaryB.toLowerCase().replace(/^the /, '');
+
+  // Get album and track values
+  const albumA = trackA.album?.toLowerCase() || '';
+  const albumB = trackB.album?.toLowerCase() || '';
+  const trackANum = trackA.trackNumber ?? null;
+  const trackBNum = trackB.trackNumber ?? null;
+
+  // Compare primary keys
+  if (normalizedArtistA < normalizedArtistB) return isDescending ? 1 : -1;
+  if (normalizedArtistA > normalizedArtistB) return isDescending ? -1 : 1;
+
+  // If primary keys are the same, compare albums
+  if (albumA < albumB) return isDescending ? 1 : -1;
+  if (albumA > albumB) return isDescending ? -1 : 1;
+
+  // If albums are the same, compare track numbers
+  if (trackANum === null && trackBNum !== null) return isDescending ? 1 : -1;
+  if (trackANum !== null && trackBNum === null) return isDescending ? -1 : 1;
+  if (trackANum !== null && trackBNum !== null) {
+    if (trackANum < trackBNum) return isDescending ? 1 : -1;
+    if (trackANum > trackBNum) return isDescending ? -1 : 1;
+  }
+
+  // If everything is equal, return 0
+  return 0;
+}
+
+/**
  * Sort tracks by album artist, then album, then track number
  */
 export function sortByAlbumArtist(
@@ -225,10 +269,16 @@ export function sortByLastPlayed(
 }
 
 /**
- * Get the appropriate sorting function based on the field
+ * Get the appropriate sorting function based on the field.
+ *
+ * The optional `opts.sortArtistByAlbumArtist` flag swaps the Artist column's
+ * comparator from raw-artist semantics to the smart album-artist-with-fallback
+ * comparator. Pass through the current Settings value so the Artist column,
+ * the next/prev-track utilities, and any other consumer agree on the order.
  */
 export function getSortingFunction(
   field: string,
+  opts?: { sortArtistByAlbumArtist?: boolean },
 ): (
   a: TrackWithOptionalFields,
   b: TrackWithOptionalFields,
@@ -236,7 +286,7 @@ export function getSortingFunction(
 ) => number {
   switch (field) {
     case 'artist':
-      return sortByArtist;
+      return opts?.sortArtistByAlbumArtist ? sortByArtistSmart : sortByArtist;
     case 'albumArtist':
       return sortByAlbumArtist;
     case 'album':

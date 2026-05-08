@@ -2,6 +2,7 @@ import { type ColumnDef, type Row } from '@tanstack/react-table';
 import {
   sortByTitle,
   sortByArtist,
+  sortByArtistSmart,
   sortByAlbumArtist,
   sortByAlbum,
   sortByGenre,
@@ -45,8 +46,14 @@ export interface TableData {
   trackNumber: number | null;
 }
 
-// Define common column definitions for TanStack Table
-export const getCommonColumnDefs = (): ColumnDef<TableData>[] => [
+// Define common column definitions for TanStack Table.
+// `sortArtistByAlbumArtist` toggles the Artist column's comparator between
+// raw-artist semantics and album-artist-with-fallback semantics. Pass the
+// current Settings value so callers stay in sync with the next/prev-track
+// utilities (which read the same setting via getSettingsSnapshot).
+export const getCommonColumnDefs = (opts?: {
+  sortArtistByAlbumArtist?: boolean;
+}): ColumnDef<TableData>[] => [
   {
     accessorKey: 'title',
     header: 'Title',
@@ -58,8 +65,11 @@ export const getCommonColumnDefs = (): ColumnDef<TableData>[] => [
     accessorKey: 'artist',
     header: 'Artist',
     size: 200,
-    sortingFn: (rowA: Row<TableData>, rowB: Row<TableData>) =>
-      sortByArtist(rowA.original, rowB.original, false),
+    sortingFn: opts?.sortArtistByAlbumArtist
+      ? (rowA: Row<TableData>, rowB: Row<TableData>) =>
+          sortByArtistSmart(rowA.original, rowB.original, false)
+      : (rowA: Row<TableData>, rowB: Row<TableData>) =>
+          sortByArtist(rowA.original, rowB.original, false),
   },
   {
     accessorKey: 'albumArtist',

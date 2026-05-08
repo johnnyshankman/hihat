@@ -7,6 +7,7 @@ import {
   sortByAlbum,
   sortByAlbumArtist,
   sortByArtist,
+  sortByArtistSmart,
   sortByDateAdded,
   sortByDuration,
   sortByGenre,
@@ -124,6 +125,114 @@ describe('sortByAlbumArtist', () => {
   });
 });
 
+describe('sortByArtistSmart', () => {
+  test('orders by albumArtist when both fields populated and differ', () => {
+    // Toggle-on path: featured-artist track stays grouped with the album.
+    const featured = t({
+      artist: 'Kendrick Lamar feat. SZA',
+      albumArtist: 'Kendrick Lamar',
+      album: 'Mr. Morale',
+      trackNumber: 1,
+    });
+    const sameAlbum = t({
+      artist: 'Kendrick Lamar',
+      albumArtist: 'Kendrick Lamar',
+      album: 'Mr. Morale',
+      trackNumber: 2,
+    });
+    const otherAlbumArtist = t({
+      artist: 'Frank Ocean',
+      albumArtist: 'Frank Ocean',
+      album: 'Blonde',
+      trackNumber: 1,
+    });
+
+    // 'frank ocean' < 'kendrick lamar', so Frank sorts first.
+    expect(sign(sortByArtistSmart(otherAlbumArtist, featured, false))).toBe(-1);
+    // Within Kendrick group, track 1 (featured) precedes track 2.
+    expect(sign(sortByArtistSmart(featured, sameAlbum, false))).toBe(-1);
+  });
+
+  test('falls back to raw artist when albumArtist is empty', () => {
+    // No albumArtist on either track — should sort by raw artist tag.
+    const a = t({ artist: 'Aardvark' });
+    const b = t({ artist: 'Zebra' });
+    expect(sign(sortByArtistSmart(a, b, false))).toBe(-1);
+    expect(sign(sortByArtistSmart(b, a, false))).toBe(1);
+  });
+
+  test('one track missing albumArtist falls back to artist for that one', () => {
+    // First key resolves to 'beatles' for both via fallback / direct.
+    const fallback = t({ artist: 'Beatles', album: 'X', trackNumber: 1 });
+    const direct = t({ albumArtist: 'Beatles', album: 'X', trackNumber: 2 });
+    expect(sign(sortByArtistSmart(fallback, direct, false))).toBe(-1);
+  });
+
+  test('strips leading "The " from primary key', () => {
+    const beatles = t({ albumArtist: 'The Beatles' });
+    const cure = t({ artist: 'Cure' });
+    expect(sign(sortByArtistSmart(beatles, cure, false))).toBe(-1);
+  });
+
+  test('descending flips the sign', () => {
+    const a = t({ albumArtist: 'A' });
+    const b = t({ albumArtist: 'Z' });
+    expect(sign(sortByArtistSmart(a, b, true))).toBe(1);
+    expect(sign(sortByArtistSmart(b, a, true))).toBe(-1);
+  });
+
+  test('ties on primary key break by album then trackNumber', () => {
+    const a = t({ albumArtist: 'Same', album: 'A', trackNumber: 2 });
+    const b = t({ albumArtist: 'Same', album: 'A', trackNumber: 5 });
+    expect(sign(sortByArtistSmart(a, b, false))).toBe(-1);
+
+    const c = t({ albumArtist: 'Same', album: 'A', trackNumber: 1 });
+    const d = t({ albumArtist: 'Same', album: 'B', trackNumber: 1 });
+    expect(sign(sortByArtistSmart(c, d, false))).toBe(-1);
+  });
+
+  test('toggle-off path matches sortByArtist behavior bit-for-bit', () => {
+    // Acceptance criterion (c): toggle off => behavior identical to
+    // pre-feature sortByArtist. Verified at the dispatch level via
+    // getSortingFunction; here we just confirm same outputs across the
+    // mixed dataset that exposes the divergence vs sortByArtistSmart.
+    const tracks: TrackLike[] = [
+      t({
+        artist: 'Kendrick Lamar feat. SZA',
+        albumArtist: 'Kendrick Lamar',
+        album: 'Mr. Morale',
+        trackNumber: 1,
+      }),
+      t({
+        artist: 'Kendrick Lamar',
+        albumArtist: 'Kendrick Lamar',
+        album: 'Mr. Morale',
+        trackNumber: 2,
+      }),
+      t({
+        artist: 'Frank Ocean',
+        albumArtist: 'Frank Ocean',
+        album: 'Blonde',
+        trackNumber: 1,
+      }),
+    ];
+
+    const offFn = getSortingFunction('artist', {
+      sortArtistByAlbumArtist: false,
+    });
+    const offCases: Array<[number, number]> = [
+      [0, 1],
+      [0, 2],
+      [1, 2],
+    ];
+    offCases.forEach(([i, j]) => {
+      expect(sign(offFn(tracks[i], tracks[j], false))).toBe(
+        sign(sortByArtist(tracks[i], tracks[j], false)),
+      );
+    });
+  });
+});
+
 describe('sortByAlbum', () => {
   test('orders by album', () => {
     const a = t({ album: 'A' });
@@ -234,5 +343,30 @@ describe('getSortingFunction', () => {
 
   test('unknown field falls back to sortByTitle', () => {
     expect(getSortingFunction('nonexistent')).toBe(sortByTitle);
+  });
+
+  test('"artist" with sortArtistByAlbumArtist:true returns sortByArtistSmart', () => {
+    expect(
+      getSortingFunction('artist', { sortArtistByAlbumArtist: true }),
+    ).toBe(sortByArtistSmart);
+  });
+
+  test('"artist" with sortArtistByAlbumArtist:false returns sortByArtist', () => {
+    expect(
+      getSortingFunction('artist', { sortArtistByAlbumArtist: false }),
+    ).toBe(sortByArtist);
+  });
+
+  test('"artist" with no opts returns sortByArtist (raw-artist default)', () => {
+    expect(getSortingFunction('artist')).toBe(sortByArtist);
+  });
+
+  test('opts only affects the artist field, not albumArtist', () => {
+    expect(
+      getSortingFunction('albumArtist', { sortArtistByAlbumArtist: true }),
+    ).toBe(sortByAlbumArtist);
+    expect(
+      getSortingFunction('albumArtist', { sortArtistByAlbumArtist: false }),
+    ).toBe(sortByAlbumArtist);
   });
 });
