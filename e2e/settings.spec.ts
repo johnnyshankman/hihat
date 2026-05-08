@@ -31,6 +31,59 @@ test.describe('Settings', () => {
     await TestHelpers.closeApp(app);
   });
 
+  test('should render Sort Artist by Album Artist toggle', async () => {
+    const { app, page } = await TestHelpers.launchApp();
+
+    await TestHelpers.navigateToView(page, 'settings');
+
+    // Section heading
+    const sortingHeading = page.getByRole('heading', { name: 'Sorting' });
+    await expect(sortingHeading).toBeVisible();
+
+    // Helper text (substring match for tolerance to whitespace)
+    await expect(
+      page.getByText(/groups tracks under their album artist/i),
+    ).toBeVisible();
+
+    // Toggle + label
+    const toggle = page.locator(
+      '[data-testid="sort-artist-by-album-artist-toggle"]',
+    );
+    await expect(toggle).toBeVisible();
+    await expect(page.getByLabel('Sort Artist by Album Artist')).toBeVisible();
+
+    // Default is ON for fresh installs / migrated rows.
+    expect(await toggle.isChecked()).toBe(true);
+
+    // Flip OFF and verify it persists in settings IPC.
+    await toggle.click();
+    await page.waitForTimeout(300);
+    expect(await toggle.isChecked()).toBe(false);
+
+    const persistedAfterOff = await page.evaluate(() =>
+      (window as any).electron.settings
+        .get()
+        .then((s: any) => s.sortArtistByAlbumArtist),
+    );
+    expect(persistedAfterOff).toBe(false);
+
+    // Flip back ON.
+    await toggle.click();
+    await page.waitForTimeout(300);
+    expect(await toggle.isChecked()).toBe(true);
+
+    const persistedAfterOn = await page.evaluate(() =>
+      (window as any).electron.settings
+        .get()
+        .then((s: any) => s.sortArtistByAlbumArtist),
+    );
+    expect(persistedAfterOn).toBe(true);
+
+    await TestHelpers.takeScreenshot(page, 'settings-sorting-section');
+
+    await TestHelpers.closeApp(app);
+  });
+
   test('should toggle dark mode theme', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
