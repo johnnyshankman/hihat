@@ -42,7 +42,7 @@ test.describe('Settings', () => {
 
     // Helper text (substring match for tolerance to whitespace)
     await expect(
-      page.getByText(/featured-artist tracks grouped with their album/i),
+      page.getByText(/sort itself by Album Artist instead/i),
     ).toBeVisible();
 
     // Toggle + label

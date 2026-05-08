@@ -795,8 +795,10 @@ export default function Settings({ onClose }: SettingsProps) {
             sx={{ display: 'block', mb: 2 }}
             variant="caption"
           >
-            This keeps multi-artist tracks grouped with their album when sorting
-            by Artist.
+            This causes the Artist column to sort itself by Album Artist
+            instead. This keeps multi-artist songs in their original
+            album&apos;s order, instead of grouping them at the end of the
+            album.
           </Typography>
           <FormGroup>
             <FormControlLabel
