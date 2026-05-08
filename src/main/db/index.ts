@@ -206,6 +206,15 @@ function runMigrations(): void {
     // Migration 8: Add columnOrder column to settings table if it doesn't exist
     addColumnIfNotExists('settings', 'columnOrder', 'TEXT');
 
+    // Migration 10: Add sortArtistByAlbumArtist column to settings table.
+    // Stored as INTEGER (0/1); existing rows receive 1 below so upgrades
+    // default to album-artist sort, matching the new install default.
+    addColumnIfNotExists(
+      'settings',
+      'sortArtistByAlbumArtist',
+      'INTEGER NOT NULL DEFAULT 1',
+    );
+
     // Migration 9: Add new metadata columns to tracks table
     addColumnIfNotExists('tracks', 'totalTracks', 'INTEGER');
     addColumnIfNotExists('tracks', 'discNumber', 'INTEGER');
@@ -361,13 +370,14 @@ function initDefaultSettings(): void {
           columnWidths: null,
           librarySorting: null,
           columnOrder: null,
+          sortArtistByAlbumArtist: true,
         };
 
         // Insert default settings
         db.prepare(
           `
-          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder, sortArtistByAlbumArtist)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         ).run(
           defaultSettings.id,
@@ -379,6 +389,7 @@ function initDefaultSettings(): void {
           defaultSettings.columnWidths,
           defaultSettings.librarySorting,
           defaultSettings.columnOrder,
+          defaultSettings.sortArtistByAlbumArtist ? 1 : 0,
         );
       }
     } catch (error) {
@@ -413,13 +424,14 @@ function initDefaultSettings(): void {
         columnWidths: null,
         librarySorting: null,
         columnOrder: null,
+        sortArtistByAlbumArtist: true,
       };
 
       // Insert default settings
       db.prepare(
         `
-        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder, sortArtistByAlbumArtist)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       ).run(
         defaultSettings.id,
@@ -431,6 +443,7 @@ function initDefaultSettings(): void {
         defaultSettings.columnWidths,
         defaultSettings.librarySorting,
         defaultSettings.columnOrder,
+        defaultSettings.sortArtistByAlbumArtist ? 1 : 0,
       );
     }
   } catch (outerError) {
@@ -1454,6 +1467,7 @@ export function getSettings(): Settings {
         columnWidths: null,
         librarySorting: null,
         columnOrder: null,
+        sortArtistByAlbumArtist: true,
       };
     }
 
@@ -1519,6 +1533,11 @@ export function getSettings(): Settings {
         columnWidths: parsedColumnWidths,
         librarySorting: parsedLibrarySorting,
         columnOrder: parsedColumnOrder2,
+        sortArtistByAlbumArtist:
+          (newSettings as any).sortArtistByAlbumArtist === undefined ||
+          (newSettings as any).sortArtistByAlbumArtist === null
+            ? true
+            : Boolean((newSettings as any).sortArtistByAlbumArtist),
       };
     }
 
@@ -1566,6 +1585,11 @@ export function getSettings(): Settings {
       columnWidths: parsedColumnWidths,
       librarySorting: parsedLibrarySorting,
       columnOrder: parsedColumnOrder,
+      sortArtistByAlbumArtist:
+        (settings as any).sortArtistByAlbumArtist === undefined ||
+        (settings as any).sortArtistByAlbumArtist === null
+          ? true
+          : Boolean((settings as any).sortArtistByAlbumArtist),
     };
   } catch (error) {
     console.error('Failed to get settings:', error);
@@ -1591,6 +1615,7 @@ export function getSettings(): Settings {
       columnWidths: null,
       librarySorting: null,
       columnOrder: null,
+      sortArtistByAlbumArtist: true,
     };
   }
 }
@@ -1616,7 +1641,8 @@ export function updateSettings(settings: Settings): boolean {
           volume = ?,
           columnWidths = ?,
           librarySorting = ?,
-          columnOrder = ?
+          columnOrder = ?,
+          sortArtistByAlbumArtist = ?
         WHERE id = ?
       `,
         )
@@ -1631,6 +1657,7 @@ export function updateSettings(settings: Settings): boolean {
             ? JSON.stringify(settings.librarySorting)
             : null,
           settings.columnOrder ? JSON.stringify(settings.columnOrder) : null,
+          settings.sortArtistByAlbumArtist ? 1 : 0,
           settings.id,
         );
 
