@@ -109,10 +109,8 @@ export function useDeletePlaylist() {
       );
       return { prev };
     },
-    onSuccess: (_data, id) => {
-      const name = qc
-        .getQueryData<Playlist[]>(queryKeys.playlists)
-        ?.find((p) => p.id === id)?.name;
+    onSuccess: (_data, id, ctx) => {
+      const name = ctx?.prev?.find((p) => p.id === id)?.name;
       useUIStore
         .getState()
         .showNotification(`Playlist "${name ?? id}" deleted`, 'success');
