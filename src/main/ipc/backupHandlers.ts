@@ -6,154 +6,96 @@
  *   - registers via `ipcMain.on('menu-backup-library', …)`, not
  *     `ipcMain.handle`
  *   - streams progress to the renderer via `event.reply()` repeatedly
- *     over the lifetime of the rsync subprocess (counting → scanning →
- *     transferring → success/error), rather than returning a single
- *     typed response
- *   - parses rsync's stdout (~250 lines below) to derive structured
- *     progress events, which has nothing to do with the typed
- *     invoke-handler registry in `handlers.ts`
+ *     over the lifetime of the rsync subprocess (planning → transferring
+ *     → success/error), rather than returning a single typed response
+ *
+ * Two phases:
+ *   1. Plan — walk source and destination to count files that need to
+ *      transfer (matches --ignore-existing semantics). Knowing the
+ *      denominator up front is what lets the renderer show smooth
+ *      progress in phase 2.
+ *   2. Transfer — run rsync with `--out-format='%i %n'` so each
+ *      transferred entry is one stable, version-independent line on
+ *      stdout. The `%i` itemize-changes string lets us tell files apart
+ *      from directories that rsync creates along the way (rsync emits a
+ *      line for each created directory too — counting those would blow
+ *      past the file-count denominator we computed in phase 1). Emit
+ *      progress events throttled to 250ms. This avoids parsing rsync's
+ *      verbose-mode output, whose format differs across rsync 2.x,
+ *      rsync 3.x, and OpenRsync (the macOS Sequoia default).
  *
  * Anything else that needs the same long-running, progress-streaming
  * shape belongs in its own similar file/module — not in `handlers.ts`.
  */
 
 import path from 'path';
+import { promises as fsp } from 'fs';
 import type { IpcMainEvent } from 'electron';
 import Rsync from 'rsync';
 import * as db from '../db';
 
-// Define interfaces for parsed output types
-interface BaseOutput {
-  type: string;
-}
-
-interface FileOutput extends BaseOutput {
-  type: 'file';
-  currentFile: string;
-}
-
-interface PreparingOutput extends BaseOutput {
-  type: 'preparing';
-  status: string;
-}
-
-interface FilesCountOutput extends BaseOutput {
-  type: 'filesCount';
-  totalFiles: number;
-}
-
-interface ScanningOutput extends BaseOutput {
-  type: 'scanning';
-  filesProcessed: number;
-}
-
-interface ProgressOutput extends BaseOutput {
-  type: 'progress';
-  percent: number;
-  currentTransfer?: number;
-  remaining?: number;
-  total?: number;
-}
-
-interface SpeedOutput extends BaseOutput {
-  type: 'speed';
-  speed: string;
-}
-
-type ParsedOutput =
-  | FileOutput
-  | PreparingOutput
-  | FilesCountOutput
-  | ScanningOutput
-  | ProgressOutput
-  | SpeedOutput
-  | null;
+const PLANNING_EMIT_EVERY_N_FILES = 100;
+const TRANSFER_EMIT_INTERVAL_MS = 250;
 
 /**
- * Parses rsync output to extract useful information
- * @param output - The stdout from rsync
- * @returns Parsed information object or null if not relevant
+ * Walk the source library tree, counting files that don't yet exist at
+ * the destination. Mirrors rsync `--ignore-existing` semantics: presence
+ * of the destination path means "skip", regardless of size or mtime.
+ *
+ * `onChecked` fires every {@link PLANNING_EMIT_EVERY_N_FILES} files so
+ * the renderer can keep the indeterminate progress bar lively rather
+ * than appearing frozen on large libraries.
  */
-const parseRsyncOutput = (output: string): ParsedOutput => {
-  const trimmedOutput = output.trim();
+async function planBackup(
+  libraryPath: string,
+  backupPath: string,
+  onChecked: (totalChecked: number) => void,
+): Promise<{ totalFiles: number; totalChecked: number }> {
+  const state = { totalFiles: 0, totalChecked: 0 };
 
-  // Check if this is a file transfer line with a path
-  if (trimmedOutput.includes('.m4a') || trimmedOutput.includes('.mp3')) {
-    return {
-      type: 'file',
-      currentFile: trimmedOutput,
-    };
-  }
-
-  // Check if this is a file list building line
-  if (trimmedOutput.includes('building file list')) {
-    return {
-      type: 'preparing',
-      status: 'Building file list...',
-    };
-  }
-
-  // Check if this shows number of files to process
-  const filesMatch = trimmedOutput.match(/(\d+) files to consider/);
-  if (filesMatch) {
-    return {
-      type: 'filesCount',
-      totalFiles: parseInt(filesMatch[1], 10),
-    };
-  }
-
-  // Check if this is a progress percentage line
-  const progressMatch = trimmedOutput.match(/(\d+)%/);
-  if (progressMatch) {
-    // Also try to get transfer info if available
-    const transferMatch = trimmedOutput.match(
-      /\(xfer#(\d+), to-check=(\d+)\/(\d+)\)/,
-    );
-    if (transferMatch) {
-      return {
-        type: 'progress',
-        percent: parseInt(progressMatch[1], 10),
-        currentTransfer: parseInt(transferMatch[1], 10),
-        remaining: parseInt(transferMatch[2], 10),
-        total: parseInt(transferMatch[3], 10),
-      };
+  const walk = async (dir: string): Promise<void> => {
+    let entries: import('fs').Dirent[];
+    try {
+      entries = await fsp.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
     }
+    await Promise.all(
+      entries.map(async (entry) => {
+        const sourcePath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          await walk(sourcePath);
+          return;
+        }
+        if (!entry.isFile()) return;
+        const rel = path.relative(libraryPath, sourcePath);
+        const destPath = path.join(backupPath, rel);
+        try {
+          await fsp.access(destPath);
+          // Exists at destination — rsync will skip it.
+        } catch {
+          state.totalFiles += 1;
+        }
+        state.totalChecked += 1;
+        if (state.totalChecked % PLANNING_EMIT_EVERY_N_FILES === 0) {
+          onChecked(state.totalChecked);
+        }
+      }),
+    );
+  };
 
-    return {
-      type: 'progress',
-      percent: parseInt(progressMatch[1], 10),
-    };
-  }
-
-  // Check if this is a speed line
-  const speedMatch = trimmedOutput.match(/(\d+\.\d+)(M|K|G)B\/s/);
-  if (speedMatch) {
-    return {
-      type: 'speed',
-      speed: `${speedMatch[1]} ${speedMatch[2]}B/s`,
-    };
-  }
-
-  // Check if showing X files processed
-  const filesProcessedMatch = trimmedOutput.match(/(\d+) files\.\.\./);
-  if (filesProcessedMatch) {
-    return {
-      type: 'scanning',
-      filesProcessed: parseInt(filesProcessedMatch[1], 10),
-    };
-  }
-
-  return null;
-};
+  await walk(libraryPath);
+  return state;
+}
 
 /**
- * Backup the user's library to the specified directory using rsync
+ * Backup the user's library to the specified directory using rsync.
+ *
  * @param backupPath - Path to backup the library to
  * @param event - IPC event to reply with progress or completion
  */
 const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
   try {
-    // Get user settings for library path
     const settings = await db.getSettings();
     const { libraryPath } = settings;
 
@@ -162,7 +104,6 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
       return;
     }
 
-    // Validate that backup path is not the same as library path
     if (
       backupPath === libraryPath ||
       backupPath.startsWith(libraryPath + path.sep)
@@ -174,25 +115,88 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
       return;
     }
 
-    console.warn('backupLibrary called');
+    // Phase 1: Plan
+    event.reply('backup-library-progress', {
+      phase: 'planning',
+      status: 'Checking files...',
+    });
 
-    // Set up rsync
+    const { totalFiles } = await planBackup(
+      libraryPath,
+      backupPath,
+      (checked) => {
+        event.reply('backup-library-progress', {
+          phase: 'planning',
+          status: `Checking ${checked.toLocaleString()} files...`,
+        });
+      },
+    );
+
+    event.reply('backup-library-progress', {
+      phase: 'planning',
+      totalFiles,
+      status:
+        totalFiles === 0
+          ? 'Already up to date'
+          : `Found ${totalFiles.toLocaleString()} new file${
+              totalFiles === 1 ? '' : 's'
+            } to back up`,
+    });
+
+    if (totalFiles === 0) {
+      event.reply('backup-library-success');
+      return;
+    }
+
+    // Phase 2: Transfer
+    let filesCopied = 0;
+    let lastEmit = 0;
+    let stdoutBuf = '';
+
+    const emitProgress = (currentFile: string, force: boolean) => {
+      const now = Date.now();
+      if (!force && now - lastEmit < TRANSFER_EMIT_INTERVAL_MS) return;
+      lastEmit = now;
+      const progress = Math.min(
+        100,
+        Math.round((filesCopied / totalFiles) * 100),
+      );
+      event.reply('backup-library-progress', {
+        phase: 'transferring',
+        progress,
+        currentFile,
+        currentTransfer: filesCopied,
+        total: totalFiles,
+        remaining: Math.max(0, totalFiles - filesCopied),
+        status: `Copying: ${path.basename(currentFile)}`,
+      });
+    };
+
+    const handleLine = (rawLine: string) => {
+      const line = rawLine.trim();
+      // rsync emits one line per transferred *entry* — files AND
+      // directory creations. Format with --out-format='%i %n' is:
+      // 11 itemize chars + ' ' + path. Position 1 of %i is the entry
+      // type: 'f' (regular file), 'd' (directory), 'L' (symlink), etc.
+      // Only count regular files so the numerator can't overshoot the
+      // file-count denominator from planBackup. Lines too short or with
+      // a non-file type byte are skipped silently.
+      if (line.length < 13 || line.charAt(1) !== 'f') return;
+      const fileName = line.substring(12);
+      filesCopied += 1;
+      const isFirst = filesCopied === 1;
+      const isLast = filesCopied >= totalFiles;
+      emitProgress(fileName, isFirst || isLast);
+    };
+
     const rsync = new Rsync();
-
-    // Track current state
-    let currentFile = '';
-    let filesProcessed = 0;
-    let totalFiles = 0;
-    let phase = 'preparing';
-    let transferSpeed = '';
-
     rsync
-      .set('ignore-existing') // Don't overwrite existing files
-      .flags(['v', 'P', 'r', 'h']) // Verbose, Progress, Recursive, Human-readable
-      .source(libraryPath + path.sep) // Ensure trailing slash to copy contents
+      .set('ignore-existing')
+      .set('out-format', '%i %n')
+      .flags(['r'])
+      .source(libraryPath + path.sep)
       .destination(backupPath);
 
-    // Execute the command
     rsync.execute(
       (error, _code, cmd) => {
         console.warn('rsync command:', cmd);
@@ -203,99 +207,36 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
           return;
         }
 
-        // Backup successful
+        // Flush any buffered partial line that didn't get a trailing newline.
+        if (stdoutBuf.trim()) handleLine(stdoutBuf);
+
+        // Final 100% — guarantees the bar lands at full even if the file
+        // count drifted (e.g. rsync copied directory entries we didn't
+        // count in planBackup).
+        event.reply('backup-library-progress', {
+          phase: 'transferring',
+          progress: 100,
+          currentFile: '',
+          currentTransfer: totalFiles,
+          total: totalFiles,
+          remaining: 0,
+          status: 'Finishing up…',
+        });
+
         event.reply('backup-library-success');
       },
       (stdout) => {
-        const output = stdout.toString();
-
-        console.warn('rsync stdout:', output);
-
-        // Parse output
-        const parsedOutput = parseRsyncOutput(output);
-
-        if (parsedOutput) {
-          switch (parsedOutput.type) {
-            case 'preparing':
-              phase = 'preparing';
-              event.reply('backup-library-progress', {
-                phase,
-                status: 'Preparing backup...',
-              });
-              break;
-
-            case 'filesCount':
-              totalFiles = parsedOutput.totalFiles;
-              event.reply('backup-library-progress', {
-                phase: 'counting',
-                totalFiles,
-                status: `Found ${totalFiles} files to backup`,
-              });
-              break;
-
-            case 'scanning':
-              filesProcessed = parsedOutput.filesProcessed;
-              event.reply('backup-library-progress', {
-                phase: 'scanning',
-                filesProcessed,
-                status: `Scanning files: ${filesProcessed} processed`,
-              });
-              break;
-
-            case 'file':
-              currentFile = parsedOutput.currentFile;
-              phase = 'transferring';
-              event.reply('backup-library-progress', {
-                phase,
-                currentFile,
-                status: `Copying: ${currentFile}`,
-              });
-              break;
-
-            case 'progress':
-              if (
-                'total' in parsedOutput &&
-                parsedOutput.total !== undefined &&
-                'remaining' in parsedOutput &&
-                parsedOutput.remaining !== undefined &&
-                'currentTransfer' in parsedOutput &&
-                parsedOutput.currentTransfer !== undefined
-              ) {
-                const progress = Math.round(
-                  ((parsedOutput.total - parsedOutput.remaining) /
-                    parsedOutput.total) *
-                    100,
-                );
-                event.reply('backup-library-progress', {
-                  phase: 'transferring',
-                  progress,
-                  currentFile,
-                  currentTransfer: parsedOutput.currentTransfer,
-                  remaining: parsedOutput.remaining,
-                  total: parsedOutput.total,
-                  transferSpeed,
-                  status: `Copying: ${currentFile} (${parsedOutput.currentTransfer}/${parsedOutput.total})`,
-                });
-              }
-              break;
-
-            case 'speed':
-              transferSpeed = parsedOutput.speed;
-              break;
-
-            default:
-              // Unhandled output type
-              break;
-          }
-        }
+        stdoutBuf += stdout.toString();
+        const lines = stdoutBuf.split('\n');
+        stdoutBuf = lines.pop() ?? '';
+        lines.forEach(handleLine);
       },
       (stderr) => {
+        // rsync writes warnings (e.g. "skipping non-regular file") to
+        // stderr without exiting non-zero. Log them but don't surface as
+        // a backup error or progress-phase change — only the exit-code
+        // callback above triggers the error path.
         console.warn('rsync stderr:', stderr.toString());
-        // Send error information to renderer if needed
-        event.reply('backup-library-progress', {
-          phase: 'error',
-          status: `Error: ${stderr.toString()}`,
-        });
       },
     );
   } catch (error: unknown) {

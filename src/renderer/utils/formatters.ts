@@ -56,3 +56,44 @@ export function calculateTotalHours(
   const days = totalDays.toFixed(1);
   return `${days}${days === '1.0' ? 'd' : 'd'}`;
 }
+
+/**
+ * Format a "time remaining" estimate from elapsed wall-clock time and
+ * file counts. Returns an empty string when the estimate would be too
+ * volatile to be useful (very small samples / very recent start).
+ *
+ * Used by both the library scan and library backup progress dialogs so
+ * their wording stays consistent.
+ *
+ * @param elapsedMs - Milliseconds since the operation started
+ * @param processed - Files processed so far
+ * @param total - Total files expected
+ * @returns Human-readable estimate (e.g. "3 minutes", "1 hour 5 minutes")
+ *          or an empty string when no estimate should be shown yet.
+ */
+export function formatEta(
+  elapsedMs: number,
+  processed: number,
+  total: number,
+): string {
+  // Volatility guard: with only a handful of samples the estimate
+  // bounces wildly. Suppress until we have either enough files OR
+  // enough wall-clock time to smooth it out.
+  if (processed < 5 && elapsedMs < 2000) return '';
+  if (processed === 0) return '';
+  const remaining = total - processed;
+  if (remaining <= 0) return '';
+
+  const msPerFile = elapsedMs / processed;
+  const etaMs = remaining * msPerFile;
+
+  if (etaMs < 60_000) {
+    return `${Math.ceil(etaMs / 1000)} seconds`;
+  }
+  if (etaMs < 3_600_000) {
+    return `${Math.ceil(etaMs / 60_000)} minutes`;
+  }
+  const hours = Math.floor(etaMs / 3_600_000);
+  const minutes = Math.ceil((etaMs % 3_600_000) / 60_000);
+  return `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+}

@@ -35,6 +35,7 @@ import {
   getSettingsSnapshot,
   DEFAULT_COLUMNS,
 } from '../queries';
+import { formatEta } from '../utils/formatters';
 import ConfirmationDialog from './ConfirmationDialog';
 
 // Define the props for the Settings component
@@ -85,7 +86,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const scanProcessedFilesRef = useRef<string[]>([]);
   const scanStartTime = useRef<number>(0);
 
-  const [_backupStatus, setBackupStatus] = useState('');
+  const [backupStatus, setBackupStatus] = useState('');
   // Add backup progress state
   const [backupProgress, setBackupProgress] = useState(0);
   const [backupCurrentFile, setBackupCurrentFile] = useState('');
@@ -94,8 +95,11 @@ export default function Settings({ onClose }: SettingsProps) {
     current: number;
     total: number;
     remaining: number;
-    speed: string;
+    estimatedTimeRemaining: string;
   } | null>(null);
+  // Wall-clock anchor for ETA. Set when the first file finishes copying
+  // (transfer phase, currentTransfer === 1). Reset to 0 between runs.
+  const backupStartTime = useRef<number>(0);
   // Track the last processed file for display in the completed log
   const [_processedFiles, setProcessedFiles] = useState<string[]>([]);
   const processedFilesRef = useRef<string[]>([]);
@@ -146,34 +150,17 @@ export default function Settings({ onClose }: SettingsProps) {
           setScanProcessedFiles(updatedFiles);
         }
 
-        // Calculate ETA
         if (data.processed > 0 && scanStartTime.current > 0) {
-          const elapsedTime = now - scanStartTime.current;
-          const filesPerMs = data.processed / elapsedTime;
-          const remainingFiles = data.total - data.processed;
-          const estimatedRemainingMs = remainingFiles / filesPerMs;
-
-          // Format estimated time remaining
-          let estimatedTimeRemaining = '';
-          if (estimatedRemainingMs < 60000) {
-            // Less than a minute
-            estimatedTimeRemaining = `${Math.ceil(estimatedRemainingMs / 1000)} seconds`;
-          } else if (estimatedRemainingMs < 3600000) {
-            // Less than an hour
-            estimatedTimeRemaining = `${Math.ceil(estimatedRemainingMs / 60000)} minutes`;
-          } else {
-            // Hours or more
-            const hours = Math.floor(estimatedRemainingMs / 3600000);
-            const minutes = Math.ceil((estimatedRemainingMs % 3600000) / 60000);
-            estimatedTimeRemaining = `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
-          }
-
-          // Update transfer info
+          const elapsedMs = now - scanStartTime.current;
           setScanTransferInfo({
             current: data.processed,
             total: data.total,
-            remaining: remainingFiles,
-            estimatedTimeRemaining,
+            remaining: data.total - data.processed,
+            estimatedTimeRemaining: formatEta(
+              elapsedMs,
+              data.processed,
+              data.total,
+            ),
           });
         }
 
@@ -246,17 +233,24 @@ export default function Settings({ onClose }: SettingsProps) {
           data.total !== undefined &&
           data.remaining !== undefined
         ) {
+          if (backupStartTime.current === 0 && data.currentTransfer >= 1) {
+            backupStartTime.current = Date.now();
+          }
+          const elapsedMs =
+            backupStartTime.current === 0
+              ? 0
+              : Date.now() - backupStartTime.current;
           setBackupTransferInfo({
             current: data.currentTransfer,
             total: data.total,
             remaining: data.remaining,
-            speed: data.transferSpeed || '',
+            estimatedTimeRemaining: formatEta(
+              elapsedMs,
+              data.currentTransfer,
+              data.total,
+            ),
           });
         }
-      } else if (data.phase === 'counting' && data.totalFiles) {
-        setBackupStatus(`Found ${data.totalFiles} files to backup`);
-      } else if (data.phase === 'scanning' && data.filesProcessed) {
-        setBackupStatus(`Scanning files: ${data.filesProcessed} processed`);
       }
     });
 
@@ -376,10 +370,16 @@ export default function Settings({ onClose }: SettingsProps) {
         return;
       }
 
-      // Show backup dialog
+      // Reset run-scoped state so a second backup in the same session
+      // doesn't show stale counts/ETA from the previous run.
       setBackupDialogOpen(true);
       setIsBackupInProgress(true);
       setBackupStatus('Backing up library...');
+      setBackupPhase('preparing');
+      setBackupProgress(0);
+      setBackupCurrentFile('');
+      setBackupTransferInfo(null);
+      backupStartTime.current = 0;
 
       // Trigger the backup; progress / success / error arrive via the
       // backup.on* subscriptions above.
@@ -528,10 +528,8 @@ export default function Settings({ onClose }: SettingsProps) {
     switch (backupPhase) {
       case 'preparing':
         return 'Preparing...';
-      case 'counting':
-        return 'Counting files...';
-      case 'scanning':
-        return 'Scanning files...';
+      case 'planning':
+        return 'Checking files...';
       case 'transferring':
         return 'Copying files...';
       case 'error':
@@ -958,12 +956,25 @@ export default function Settings({ onClose }: SettingsProps) {
               variant={getProgressVariant()}
             />
 
+            {backupPhase === 'planning' && backupStatus && (
+              <Typography color="text.secondary" variant="body2">
+                {backupStatus}
+              </Typography>
+            )}
+
             {backupPhase === 'transferring' && backupTransferInfo && (
               <Typography color="text.secondary" variant="body2">
                 {backupTransferInfo.current.toLocaleString()} of{' '}
                 {backupTransferInfo.total.toLocaleString()} files
               </Typography>
             )}
+
+            {backupPhase === 'transferring' &&
+              backupTransferInfo?.estimatedTimeRemaining && (
+                <Typography color="text.secondary" variant="body2">
+                  About {backupTransferInfo.estimatedTimeRemaining} remaining
+                </Typography>
+              )}
 
             {backupPhase === 'transferring' && backupCurrentFile && (
               <Typography
