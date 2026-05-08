@@ -96,7 +96,7 @@ export default function Playlists() {
 
   // Read via selectors; setPlaylistSortPreference and setSearchFilter
   // fan out to playlistViewState, so this component just writes.
-  const sorting = useLibraryStore((state) => {
+  const persistedSorting = useLibraryStore((state) => {
     const pid = state.selectedPlaylistId;
     if (!pid) return DEFAULT_PLAYLIST_SORTING;
     return (
@@ -122,6 +122,19 @@ export default function Playlists() {
   const columnVisibility = settings?.columns ?? DEFAULT_COLUMNS;
   const columnWidths = settings?.columnWidths ?? null;
   const columnOrder = settings?.columnOrder ?? null;
+  const sortArtistByAlbumArtist = settings?.sortArtistByAlbumArtist ?? true;
+  // Re-mint the sorting reference when the artist-comparator toggle flips
+  // so @tanstack/react-table's `getSortedRowModel` memo (keyed on the
+  // sorting state reference) invalidates and re-sorts without requiring a
+  // manual header click. Changing only the column's `sortingFn` is not
+  // enough — the sort memo doesn't depend on column metadata.
+  const sorting = useMemo(
+    () => persistedSorting.slice(),
+    // sortArtistByAlbumArtist isn't read in the body — it's a tripwire
+    // dep that mints a fresh array reference when the toggle flips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [persistedSorting, sortArtistByAlbumArtist],
+  );
   const currentTrack = useSettingsAndPlaybackStore(
     (state) => state.currentTrack,
   );
@@ -415,8 +428,14 @@ export default function Playlists() {
   }, [scrollToTrackWhenReady]);
 
   // useMemo: stable identity for tanstack's internal row-model memoization
-  // and avoids re-allocating column defs each render. Empty deps = once.
-  const columns = useMemo(() => getCommonColumnDefs(), []);
+  // and avoids re-allocating column defs each render. The Artist column's
+  // comparator depends on `sortArtistByAlbumArtist`; the matching sort
+  // re-trigger lives at the `sorting` memo above, since changing column
+  // metadata alone does not invalidate the sort row-model memo.
+  const columns = useMemo(
+    () => getCommonColumnDefs({ sortArtistByAlbumArtist }),
+    [sortArtistByAlbumArtist],
+  );
 
   // useMemo: O(n) filter + map over playlist tracks.
   const data = useMemo<TableData[]>(() => {

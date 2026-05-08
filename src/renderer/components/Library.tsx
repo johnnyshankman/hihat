@@ -119,7 +119,25 @@ export default function Library() {
   const updateSettings = useUpdateSettings();
   const columnVisibility = settings?.columns ?? DEFAULT_COLUMNS;
   const columnWidths = settings?.columnWidths ?? null;
-  const sorting = settings?.librarySorting ?? DEFAULT_LIBRARY_SORTING;
+  const persistedSorting = settings?.librarySorting ?? DEFAULT_LIBRARY_SORTING;
+  const sortArtistByAlbumArtist = settings?.sortArtistByAlbumArtist ?? true;
+  // Re-mint the sorting reference when the artist-comparator toggle flips
+  // so @tanstack/react-table's `getSortedRowModel` memo (keyed on the
+  // sorting state reference + the pre-sorted row model) invalidates and
+  // re-sorts without requiring a manual header click. Changing only the
+  // column's `sortingFn` is not enough — the sort memo doesn't depend on
+  // column metadata. The useEffect-based approach (pushing a re-sort
+  // signal through setSorting → onSortingChange → updateSettings.mutate)
+  // fails in practice because the async mutation path collapses the new
+  // librarySorting reference back via TanStack Query's structural sharing
+  // when the content is unchanged. `slice()` is O(k) where k ≤ 2.
+  const sorting = useMemo(
+    () => persistedSorting.slice(),
+    // sortArtistByAlbumArtist isn't read in the body — it's a tripwire
+    // dep that mints a fresh array reference when the toggle flips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [persistedSorting, sortArtistByAlbumArtist],
+  );
   const columnOrder = settings?.columnOrder ?? null;
   const updateLibraryViewState = useLibraryStore(
     (state) => state.updateLibraryViewState,
@@ -542,8 +560,14 @@ export default function Library() {
   }, [lastViewedTrackId, tracks.length, scrollToTrackWhenReady]);
 
   // useMemo: stable identity for tanstack's internal row-model memoization
-  // and avoids re-allocating column defs each render. Empty deps = once.
-  const columns = useMemo(() => getCommonColumnDefs(), []);
+  // and avoids re-allocating column defs each render. The Artist column's
+  // comparator depends on `sortArtistByAlbumArtist`; the matching sort
+  // re-trigger lives at the `sorting` memo above, since changing column
+  // metadata alone does not invalidate the sort row-model memo.
+  const columns = useMemo(
+    () => getCommonColumnDefs({ sortArtistByAlbumArtist }),
+    [sortArtistByAlbumArtist],
+  );
 
   // useMemo: O(n) filter + map over potentially thousands of tracks.
   const data = useMemo<TableData[]>(() => {

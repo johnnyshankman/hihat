@@ -83,6 +83,7 @@ export interface Settings {
   columnWidths: Record<string, number> | null; // Persisted column widths for the track table
   librarySorting: Array<{ id: string; desc: boolean }> | null; // Persisted sorting preference for the library view
   columnOrder: string[] | null; // Persisted column order for the track table
+  sortArtistByAlbumArtist: boolean; // When true, Artist column sorts by albumArtist (with fallback to artist)
 }
 
 /**

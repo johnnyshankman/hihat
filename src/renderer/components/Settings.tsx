@@ -50,6 +50,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const libraryPath = settings?.libraryPath ?? '';
   const theme = settings?.theme ?? 'dark';
   const columns = settings?.columns ?? DEFAULT_COLUMNS;
+  const sortArtistByAlbumArtist = settings?.sortArtistByAlbumArtist ?? true;
   const updateSettings = useUpdateSettings();
   // Library / scan / reset mutations via TanStack Query. Each hook
   // owns success/error toasts and cache invalidation so the rest of
@@ -266,6 +267,12 @@ export default function Settings({ onClose }: SettingsProps) {
   const handleThemeChange = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     updateSettings.mutate({ theme: newTheme });
+  };
+
+  const handleSortArtistByAlbumArtistChange = () => {
+    updateSettings.mutate({
+      sortArtistByAlbumArtist: !sortArtistByAlbumArtist,
+    });
   };
 
   const handleColumnVisibilityChange = (column: keyof typeof columns) => {
@@ -775,6 +782,34 @@ export default function Settings({ onClose }: SettingsProps) {
                 />
               }
               label="Dark Theme"
+            />
+          </FormGroup>
+        </Paper>
+
+        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+          <Typography gutterBottom variant="h2">
+            Sorting
+          </Typography>
+          <Typography
+            color="text.secondary"
+            sx={{ display: 'block', mb: 2 }}
+            variant="caption"
+          >
+            This causes the Artist column to sort itself by Album Artist
+            instead. This keeps multi-artist songs in their original
+            album&apos;s order, instead of grouping them at the end of the
+            album.
+          </Typography>
+          <FormGroup>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={sortArtistByAlbumArtist}
+                  data-testid="sort-artist-by-album-artist-toggle"
+                  onChange={handleSortArtistByAlbumArtistChange}
+                />
+              }
+              label="Sort Artist by Album Artist"
             />
           </FormGroup>
         </Paper>

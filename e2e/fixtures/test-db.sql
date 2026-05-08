@@ -259,6 +259,17 @@ INSERT INTO tracks (id, filePath, title, artist, album, albumArtist, genre, dura
 ('test-large-204', '{{TEST_SONGS_PATH}}/204 - Test Artist - Test OGG Song.ogg', 'Test OGG Song', 'Test Artist', 'Test Album', 'Test Artist', 'Electronic', 10.0, 0, '2024-01-01T05:00:00.000Z', NULL, NULL, 1, NULL, NULL, NULL, 2024, NULL, NULL, NULL),
 ('test-large-205', '{{TEST_SONGS_PATH}}/205 - Test Artist - Test AAC Song.aac', 'Test AAC Song', 'Test Artist', 'Test Album', 'Test Artist', 'Electronic', 10.0, 0, '2024-01-01T05:00:00.000Z', NULL, NULL, 1, NULL, NULL, NULL, 2024, NULL, NULL, NULL);
 
+-- Featured-artist tracks for the Artist column sort tests in
+-- e2e/sort-artist-by-album-artist.spec.ts. All three share albumArtist
+-- 'Hip Hop Legends' but their raw `artist` tags include "feat. <X>" — under
+-- the album-artist-aware sort they stay grouped inside their album block,
+-- while under the raw-artist sort they sort alphabetically among themselves
+-- and drift to the end of the H-section.
+INSERT INTO tracks (id, filePath, title, artist, album, albumArtist, genre, duration, playCount, dateAdded, lastPlayed, lyrics, trackNumber, totalTracks, discNumber, totalDiscs, year, bpm, composer, comment) VALUES
+('test-large-feat-001', '{{TEST_SONGS_PATH}}/feat-001-bonus.mp3', 'Featured Cut Soul', 'Hip Hop Legends feat. Soul Sisters', 'Beats & Rhymes', 'Hip Hop Legends', 'Hip Hop', 10.0, 0, '2024-12-29T05:00:00.000Z', NULL, NULL, 12, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+('test-large-feat-002', '{{TEST_SONGS_PATH}}/feat-002-bonus.mp3', 'Featured Cut Aurora', 'Hip Hop Legends feat. Aurora Synth', 'Beats & Rhymes', 'Hip Hop Legends', 'Hip Hop', 10.0, 0, '2024-12-30T05:00:00.000Z', NULL, NULL, 13, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+('test-large-feat-003', '{{TEST_SONGS_PATH}}/feat-003-bonus.mp3', 'Featured Cut Reggae', 'Hip Hop Legends feat. Reggae Vibes', 'Beats & Rhymes', 'Hip Hop Legends', 'Hip Hop', 10.0, 0, '2024-12-31T05:00:00.000Z', NULL, NULL, 14, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
 -- Insert test playlists
 INSERT INTO playlists (id, name, isSmart, smartPlaylistId, ruleSet, trackIds, sortPreference) VALUES
 ('playlist-1', 'Test Playlist', 0, NULL, NULL, '["test-large-001","test-large-002","test-large-003"]', NULL),

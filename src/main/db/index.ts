@@ -214,6 +214,15 @@ function runMigrations(): void {
     addColumnIfNotExists('tracks', 'bpm', 'INTEGER');
     addColumnIfNotExists('tracks', 'composer', 'TEXT');
     addColumnIfNotExists('tracks', 'comment', 'TEXT');
+
+    // Migration 10: Add sortArtistByAlbumArtist column to settings table.
+    // Stored as INTEGER (0/1); existing rows receive 1 below so upgrades
+    // default to album-artist sort, matching the new install default.
+    addColumnIfNotExists(
+      'settings',
+      'sortArtistByAlbumArtist',
+      'INTEGER NOT NULL DEFAULT 1',
+    );
   } catch (error) {
     console.error('Error running database migrations:', error);
   }
@@ -361,13 +370,14 @@ function initDefaultSettings(): void {
           columnWidths: null,
           librarySorting: null,
           columnOrder: null,
+          sortArtistByAlbumArtist: true,
         };
 
         // Insert default settings
         db.prepare(
           `
-          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder, sortArtistByAlbumArtist)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         ).run(
           defaultSettings.id,
@@ -379,6 +389,7 @@ function initDefaultSettings(): void {
           defaultSettings.columnWidths,
           defaultSettings.librarySorting,
           defaultSettings.columnOrder,
+          defaultSettings.sortArtistByAlbumArtist ? 1 : 0,
         );
       }
     } catch (error) {
@@ -413,13 +424,14 @@ function initDefaultSettings(): void {
         columnWidths: null,
         librarySorting: null,
         columnOrder: null,
+        sortArtistByAlbumArtist: true,
       };
 
       // Insert default settings
       db.prepare(
         `
-        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder, sortArtistByAlbumArtist)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       ).run(
         defaultSettings.id,
@@ -431,6 +443,7 @@ function initDefaultSettings(): void {
         defaultSettings.columnWidths,
         defaultSettings.librarySorting,
         defaultSettings.columnOrder,
+        defaultSettings.sortArtistByAlbumArtist ? 1 : 0,
       );
     }
   } catch (outerError) {
@@ -1427,6 +1440,80 @@ export function deletePlaylist(id: string): boolean {
 }
 
 /**
+ * Raw shape of a `settings` row as returned by sql.js. JSON-encoded fields
+ * are still strings here; SQLite-INTEGER booleans are still 0/1, with
+ * `null` reserved for pre-migration rows that don't have the column at
+ * all. Coercion to the renderer-facing `Settings` happens in
+ * `parseSettingsRow` below — typing the row precisely lets that helper
+ * read each field without `as any`.
+ */
+interface RawSettingsRow {
+  id: string;
+  libraryPath: string;
+  theme: string;
+  columns: string;
+  lastPlayedSongId: string | null;
+  volume: number | null;
+  columnWidths: string | null;
+  librarySorting: string | null;
+  columnOrder: string | null;
+  sortArtistByAlbumArtist: number | null;
+}
+
+/**
+ * Convert a raw `settings` row to the renderer-facing Settings shape.
+ * JSON parses are wrapped per-field so a corrupted single field falls
+ * back to its default instead of nuking every other setting. `columns`
+ * is intentionally not wrapped — it's structurally required, and a
+ * malformed value should bubble to `getSettings`'s outer catch and
+ * trigger the default-settings fallback.
+ */
+function parseSettingsRow(raw: RawSettingsRow): Settings {
+  let parsedColumnWidths: Record<string, number> | null = null;
+  try {
+    parsedColumnWidths = raw.columnWidths ? JSON.parse(raw.columnWidths) : null;
+  } catch (_e) {
+    parsedColumnWidths = null;
+  }
+
+  let parsedLibrarySorting: Array<{ id: string; desc: boolean }> | null = null;
+  try {
+    parsedLibrarySorting = raw.librarySorting
+      ? JSON.parse(raw.librarySorting)
+      : null;
+  } catch (_e) {
+    parsedLibrarySorting = null;
+  }
+
+  let parsedColumnOrder: string[] | null = null;
+  try {
+    parsedColumnOrder = raw.columnOrder ? JSON.parse(raw.columnOrder) : null;
+  } catch (_e) {
+    parsedColumnOrder = null;
+  }
+
+  return {
+    id: raw.id,
+    libraryPath: raw.libraryPath,
+    // Narrow the raw TEXT to the `'dark' | 'light'` union; anything
+    // unexpected (corrupted row, future value) falls back to 'dark'.
+    theme: raw.theme === 'light' ? 'light' : 'dark',
+    columns: JSON.parse(raw.columns),
+    lastPlayedSongId: raw.lastPlayedSongId || null,
+    volume: raw.volume || 1.0,
+    columnWidths: parsedColumnWidths,
+    librarySorting: parsedLibrarySorting,
+    columnOrder: parsedColumnOrder,
+    // `null` covers pre-migration rows where the column itself is absent;
+    // schema default is 1, matching the new-install default of `true`.
+    sortArtistByAlbumArtist:
+      raw.sortArtistByAlbumArtist == null
+        ? true
+        : Boolean(raw.sortArtistByAlbumArtist),
+  };
+}
+
+/**
  * Get the application settings
  * @returns Settings object
  */
@@ -1454,119 +1541,26 @@ export function getSettings(): Settings {
         columnWidths: null,
         librarySorting: null,
         columnOrder: null,
+        sortArtistByAlbumArtist: true,
       };
     }
 
-    const settings = db
+    let row = db
       .prepare('SELECT * FROM settings WHERE id = ?')
-      .get('app-settings') as Settings | undefined;
+      .get('app-settings') as RawSettingsRow | undefined;
 
-    if (!settings) {
+    if (!row) {
       console.warn('Settings not found, initializing default settings');
-      // Initialize default settings
       initDefaultSettings();
-
-      // Try to get settings again
-      const newSettings = db
+      row = db
         .prepare('SELECT * FROM settings WHERE id = ?')
-        .get('app-settings') as Settings | undefined;
-
-      if (!newSettings) {
+        .get('app-settings') as RawSettingsRow | undefined;
+      if (!row) {
         throw new Error('Failed to initialize settings');
       }
-
-      let parsedColumnWidths: Record<string, number> | null = null;
-      try {
-        parsedColumnWidths =
-          typeof newSettings.columnWidths === 'string'
-            ? JSON.parse(newSettings.columnWidths)
-            : newSettings.columnWidths || null;
-      } catch (_e) {
-        parsedColumnWidths = null;
-      }
-
-      let parsedLibrarySorting: Array<{
-        id: string;
-        desc: boolean;
-      }> | null = null;
-      try {
-        parsedLibrarySorting =
-          typeof (newSettings as any).librarySorting === 'string'
-            ? JSON.parse((newSettings as any).librarySorting)
-            : (newSettings as any).librarySorting || null;
-      } catch (_e) {
-        parsedLibrarySorting = null;
-      }
-
-      let parsedColumnOrder2: string[] | null = null;
-      try {
-        parsedColumnOrder2 =
-          typeof (newSettings as any).columnOrder === 'string'
-            ? JSON.parse((newSettings as any).columnOrder)
-            : (newSettings as any).columnOrder || null;
-      } catch (_e) {
-        parsedColumnOrder2 = null;
-      }
-
-      return {
-        ...newSettings,
-        columns:
-          typeof newSettings.columns === 'string'
-            ? JSON.parse(newSettings.columns)
-            : newSettings.columns,
-        lastPlayedSongId: newSettings.lastPlayedSongId || null,
-        volume: newSettings.volume || 1.0,
-        columnWidths: parsedColumnWidths,
-        librarySorting: parsedLibrarySorting,
-        columnOrder: parsedColumnOrder2,
-      };
     }
 
-    let parsedColumnWidths: Record<string, number> | null = null;
-    try {
-      parsedColumnWidths =
-        typeof settings.columnWidths === 'string'
-          ? JSON.parse(settings.columnWidths)
-          : settings.columnWidths || null;
-    } catch (_e) {
-      parsedColumnWidths = null;
-    }
-
-    let parsedLibrarySorting: Array<{
-      id: string;
-      desc: boolean;
-    }> | null = null;
-    try {
-      parsedLibrarySorting =
-        typeof (settings as any).librarySorting === 'string'
-          ? JSON.parse((settings as any).librarySorting)
-          : (settings as any).librarySorting || null;
-    } catch (_e) {
-      parsedLibrarySorting = null;
-    }
-
-    let parsedColumnOrder: string[] | null = null;
-    try {
-      parsedColumnOrder =
-        typeof (settings as any).columnOrder === 'string'
-          ? JSON.parse((settings as any).columnOrder)
-          : (settings as any).columnOrder || null;
-    } catch (_e) {
-      parsedColumnOrder = null;
-    }
-
-    return {
-      ...settings,
-      columns:
-        typeof settings.columns === 'string'
-          ? JSON.parse(settings.columns)
-          : settings.columns,
-      lastPlayedSongId: settings.lastPlayedSongId || null,
-      volume: settings.volume || 1.0,
-      columnWidths: parsedColumnWidths,
-      librarySorting: parsedLibrarySorting,
-      columnOrder: parsedColumnOrder,
-    };
+    return parseSettingsRow(row);
   } catch (error) {
     console.error('Failed to get settings:', error);
 
@@ -1591,6 +1585,7 @@ export function getSettings(): Settings {
       columnWidths: null,
       librarySorting: null,
       columnOrder: null,
+      sortArtistByAlbumArtist: true,
     };
   }
 }
@@ -1616,7 +1611,8 @@ export function updateSettings(settings: Settings): boolean {
           volume = ?,
           columnWidths = ?,
           librarySorting = ?,
-          columnOrder = ?
+          columnOrder = ?,
+          sortArtistByAlbumArtist = ?
         WHERE id = ?
       `,
         )
@@ -1631,6 +1627,7 @@ export function updateSettings(settings: Settings): boolean {
             ? JSON.stringify(settings.librarySorting)
             : null,
           settings.columnOrder ? JSON.stringify(settings.columnOrder) : null,
+          settings.sortArtistByAlbumArtist ? 1 : 0,
           settings.id,
         );
 

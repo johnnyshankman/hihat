@@ -2,6 +2,7 @@ import { Track } from '../../types/dbTypes';
 import useLibraryStore from '../stores/libraryStore';
 import type { SettingsAndPlaybackStore } from '../stores/types';
 import { getTracksSnapshot, getPlaylistsSnapshot } from '../queries';
+import { getSettingsSnapshot } from '../queries/settings';
 import { getSortingFunction } from './sortingFunctions';
 
 // Define MediaImage interface for TypeScript
@@ -39,6 +40,13 @@ export const getFilteredAndSortedTrackIds = (
   const { libraryViewState, playlistViewState } = useLibraryStore.getState();
   const tracks = getTracksSnapshot()?.tracks ?? [];
   const playlists = getPlaylistsSnapshot() ?? [];
+  // Read the Artist-column sort preference here so next/prev-track
+  // selection stays consistent with the rendered table order. Default
+  // to true to match the schema default for fresh installs / cold reads
+  // before the settings query has resolved.
+  const sortArtistByAlbumArtist =
+    getSettingsSnapshot()?.sortArtistByAlbumArtist ?? true;
+  const sortOpts = { sortArtistByAlbumArtist };
 
   // Get the appropriate track IDs array based on the playback source
   let trackIds: string[] = [];
@@ -81,7 +89,7 @@ export const getFilteredAndSortedTrackIds = (
       const { id: sortField, desc: isDescending } = sortConfig;
 
       // Use our custom sorting functions
-      const sortFn = getSortingFunction(sortField);
+      const sortFn = getSortingFunction(sortField, sortOpts);
       filteredTracks.sort((a, b) => sortFn(a, b, isDescending));
     }
 
@@ -136,7 +144,7 @@ export const getFilteredAndSortedTrackIds = (
       const { id: sortField, desc: isDescending } = sortConfig;
 
       // Use our custom sorting functions
-      const sortFn = getSortingFunction(sortField);
+      const sortFn = getSortingFunction(sortField, sortOpts);
       filteredTracks.sort((a, b) => sortFn(a, b, isDescending));
     }
 
