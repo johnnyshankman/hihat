@@ -83,7 +83,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
-    "@regosen/gapless-5": "github:johnnyshankman/Gapless-5",
+    "@regosen/gapless-5": "github:johnnyshankman/Gapless-5#johnny/fix-index-on-remove-error",
     "@tanstack/react-query": "^5.100.8",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.23",
