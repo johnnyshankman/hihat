@@ -795,10 +795,8 @@ export default function Settings({ onClose }: SettingsProps) {
             sx={{ display: 'block', mb: 2 }}
             variant="caption"
           >
-            When on, sorting by the Artist column groups tracks under their
-            album artist — keeping featured-artist songs together with the rest
-            of their album. Falls back to the regular artist tag when an album
-            artist isn&apos;t set.
+            This keeps multi-artist tracks grouped with their album when sorting
+            by Artist.
           </Typography>
           <FormGroup>
             <FormControlLabel
