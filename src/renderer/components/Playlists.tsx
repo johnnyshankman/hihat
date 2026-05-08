@@ -124,14 +124,14 @@ export default function Playlists() {
   const columnOrder = settings?.columnOrder ?? null;
   const sortArtistByAlbumArtist = settings?.sortArtistByAlbumArtist ?? true;
   // Re-mint the sorting reference when the artist-comparator toggle flips
-  // so @tanstack/react-table's `getSortedRowModel` memo (keyed on sorting
-  // state reference) invalidates and re-sorts without requiring a manual
-  // header click. Changing only the column's `sortingFn` is not enough —
-  // the sort memo doesn't depend on column metadata.
+  // so @tanstack/react-table's `getSortedRowModel` memo (keyed on the
+  // sorting state reference) invalidates and re-sorts without requiring a
+  // manual header click. Changing only the column's `sortingFn` is not
+  // enough — the sort memo doesn't depend on column metadata.
   const sorting = useMemo(
     () => persistedSorting.slice(),
-    // sortArtistByAlbumArtist isn't read in the body — it's a dep purely
-    // to mint a fresh array reference when the toggle flips.
+    // sortArtistByAlbumArtist isn't read in the body — it's a tripwire
+    // dep that mints a fresh array reference when the toggle flips.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [persistedSorting, sortArtistByAlbumArtist],
   );

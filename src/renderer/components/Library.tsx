@@ -126,11 +126,15 @@ export default function Library() {
   // sorting state reference + the pre-sorted row model) invalidates and
   // re-sorts without requiring a manual header click. Changing only the
   // column's `sortingFn` is not enough — the sort memo doesn't depend on
-  // column metadata. `slice()` is O(k) where k ≤ 2 in practice.
+  // column metadata. The useEffect-based approach (pushing a re-sort
+  // signal through setSorting → onSortingChange → updateSettings.mutate)
+  // fails in practice because the async mutation path collapses the new
+  // librarySorting reference back via TanStack Query's structural sharing
+  // when the content is unchanged. `slice()` is O(k) where k ≤ 2.
   const sorting = useMemo(
     () => persistedSorting.slice(),
-    // sortArtistByAlbumArtist isn't read in the body — it's a dep purely
-    // to mint a fresh array reference when the toggle flips.
+    // sortArtistByAlbumArtist isn't read in the body — it's a tripwire
+    // dep that mints a fresh array reference when the toggle flips.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [persistedSorting, sortArtistByAlbumArtist],
   );
