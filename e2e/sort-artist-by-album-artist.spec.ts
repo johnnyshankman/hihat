@@ -114,15 +114,36 @@ test.describe('Artist column — sort by album artist (toggle on)', () => {
 });
 
 test.describe('Artist column — sort by raw artist (toggle off)', () => {
-  test('flipping the toggle off scatters feat tracks by raw artist', async () => {
+  test('flipping the toggle off re-sorts the open library without a manual header click', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
     await page.waitForSelector('.vt-table', { timeout: 10000 });
 
+    // Activate Artist sort BEFORE opening Settings. With the toggle still
+    // ON, this orders the HHL block by album-artist semantics. The key
+    // assertion later is that flipping the toggle re-sorts the visible
+    // table on its own — without the user re-clicking the Artist header.
+    await page.click('[aria-label="Show/Hide search"]');
+    await page.waitForSelector('[data-testid="search-input"]', {
+      timeout: 5000,
+    });
+    await page.fill('[data-testid="search-input"]', 'Hip Hop Legends');
+    await page.waitForTimeout(500);
+
+    const artistHeader = page.locator('th:has-text("Artist")').first();
+    await artistHeader.click();
+    await page.waitForTimeout(500);
+
+    let sortInfo = await getActiveSort(page);
+    expect(sortInfo).not.toBeNull();
+    expect(sortInfo!.column.startsWith('Artist')).toBe(true);
+    expect(sortInfo!.column.startsWith('Album')).toBe(false);
+    expect(sortInfo!.direction).toBe('ascending');
+
     // Round-trip through the Settings UI: open Settings drawer, flip the
     // toggle, dismiss the drawer. Exercises the full chain — Switch click
     // → useUpdateSettings mutation → settings:update IPC → DB write → query
-    // cache update → column-defs useMemo rebuild.
+    // cache update → column-defs + sorting-reference re-mint → table re-sort.
     await page.click('[data-testid="nav-settings"]');
     await page.waitForTimeout(500);
 
@@ -147,28 +168,25 @@ test.describe('Artist column — sort by raw artist (toggle off)', () => {
 
     // Settings opens as a temporary MUI Drawer that overlays the library and
     // intercepts pointer events for everything underneath. Press Escape to
-    // dismiss it before re-targeting the table.
+    // dismiss it; sorting state is preserved (we never touched it).
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(500);
     await page.waitForSelector('.vt-table', { timeout: 10000 });
 
-    await page.click('[aria-label="Show/Hide search"]');
-    await page.waitForSelector('[data-testid="search-input"]', {
-      timeout: 5000,
-    });
-    await page.fill('[data-testid="search-input"]', 'Hip Hop Legends');
-    await page.waitForTimeout(500);
-
-    const artistHeader = page.locator('th:has-text("Artist")').first();
-    await artistHeader.click();
-    await page.waitForTimeout(500);
-
-    const sortInfo = await getActiveSort(page);
+    // Header still says ascending Artist — sorting state never changed,
+    // only the comparator behind it. If the table failed to re-sort, the
+    // ordering assertions below would catch that.
+    sortInfo = await getActiveSort(page);
     expect(sortInfo).not.toBeNull();
     expect(sortInfo!.column.startsWith('Artist')).toBe(true);
     expect(sortInfo!.column.startsWith('Album')).toBe(false);
     expect(sortInfo!.direction).toBe('ascending');
 
+    // KEY ASSERTION: rendered order has changed to raw-artist semantics
+    // EVEN THOUGH the user never re-clicked the Artist header. If the
+    // table only re-sorted on a manual header click, the toggle-on order
+    // (feat-001 immediately after Beats & Rhymes #11s) would still hold
+    // and the assertions below would fail.
     const orderedIds = await getRenderedTrackIds(page);
     const indexOf = (id: string) => orderedIds.indexOf(id);
     expect(orderedIds).toContain(FEAT_AURORA);
