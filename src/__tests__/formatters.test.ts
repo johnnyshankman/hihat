@@ -5,6 +5,7 @@
 import {
   calculateTotalHours,
   formatDuration,
+  formatEta,
 } from '../renderer/utils/formatters';
 
 describe('formatDuration', () => {
@@ -88,5 +89,47 @@ describe('calculateTotalHours', () => {
     expect(calculateTotalHours([{ duration: 86399 }])).toMatch(/h$/);
     // 24h 0m 1s -> days
     expect(calculateTotalHours([{ duration: 86401 }])).toMatch(/d$/);
+  });
+});
+
+describe('formatEta', () => {
+  test('volatility guard: too few samples and too soon → empty', () => {
+    // 1 file in 500ms is not enough signal to estimate.
+    expect(formatEta(500, 1, 1000)).toBe('');
+    expect(formatEta(1999, 4, 1000)).toBe('');
+  });
+
+  test('emits an estimate once we have either enough files or enough time', () => {
+    // 5 files unlocks an estimate even if elapsed is small.
+    expect(formatEta(500, 5, 1000)).not.toBe('');
+    // 2s elapsed unlocks an estimate even with 1 file.
+    expect(formatEta(2000, 1, 1000)).not.toBe('');
+  });
+
+  test('returns empty when there is nothing left to do', () => {
+    expect(formatEta(10_000, 100, 100)).toBe('');
+    expect(formatEta(10_000, 100, 50)).toBe('');
+    expect(formatEta(10_000, 0, 100)).toBe('');
+  });
+
+  test('formats sub-minute estimates as seconds', () => {
+    // 10 files in 1s → 100ms/file → 50 files remaining = 5s
+    expect(formatEta(1000, 10, 60)).toBe('5 seconds');
+  });
+
+  test('formats sub-hour estimates as minutes', () => {
+    // 10 files in 1s → 100ms/file → 6000 files remaining = 600s = 10min
+    expect(formatEta(1000, 10, 6010)).toBe('10 minutes');
+  });
+
+  test('formats hour-plus estimates as hours and minutes', () => {
+    // 1 file/s → 7200s remaining = 2h
+    const out = formatEta(10_000, 10, 7210);
+    expect(out).toMatch(/^\d+ hours? \d+ minutes?$/);
+  });
+
+  test('uses singular nouns for 1-hour estimates', () => {
+    // 1 file/s → 3660s remaining = 1h 1m
+    expect(formatEta(10_000, 10, 3670)).toBe('1 hour 1 minute');
   });
 });
