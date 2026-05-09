@@ -42,13 +42,12 @@
 7. [Built With](#built-with)
 8. [Contributing](#contributing)
 9. [Getting Started as a Contributor](#getting-started-as-a-contributor)
-10. [Looking for Something Like WinAmp?](#looking-for-something-like-winamp)
-11. [License](#license)
-12. [Contact](#contact)
+10. [License](#license)
+11. [Contact](#contact)
 
 ## About The Project
 
-**hihat** is a free, minimalist, open-source music player for macOS. It plays every major audio format with true gapless playback, manages libraries of any size, and comes with a sleek responsive interface. 
+**hihat** is a free, minimalist, open-source music player for macOS. It plays every major audio format with true gapless playback, manages libraries of any size, and comes with a sleek responsive interface.
 
 No ads, no accounts, no internet — just your music.
 
@@ -252,14 +251,6 @@ npm run package        # Build + package Electron app
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## Looking for Something Like WinAmp?
-
-I highly suggest [Aural](https://github.com/kartik-venugopal/aural-player) for that experience! It's no longer in development but works perfectly.
-
-## Looking for Windows support?
-
-How'd you end up here? [MusicBee](https://getmusicbee.com/) is great and free but is not open source.
 
 ## License
 
