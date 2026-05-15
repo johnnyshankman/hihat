@@ -185,10 +185,33 @@ const createWindow = async () => {
    * This allows the renderer to access audio files through a custom URL scheme
    */
   protocol.registerFileProtocol('hihat-audio', (request, callback) => {
-    const url = request.url.replace('hihat-audio://getfile/', '');
-    const decodedUrl = decodeURIComponent(url);
     try {
-      return callback(decodedUrl);
+      const url = request.url.replace('hihat-audio://getfile/', '');
+      const decodedUrl = decodeURIComponent(url);
+
+      // Constrain audio requests to files inside the configured library
+      // path. The renderer only builds these URLs from track file paths,
+      // and the scanner copies every imported file into libraryPath, so a
+      // legitimate request always resolves inside it. Without this check a
+      // compromised renderer could request any path on disk (such as
+      // hihat-audio://getfile/%2Fetc%2Fpasswd) and read it. Mirrors the
+      // prefix check in the fileSystem:deleteFile IPC handler.
+      const { libraryPath } = getSettings();
+      if (!libraryPath) {
+        console.error('Refusing audio request: library path is not set');
+        return callback({ error: 404 });
+      }
+      const resolvedTarget = path.resolve(decodedUrl);
+      const resolvedRoot = path.resolve(libraryPath);
+      if (
+        resolvedTarget !== resolvedRoot &&
+        !resolvedTarget.startsWith(resolvedRoot + path.sep)
+      ) {
+        console.error('Refusing audio request outside the library path');
+        return callback({ error: 404 });
+      }
+
+      return callback(resolvedTarget);
     } catch (error) {
       console.error('Error handling audio file request:', error);
       return callback({ error: 404 });
