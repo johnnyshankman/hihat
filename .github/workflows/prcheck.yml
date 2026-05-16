@@ -15,10 +15,10 @@ jobs:
     name: Typecheck, Lint & Build
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
-    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+    - uses: actions/setup-node@v4
       with:
         node-version: '22.x'
         cache: 'npm'
@@ -48,10 +48,10 @@ jobs:
     outputs:
       e2e: ${{ steps.filter.outputs.e2e }}
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
-    - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+    - uses: dorny/paths-filter@v3
       id: filter
       with:
         filters: |
@@ -76,11 +76,11 @@ jobs:
       if: needs.changes.outputs.e2e != 'true'
       run: echo "No E2E-relevant changes detected; skipping E2E tests."
 
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@v5
       if: needs.changes.outputs.e2e == 'true'
       with:
         persist-credentials: false
-    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+    - uses: actions/setup-node@v4
       if: needs.changes.outputs.e2e == 'true'
       with:
         node-version: '22.x'

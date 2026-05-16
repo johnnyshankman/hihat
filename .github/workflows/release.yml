@@ -13,10 +13,10 @@ jobs:
       id-token: write # OIDC token for build-provenance attestation
       attestations: write # write the attestation to the attestations store
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@v5
       with:
         persist-credentials: false
-    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+    - uses: actions/setup-node@v4
       with:
         node-version: '22.x'
         cache: 'npm'
@@ -30,7 +30,7 @@ jobs:
     # Lets DMG/zip downloaders verify the artifact was built by this repo's
     # CI from this commit: gh attestation verify <file> --repo johnnyshankman/hihat
     - name: Attest build provenance
-      uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+      uses: actions/attest-build-provenance@v2
       with:
         subject-path: |
           release/build/*.dmg
@@ -38,6 +38,8 @@ jobs:
 
     # Replaces the unmaintained marvinpinto/action-automatic-releases. Uses the
     # preinstalled GitHub CLI, so no third-party action runs in the publish path.
+    # --latest marks this tagged release as "Latest" so the
+    # /releases/latest URL redirects to it.
     - name: Publish Release on GitHub
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,6 +48,6 @@ jobs:
           --repo "$GITHUB_REPOSITORY" \
           --title "${{ github.ref_name }}" \
           --generate-notes \
-          --latest=false \
+          --latest \
           release/build/*.dmg \
           release/build/*.zip
