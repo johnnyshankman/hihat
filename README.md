@@ -215,14 +215,14 @@ Don't forget to give the project a star! Thanks again!
 
 ### Prerequisites
 
-* Node v22+
+* Node v24+
   ```sh
   brew install nvm
-  nvm install 22
-  nvm use 22
+  nvm install 24
+  nvm use 24
   ```
 
-* npm v10+
+* npm v11+
   ```sh
   npm install npm@latest -g
   ```
