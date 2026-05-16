@@ -1,0 +1,10 @@
+# Optional client-side guard: runs gitleaks on staged changes before every
+# commit. Install once, after cloning:  pipx install pre-commit && pre-commit install
+#
+# This is a convenience hook only — the authoritative secret-scanning layers
+# are the secret-scan.yml CI workflow and GitHub push protection.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks

@@ -1,11 +1,22 @@
 name: Release
 on: [workflow_dispatch]
+
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: macos-latest
+    environment: release
+    permissions:
+      contents: write # create the GitHub Release and upload DMG/zip
+      id-token: write # OIDC token for build-provenance attestation
+      attestations: write # write the attestation to the attestations store
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
         node-version: '22.x'
         cache: 'npm'
@@ -16,12 +27,25 @@ jobs:
     - name: Package
       run: npm run package
 
-    - name: Publish Release on Github
-      uses: marvinpinto/action-automatic-releases@latest
+    # Lets DMG/zip downloaders verify the artifact was built by this repo's
+    # CI from this commit: gh attestation verify <file> --repo johnnyshankman/hihat
+    - name: Attest build provenance
+      uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        automatic_release_tag: "${{ github.ref_name }}"
-        prerelease: false
-        files: |
-          release/build/*.zip
+        subject-path: |
           release/build/*.dmg
+          release/build/*.zip
+
+    # Replaces the unmaintained marvinpinto/action-automatic-releases. Uses the
+    # preinstalled GitHub CLI, so no third-party action runs in the publish path.
+    - name: Publish Release on GitHub
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release create "${{ github.ref_name }}" \
+          --repo "$GITHUB_REPOSITORY" \
+          --title "${{ github.ref_name }}" \
+          --generate-notes \
+          --latest=false \
+          release/build/*.dmg \
+          release/build/*.zip

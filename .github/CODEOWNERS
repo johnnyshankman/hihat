@@ -1,0 +1,34 @@
+# CODEOWNERS for hihat
+# Every PR touching these paths requires review from the listed owner(s).
+# Used by the "base rules" repository ruleset (require_code_owner_review: true).
+# Docs: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo.
+*                       @johnnyshankman
+
+# --- Security- & supply-chain-sensitive paths (explicit, for clarity) ---
+
+# CI/CD, release automation, and Dependabot config.
+/.github/               @johnnyshankman
+
+# This file itself — changing ownership must go through the owner.
+/.github/CODEOWNERS     @johnnyshankman
+
+# Electron main process: file-system access, IPC trust boundary,
+# custom protocol handler, sender validation.
+/src/main/              @johnnyshankman
+
+# Preload / contextBridge — the renderer<->main security boundary.
+/src/main/preload.ts    @johnnyshankman
+
+# Typed IPC contract — channel surface area.
+/src/types/ipc.ts       @johnnyshankman
+
+# Build tooling / webpack config.
+/.erb/                  @johnnyshankman
+
+# Dependency manifests & lockfiles.
+/package.json           @johnnyshankman
+/package-lock.json      @johnnyshankman
+/release/app/package.json       @johnnyshankman
+/release/app/package-lock.json  @johnnyshankman
