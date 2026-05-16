@@ -196,7 +196,7 @@ const createWindow = async () => {
         console.error('Refusing audio request: library path is not set');
         return callback({ error: 404 });
       }
-      
+
       const resolvedTarget = path.resolve(decodedUrl);
       const resolvedRoot = path.resolve(libraryPath);
       if (
