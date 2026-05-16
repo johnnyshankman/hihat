@@ -1,13 +1,24 @@
 name: Release
 on: [workflow_dispatch]
+
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: macos-latest
+    environment: release
+    permissions:
+      contents: write # create the GitHub Release and upload DMG/zip
+      id-token: write # OIDC token for build-provenance attestation
+      attestations: write # write the attestation to the attestations store
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@v6
       with:
-        node-version: '22.x'
+        persist-credentials: false
+    - uses: actions/setup-node@v6
+      with:
+        node-version: '24.x'
         cache: 'npm'
 
     - name: Install dependencies
@@ -16,12 +27,27 @@ jobs:
     - name: Package
       run: npm run package
 
-    - name: Publish Release on Github
-      uses: marvinpinto/action-automatic-releases@latest
+    # Lets DMG/zip downloaders verify the artifact was built by this repo's
+    # CI from this commit: gh attestation verify <file> --repo johnnyshankman/hihat
+    - name: Attest build provenance
+      uses: actions/attest-build-provenance@v4
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        automatic_release_tag: "${{ github.ref_name }}"
-        prerelease: false
-        files: |
-          release/build/*.zip
+        subject-path: |
           release/build/*.dmg
+          release/build/*.zip
+
+    # Replaces the unmaintained marvinpinto/action-automatic-releases. Uses the
+    # preinstalled GitHub CLI, so no third-party action runs in the publish path.
+    # --latest marks this tagged release as "Latest" so the
+    # /releases/latest URL redirects to it.
+    - name: Publish Release on GitHub
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release create "${{ github.ref_name }}" \
+          --repo "$GITHUB_REPOSITORY" \
+          --title "${{ github.ref_name }}" \
+          --generate-notes \
+          --latest \
+          release/build/*.dmg \
+          release/build/*.zip

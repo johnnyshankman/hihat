@@ -43,3 +43,31 @@ test-results/
 e2e/fixtures/*.sqlite
 e2e/fixtures/test-userConfig.json
 e2e/fixtures/test-userConfig.json.migrated
+
+# Secrets & environment files
+# .env is build-tuning only here, but never commit env files as a rule.
+.env
+.env.*
+!.env.example
+
+# Certificates, private keys & signing material
+*.p12
+*.pfx
+*.pem
+*.key
+*.cer
+*.cert
+*.crt
+*.der
+*.keystore
+*.jks
+*.asc
+*.gpg
+
+# Apple code-signing / notarization artifacts
+*.mobileprovision
+*.provisionprofile
+*.keychain
+*.keychain-db
+build/entitlements.mac.plist.local
+AuthKey_*.p8
