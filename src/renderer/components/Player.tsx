@@ -32,6 +32,7 @@ import {
   toggleIconButtonSx,
 } from '../styles/iconButtonStyles';
 import { playerSliderSx } from '../styles/sliderStyles';
+import silenceAudio from '../assets/silence.mp3';
 
 // Album art placeholder component
 function AlbumArtPlaceholder() {
@@ -528,7 +529,7 @@ export default function Player() {
       <audio
         ref={audioRef}
         loop
-        src="https://github.com/anars/blank-audio/raw/refs/heads/master/2-minutes-and-30-seconds-of-silence.mp3"
+        src={silenceAudio}
         style={{ display: 'none' }}
       />
       <Box
