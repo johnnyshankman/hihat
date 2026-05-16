@@ -190,6 +190,7 @@ See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full
 * [![zustand][zustand.js]][zustand-url]
 * [![TanStack Query][TanStackQuery.js]][TanStackQuery-url]
 * [![TanStack Table][TanStackTable.js]][TanStackTable-url]
+* [![SQLite][SQLite.js]][SQLite-url]
 * [![Music Metadata][MusicMetadata.js]][MusicMetadata-url]
 * [![Gapless 5][Gapless5.js]][Gapless5-url]
 
@@ -214,14 +215,14 @@ Don't forget to give the project a star! Thanks again!
 
 ### Prerequisites
 
-* Node v22+
+* Node v24+
   ```sh
   brew install nvm
-  nvm install 22
-  nvm use 22
+  nvm install 24
+  nvm use 24
   ```
 
-* npm v10+
+* npm v11+
   ```sh
   npm install npm@latest -g
   ```
@@ -295,3 +296,5 @@ Project Link: [https://github.com/johnnyshankman/hihat](https://github.com/johnn
 [TanStackTable-url]: https://tanstack.com/table
 [Gapless5.js]: https://img.shields.io/badge/Gapless5-20232A?style=for-the-badge&logo=javascript&logoColor=007ACC
 [Gapless5-url]: https://github.com/regosen/Gapless-5
+[SQLite.js]: https://img.shields.io/badge/SQLite-20232A?style=for-the-badge&logo=sqlite&logoColor=007ACC
+[SQLite-url]: https://sql.js.org
