@@ -181,14 +181,33 @@ const createWindow = async () => {
   }
 
   /**
-   * Register a custom protocol to handle audio file requests from the renderer process
-   * This allows the renderer to access audio files through a custom URL scheme
+   * Register a custom protocol to handle audio file requests from the renderer process.
+   * This allows the renderer to access audio files through a custom URL scheme.
+   * Confined to the library directory so a compromised renderer can't
+   * read arbitrary files, mirroring the fileSystem:deleteFile guard.
    */
   protocol.registerFileProtocol('hihat-audio', (request, callback) => {
-    const url = request.url.replace('hihat-audio://getfile/', '');
-    const decodedUrl = decodeURIComponent(url);
     try {
-      return callback(decodedUrl);
+      const url = request.url.replace('hihat-audio://getfile/', '');
+      const decodedUrl = decodeURIComponent(url);
+
+      const { libraryPath } = getSettings();
+      if (!libraryPath) {
+        console.error('Refusing audio request: library path is not set');
+        return callback({ error: 404 });
+      }
+
+      const resolvedTarget = path.resolve(decodedUrl);
+      const resolvedRoot = path.resolve(libraryPath);
+      if (
+        resolvedTarget !== resolvedRoot &&
+        !resolvedTarget.startsWith(resolvedRoot + path.sep)
+      ) {
+        console.error('Refusing audio request outside the library path');
+        return callback({ error: 404 });
+      }
+
+      return callback(resolvedTarget);
     } catch (error) {
       console.error('Error handling audio file request:', error);
       return callback({ error: 404 });
