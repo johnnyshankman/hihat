@@ -13,12 +13,12 @@ jobs:
       id-token: write # OIDC token for build-provenance attestation
       attestations: write # write the attestation to the attestations store
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         persist-credentials: false
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with:
-        node-version: '22.x'
+        node-version: '24.x'
         cache: 'npm'
 
     - name: Install dependencies
@@ -30,7 +30,7 @@ jobs:
     # Lets DMG/zip downloaders verify the artifact was built by this repo's
     # CI from this commit: gh attestation verify <file> --repo johnnyshankman/hihat
     - name: Attest build provenance
-      uses: actions/attest-build-provenance@v2
+      uses: actions/attest-build-provenance@v4
       with:
         subject-path: |
           release/build/*.dmg

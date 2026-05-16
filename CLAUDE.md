@@ -23,7 +23,7 @@
 | Database | sql.js (in-memory SQLite compiled to WASM, persists to disk on every write) |
 | Build tooling | Webpack 5, TypeScript 5.8, Electron React Boilerplate |
 | Testing | Jest + Testing Library (unit), Playwright (E2E with Electron) |
-| Package manager | npm 10+ / Node 22+ |
+| Package manager | npm 10+ / Node 24+ |
 
 ## Project Structure
 

@@ -15,12 +15,12 @@ jobs:
     name: Typecheck, Lint & Build
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         persist-credentials: false
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with:
-        node-version: '22.x'
+        node-version: '24.x'
         cache: 'npm'
 
     - name: Install dependencies
@@ -48,10 +48,10 @@ jobs:
     outputs:
       e2e: ${{ steps.filter.outputs.e2e }}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         persist-credentials: false
-    - uses: dorny/paths-filter@v3
+    - uses: dorny/paths-filter@v4
       id: filter
       with:
         filters: |
@@ -76,14 +76,14 @@ jobs:
       if: needs.changes.outputs.e2e != 'true'
       run: echo "No E2E-relevant changes detected; skipping E2E tests."
 
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       if: needs.changes.outputs.e2e == 'true'
       with:
         persist-credentials: false
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       if: needs.changes.outputs.e2e == 'true'
       with:
-        node-version: '22.x'
+        node-version: '24.x'
         cache: 'npm'
 
     - name: Install dependencies
