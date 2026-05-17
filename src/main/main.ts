@@ -9,7 +9,8 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, protocol } from 'electron';
+import { pathToFileURL } from 'url';
+import { app, BrowserWindow, shell, ipcMain, net, protocol } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import electronDebug from 'electron-debug';
@@ -111,6 +112,33 @@ if (isDebug) {
   electronDebug();
 }
 
+// ── Custom audio protocol scheme ────────────────────────────────────────
+// `hihat-audio://` must be registered as a privileged scheme *before* the
+// app `ready` event. Without this, the renderer's Web Audio loader (an
+// XHR/fetch issued by Gapless-5) is rejected by Chromium's CORS policy —
+// custom schemes are not eligible for cross-origin requests unless
+// explicitly privileged here.
+//   standard/secure : treat as a proper, secure origin
+//   supportFetchAPI : allow fetch()/XMLHttpRequest to the scheme
+//   corsEnabled     : permit cross-origin requests from the file:// renderer
+//   stream          : allow streamed media responses
+//   bypassCSP       : the renderer CSP does not enumerate this scheme
+// The request handler itself is installed via protocol.handle() once the
+// app is ready (see registerAudioProtocol).
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'hihat-audio',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+      bypassCSP: true,
+    },
+  },
+]);
+
 const installExtensions = async () => {
   const installer = require('electron-devtools-installer');
   const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
@@ -175,18 +203,20 @@ const cleanupResources = () => {
   closeDatabase();
 };
 
-const createWindow = async () => {
-  if (isDebug) {
-    await installExtensions();
-  }
-
-  /**
-   * Register a custom protocol to handle audio file requests from the renderer process.
-   * This allows the renderer to access audio files through a custom URL scheme.
-   * Confined to the library directory so a compromised renderer can't
-   * read arbitrary files, mirroring the fileSystem:deleteFile guard.
-   */
-  protocol.registerFileProtocol('hihat-audio', (request, callback) => {
+/**
+ * Register the `hihat-audio://` request handler. Serves audio files from the
+ * configured library directory to the renderer's audio engine using the
+ * standard Request/Response protocol API.
+ *
+ * Confined to the library directory so a compromised renderer can't read
+ * arbitrary files, mirroring the fileSystem:deleteFile guard.
+ *
+ * Called once, after `app` is ready: protocol.handle throws if a scheme is
+ * handled twice, and createWindow can run again on macOS dock re-activation.
+ * The scheme is declared privileged at module load (see above).
+ */
+const registerAudioProtocol = () => {
+  protocol.handle('hihat-audio', async (request) => {
     try {
       const url = request.url.replace('hihat-audio://getfile/', '');
       const decodedUrl = decodeURIComponent(url);
@@ -194,7 +224,7 @@ const createWindow = async () => {
       const { libraryPath } = getSettings();
       if (!libraryPath) {
         console.error('Refusing audio request: library path is not set');
-        return callback({ error: 404 });
+        return new Response(null, { status: 404 });
       }
 
       const resolvedTarget = path.resolve(decodedUrl);
@@ -204,15 +234,24 @@ const createWindow = async () => {
         !resolvedTarget.startsWith(resolvedRoot + path.sep)
       ) {
         console.error('Refusing audio request outside the library path');
-        return callback({ error: 404 });
+        return new Response(null, { status: 404 });
       }
 
-      return callback(resolvedTarget);
+      const response = await net.fetch(
+        pathToFileURL(resolvedTarget).toString(),
+      );
+      return response;
     } catch (error) {
       console.error('Error handling audio file request:', error);
-      return callback({ error: 404 });
+      return new Response(null, { status: 404 });
     }
   });
+};
+
+const createWindow = async () => {
+  if (isDebug) {
+    await installExtensions();
+  }
 
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
@@ -460,6 +499,8 @@ app
     // Configure logging before anything else
     configureLogging();
 
+    // Install the hihat-audio:// handler once, before the first window.
+    registerAudioProtocol();
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
