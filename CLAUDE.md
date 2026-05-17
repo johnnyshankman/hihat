@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**hihat** is a minimalist offline music library player for macOS built with Electron 35, React 19, and TypeScript. It targets audiophiles who want a modern, dark-mode, ad-free iTunes replacement with gapless playback and large library support.
+**hihat** is a minimalist offline music library player for macOS built with Electron 42, React 19, and TypeScript. It targets audiophiles who want a modern, dark-mode, ad-free iTunes replacement with gapless playback and large library support.
 
 - **Repository**: `johnnyshankman/hihat`
 - **License**: MIT
@@ -12,7 +12,7 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Desktop runtime | Electron 35 (frameless window, custom title bar) |
+| Desktop runtime | Electron 42 (frameless window, custom title bar) |
 | Frontend | React 19, MUI 9 (`@mui/material`, `@mui/icons-material`) |
 | Routing | React Router 7 |
 | Server state | TanStack Query 5 (`@tanstack/react-query`) — owns all DB-backed IPC data |
