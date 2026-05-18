@@ -616,7 +616,7 @@ export default function Settings({ onClose }: SettingsProps) {
         <Typography
           color="text.primary"
           sx={{ userSelect: 'none' }}
-          variant="h1"
+          variant="h2"
         >
           Settings
         </Typography>
