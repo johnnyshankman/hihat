@@ -600,7 +600,11 @@ export default function Settings({ onClose }: SettingsProps) {
           alignItems: 'center',
           justifyContent: 'space-between',
           px: 2,
-          py: 1.35,
+          py: 0.5,
+          // Match the library/playlist top toolbar height (.vt-toolbar
+          // min-height: 44px in virtualTable.css) so the Settings header
+          // lines up with every other header in the app.
+          minHeight: 44,
           borderBottom: (t) => `1px solid ${t.palette.divider}`,
           position: 'sticky',
           top: 0,
