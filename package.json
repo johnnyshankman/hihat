@@ -203,7 +203,7 @@
         ]
       },
       "type": "distribution",
-      "hardenedRuntime": true,
+      "hardenedRuntime": false,
       "entitlements": "assets/entitlements.mac.plist",
       "entitlementsInherit": "assets/entitlements.mac.plist",
       "gatekeeperAssess": false
