@@ -108,7 +108,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.7.1",
+    "@electron/rebuild": "^4.0.4",
     "@playwright/test": "^1.59.1",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
     "@svgr/webpack": "^8.1.0",
@@ -156,7 +156,7 @@
     "html-webpack-plugin": "^5.6.3",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
+    "jest-environment-jsdom": "^30.4.1",
     "mini-css-extract-plugin": "^2.9.2",
     "playwright": "^1.59.1",
     "postcss-loader": "^7.3.3",
@@ -167,7 +167,7 @@
     "rimraf": "^6.0.1",
     "sass": "^1.86.0",
     "sass-loader": "^16.0.5",
-    "sqlite3": "^5.1.7",
+    "sqlite3": "^6.0.1",
     "style-loader": "^4.0.0",
     "styled-components": "^6.1.0",
     "terser-webpack-plugin": "^5.3.9",
