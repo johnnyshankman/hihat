@@ -1,7 +1,7 @@
 {
   "description": "The minimalist offline music library player for macOS",
   "license": "MIT",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "name": "hihat",
   "main": "./.erb/dll/main.bundle.dev.js",
   "engines": {
@@ -94,7 +94,7 @@
     "@tanstack/react-virtual": "^3.13.23",
     "electron-debug": "^4.1.0",
     "electron-log": "^5.3.2",
-    "electron-updater": "^6.3.9",
+    "electron-updater": "^6.8.3",
     "material-symbols": "^0.40.2",
     "music-metadata": "^11.12.3",
     "node-taglib-sharp": "^5.2.3",
@@ -135,8 +135,8 @@
     "css-loader": "^7.1.2",
     "css-minimizer-webpack-plugin": "^7.0.2",
     "detect-port": "^2.1.0",
-    "electron": "^35.0.2",
-    "electron-builder": "^25.1.8",
+    "electron": "^42.1.0",
+    "electron-builder": "^26.8.1",
     "electron-devtools-installer": "^4.0.0",
     "electron-icon-builder": "^2.0.1",
     "electronmon": "^2.0.3",
@@ -203,7 +203,7 @@
         ]
       },
       "type": "distribution",
-      "hardenedRuntime": true,
+      "hardenedRuntime": false,
       "entitlements": "assets/entitlements.mac.plist",
       "entitlementsInherit": "assets/entitlements.mac.plist",
       "gatekeeperAssess": false
