@@ -15,9 +15,7 @@ import {
   DialogTitle,
   DialogContent,
   LinearProgress,
-  Divider,
 } from '@mui/material';
-import Grid from '@mui/material/Grid';
 import FolderIcon from '@mui/icons-material/Folder';
 import WarningIcon from '@mui/icons-material/Warning';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -36,6 +34,7 @@ import {
   DEFAULT_COLUMNS,
 } from '../queries';
 import { formatEta } from '../utils/formatters';
+import { mutedIconButtonSx } from '../styles/iconButtonStyles';
 import ConfirmationDialog from './ConfirmationDialog';
 
 // Define the props for the Settings component
@@ -600,7 +599,11 @@ export default function Settings({ onClose }: SettingsProps) {
           alignItems: 'center',
           justifyContent: 'space-between',
           px: 2,
-          py: 1.35,
+          py: 0.5,
+          // Match the library/playlist top toolbar height (.vt-toolbar
+          // min-height: 44px in virtualTable.css) so the Settings header
+          // lines up with every other header in the app.
+          minHeight: 44,
           borderBottom: (t) => `1px solid ${t.palette.divider}`,
           position: 'sticky',
           top: 0,
@@ -612,14 +615,14 @@ export default function Settings({ onClose }: SettingsProps) {
         <Typography
           color="text.primary"
           sx={{ userSelect: 'none' }}
-          variant="h1"
+          variant="h2"
         >
           Settings
         </Typography>
         <IconButton
           onClick={onClose}
           size="small"
-          sx={{ WebkitAppRegion: 'no-drag' }}
+          sx={{ ...mutedIconButtonSx, WebkitAppRegion: 'no-drag' }}
         >
           <CloseIcon />
         </IconButton>
@@ -627,140 +630,116 @@ export default function Settings({ onClose }: SettingsProps) {
 
       <Paper elevation={1} sx={{ WebkitAppRegion: 'no-drag', p: 2 }}>
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-          <Grid container spacing={3}>
-            {/* Library Path Section */}
-            <Grid size={12}>
-              <Typography gutterBottom variant="h2">
-                Music Folder
-              </Typography>
-              <Typography
-                color="text.secondary"
-                sx={{ display: 'block', mb: 2 }}
-                variant="caption"
-              >
-                The folder on your computer where your music files live. hihat
-                scans this folder and all its subfolders.
-              </Typography>
-              <FormControl fullWidth sx={{ mt: 1 }}>
-                <TextField
-                  label="Folder"
-                  onChange={handleSelectLibraryPath}
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            edge="end"
-                            onClick={handleSelectLibraryPath}
-                          >
-                            <FolderIcon />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                  value={libraryPath}
-                />
-              </FormControl>
-            </Grid>
-
-            <Grid size={12}>
-              <Divider sx={{ my: 2 }} />
-            </Grid>
-
-            <Grid size={12}>
-              <Typography gutterBottom variant="h2">
-                Import Music
-              </Typography>
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Typography
-                  color="text.secondary"
-                  sx={{ display: 'block', fontSize: '0.75rem' }}
-                >
-                  Add new songs or entire folders to your library. Files are
-                  copied into your Music Folder, so the originals stay right
-                  where they are. Duplicates are skipped automatically.
-                </Typography>
-                <Button
-                  color="primary"
-                  disabled={!libraryPath || isScanning}
-                  fullWidth
-                  onClick={handleAddSongs}
-                  startIcon={<AddIcon />}
-                  variant="contained"
-                >
-                  Add Songs
-                </Button>
-              </Box>
-            </Grid>
-
-            <Grid size={12}>
-              <Divider sx={{ my: 2 }} />
-            </Grid>
-
-            {/* Library Operations Section */}
-            <Grid size={12}>
-              <Typography gutterBottom variant="h2">
-                Rescan Library
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Typography
-                  color="text.secondary"
-                  sx={{ display: 'block', fontSize: '0.75rem' }}
-                >
-                  Check your music folder for any new, changed, or removed files
-                  and update your library to match.
-                </Typography>
-                <Button
-                  color="primary"
-                  disabled={!libraryPath || isScanning}
-                  fullWidth
-                  onClick={handleRescanLibrary}
-                  startIcon={<RefreshIcon />}
-                  variant="contained"
-                >
-                  {isScanning ? 'Scanning...' : 'Rescan Library'}
-                </Button>
-              </Box>
-            </Grid>
-
-            <Grid size={12}>
-              <Divider sx={{ my: 2 }} />
-            </Grid>
-
-            {/* Backup Section */}
-            <Grid size={12}>
-              <Typography gutterBottom variant="h2">
-                Backup Library
-              </Typography>
-              <Typography
-                color="text.secondary"
-                sx={{ display: 'block', mb: 2 }}
-                variant="caption"
-              >
-                Copy your music library to an external drive or another folder.
-                Only new and changed files are copied each time, so backups
-                after the first one are fast. Your existing backup files are
-                never removed.
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Button
-                  color="primary"
-                  disabled={!libraryPath || isScanning || isBackupInProgress}
-                  onClick={handleBackupLibrary}
-                  startIcon={<BackupIcon />}
-                  variant="contained"
-                >
-                  {isBackupInProgress ? 'Backing Up...' : 'Backup Library'}
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
+          <Typography gutterBottom variant="h3">
+            Music Folder
+          </Typography>
+          <Typography
+            color="text.secondary"
+            sx={{ display: 'block', mb: 2 }}
+            variant="caption"
+          >
+            The folder on your computer where your music files live. hihat scans
+            this folder and all its subfolders.
+          </Typography>
+          <FormControl fullWidth sx={{ mt: 1 }}>
+            <TextField
+              label="Folder"
+              onChange={handleSelectLibraryPath}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton edge="end" onClick={handleSelectLibraryPath}>
+                        <FolderIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              value={libraryPath}
+            />
+          </FormControl>
         </Paper>
 
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-          <Typography gutterBottom variant="h2">
+          <Typography gutterBottom variant="h3">
+            Import Music
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography
+              color="text.secondary"
+              sx={{ display: 'block', fontSize: '0.75rem' }}
+            >
+              Add new songs or entire folders to your library. Files are copied
+              into your Music Folder, so the originals stay right where they
+              are. Duplicates are skipped automatically.
+            </Typography>
+            <Button
+              color="primary"
+              disabled={!libraryPath || isScanning}
+              fullWidth
+              onClick={handleAddSongs}
+              startIcon={<AddIcon />}
+              variant="contained"
+            >
+              Add Songs
+            </Button>
+          </Box>
+        </Paper>
+
+        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+          <Typography gutterBottom variant="h3">
+            Rescan Library
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography
+              color="text.secondary"
+              sx={{ display: 'block', fontSize: '0.75rem' }}
+            >
+              Check your music folder for any new, changed, or removed files and
+              update your library to match.
+            </Typography>
+            <Button
+              color="primary"
+              disabled={!libraryPath || isScanning}
+              fullWidth
+              onClick={handleRescanLibrary}
+              startIcon={<RefreshIcon />}
+              variant="contained"
+            >
+              {isScanning ? 'Scanning...' : 'Rescan Library'}
+            </Button>
+          </Box>
+        </Paper>
+
+        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+          <Typography gutterBottom variant="h3">
+            Backup Library
+          </Typography>
+          <Typography
+            color="text.secondary"
+            sx={{ display: 'block', mb: 2 }}
+            variant="caption"
+          >
+            Copy your music library to an external drive or another folder. Only
+            new and changed files are copied each time, so backups after the
+            first one are fast. Your existing backup files are never removed.
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Button
+              color="primary"
+              disabled={!libraryPath || isScanning || isBackupInProgress}
+              onClick={handleBackupLibrary}
+              startIcon={<BackupIcon />}
+              variant="contained"
+            >
+              {isBackupInProgress ? 'Backing Up...' : 'Backup Library'}
+            </Button>
+          </Box>
+        </Paper>
+
+        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+          <Typography gutterBottom variant="h3">
             Appearance
           </Typography>
           <Typography
@@ -787,7 +766,7 @@ export default function Settings({ onClose }: SettingsProps) {
         </Paper>
 
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-          <Typography gutterBottom variant="h2">
+          <Typography gutterBottom variant="h3">
             Sorting
           </Typography>
           <Typography
@@ -815,7 +794,7 @@ export default function Settings({ onClose }: SettingsProps) {
         </Paper>
 
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-          <Typography gutterBottom variant="h2">
+          <Typography gutterBottom variant="h3">
             Column Visibility
           </Typography>
           <Typography
@@ -912,7 +891,7 @@ export default function Settings({ onClose }: SettingsProps) {
         </Paper>
 
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-          <Typography gutterBottom variant="h2">
+          <Typography gutterBottom variant="h3">
             Reset
           </Typography>
           <Box sx={{ mt: 2 }}>

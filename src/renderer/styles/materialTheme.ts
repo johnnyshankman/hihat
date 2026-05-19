@@ -36,8 +36,8 @@ const baseThemeOptions: ThemeOptions = {
       fontWeight: 600,
     },
     h3: {
-      fontSize: '18px',
-      fontWeight: 500,
+      fontSize: '17px',
+      fontWeight: 600,
     },
     body1: {
       fontSize: '14px',
