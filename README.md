@@ -19,7 +19,7 @@
     <a href="https://github.com/johnnyshankman/hihat/issues">Request Feature</a>
   </p>
   <p align="center">
-    <img src="https://github.com/johnnyshankman/hihat/actions/workflows/build.yml/badge.svg" alt="Build status" width="105" height="20">
+    <img src="https://img.shields.io/github/actions/workflow/status/johnnyshankman/hihat/build.yml?label=build&style=flat" alt="Build status" height="20">
     <img src="https://img.shields.io/github/v/release/johnnyshankman/hihat?label=release&color=black" alt="Latest release" height="20">
     <img src="https://img.shields.io/github/downloads/johnnyshankman/hihat/total?label=downloads&color=black" alt="Total downloads" height="20">
     <img src="https://img.shields.io/github/license/johnnyshankman/hihat?color=black" alt="License" height="20">
