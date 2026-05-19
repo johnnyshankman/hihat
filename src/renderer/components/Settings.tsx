@@ -34,6 +34,7 @@ import {
   DEFAULT_COLUMNS,
 } from '../queries';
 import { formatEta } from '../utils/formatters';
+import { mutedIconButtonSx } from '../styles/iconButtonStyles';
 import ConfirmationDialog from './ConfirmationDialog';
 
 // Define the props for the Settings component
@@ -621,7 +622,7 @@ export default function Settings({ onClose }: SettingsProps) {
         <IconButton
           onClick={onClose}
           size="small"
-          sx={{ WebkitAppRegion: 'no-drag' }}
+          sx={{ ...mutedIconButtonSx, WebkitAppRegion: 'no-drag' }}
         >
           <CloseIcon />
         </IconButton>
