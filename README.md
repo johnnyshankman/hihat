@@ -48,9 +48,11 @@
 
 ## About The Project
 
-A free, open-source, and modern music player for macOS. It plays every major audio format with true gapless playback, manages local libraries of any size, and comes with a sleek responsive interface.
+**hihat* is a free, open-source, and modern music player for macOS. It plays every major audio format with true gapless playback, manages local libraries of any size, and comes with a sleek responsive interface. 
 
 No ads, no accounts, no internet — just your music.
+
+It is inspired by the original feature set of iTunes, modernized with the look and feel of a Spotify or Tidal.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
