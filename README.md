@@ -159,9 +159,9 @@ For detailed format information, see:
 
 ## User Guide
 
-A full walkthrough of hihat's features — playback, playlists, browsing and search, the Mini Player, metadata editing, right-click actions, settings, keyboard shortcuts, and tips — lives in a separate document so this README stays focused on getting you up and running.
-
 **See the [hihat User Guide](USER_GUIDE.md)** for everything you can do once the app is open.
+
+The full walkthrough of hihat's features — playback, playlists, browsing and search, the Mini Player, metadata editing, right-click actions, settings, keyboard shortcuts, and tips — lives in that document so that this README stays focused on getting you up and running.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
