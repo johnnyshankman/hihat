@@ -22,8 +22,8 @@
     <img src="https://img.shields.io/github/actions/workflow/status/johnnyshankman/hihat/build.yml?label=build&style=flat" alt="Build status" height="20">
     <img src="https://img.shields.io/github/v/release/johnnyshankman/hihat?label=release&color=black" alt="Latest release" height="20">
     <img src="https://img.shields.io/github/downloads/johnnyshankman/hihat/total?label=downloads&color=black" alt="Total downloads" height="20">
-    <img src="https://img.shields.io/github/license/johnnyshankman/hihat?color=black" alt="License" height="20">
     <img src="https://img.shields.io/github/stars/johnnyshankman/hihat?label=stars&style=flat&color=black" alt="License" alt="Total stars" height="20">
+    <img src="https://img.shields.io/github/license/johnnyshankman/hihat?color=black" alt="License" height="20">
   </p>
 </div>
 
