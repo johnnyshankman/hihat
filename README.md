@@ -9,7 +9,7 @@
   <h3 align="center">hihat</h3>
 
   <p align="center">
-    The minimalist offline music player for macOS
+    The modern offline music player for macOS
     <br />
     <br />
     <a href="https://github.com/johnnyshankman/hihat/releases/latest">Download</a>
