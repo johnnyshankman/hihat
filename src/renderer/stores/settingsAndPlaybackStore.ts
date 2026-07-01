@@ -179,7 +179,36 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         if (player) {
           removePreloadedTrack(player);
         }
-        set({ preloadedTrack: null, preloadReady: false });
+
+        // The on-deck song was deleted, but the current track keeps playing —
+        // recompute what should come next and preload it so playback advances
+        // seamlessly instead of stalling when the current track ends
+        // (autoPlayNextTrack reads state.preloadedTrack and can't fall back on
+        // its own). Exclude the just-deleted ids: the tracks query invalidates
+        // asynchronously, so the snapshot findNextSong reads may still list
+        // them and would otherwise hand back the song we just removed.
+        let replacement: Track | null = null;
+        if (currentTrack) {
+          const artistFilter =
+            state.playbackContextBrowserFilter?.artist || null;
+          const albumFilter = state.playbackContextBrowserFilter?.album || null;
+          replacement =
+            findNextSong(
+              currentTrack.id,
+              state.shuffleMode,
+              state.playbackSource,
+              state.repeatMode,
+              artistFilter,
+              state.shuffleHistory,
+              albumFilter,
+              ids,
+            ) ?? null;
+        }
+
+        if (replacement && player) {
+          preloadNextInQueue(player, replacement);
+        }
+        set({ preloadedTrack: replacement, preloadReady: false });
         get().refreshCanGoNext();
       }
     },

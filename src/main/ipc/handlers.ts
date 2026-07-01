@@ -589,10 +589,7 @@ export const fileSystemHandlers = {
       // would permanently delete repo test assets, so skip the trash and
       // report success — the DB row deletion that drives the UI has already
       // happened in the caller. This keeps delete-flow e2e tests repeatable.
-      if (
-        process.env.NODE_ENV === 'test' ||
-        process.env.TEST_MODE === 'true'
-      ) {
+      if (process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true') {
         return {
           success: true,
           message: 'Skipped trashing file in test mode',
