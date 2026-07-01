@@ -77,3 +77,35 @@ export function preloadNextInQueue(player: Gapless5, next: Track): void {
   player.addTrack(getTrackUrl(next.filePath));
   assertQueueInvariant(player);
 }
+
+/**
+ * Stop playback and empty Gapless-5's queue.
+ *
+ * Used when the currently-loaded track is deleted from the library: the
+ * player must release the decoded buffer so the deleted song can no longer
+ * be heard. Safe with respect to the known removeTrack auto-advance bug
+ * (see the leak note above) because callers invoke this while the player is
+ * already paused — there is no in-flight transition to disrupt.
+ */
+export function clearPlayerQueue(player: Gapless5): void {
+  player.pause();
+  player.removeAllTracks();
+}
+
+/**
+ * Remove the trailing preloaded track (the last queue entry) while leaving
+ * the currently-playing track at index 0 intact.
+ *
+ * Used when a deleted track was only sitting in the queue as the preloaded
+ * next-up song. The preload is always the most recent `addTrack`, so it is
+ * the last entry even when leading stale tracks have accumulated from the
+ * documented auto-advance leak. Removing a trailing, non-playing entry does
+ * not hit the index-0-mid-transition bug. No-op when only one track remains
+ * so we never remove the sole current track.
+ */
+export function removePreloadedTrack(player: Gapless5): void {
+  const len = player.getTracks().length;
+  if (len > 1) {
+    player.removeTrack(len - 1);
+  }
+}

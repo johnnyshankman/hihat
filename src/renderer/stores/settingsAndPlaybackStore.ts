@@ -11,6 +11,7 @@ import {
   queryKeys,
 } from '../queries';
 import {
+  clearMediaSession,
   computeCanGoNext,
   findNextSong,
   findPreviousSong,
@@ -18,7 +19,12 @@ import {
   updateMediaSession,
 } from '../utils/trackSelectionUtils';
 import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
-import { preloadNextInQueue, syncPlayerQueue } from '../utils/playerQueue';
+import {
+  clearPlayerQueue,
+  preloadNextInQueue,
+  removePreloadedTrack,
+  syncPlayerQueue,
+} from '../utils/playerQueue';
 
 /**
  * Persist `lastPlayedSongId` to the DB and reflect it in the TanStack
@@ -129,6 +135,53 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
         return { canGoNext };
       });
+    },
+
+    // React to tracks being deleted from the library so a removed song can
+    // never linger in the player. Two cases matter (issue #140):
+    //   1. The deleted track is the one currently loaded/playing -> stop and
+    //      fully clear playback. The UI falls back to the same empty
+    //      "nothing playing" state the app shows on first boot.
+    //   2. The deleted track is only the preloaded next-up song -> purge it
+    //      from the Gapless-5 buffer so neither Next nor auto-advance can
+    //      reach the still-decoded copy.
+    // Deleting any other track has no effect on playback.
+    handleDeletedTracks: (deletedIds: string[]) => {
+      const ids = new Set(deletedIds);
+      const state = get();
+      const { player, currentTrack, preloadedTrack } = state;
+
+      if (currentTrack && ids.has(currentTrack.id)) {
+        if (player) {
+          // Safe: player is being paused here, so removeAllTracks isn't
+          // mutating an in-flight auto-advance transition.
+          clearPlayerQueue(player);
+        }
+        state.silentAudioRef?.pause();
+        clearMediaSession();
+        // Drop any in-progress play-count timer for the now-deleted track.
+        playbackTracker.resetTrack(currentTrack.id);
+        set({
+          currentTrack: null,
+          preloadedTrack: null,
+          preloadReady: false,
+          paused: true,
+          position: 0,
+          lastPosition: 0,
+          duration: 0,
+          queueLeadingStaleCount: 0,
+        });
+        get().refreshCanGoNext();
+        return;
+      }
+
+      if (preloadedTrack && ids.has(preloadedTrack.id)) {
+        if (player) {
+          removePreloadedTrack(player);
+        }
+        set({ preloadedTrack: null, preloadReady: false });
+        get().refreshCanGoNext();
+      }
     },
 
     setVolume: (volume) => {

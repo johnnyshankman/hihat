@@ -273,6 +273,19 @@ export const updateMediaSession = async (track: Track) => {
   }
 };
 
+/**
+ * Clear OS media controls (lock screen / media keys metadata) when nothing
+ * is playing — e.g. after the currently-loaded track is deleted. Mirrors the
+ * empty state the app starts in before any track is selected.
+ */
+export const clearMediaSession = () => {
+  if (!navigator.mediaSession) {
+    return;
+  }
+  navigator.mediaSession.metadata = null;
+  navigator.mediaSession.playbackState = 'none';
+};
+
 export const findPreviousSong = (
   currentTrackId: string,
   shuffleMode: boolean,

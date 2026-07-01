@@ -504,6 +504,12 @@ export default function Library() {
       // Mutation hooks already invalidate tracks/playlists on success;
       // nothing else to do here.
 
+      // Clear the player if the currently-loaded (or preloaded next-up) song
+      // was part of this bulk deletion (issue #140).
+      useSettingsAndPlaybackStore
+        .getState()
+        .handleDeletedTracks(selectedTrackIds);
+
       setSelectedTracks({});
 
       if (targetTrackId) {
