@@ -30,8 +30,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:ui": "playwright test --ui",
-    "typecheck": "tsc --noEmit",
-    "generate-icons": "rm -rf ./assets/icons && electron-icon-builder --input=./assets/icon.png --output=./assets/icons"
+    "typecheck": "tsc --noEmit"
   },
   "browserslist": [],
   "prettier": {
@@ -138,7 +137,6 @@
     "electron": "^42.1.0",
     "electron-builder": "^26.8.1",
     "electron-devtools-installer": "^4.0.0",
-    "electron-icon-builder": "^2.0.1",
     "electronmon": "^2.0.3",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
