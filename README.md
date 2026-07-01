@@ -9,7 +9,7 @@
   <h3 align="center">hihat</h3>
 
   <p align="center">
-    The minimalist offline music player for macOS
+    The modern offline music player for macOS
     <br />
     <br />
     <a href="https://github.com/johnnyshankman/hihat/releases/latest">Download</a>
@@ -19,10 +19,11 @@
     <a href="https://github.com/johnnyshankman/hihat/issues">Request Feature</a>
   </p>
   <p align="center">
-    <img src="https://github.com/johnnyshankman/hihat/actions/workflows/build.yml/badge.svg" alt="Build status" width="105" height="20">
-    <img src="https://img.shields.io/github/v/release/johnnyshankman/hihat?label=release&color=success" alt="Latest release" height="20">
-    <img src="https://img.shields.io/github/downloads/johnnyshankman/hihat/total?label=downloads&color=blue" alt="Total downloads" height="20">
-    <img src="https://img.shields.io/github/license/johnnyshankman/hihat?color=lightgrey" alt="License" height="20">
+    <img src="https://img.shields.io/github/actions/workflow/status/johnnyshankman/hihat/build.yml?label=build&style=flat" alt="Build status" height="20">
+    <img src="https://img.shields.io/github/v/release/johnnyshankman/hihat?label=release&color=black" alt="Latest release" height="20">
+    <img src="https://img.shields.io/github/downloads/johnnyshankman/hihat/total?label=downloads&color=black" alt="Total downloads" height="20">
+    <img src="https://img.shields.io/github/stars/johnnyshankman/hihat?label=stars&style=flat&color=black" alt="License" alt="Total stars" height="20">
+    <img src="https://img.shields.io/github/license/johnnyshankman/hihat?color=black" alt="License" height="20">
   </p>
 </div>
 
@@ -47,7 +48,7 @@
 
 ## About The Project
 
-**hihat** is a free, minimalist, open-source music player for macOS. It plays every major audio format with true gapless playback, manages libraries of any size, and comes with a sleek responsive interface.
+A free, open-source, and modern music player for macOS. It plays every major audio format with true gapless playback, manages local libraries of any size, and comes with a sleek responsive interface.
 
 No ads, no accounts, no internet — just your music.
 
@@ -59,19 +60,18 @@ No ads, no accounts, no internet — just your music.
 
 1. Download the `.dmg` file from the [Latest Release](https://github.com/johnnyshankman/hihat/releases/latest)
 2. Double-click the `.dmg` to open it, then drag **hihat** into your Applications folder
+3. That's it -- double click **hihat** to open.
 
-That's it — hihat is now installed and ready to use.
-
-> **Note:** The first time you open hihat, macOS will warn you it's from an unidentified developer and ask you to confirm. This is expected — hihat is free and does not pay for an Apple Developer License to suppress this dialog.
+> **Note:** The first time you open **hihat**, macOS will warn you that this is from an unidentified developer and then ask you to confirm. This is expected and safe to confirm. **hihat** is free and does not pay for an Apple Developer License to suppress this dialog.
 
 ### First Time Setup
 
-1. Open hihat
+1. Open **hihat**
 2. Click the **Settings** icon (gear) in the top-right corner of the sidebar
 3. Under **Music Folder**, click the folder icon to select the folder where you store your music
 4. Confirm you want to scan the folder
 5. Wait for the import to complete (about 1 minute per 10,000 songs)
-6. Your library is ready — start playing!
+6. Your library is ready to start playing!
 
 ![hihat first-time setup showing the Settings drawer with Library Location folder picker](screenshots/setup-library-location.png)
 
@@ -94,45 +94,39 @@ To install an update:
 * Smart deduplication on import (prefers higher-quality files)
 * Fast library scanning (~1 minute per 10,000 songs)
 * Edit metadata for any track — changes are written back to the audio file tags
-* Library stats: total songs, size in GB, total plays, and total hours (via the hihat menu)
 * Incremental library backup to any external drive
 
 **Playback**
 * True gapless playback
 * Shuffle with navigable history (up to 100 tracks)
 * Repeat modes: off, single track, or all
-* Play count tracking with duration-based threshold
-* Last Played date tracking
+* Play count tracking with smart/dynamic thresholds
+* Last Played tracking
 
 **Organization**
-* User-created playlists — create, rename, delete, and add or remove tracks
-* Smart playlists: Recently Added, Recently Played, and Most Played (top 50 each, updated automatically)
+* Custom playlists
+* Smart playlists: Recently Added, Recently Played, and Most Played (all updated automatically)
 * Browser panel for filtering by album artist and album
-* Sort by any column
-* Quick search bar — filter by title, artist, album, or genre
-* Customizable column visibility — right-click any column header
+* Quick search and sort
+* Customizable column visibility
 * Drag-and-drop column reordering
-* Drag and drop tracks to sidebar playlists
+* Drag-and-drop tracks to playlists
 * Per-view search filters preserved across navigation
-* Persistent sorting preferences per playlist
-* Persistent column widths
+* Persistent column widths & sorting preferences
 
 **Interface**
-* Dark and Light themes
+* Dark and Light mode
 * Mini Player mode — a floating window with album art
-* Frameless macOS-native window with traffic light controls
 * Collapsible sidebar navigation
 * Multi-select with bulk operations (Cmd+Click, Shift+Click)
 * Scrolling marquee for long track and artist names
-* Responsive design down to 540px
 
 **Integration**
 * macOS media keys, keyboard, and Bluetooth headphone support
 * macOS menu bar with playback controls and keyboard shortcuts
 * macOS Now Playing widget integration
-* Find on Spotify, Apple Music, and Tidal in one click
-* Download album art from any track
-* Show any track's file in Finder
+* Find tracks on Spotify, Apple Music, or Tidal in one click
+* Show any track in Finder
 
 ![hihat in light theme with Browser panel open at the top](screenshots/features-light-theme-artist-browser.png)
 
@@ -165,9 +159,9 @@ For detailed format information, see:
 
 ## User Guide
 
-A full walkthrough of hihat's features — playback, playlists, browsing and search, the Mini Player, metadata editing, right-click actions, settings, keyboard shortcuts, and tips — lives in a separate document so this README stays focused on getting you up and running.
-
 **See the [hihat User Guide](USER_GUIDE.md)** for everything you can do once the app is open.
+
+The full walkthrough of hihat's features — playback, playlists, browsing and search, the Mini Player, metadata editing, right-click actions, settings, keyboard shortcuts, and tips — lives in that document so that this README stays focused on getting you up and running.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
