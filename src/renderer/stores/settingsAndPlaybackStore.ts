@@ -1160,17 +1160,13 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           throw new Error('No next track found while auto playing next track');
         }
 
-        // Reached the end of the source with nothing to play next (repeat off,
-        // last track). Gapless-5 has already auto-advanced onto the final track
-        // and it's audibly playing, but there's no successor to preload. Commit
-        // that track as the now-playing state instead of bailing with an empty
-        // `return {}`: leaving currentTrack pointed at the previous (finished)
-        // song desyncs the UI/MediaSession and — worse — makes
-        // handleDeletedTracks mis-route a delete of the playing song into the
-        // preload branch, where removePreloadedTrack would rip out the track
-        // that's actually playing. preloadedTrack is null (queue has no trailing
-        // preload); queueLeadingStaleCount still grows by one because the
-        // finished track lingers at the front per the documented leak.
+        // End of source (repeat off): Gapless-5 already auto-advanced onto the
+        // final playing track with no successor to preload. Commit it as
+        // now-playing rather than bailing with `return {}` — else a stale
+        // currentTrack (still pointing at the finished song) makes
+        // handleDeletedTracks mis-route a delete of the playing track through
+        // removePreloadedTrack and kill playback. preloadedTrack is null; stale
+        // count still grows by one for the lingering finished track.
         const commitFinalTrackAsNowPlaying = () => {
           updateMediaSession(currentTrackThatIsAudiblyPlaying);
           playbackTracker.startTrackingTrack(

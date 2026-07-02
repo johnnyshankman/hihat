@@ -119,20 +119,15 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
     }
   });
 
-  // Regression for the end-of-source desync: when playback auto-advances onto
-  // the LAST track of a source (repeat off), autoPlayNextTrack used to bail with
-  // `return {}`, leaving the store's currentTrack pointed at the previous song
-  // and preloadedTrack pointing at the track actually playing. Deleting that
-  // playing track then skipped the "clear current" branch and instead ran
-  // removePreloadedTrack, which ripped out the playing track and restarted the
-  // previous one. The fix commits the auto-advanced track as the now-playing
-  // state so the delete routes correctly and the UI clears.
+  // Regression for the end-of-source desync: auto-advancing onto the LAST track
+  // of a source (repeat off) used to leave currentTrack on the previous song and
+  // preloadedTrack on the track actually playing, so deleting that playing track
+  // mis-routed through removePreloadedTrack and restarted the previous one. The
+  // fix commits the auto-advanced track as now-playing.
   //
-  // Requires REAL-TIME gapless auto-advance (a track has to actually finish),
-  // exactly like e2e/playback-autoplay*.spec.ts. That only progresses on a
-  // focused/audible runner (CI), not in a backgrounded/headless sandbox where
-  // the Web Audio clock stalls — so this asserts against a generous timeout and
-  // is effectively CI-verified.
+  // Needs REAL-TIME gapless auto-advance (like playback-autoplay*.spec.ts): only
+  // progresses on a focused/audible runner (CI), not a headless sandbox where the
+  // Web Audio clock stalls. CI-verified.
   test('auto-advance to the last track then delete it: clears now-playing instead of resurrecting the previous track', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
@@ -142,14 +137,11 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
       await page.waitForTimeout(500);
       await page.waitForSelector('[data-track-id]', { timeout: 5000 });
 
-      // Filter the library down to a tiny source via search. "Digital Dreams"
-      // is an album shared by exactly 4 Aurora Synth tracks, so the filtered
-      // source has a real END: auto-advancing off its second-to-last track
-      // lands on its last, where findNextSong returns null (repeat off) — the
-      // exact condition that used to desync the store. A search-filtered
-      // library keeps everything in one view (unlike a playlist, whose
-      // "Remove from Library" action isn't offered), and all matched rows
-      // render so positional lookups are safe.
+      // Filter the library to a tiny source via search: "Digital Dreams" is an
+      // album shared by 4 Aurora Synth tracks, giving a source with a real END
+      // where findNextSong returns null (repeat off) — the desync trigger.
+      // Staying in the library view (not a playlist) keeps "Remove from Library"
+      // available, and all 4 matched rows render so nth() lookups are safe.
       await page.locator('[aria-label="Show/Hide search"]').click();
       await page.waitForTimeout(300);
       await page.locator('[data-testid="search-input"]').fill('Digital Dreams');
@@ -180,9 +172,8 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
         page.locator('[data-testid="now-playing-title"]'),
       ).toContainText(secondTitle!);
 
-      // Let the ~10s track finish and auto-advance to the last track. The
-      // player must now report the LAST track as now-playing — the crux of the
-      // fix. Before it, currentTrack stayed pointed at the second-to-last track.
+      // Let the ~10s track finish and auto-advance to the last track: the player
+      // must now report the LAST track as now-playing (the crux of the fix).
       await expect(
         page.locator('[data-testid="now-playing-title"]'),
       ).toContainText(lastTitle!, { timeout: 30000 });
@@ -201,10 +192,9 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
       await dialog.getByRole('button', { name: 'Delete' }).click();
       await page.waitForTimeout(1500);
 
-      // Deleting the playing track clears the now-playing UI — it does NOT
-      // resurrect the previous track. Before the fix, the now-playing title
-      // would still show the second-to-last track (restarted by
-      // removePreloadedTrack ripping out the playing track).
+      // Deleting the playing track clears the now-playing UI instead of
+      // resurrecting the previous track (pre-fix: removePreloadedTrack restarted
+      // the second-to-last track, leaving now-playing populated).
       await expect(
         page.locator('[data-testid="now-playing-title"]'),
       ).toHaveCount(0);
