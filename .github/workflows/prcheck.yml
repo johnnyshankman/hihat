@@ -91,17 +91,7 @@ jobs:
       if: needs.changes.outputs.e2e == 'true'
       run: npm ci
 
-    # NOTE: Do NOT add `playwright install`. These E2E tests drive the app via
-    # Playwright's Electron integration (`_electron.launch`), which launches the
-    # `electron` dependency's own binary — not a Playwright-managed browser.
-    # That standalone-Chromium download stalls indefinitely on the macOS runner
-    # and is never used.
-    #
-    # The `electron` package (v42) ships no postinstall, so `npm ci` does NOT
-    # fetch its binary. Left alone it downloads lazily on first
-    # `require('electron')` *inside* the test run — blowing each launch timeout
-    # and re-downloading on every worker restart ("Downloading Electron
-    # binary..." on a loop). Provision it up front so the tests start ready.
+    # Required for playwright + electron to work on osx runners
     - name: Install Electron binary
       if: needs.changes.outputs.e2e == 'true'
       run: node node_modules/electron/install.js
