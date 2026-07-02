@@ -71,6 +71,7 @@ jobs:
     name: E2E Tests
     needs: [check, changes]
     runs-on: macos-latest
+    timeout-minutes: 90
     steps:
     - name: Skip notice
       if: needs.changes.outputs.e2e != 'true'
@@ -90,9 +91,11 @@ jobs:
       if: needs.changes.outputs.e2e == 'true'
       run: npm ci
 
-    - name: Install Playwright browsers
-      if: needs.changes.outputs.e2e == 'true'
-      run: npx playwright install --with-deps chromium
+    # NOTE: Do NOT add `playwright install`. These E2E tests drive the app via
+    # Playwright's Electron integration (`_electron.launch`), which uses the
+    # bundled Electron/Chromium from the `electron` dependency — not a
+    # Playwright-managed browser. The download of Playwright's standalone
+    # Chromium stalls indefinitely on the macOS runner and is never used.
 
     - name: Build
       if: needs.changes.outputs.e2e == 'true'
