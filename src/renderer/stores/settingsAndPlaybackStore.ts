@@ -1160,6 +1160,36 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           throw new Error('No next track found while auto playing next track');
         }
 
+        // Reached the end of the source with nothing to play next (repeat off,
+        // last track). Gapless-5 has already auto-advanced onto the final track
+        // and it's audibly playing, but there's no successor to preload. Commit
+        // that track as the now-playing state instead of bailing with an empty
+        // `return {}`: leaving currentTrack pointed at the previous (finished)
+        // song desyncs the UI/MediaSession and — worse — makes
+        // handleDeletedTracks mis-route a delete of the playing song into the
+        // preload branch, where removePreloadedTrack would rip out the track
+        // that's actually playing. preloadedTrack is null (queue has no trailing
+        // preload); queueLeadingStaleCount still grows by one because the
+        // finished track lingers at the front per the documented leak.
+        const commitFinalTrackAsNowPlaying = () => {
+          updateMediaSession(currentTrackThatIsAudiblyPlaying);
+          playbackTracker.startTrackingTrack(
+            currentTrackThatIsAudiblyPlaying.id,
+          );
+          persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
+          return {
+            currentTrack: currentTrackThatIsAudiblyPlaying,
+            duration: currentTrackThatIsAudiblyPlaying.duration,
+            paused: false,
+            position: 0,
+            lastPosition: 0,
+            lastPlaybackTimeUpdateRef: Date.now() - 1000,
+            preloadedTrack: null,
+            preloadReady: false,
+            queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
+          };
+        };
+
         // Handle shuffle mode with history
         if (state.shuffleMode) {
           // Check if we're navigating within history
@@ -1221,7 +1251,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           );
 
           if (!nextSong) {
-            return {};
+            return commitFinalTrackAsNowPlaying();
           }
 
           // Check if we need to clear history (when all songs have been played with repeat all)
@@ -1335,7 +1365,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         );
 
         if (!nextSong) {
-          return {};
+          return commitFinalTrackAsNowPlaying();
         }
 
         // Add the FUTURE next song to the player queue
