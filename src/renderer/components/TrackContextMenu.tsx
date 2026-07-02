@@ -248,12 +248,6 @@ export default function TrackContextMenu({
         return;
       }
 
-      // Clear the player if the deleted track was the one loaded/playing, or
-      // purge it from the queue if it was only the preloaded next-up song
-      // (issue #140). Read the action at call time — this fires long after
-      // mount and doesn't drive renders.
-      useSettingsAndPlaybackStore.getState().handleDeletedTracks([trackId]);
-
       // Step 4: Delete the file from the filesystem.
       if (track.filePath) {
         const fileDeleteResult = await deleteFileMutation.mutateAsync(
@@ -267,6 +261,10 @@ export default function TrackContextMenu({
           // Continue with UI updates even if file deletion fails.
         }
       }
+
+      // 5. Clear the player when the deleted track was the one loaded/playing,
+      // or purge it from the queue if it was only the preloaded next-up song.
+      useSettingsAndPlaybackStore.getState().handleDeletedTracks([trackId]);
 
       showNotification(
         `Track "${track.title}" has been removed and moved to Trash`,

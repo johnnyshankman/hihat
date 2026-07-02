@@ -1,11 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
 
-// Regression coverage for issue #140: deleting the song that is currently
-// loaded in the player must clear the "now playing" UI and remove the track
-// from the gapless-5 queue so it can no longer be heard or reached via Next.
-// The cleared state is intentionally the same empty state the app shows on
-// first boot (the `---` placeholder) — `now-playing-title` is absent entirely.
+// Regression coverage for issue #140:
+// deleting the song that is currently loaded in the player must clear
+// the "now playing" UI and remove the track from the gapless-5 queue so it can
+// no longer be heard or reached via Next.
 test.describe('Issue #140 — deleting the playing song clears the now-playing UI', () => {
   test('single delete: clears now-playing UI and disables Next when the current song is removed', async () => {
     const { app, page } = await TestHelpers.launchApp();
