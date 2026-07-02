@@ -101,17 +101,7 @@ jobs:
     # fetch its binary. Left alone it downloads lazily on first
     # `require('electron')` *inside* the test run — blowing each launch timeout
     # and re-downloading on every worker restart ("Downloading Electron
-    # binary..." on a loop). Provision it up front, and cache the @electron/get
-    # download so reruns skip the network hit.
-    - name: Cache Electron binary
-      if: needs.changes.outputs.e2e == 'true'
-      uses: actions/cache@v4
-      with:
-        path: ~/Library/Caches/electron
-        key: ${{ runner.os }}-electron-${{ hashFiles('package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-electron-
-
+    # binary..." on a loop). Provision it up front so the tests start ready.
     - name: Install Electron binary
       if: needs.changes.outputs.e2e == 'true'
       run: node node_modules/electron/install.js
