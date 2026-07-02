@@ -92,10 +92,29 @@ jobs:
       run: npm ci
 
     # NOTE: Do NOT add `playwright install`. These E2E tests drive the app via
-    # Playwright's Electron integration (`_electron.launch`), which uses the
-    # bundled Electron/Chromium from the `electron` dependency — not a
-    # Playwright-managed browser. The download of Playwright's standalone
-    # Chromium stalls indefinitely on the macOS runner and is never used.
+    # Playwright's Electron integration (`_electron.launch`), which launches the
+    # `electron` dependency's own binary — not a Playwright-managed browser.
+    # That standalone-Chromium download stalls indefinitely on the macOS runner
+    # and is never used.
+    #
+    # The `electron` package (v42) ships no postinstall, so `npm ci` does NOT
+    # fetch its binary. Left alone it downloads lazily on first
+    # `require('electron')` *inside* the test run — blowing each launch timeout
+    # and re-downloading on every worker restart ("Downloading Electron
+    # binary..." on a loop). Provision it up front, and cache the @electron/get
+    # download so reruns skip the network hit.
+    - name: Cache Electron binary
+      if: needs.changes.outputs.e2e == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Caches/electron
+        key: ${{ runner.os }}-electron-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-electron-
+
+    - name: Install Electron binary
+      if: needs.changes.outputs.e2e == 'true'
+      run: node node_modules/electron/install.js
 
     - name: Build
       if: needs.changes.outputs.e2e == 'true'
