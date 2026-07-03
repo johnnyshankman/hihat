@@ -71,6 +71,7 @@ jobs:
     name: E2E Tests
     needs: [check, changes]
     runs-on: macos-latest
+    timeout-minutes: 40
     steps:
     - name: Skip notice
       if: needs.changes.outputs.e2e != 'true'
@@ -90,9 +91,10 @@ jobs:
       if: needs.changes.outputs.e2e == 'true'
       run: npm ci
 
-    - name: Install Playwright browsers
+    # Required for playwright + electron to work on osx runners
+    - name: Install Electron binary
       if: needs.changes.outputs.e2e == 'true'
-      run: npx playwright install --with-deps chromium
+      run: node node_modules/electron/install.js
 
     - name: Build
       if: needs.changes.outputs.e2e == 'true'

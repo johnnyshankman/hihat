@@ -251,6 +251,72 @@ describe('findNextSong (non-shuffle)', () => {
   test('returns undefined when given an empty currentTrackId', () => {
     expect(findNextSong('', false, 'library', 'off')).toBeUndefined();
   });
+
+  test('skips an excluded (just-deleted) next track', () => {
+    // 2 was on-deck but is being deleted; next should jump straight to 3.
+    const next = findNextSong(
+      '1',
+      false,
+      'library',
+      'off',
+      null,
+      undefined,
+      null,
+      new Set(['2']),
+    );
+    expect(next?.id).toBe('3');
+  });
+
+  test('skips consecutive excluded tracks (bulk delete)', () => {
+    seedLibrary({
+      tracks: [
+        makeTrack({ id: '1', title: 'A' }),
+        makeTrack({ id: '2', title: 'B' }),
+        makeTrack({ id: '3', title: 'C' }),
+        makeTrack({ id: '4', title: 'D' }),
+      ],
+    });
+    const next = findNextSong(
+      '1',
+      false,
+      'library',
+      'off',
+      null,
+      undefined,
+      null,
+      new Set(['2', '3']),
+    );
+    expect(next?.id).toBe('4');
+  });
+
+  test('returns undefined when the only later track is excluded (repeat off)', () => {
+    const next = findNextSong(
+      '2',
+      false,
+      'library',
+      'off',
+      null,
+      undefined,
+      null,
+      new Set(['3']),
+    );
+    expect(next).toBeUndefined();
+  });
+
+  test('keeps the current track as anchor even if it is in excludeIds', () => {
+    // Excluding the current id must not break the positional lookup.
+    const next = findNextSong(
+      '1',
+      false,
+      'library',
+      'off',
+      null,
+      undefined,
+      null,
+      new Set(['1']),
+    );
+    expect(next?.id).toBe('2');
+  });
 });
 
 describe('findNextSong (shuffle)', () => {
@@ -306,6 +372,24 @@ describe('findNextSong (shuffle)', () => {
     );
     expect(next).toBeDefined();
     expect(['1', '2', '3']).toContain(next!.id);
+    randomSpy.mockRestore();
+  });
+
+  test('never picks an excluded (just-deleted) track', () => {
+    // current = 1, no history; only 2 and 3 are candidates, but 2 is being
+    // deleted, so the random pick must land on 3 regardless of Math.random.
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
+    const next = findNextSong(
+      '1',
+      true,
+      'library',
+      'off',
+      null,
+      [],
+      null,
+      new Set(['2']),
+    );
+    expect(next?.id).toBe('3');
     randomSpy.mockRestore();
   });
 });

@@ -229,4 +229,7 @@ export interface SettingsAndPlaybackStore {
   setSilentAudioRef: (ref: HTMLAudioElement | null) => void;
   autoPlayNextTrack: () => Promise<void>;
   refreshCanGoNext: () => void;
+  // Clear playback when the given tracks are deleted from the library so a
+  // removed song cannot linger in the player UI or the Gapless-5 queue.
+  handleDeletedTracks: (deletedIds: string[]) => void;
 }

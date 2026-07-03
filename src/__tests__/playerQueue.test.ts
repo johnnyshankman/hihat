@@ -6,7 +6,9 @@
 // would load the real module. The tests pass a hand-rolled mock instance.
 import type { Gapless5 } from '@regosen/gapless-5';
 import {
+  clearPlayerQueue,
   preloadNextInQueue,
+  removePreloadedTrack,
   syncPlayerQueue,
 } from '../renderer/utils/playerQueue';
 import { Track } from '../types/dbTypes';
@@ -17,13 +19,14 @@ interface MockPlayer {
   pause: jest.Mock;
   removeAllTracks: jest.Mock;
   addTrack: jest.Mock;
+  removeTrack: jest.Mock;
   play: jest.Mock;
   getTracks: jest.Mock;
 }
 
 function createMockPlayer(): MockPlayer {
-  // getTracks reflects what addTrack calls have happened so the queue
-  // invariant assertion sees a realistic length.
+  // getTracks reflects what addTrack/removeTrack calls have happened so the
+  // queue invariant assertion sees a realistic length.
   const queue: string[] = [];
   return {
     pause: jest.fn(),
@@ -32,6 +35,9 @@ function createMockPlayer(): MockPlayer {
     }),
     addTrack: jest.fn((url: string) => {
       queue.push(url);
+    }),
+    removeTrack: jest.fn((index: number) => {
+      queue.splice(index, 1);
     }),
     play: jest.fn(),
     getTracks: jest.fn(() => queue),
@@ -133,6 +139,7 @@ describe('syncPlayerQueue', () => {
       pause: jest.fn(() => callOrder.push('pause')),
       removeAllTracks: jest.fn(() => callOrder.push('removeAllTracks')),
       addTrack: jest.fn(() => callOrder.push('addTrack')),
+      removeTrack: jest.fn(),
       play: jest.fn(() => callOrder.push('play')),
       getTracks: jest.fn(() => []),
     };
@@ -157,6 +164,7 @@ describe('syncPlayerQueue', () => {
       pause: jest.fn(() => callOrder.push('pause')),
       removeAllTracks: jest.fn(() => callOrder.push('removeAllTracks')),
       addTrack: jest.fn(() => callOrder.push('addTrack')),
+      removeTrack: jest.fn(),
       play: jest.fn(() => callOrder.push('play')),
       getTracks: jest.fn(() => []),
     };
@@ -215,6 +223,71 @@ describe('preloadNextInQueue', () => {
   });
 });
 
+describe('clearPlayerQueue', () => {
+  test('pauses then empties the queue', () => {
+    const callOrder: string[] = [];
+    const player: MockPlayer = {
+      pause: jest.fn(() => callOrder.push('pause')),
+      removeAllTracks: jest.fn(() => callOrder.push('removeAllTracks')),
+      addTrack: jest.fn(),
+      removeTrack: jest.fn(),
+      play: jest.fn(),
+      getTracks: jest.fn(() => []),
+    };
+
+    clearPlayerQueue(player as unknown as Gapless5);
+
+    expect(callOrder).toEqual(['pause', 'removeAllTracks']);
+    expect(player.play).not.toHaveBeenCalled();
+  });
+});
+
+describe('removePreloadedTrack', () => {
+  test('removes the trailing entry, leaving the current track intact', () => {
+    const player = createMockPlayer();
+    player.addTrack('current');
+    player.addTrack('preloaded');
+
+    removePreloadedTrack(player as unknown as Gapless5);
+
+    expect(player.removeTrack).toHaveBeenCalledTimes(1);
+    expect(player.removeTrack).toHaveBeenCalledWith(1);
+    expect(player.getTracks()).toEqual(['current']);
+  });
+
+  test('removes the last entry even when leading stale tracks have accumulated', () => {
+    const player = createMockPlayer();
+    // Simulates the documented auto-advance leak: stale leaders ahead of the
+    // currently-playing track, with the preload always last.
+    player.addTrack('stale');
+    player.addTrack('current');
+    player.addTrack('preloaded');
+
+    removePreloadedTrack(player as unknown as Gapless5);
+
+    expect(player.removeTrack).toHaveBeenCalledWith(2);
+    expect(player.getTracks()).toEqual(['stale', 'current']);
+  });
+
+  test('is a no-op when only the current track remains', () => {
+    const player = createMockPlayer();
+    player.addTrack('current');
+
+    removePreloadedTrack(player as unknown as Gapless5);
+
+    expect(player.removeTrack).not.toHaveBeenCalled();
+    expect(player.getTracks()).toEqual(['current']);
+  });
+
+  test('is a no-op when the queue is empty', () => {
+    const player = createMockPlayer();
+
+    removePreloadedTrack(player as unknown as Gapless5);
+
+    expect(player.removeTrack).not.toHaveBeenCalled();
+  });
+});
+
 describe('queue invariant logging', () => {
   // The dev-only invariant check warns when queue length > 2.
   // It runs only when NODE_ENV !== 'production'. Jest sets NODE_ENV='test'
@@ -227,6 +300,7 @@ describe('queue invariant logging', () => {
       pause: jest.fn(),
       removeAllTracks: jest.fn(),
       addTrack: jest.fn(),
+      removeTrack: jest.fn(),
       play: jest.fn(),
       getTracks: jest.fn(() => ['a', 'b', 'c']),
     };

@@ -584,6 +584,18 @@ export const fileSystemHandlers = {
         };
       }
 
+      // In E2E test mode the "library" is the shared, checked-in fixture
+      // folder (e2e/fixtures/test-songs-large). Actually trashing files there
+      // would permanently delete repo test assets, so skip the trash and
+      // report success — the DB row deletion that drives the UI has already
+      // happened in the caller. This keeps delete-flow e2e tests repeatable.
+      if (process.env.NODE_ENV === 'test' || process.env.TEST_MODE === 'true') {
+        return {
+          success: true,
+          message: 'Skipped trashing file in test mode',
+        };
+      }
+
       // Move file to Trash instead of permanently deleting it
       await shell.trashItem(filePath);
 

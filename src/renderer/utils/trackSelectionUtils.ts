@@ -161,6 +161,11 @@ export const getFilteredAndSortedTrackIds = (
  *
  * @param currentTrackId - The ID of the current track
  * @param state - The current playback store state
+ * @param excludeIds - Track IDs to treat as if they were already gone from the
+ *   library. Deleting a track only invalidates the tracks query (an async
+ *   refetch), so `getTracksSnapshot()` can still contain just-deleted rows for
+ *   a tick — pass them here so next-track selection never lands back on them.
+ *   The current track is always kept as the positional anchor even if listed.
  * @returns The ID of the next track, or null if there is no next track to play
  */
 export const findNextSong = (
@@ -171,6 +176,7 @@ export const findNextSong = (
   artistFilter?: string | null,
   shuffleHistory?: Track[],
   albumFilter?: string | null,
+  excludeIds?: Set<string>,
 ): Track | undefined => {
   if (!currentTrackId) return undefined;
 
@@ -178,11 +184,19 @@ export const findNextSong = (
   const tracks = getTracksSnapshot()?.tracks ?? [];
 
   // Get the filtered and sorted track IDs
-  const trackIds = getFilteredAndSortedTrackIds(
+  let trackIds = getFilteredAndSortedTrackIds(
     playbackSource,
     artistFilter,
     albumFilter,
   );
+
+  // Drop excluded (e.g. just-deleted) tracks from the candidate list, but
+  // never the current track — it's the anchor the next-track math depends on.
+  if (excludeIds && excludeIds.size > 0) {
+    trackIds = trackIds.filter(
+      (id) => id === currentTrackId || !excludeIds.has(id),
+    );
+  }
 
   // if shuffle mode is on, return a random track that hasn't been played yet
   if (shuffleMode) {
@@ -271,6 +285,19 @@ export const updateMediaSession = async (track: Track) => {
   } catch (error) {
     console.error('Error updating media session metadata:', error);
   }
+};
+
+/**
+ * Clear OS media controls (lock screen / media keys metadata) when nothing
+ * is playing — e.g. after the currently-loaded track is deleted. Mirrors the
+ * empty state the app starts in before any track is selected.
+ */
+export const clearMediaSession = () => {
+  if (!navigator.mediaSession) {
+    return;
+  }
+  navigator.mediaSession.metadata = null;
+  navigator.mediaSession.playbackState = 'none';
 };
 
 export const findPreviousSong = (

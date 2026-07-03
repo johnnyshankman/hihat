@@ -11,6 +11,7 @@ import {
   queryKeys,
 } from '../queries';
 import {
+  clearMediaSession,
   computeCanGoNext,
   findNextSong,
   findPreviousSong,
@@ -18,7 +19,12 @@ import {
   updateMediaSession,
 } from '../utils/trackSelectionUtils';
 import { playbackTracker, updatePlayCount } from '../utils/playbackTracker';
-import { preloadNextInQueue, syncPlayerQueue } from '../utils/playerQueue';
+import {
+  clearPlayerQueue,
+  preloadNextInQueue,
+  removePreloadedTrack,
+  syncPlayerQueue,
+} from '../utils/playerQueue';
 
 /**
  * Persist `lastPlayedSongId` to the DB and reflect it in the TanStack
@@ -129,6 +135,82 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         }
         return { canGoNext };
       });
+    },
+
+    // React to tracks being deleted from the library so a removed song can
+    // never linger in the player. Two cases matter (issue #140):
+    //   1. The deleted track is the one currently loaded/playing -> stop and
+    //      fully clear playback. The UI falls back to the same empty
+    //      "nothing playing" state the app shows on first boot.
+    //   2. The deleted track is only the preloaded next-up song -> purge it
+    //      from the Gapless-5 buffer so neither Next nor auto-advance can
+    //      reach the still-decoded copy.
+    // Deleting any other track has no effect on playback.
+    handleDeletedTracks: (deletedIds: string[]) => {
+      const ids = new Set(deletedIds);
+      const state = get();
+      const { player, currentTrack, preloadedTrack } = state;
+
+      if (currentTrack && ids.has(currentTrack.id)) {
+        if (player) {
+          // Safe: player is being paused here, so removeAllTracks isn't
+          // mutating an in-flight auto-advance transition.
+          clearPlayerQueue(player);
+        }
+        state.silentAudioRef?.pause();
+        clearMediaSession();
+        // Drop any in-progress play-count timer for the now-deleted track.
+        playbackTracker.resetTrack(currentTrack.id);
+        set({
+          currentTrack: null,
+          preloadedTrack: null,
+          preloadReady: false,
+          paused: true,
+          position: 0,
+          lastPosition: 0,
+          duration: 0,
+          queueLeadingStaleCount: 0,
+        });
+        get().refreshCanGoNext();
+        return;
+      }
+
+      if (preloadedTrack && ids.has(preloadedTrack.id)) {
+        if (player) {
+          removePreloadedTrack(player);
+        }
+
+        // The on-deck song was deleted, but the current track keeps playing —
+        // recompute what should come next and preload it so playback advances
+        // seamlessly instead of stalling when the current track ends
+        // (autoPlayNextTrack reads state.preloadedTrack and can't fall back on
+        // its own). Exclude the just-deleted ids: the tracks query invalidates
+        // asynchronously, so the snapshot findNextSong reads may still list
+        // them and would otherwise hand back the song we just removed.
+        let replacement: Track | null = null;
+        if (currentTrack) {
+          const artistFilter =
+            state.playbackContextBrowserFilter?.artist || null;
+          const albumFilter = state.playbackContextBrowserFilter?.album || null;
+          replacement =
+            findNextSong(
+              currentTrack.id,
+              state.shuffleMode,
+              state.playbackSource,
+              state.repeatMode,
+              artistFilter,
+              state.shuffleHistory,
+              albumFilter,
+              ids,
+            ) ?? null;
+        }
+
+        if (replacement && player) {
+          preloadNextInQueue(player, replacement);
+        }
+        set({ preloadedTrack: replacement, preloadReady: false });
+        get().refreshCanGoNext();
+      }
     },
 
     setVolume: (volume) => {
@@ -1078,6 +1160,32 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           throw new Error('No next track found while auto playing next track');
         }
 
+        // End of source (repeat off): Gapless-5 already auto-advanced onto the
+        // final playing track with no successor to preload. Commit it as
+        // now-playing rather than bailing with `return {}` — else a stale
+        // currentTrack (still pointing at the finished song) makes
+        // handleDeletedTracks mis-route a delete of the playing track through
+        // removePreloadedTrack and kill playback. preloadedTrack is null; stale
+        // count still grows by one for the lingering finished track.
+        const commitFinalTrackAsNowPlaying = () => {
+          updateMediaSession(currentTrackThatIsAudiblyPlaying);
+          playbackTracker.startTrackingTrack(
+            currentTrackThatIsAudiblyPlaying.id,
+          );
+          persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
+          return {
+            currentTrack: currentTrackThatIsAudiblyPlaying,
+            duration: currentTrackThatIsAudiblyPlaying.duration,
+            paused: false,
+            position: 0,
+            lastPosition: 0,
+            lastPlaybackTimeUpdateRef: Date.now() - 1000,
+            preloadedTrack: null,
+            preloadReady: false,
+            queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
+          };
+        };
+
         // Handle shuffle mode with history
         if (state.shuffleMode) {
           // Check if we're navigating within history
@@ -1139,7 +1247,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           );
 
           if (!nextSong) {
-            return {};
+            return commitFinalTrackAsNowPlaying();
           }
 
           // Check if we need to clear history (when all songs have been played with repeat all)
@@ -1253,7 +1361,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         );
 
         if (!nextSong) {
-          return {};
+          return commitFinalTrackAsNowPlaying();
         }
 
         // Add the FUTURE next song to the player queue

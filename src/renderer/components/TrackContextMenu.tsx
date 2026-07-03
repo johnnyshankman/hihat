@@ -48,10 +48,6 @@ export default function TrackContextMenu({
   const selectSpecificSong = useSettingsAndPlaybackStore(
     (state) => state.selectSpecificSong,
   );
-  const currentTrack = useSettingsAndPlaybackStore(
-    (state) => state.currentTrack,
-  );
-  const setPaused = useSettingsAndPlaybackStore((state) => state.setPaused);
   const currentView = useUIStore((state) => state.currentView);
   const showNotification = useUIStore((state) => state.showNotification);
   const selectedPlaylistId = useLibraryStore(
@@ -223,11 +219,6 @@ export default function TrackContextMenu({
         targetTrackId = trackIds[currentIndex - 1];
       }
 
-      // Check if this is the currently playing track and pause playback if it is
-      if (currentTrack && currentTrack.id === trackId) {
-        setPaused(true);
-      }
-
       // Step 1: Get all playlists from the cache (already populated by
       // Sidebar's usePlaylists subscription).
       const allPlaylists = getPlaylistsSnapshot() ?? [];
@@ -270,6 +261,10 @@ export default function TrackContextMenu({
           // Continue with UI updates even if file deletion fails.
         }
       }
+
+      // 5. Clear the player when the deleted track was the one loaded/playing,
+      // or purge it from the queue if it was only the preloaded next-up song.
+      useSettingsAndPlaybackStore.getState().handleDeletedTracks([trackId]);
 
       showNotification(
         `Track "${track.title}" has been removed and moved to Trash`,
