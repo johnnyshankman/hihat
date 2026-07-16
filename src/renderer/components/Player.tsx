@@ -12,6 +12,7 @@ import {
 import {
   PlayArrow,
   Pause,
+  Speaker,
   VolumeUp,
   VolumeDown,
   VolumeOff,
@@ -27,6 +28,7 @@ import {
 } from '../stores';
 import { useSettings } from '../queries';
 import PositionDisplay from './PositionDisplay';
+import AudioOutputPopover from './AudioOutputPopover';
 import {
   mutedIconButtonSx,
   toggleIconButtonSx,
@@ -142,6 +144,10 @@ export default function Player() {
   const [albumArt, setAlbumArt] = useState<string | null>(null);
   const [isTitleScrolling, setIsTitleScrolling] = useState(false);
   const [isArtistAlbumScrolling, setIsArtistAlbumScrolling] = useState(false);
+  // Anchor for the audio-output-device picker popover (Speaker button).
+  const [outputAnchorEl, setOutputAnchorEl] = useState<HTMLElement | null>(
+    null,
+  );
   // Refs for title and artist+album text elements
   const titleRef = useRef<HTMLDivElement>(null);
   const titleRef2 = useRef<HTMLDivElement>(null);
@@ -855,7 +861,7 @@ export default function Player() {
           <PositionDisplay disabled={!currentTrack} />
         </Box>
 
-        {/* Right cell: Inline volume control (slider → mute icon) */}
+        {/* Right cell: output-device button → volume slider → mute icon */}
         <Box
           sx={{
             display: 'flex',
@@ -865,6 +871,17 @@ export default function Player() {
             minWidth: 0,
           }}
         >
+          <Tooltip arrow placement="bottom" title="Audio output device">
+            <IconButton
+              aria-label="Audio output device"
+              data-testid="output-device-toggle"
+              onClick={(e) => setOutputAnchorEl(e.currentTarget)}
+              size="small"
+              sx={{ ...mutedIconButtonSx, flexShrink: 0 }}
+            >
+              <Speaker sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Tooltip>
           <Slider
             aria-label="Volume"
             data-testid="volume-slider"
@@ -903,6 +920,11 @@ export default function Player() {
             </IconButton>
           </Tooltip>
         </Box>
+        <AudioOutputPopover
+          anchorEl={outputAnchorEl}
+          onClose={() => setOutputAnchorEl(null)}
+          open={Boolean(outputAnchorEl)}
+        />
       </Box>
     </Paper>
   );

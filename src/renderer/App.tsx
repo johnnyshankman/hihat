@@ -94,6 +94,23 @@ function ThemedAppContent() {
     if (player) player.setVolume(settingsVolume);
   }, [settingsVolume]);
 
+  // Reconcile the audio output device once useSettings settles, mirroring
+  // the volume reconcile above. initPlayer already constructs the engine
+  // with the persisted sinkId when the settings snapshot is warm; this
+  // effect covers the cold-start race and re-applies on change. If the
+  // persisted device is gone (unplugged since last launch), setSinkId
+  // rejects — fall back to the system default and clear the stored id so
+  // we don't keep retrying a dead device on future launches.
+  const settingsSinkId = settings?.selectedAudioOutputDeviceId;
+  useEffect(() => {
+    const { player, setSinkId } = useSettingsAndPlaybackStore.getState();
+    if (!player || !player.canSetSinkId) return;
+    const desired = settingsSinkId ?? '';
+    player.setSinkId(desired).catch(() => {
+      if (desired) setSinkId('');
+    });
+  }, [settingsSinkId]);
+
   // Cold-boot reseed: the persisted librarySorting needs to land in
   // libraryStore.libraryViewState so trackSelectionUtils sees it for
   // next/prev track math. Write-only effect.
