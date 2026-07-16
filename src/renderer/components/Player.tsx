@@ -877,7 +877,7 @@ export default function Player() {
               data-testid="output-device-toggle"
               onClick={(e) => setOutputAnchorEl(e.currentTarget)}
               size="small"
-              sx={{ ...mutedIconButtonSx, flexShrink: 0 }}
+              sx={{ ...mutedIconButtonSx, flexShrink: 0, left: 2 }}
             >
               <Speaker sx={{ fontSize: 20 }} />
             </IconButton>

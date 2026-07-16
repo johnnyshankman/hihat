@@ -127,10 +127,19 @@ export default function AudioOutputPopover({
       open={open}
       transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
     >
-      <Box sx={{ minWidth: 240, maxWidth: 360, py: 1 }}>
+      <Box sx={{ minWidth: 240, maxWidth: 360, pb: 1 }}>
         <Typography
-          sx={{ px: 2, py: 0.5, color: 'text.secondary' }}
-          variant="overline"
+          sx={{
+            px: 1,
+            py: 1,
+            fontSize: '11px',
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
+            color: (t) => t.palette.text.secondary,
+            opacity: 0.7,
+            userSelect: 'none',
+          }}
         >
           Audio Output
         </Typography>
@@ -149,8 +158,12 @@ export default function AudioOutputPopover({
                   data-testid={`output-device-option-${device.deviceId || 'default'}`}
                   onClick={() => handleSelect(device)}
                   selected={selected}
+                  sx={{
+                    py: 0,
+                    px: 0.5,
+                  }}
                 >
-                  <ListItemIcon sx={{ minWidth: 36 }}>
+                  <ListItemIcon sx={{ minWidth: 26 }}>
                     {selected ? <CheckIcon fontSize="small" /> : null}
                   </ListItemIcon>
                   <ListItemText primary={device.label} />
