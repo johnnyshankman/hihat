@@ -230,6 +230,31 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       });
     },
 
+    setSinkId: async (deviceId) => {
+      // Route audio to the chosen output device. Unlike setVolume,
+      // Gapless-5's setSinkId is async (it applies to the shared
+      // AudioContext), so we only mirror the settings cache + persist
+      // once the engine confirms the switch. A rejection (device
+      // unplugged/unavailable) propagates to the caller and leaves the
+      // persisted value untouched. Deliberately toast-free — the startup
+      // reconcile in App.tsx also drives this action and must fail
+      // silently.
+      const { player } = get();
+      if (!player) return;
+      await player.setSinkId(deviceId);
+      queryClient.setQueryData<Settings>(queryKeys.settings, (old) =>
+        old ? { ...old, selectedAudioOutputDeviceId: deviceId || null } : old,
+      );
+      window.electron.settings
+        .update({ selectedAudioOutputDeviceId: deviceId || null })
+        .catch((error: unknown) => {
+          console.error(
+            'Error persisting selected audio output device:',
+            error,
+          );
+        });
+    },
+
     selectSpecificSong: (trackId, playbackSource, playlistId = null) => {
       set((state) => {
         if (!state.player) {
@@ -902,12 +927,20 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // not zero), fall back to 1.0; the reconcile-volume effect in
         // App.tsx applies the persisted value once useSettings settles.
         const initialVolume = getSettingsSnapshot()?.volume ?? 1.0;
+        // Persisted output device (sinkId). '' routes to the system
+        // default. Passing it here lets Gapless-5 apply the device as
+        // soon as the AudioContext exists; the reconcile effect in
+        // App.tsx re-applies it (and cleans up stale devices) once
+        // useSettings settles, mirroring the volume reconcile.
+        const initialSinkId =
+          getSettingsSnapshot()?.selectedAudioOutputDeviceId ?? '';
         const player = new Gapless5({
           useHTML5Audio: false,
           crossfade: 25, // 25ms crossfade between tracks
           exclusive: true, // Only one track can play at a time
           loadLimit: 3, // Load up to 3 tracks at a time
           volume: initialVolume,
+          sinkId: initialSinkId,
         });
 
         // E2E diagnostic hook: lets Playwright specs observe what
