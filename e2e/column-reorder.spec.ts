@@ -110,22 +110,11 @@ test.describe('Column Reorder', () => {
     });
 
     expect(dragResult).toBe(true);
-    await page.waitForTimeout(500);
-
-    // Read new column order
-    const newOrder = await getColumnOrder(page);
-
-    // Find Artist and Album indices in both orders
-    const oldArtistIdx = initialOrder.indexOf('Artist');
-    const oldAlbumIdx = initialOrder.indexOf('Album');
-    const newArtistIdx = newOrder.indexOf('Artist');
-    const newAlbumIdx = newOrder.indexOf('Album');
 
     // Artist should have moved — its position should differ from original
-    // (the exact result depends on drag direction, but it should change)
-    expect(newArtistIdx !== oldArtistIdx || newAlbumIdx !== oldAlbumIdx).toBe(
-      true,
-    );
+    // (the exact result depends on drag direction, but it should change).
+    // Polling the header order waits for React to commit the new order.
+    await expect.poll(() => getColumnOrder(page)).not.toEqual(initialOrder);
 
     await TestHelpers.closeApp(app);
   });
@@ -181,10 +170,9 @@ test.describe('Column Reorder', () => {
 
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(3000);
 
     // Wait for the library table to render
-    await page.waitForSelector('.vt-table', { timeout: 10000 });
+    await page.waitForSelector('.vt-table', { timeout: 20000 });
 
     // Read the column header order
     const headerOrder = await getColumnOrder(page);
@@ -232,18 +220,21 @@ test.describe('Column Reorder', () => {
     await page.mouse.move(handleX + 100, handleY, { steps: 10 });
     await page.mouse.up();
 
-    await page.waitForTimeout(200);
-
     // Get the new width
-    const newArtistWidth = await page.evaluate(() => {
-      const headers = document.querySelectorAll('th');
-      const arr = Array.from(headers);
-      const artistTh = arr.find(
-        (header) => header.textContent?.trim() === 'Artist',
-      );
-      return artistTh ? (artistTh as HTMLElement).offsetWidth : null;
-    });
+    const readArtistWidth = () =>
+      page.evaluate(() => {
+        const headers = document.querySelectorAll('th');
+        const arr = Array.from(headers);
+        const artistTh = arr.find(
+          (header) => header.textContent?.trim() === 'Artist',
+        );
+        return artistTh ? (artistTh as HTMLElement).offsetWidth : null;
+      });
 
+    // Poll the measured width: the resize commits on the next paint, so this
+    // settles immediately instead of after a guessed delay.
+    await expect.poll(readArtistWidth).toBeGreaterThan(initialWidth + 50);
+    const newArtistWidth = await readArtistWidth();
     expect(newArtistWidth).not.toBeNull();
     expect(newArtistWidth!).toBeGreaterThan(initialWidth + 50);
 

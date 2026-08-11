@@ -93,6 +93,27 @@ async function getActiveSortColumn(
   });
 }
 
+/**
+ * Assert which column currently owns the sort indicator, retrying until the
+ * table commits. Every view transition in these tests moves the indicator to a
+ * different column, so polling on it doubles as the "the new view rendered"
+ * signal — no fixed delays needed.
+ */
+async function expectActiveSort(
+  page: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
+  column: string,
+  direction?: 'ascending' | 'descending',
+): Promise<void> {
+  await expect
+    .poll(async () => {
+      const info = await getActiveSortColumn(page);
+      return info ? `${info.column}|${info.direction}` : 'none';
+    })
+    .toMatch(
+      new RegExp(`${column}.*\\|${direction ?? '(ascending|descending)'}`),
+    );
+}
+
 test.describe('Sorting Persistence', () => {
   test('in-session sorting persists across playlist navigation', async () => {
     const { app, page } = await TestHelpers.launchApp();
@@ -103,79 +124,57 @@ test.describe('Sorting Persistence', () => {
     // Click "Album" column header to sort library by album
     const albumHeader = page.locator('th:has-text("Album")').first();
     await albumHeader.click();
-    await page.waitForTimeout(500);
 
     // Verify sort indicator is on Album column
-    let sortInfo = await getActiveSortColumn(page);
-    expect(sortInfo).not.toBeNull();
-    expect(sortInfo!.column).toContain('Album');
+    await expectActiveSort(page, 'Album');
 
     // Navigate to "Test Playlist" in sidebar
     const testPlaylist = page.locator('text=Test Playlist').first();
     await testPlaylist.click();
-    await page.waitForTimeout(1000);
+    await TestHelpers.waitForTrackCount(page, 3);
 
     // Click "Title" column header in playlist view
     const titleHeader = page.locator('th:has-text("Title")').first();
     await titleHeader.click();
-    await page.waitForTimeout(500);
 
     // Verify sort indicator is on Title column
-    sortInfo = await getActiveSortColumn(page);
-    expect(sortInfo).not.toBeNull();
-    expect(sortInfo!.column).toContain('Title');
+    await expectActiveSort(page, 'Title');
 
     // Navigate back to library ("All" in sidebar)
     const allNav = page.locator('[data-testid="nav-library"]');
     await allNav.click();
-    await page.waitForTimeout(1000);
 
     // Assert: Album column still has sort indicator
-    sortInfo = await getActiveSortColumn(page);
-    expect(sortInfo).not.toBeNull();
-    expect(sortInfo!.column).toContain('Album');
+    await expectActiveSort(page, 'Album');
 
     // Navigate back to "Test Playlist"
     await testPlaylist.click();
-    await page.waitForTimeout(1000);
 
     // Assert: Title column still has sort indicator
-    sortInfo = await getActiveSortColumn(page);
-    expect(sortInfo).not.toBeNull();
-    expect(sortInfo!.column).toContain('Title');
+    await expectActiveSort(page, 'Title');
 
     // Navigate to "Jazz Favorites"
     const jazzPlaylist = page.locator('text=Jazz Favorites').first();
     await jazzPlaylist.click();
-    await page.waitForTimeout(1000);
 
     // Click "Genre" column header
     const genreHeader = page.locator('th:has-text("Genre")').first();
     await genreHeader.click();
-    await page.waitForTimeout(500);
 
     // Verify sort indicator is on Genre column
-    sortInfo = await getActiveSortColumn(page);
-    expect(sortInfo).not.toBeNull();
-    expect(sortInfo!.column).toContain('Genre');
+    await expectActiveSort(page, 'Genre');
 
     // Navigate back to "Test Playlist"
     await testPlaylist.click();
-    await page.waitForTimeout(1000);
 
     // Assert: Title column still has sort indicator (not Genre)
-    sortInfo = await getActiveSortColumn(page);
-    expect(sortInfo).not.toBeNull();
-    expect(sortInfo!.column).toContain('Title');
+    await expectActiveSort(page, 'Title');
 
     // Navigate back to "Jazz Favorites"
     await jazzPlaylist.click();
-    await page.waitForTimeout(1000);
 
     // Assert: Genre column still has sort indicator
-    sortInfo = await getActiveSortColumn(page);
-    expect(sortInfo).not.toBeNull();
-    expect(sortInfo!.column).toContain('Genre');
+    await expectActiveSort(page, 'Genre');
 
     await TestHelpers.closeApp(app);
   });
@@ -224,27 +223,20 @@ test.describe('Sorting Persistence', () => {
 
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(3000);
 
     // Wait for the library table to render
-    await page.waitForSelector('.vt-table', { timeout: 10000 });
+    await page.waitForSelector('.vt-table', { timeout: 20000 });
 
     // Assert: Album column has descending sort indicator
-    const librarySortInfo = await getActiveSortColumn(page);
-    expect(librarySortInfo).not.toBeNull();
-    expect(librarySortInfo!.column).toContain('Album');
-    expect(librarySortInfo!.direction).toBe('descending');
+    await expectActiveSort(page, 'Album', 'descending');
 
     // Navigate to "Test Playlist"
     const testPlaylist = page.locator('text=Test Playlist').first();
     await testPlaylist.click();
-    await page.waitForTimeout(1000);
+    await TestHelpers.waitForTrackCount(page, 3);
 
     // Assert: Title column has ascending sort indicator
-    const playlistSortInfo = await getActiveSortColumn(page);
-    expect(playlistSortInfo).not.toBeNull();
-    expect(playlistSortInfo!.column).toContain('Title');
-    expect(playlistSortInfo!.direction).toBe('ascending');
+    await expectActiveSort(page, 'Title', 'ascending');
 
     await TestHelpers.closeApp(app);
   });

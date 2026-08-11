@@ -57,8 +57,7 @@ test.describe('Settings', () => {
 
     // Flip OFF and verify it persists in settings IPC.
     await toggle.click();
-    await page.waitForTimeout(300);
-    expect(await toggle.isChecked()).toBe(false);
+    await expect(toggle).not.toBeChecked();
 
     const persistedAfterOff = await page.evaluate(() =>
       (window as any).electron.settings
@@ -69,8 +68,7 @@ test.describe('Settings', () => {
 
     // Flip back ON.
     await toggle.click();
-    await page.waitForTimeout(300);
-    expect(await toggle.isChecked()).toBe(true);
+    await expect(toggle).toBeChecked();
 
     const persistedAfterOn = await page.evaluate(() =>
       (window as any).electron.settings
@@ -99,11 +97,14 @@ test.describe('Settings', () => {
 
     // Click the theme toggle
     await themeToggle.click();
-    await page.waitForTimeout(500);
 
     // Verify the theme has changed
+    if (initialThemeIsDark) {
+      await expect(themeToggle).not.toBeChecked();
+    } else {
+      await expect(themeToggle).toBeChecked();
+    }
     const newThemeIsDark = await themeToggle.isChecked();
-    expect(newThemeIsDark).not.toBe(initialThemeIsDark);
 
     // Verify the theme persisted in the store
     const themeInStore = await page.evaluate(() => {

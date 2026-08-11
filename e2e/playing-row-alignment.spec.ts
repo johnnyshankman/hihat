@@ -12,9 +12,6 @@ test.describe('Playing Row Column Alignment', () => {
   test('playing row cells should align with header columns', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 10000 });
-
     // Find the Title column index from the header row
     const headers = page.locator('thead th');
     const headerCount = await headers.count();
@@ -45,18 +42,13 @@ test.describe('Playing Row Column Alignment', () => {
     expect(artistBeforePlay?.trim()).toBeTruthy();
 
     // Double-click to start playback
-    await firstRow.dblclick();
-    await page.waitForTimeout(1000);
-
-    // Verify the track is playing
-    const pauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-    await expect(pauseIcon).toBeVisible({ timeout: 5000 });
+    await TestHelpers.startPlayback(page, firstRow);
 
     // Locate the playing row (has vt-row-playing or vt-row-playing-selected class)
     const playingRow = page.locator(
       'tr.vt-row-playing, tr.vt-row-playing-selected',
     );
-    await expect(playingRow).toBeVisible({ timeout: 5000 });
+    await expect(playingRow).toBeVisible();
 
     // Read the playing row's cells at the same column indices
     const titleDuringPlay = await playingRow

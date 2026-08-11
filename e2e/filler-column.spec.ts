@@ -1,5 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
+
+/** Width the virtual table's scroll container currently reports. */
+const containerWidth = (page: Page) =>
+  page.evaluate(() => {
+    const container = document.querySelector(
+      '[data-testid="vt-container"]',
+    ) as HTMLElement | null;
+    return container ? container.clientWidth : 0;
+  });
 
 test.describe('Filler Column', () => {
   test('filler column appears on wide windows', async () => {
@@ -11,11 +20,13 @@ test.describe('Filler Column', () => {
     // Resize the Electron window to be very wide
     const browserWindow = await app.browserWindow(page);
     await browserWindow.evaluate((win) => win.setSize(2000, 800));
-    await page.waitForTimeout(500);
+    // The table re-lays-out from a ResizeObserver, so wait for the container to
+    // report the new width rather than sleeping through the resize.
+    await expect.poll(() => containerWidth(page)).toBeGreaterThan(1500);
 
-    // Assert filler header exists
-    const fillerThCount = await page.locator('.vt-th-filler').count();
-    expect(fillerThCount).toBeGreaterThan(0);
+    // Assert filler header exists. The filler is committed on the render after
+    // the container reports its new width, so this retries until it lands.
+    await expect(page.locator('.vt-th-filler')).not.toHaveCount(0);
 
     // Get the container width and sum of non-filler th widths
     const widths = await page.evaluate(() => {
@@ -48,8 +59,7 @@ test.describe('Filler Column', () => {
     expect(widths.fillerW).toBeLessThanOrEqual(expectedFiller + 5);
 
     // Assert filler cells exist in data rows
-    const fillerTdCount = await page.locator('.vt-td-filler').count();
-    expect(fillerTdCount).toBeGreaterThan(0);
+    await expect(page.locator('.vt-td-filler')).not.toHaveCount(0);
 
     await TestHelpers.closeApp(app);
   });
@@ -63,7 +73,7 @@ test.describe('Filler Column', () => {
     // Resize window to narrow width where columns should fill/exceed container
     const browserWindow = await app.browserWindow(page);
     await browserWindow.evaluate((win) => win.setSize(800, 600));
-    await page.waitForTimeout(500);
+    await expect.poll(() => containerWidth(page)).toBeLessThan(900);
 
     // Filler header should not exist or have 0 width
     const fillerTh = await page.locator('.vt-th-filler');

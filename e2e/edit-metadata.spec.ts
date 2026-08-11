@@ -2,23 +2,29 @@ import { test, expect, type Page, type Locator } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
 
 /**
+ * Right-click a track locator and open the Edit Metadata dialog, waiting on the
+ * menu and the dialog themselves rather than on fixed delays.
+ */
+async function openEditMetadataFor(page: Page, track: Locator): Promise<void> {
+  await track.click({ button: 'right' });
+  const menu = page.locator('[role="menu"]');
+  await expect(menu).toBeVisible();
+  await menu.getByText('Edit Metadata', { exact: true }).click();
+  await expect(
+    page.locator('[data-testid="edit-metadata-dialog"]'),
+  ).toBeVisible();
+}
+
+/**
  * Navigate to library view, wait for tracks, right-click the first track,
  * and open the Edit Metadata dialog. Returns the first track locator.
  */
 async function openEditMetadataForFirstTrack(page: Page): Promise<Locator> {
-  await page.waitForTimeout(3000);
   await page.click('[data-testid="nav-library"]');
-  await page.waitForTimeout(500);
-  await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+  await TestHelpers.waitForTracks(page);
 
   const firstTrack = page.locator('[data-track-id]').first();
-  await firstTrack.click({ button: 'right' });
-  await page.waitForTimeout(500);
-  await page
-    .locator('[role="menu"]')
-    .getByText('Edit Metadata', { exact: true })
-    .click();
-  await page.waitForTimeout(500);
+  await openEditMetadataFor(page, firstTrack);
 
   return firstTrack;
 }
@@ -27,13 +33,7 @@ async function openEditMetadataForFirstTrack(page: Page): Promise<Locator> {
  * Right-click a track locator and reopen the Edit Metadata dialog.
  */
 async function reopenEditMetadata(page: Page, track: Locator): Promise<void> {
-  await track.click({ button: 'right' });
-  await page.waitForTimeout(500);
-  await page
-    .locator('[role="menu"]')
-    .getByText('Edit Metadata', { exact: true })
-    .click();
-  await page.waitForTimeout(500);
+  await openEditMetadataFor(page, track);
 }
 
 test.describe('Edit Metadata', () => {
@@ -89,8 +89,7 @@ test.describe('Edit Metadata', () => {
 
     // Close dialog via Cancel
     await page.click('[data-testid="cancel-metadata-button"]');
-    await page.waitForTimeout(500);
-    await expect(dialog).not.toBeVisible();
+    await expect(dialog).toBeHidden();
 
     await TestHelpers.closeApp(app);
   });
@@ -111,12 +110,11 @@ test.describe('Edit Metadata', () => {
 
     // Click Save
     await page.click('[data-testid="save-metadata-button"]');
-    await page.waitForTimeout(1000);
 
     // Verify dialog closed
     await expect(
       page.locator('[data-testid="edit-metadata-dialog"]'),
-    ).not.toBeVisible();
+    ).toBeHidden();
 
     // Verify the track row in the library table now shows the updated values
     const updatedRow = page.locator('[data-track-id]').first();
@@ -144,7 +142,9 @@ test.describe('Edit Metadata', () => {
 
     // Save
     await page.click('[data-testid="save-metadata-button"]');
-    await page.waitForTimeout(1000);
+    await expect(
+      page.locator('[data-testid="edit-metadata-dialog"]'),
+    ).toBeHidden();
 
     // Reopen the dialog for the same track
     await reopenEditMetadata(page, firstTrack);
@@ -197,7 +197,9 @@ test.describe('Edit Metadata', () => {
 
     // Save
     await page.click('[data-testid="save-metadata-button"]');
-    await page.waitForTimeout(1000);
+    await expect(
+      page.locator('[data-testid="edit-metadata-dialog"]'),
+    ).toBeHidden();
 
     // Reopen dialog for same track
     await reopenEditMetadata(page, firstTrack);
@@ -237,7 +239,9 @@ test.describe('Edit Metadata', () => {
 
     // Save
     await page.click('[data-testid="save-metadata-button"]');
-    await page.waitForTimeout(1000);
+    await expect(
+      page.locator('[data-testid="edit-metadata-dialog"]'),
+    ).toBeHidden();
 
     // Reopen and clear those fields
     await reopenEditMetadata(page, firstTrack);
@@ -247,7 +251,9 @@ test.describe('Edit Metadata', () => {
 
     // Save
     await page.click('[data-testid="save-metadata-button"]');
-    await page.waitForTimeout(1000);
+    await expect(
+      page.locator('[data-testid="edit-metadata-dialog"]'),
+    ).toBeHidden();
 
     // Reopen and verify they're empty
     await reopenEditMetadata(page, firstTrack);
@@ -267,26 +273,17 @@ test.describe('Edit Metadata', () => {
   test('should successfully write metadata to M4A file (not just database)', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
     await page.click('[data-testid="nav-library"]');
-    await page.waitForTimeout(500);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    await TestHelpers.waitForTracks(page);
 
     // Open search and filter to the M4A track
     await page.locator('[aria-label="Show/Hide search"]').click();
-    await page.waitForTimeout(300);
     await page.locator('[data-testid="search-input"]').fill('Test M4A Song');
-    await page.waitForTimeout(500);
+    await TestHelpers.waitForTrackCount(page, 1);
 
     // Right-click the M4A track and open Edit Metadata
     const m4aTrack = page.locator('[data-track-id]').first();
-    await m4aTrack.click({ button: 'right' });
-    await page.waitForTimeout(500);
-    await page
-      .locator('[role="menu"]')
-      .getByText('Edit Metadata', { exact: true })
-      .click();
-    await page.waitForTimeout(500);
+    await openEditMetadataFor(page, m4aTrack);
 
     // Change the title
     const titleInput = page.locator('[data-testid="metadata-title-input"]');
@@ -294,7 +291,6 @@ test.describe('Edit Metadata', () => {
 
     // Save
     await page.click('[data-testid="save-metadata-button"]');
-    await page.waitForTimeout(1500);
 
     // Verify notification panel shows success (not a warning about file tags)
     const notificationPanel = page.locator(
@@ -311,7 +307,7 @@ test.describe('Edit Metadata', () => {
 
     // Search for the renamed track to verify it appears with the new title
     await page.locator('[data-testid="search-input"]').fill('Edited M4A Title');
-    await page.waitForTimeout(500);
+    await TestHelpers.waitForTrackCount(page, 1);
 
     // Verify the track row shows the updated title
     await expect(page.locator('[data-track-id]').first()).toContainText(

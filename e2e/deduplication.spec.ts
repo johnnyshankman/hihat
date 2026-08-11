@@ -82,7 +82,10 @@ test.describe('Deduplication on Fresh Scan', () => {
 
     page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    // Empty-library CTA is the readiness signal for a brand new database.
+    await page.waitForSelector('text=Your library is empty', {
+      timeout: 20000,
+    });
   });
 
   test.afterAll(async () => {
@@ -111,14 +114,12 @@ test.describe('Deduplication on Fresh Scan', () => {
       throw new Error('Electron API not available');
     }, tempDir);
 
-    // Wait for scan to complete
-    await page.waitForTimeout(5000);
-
-    // Count track rows in the library
-    const trackCount = await page.locator('[data-track-id]').count();
-
-    // Should have exactly 3 unique tracks, not 12
-    expect(trackCount).toBe(SOURCE_SONGS.length);
+    // Wait for the scan to land in the UI — should be exactly 3 unique
+    // tracks, not 12.
+    await expect(page.locator('[data-track-id]')).toHaveCount(
+      SOURCE_SONGS.length,
+      { timeout: 20000 },
+    );
   });
 
   test('should keep same track count when rescanning library with duplicates', async () => {
@@ -130,11 +131,10 @@ test.describe('Deduplication on Fresh Scan', () => {
       throw new Error('Electron API not available');
     }, tempDir);
 
-    // Wait for rescan to complete
-    await page.waitForTimeout(5000);
-
-    // Count should still be exactly 3
-    const trackCount = await page.locator('[data-track-id]').count();
-    expect(trackCount).toBe(SOURCE_SONGS.length);
+    // Count should still be exactly 3 once the rescan lands
+    await expect(page.locator('[data-track-id]')).toHaveCount(
+      SOURCE_SONGS.length,
+      { timeout: 20000 },
+    );
   });
 });
