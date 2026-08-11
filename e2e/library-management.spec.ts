@@ -6,9 +6,6 @@ test.describe('Library Management', () => {
   test('should display pre-loaded songs in library', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Wait a bit for the app to fully load and render
-    await page.waitForTimeout(3000);
-
     // Check if songs are visible - use multiple selectors as fallback
     const songCount = await page
       .locator(
@@ -24,10 +21,6 @@ test.describe('Library Management', () => {
 
   test('should verify test songs are loaded', async () => {
     const { app, page } = await TestHelpers.launchApp();
-
-    // Wait for app to load with pre-populated songs
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
 
     // Verify we have songs loaded — virtualization renders only visible rows,
     // so check that a reasonable number are in the DOM (overscan covers ~56 rows)
@@ -81,10 +74,6 @@ test.describe('Library Management', () => {
   test('should sort songs by different columns', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Wait for app to load with fixture data
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
-
     // Helper function to get song titles from the visible table rows
     const getSongTitles = async () => {
       // Get all table rows with track data
@@ -127,9 +116,11 @@ test.describe('Library Management', () => {
 
     // Test sorting by Title column - ascending
     // Click the Title column header directly to sort ascending
+    // The header's aria-sort attribute flips as soon as the table commits the
+    // new sort, so it replaces every "click then sleep" pair below.
     const titleHeader = page.locator('th').filter({ hasText: 'Title' }).first();
     await titleHeader.click();
-    await page.waitForTimeout(1000);
+    await expect(titleHeader).toHaveAttribute('aria-sort', 'ascending');
 
     // Get titles after sorting by Title ascending
     let titles = await getSongTitles();
@@ -140,7 +131,7 @@ test.describe('Library Management', () => {
     // Test sorting by Title column - descending
     // Click the Title header again to toggle to descending
     await titleHeader.click();
-    await page.waitForTimeout(1000);
+    await expect(titleHeader).toHaveAttribute('aria-sort', 'descending');
 
     titles = await getSongTitles();
     // Titles should be sorted in reverse alphabetical order
@@ -154,9 +145,9 @@ test.describe('Library Management', () => {
       .filter({ hasText: 'Artist' })
       .first();
     await artistHeader.click();
-    await page.waitForTimeout(500);
+    await expect(artistHeader).toHaveAttribute('aria-sort', 'ascending');
     await artistHeader.click();
-    await page.waitForTimeout(1000);
+    await expect(artistHeader).toHaveAttribute('aria-sort', 'descending');
 
     artists = await getSongArtists();
     // Artists should be sorted in reverse alphabetical order
@@ -213,42 +204,33 @@ test.describe('Library Management', () => {
 
     console.log(`Initial file count: ${initialFileCount}`);
 
-    // Wait for app to load
-    await page.waitForTimeout(3000);
-
     // Navigate to Settings
     // Click the settings button using its data-testid
     const settingsButton = page.locator('[data-testid="nav-settings"]');
     await settingsButton.click();
-
-    // Wait for settings to load
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="settings-view"]');
 
     // Find and click the "Rescan Library" button
     const rescanButton = page.locator('button:has-text("Rescan Library")');
-    await expect(rescanButton).toBeVisible({ timeout: 5000 });
+    await expect(rescanButton).toBeVisible();
     await rescanButton.click();
 
-    // Wait for scan to start
-    await page.waitForTimeout(1000);
+    // The main process pushes `library:scanComplete` when the scan finishes,
+    // which surfaces this notification. Waiting on it means the test returns
+    // the instant the scan is done rather than after a fixed 30s fallback.
+    await expect(
+      page
+        .locator('[data-testid="notification-item"]')
+        .filter({ hasText: 'Library scan completed' }),
+    ).toBeVisible({ timeout: 60000 });
 
-    // Wait for scan to complete - look for completion indicators
-    // The scan might show a progress bar or status text
-    try {
-      // Wait for scan complete text or progress to reach 100%
-      await page.waitForSelector('text=Scan Complete', { timeout: 60000 });
-    } catch {
-      // Alternative: wait for the progress indicator to disappear
-      try {
-        await page.waitForSelector('[role="progressbar"]', {
-          state: 'hidden',
-          timeout: 60000,
-        });
-      } catch {
-        // Fallback: just wait a reasonable amount of time
-        await page.waitForTimeout(30000);
-      }
-    }
+    // The scan-progress dialog is bound to the mutation's pending state, which
+    // settles a moment after the push event; wait for it to unmount so it stops
+    // intercepting clicks. (The Settings panel is itself a role="dialog", so
+    // match the scan dialog by its completion title rather than by role.)
+    await expect(
+      page.getByRole('heading', { name: 'Scan Complete' }),
+    ).toBeHidden({ timeout: 60000 });
 
     // Count files after rescan
     const finalFileCount = getFileCount(testSongsDir);
@@ -262,16 +244,13 @@ test.describe('Library Management', () => {
 
     // Close the Settings drawer before navigating back
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
 
-    // Navigate back to library (sidebar is still open)
-    const libraryButton = page.locator('[data-testid="nav-library"]');
-    await libraryButton.click();
-    await page.waitForTimeout(1000);
+    // Navigate back to library (sidebar is still open). Playwright waits for
+    // the nav button to be actionable, which covers the drawer transition.
+    await page.locator('[data-testid="nav-library"]').click();
 
     // Verify songs are visible in the UI (virtualization limits visible rows to ~45)
-    const songCount = await page.locator('[data-track-id]').count();
-    expect(songCount).toBeGreaterThan(0); // Tracks should be visible after rescan
+    await TestHelpers.waitForTracks(page);
 
     await TestHelpers.takeScreenshot(page, 'library-after-rescan');
 

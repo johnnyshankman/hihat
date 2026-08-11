@@ -1,23 +1,53 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, ElectronApplication, Page } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
+
+/**
+ * Resize the Electron window and wait until the renderer has actually laid out
+ * at the new size. Comparing `window.innerWidth` against the main process's
+ * content size is exact and survives clamping to the window's min size, so
+ * there is nothing to sleep for before screenshotting.
+ */
+async function resizeWindow(
+  app: ElectronApplication,
+  page: Page,
+  width: number,
+  height: number,
+) {
+  await app.evaluate(
+    ({ BrowserWindow }, size) => {
+      BrowserWindow.getAllWindows()[0].setSize(size.width, size.height);
+    },
+    { width, height },
+  );
+
+  await expect
+    .poll(async () => {
+      const [contentWidth, contentHeight] = await app.evaluate(
+        ({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()[0].getContentSize(),
+      );
+      const inner = await page.evaluate(() => [
+        window.innerWidth,
+        window.innerHeight,
+      ]);
+      return inner[0] === contentWidth && inner[1] === contentHeight;
+    })
+    .toBe(true);
+}
+
+const SEARCH_TOGGLE = '[aria-label="Show/Hide search"]';
+const SEARCH_INPUT = '[data-testid="search-input"]';
 
 test.describe('UI Visual Verification', () => {
   test('full size (1280x800) - library with sidebar open', async () => {
     const { app, page } = await TestHelpers.launchApp();
-    await page.waitForTimeout(3000);
 
     // Set window to full size
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].setSize(1280, 800);
-    });
-    await page.waitForTimeout(500);
+    await resizeWindow(app, page, 1280, 800);
 
     // Verify sidebar is open and library is visible
-    expect(await page.locator('[data-testid="nav-library"]').isVisible()).toBe(
-      true,
-    );
-    const trackCount = await page.locator('[data-track-id]').count();
-    expect(trackCount).toBeGreaterThan(0);
+    await expect(page.locator('[data-testid="nav-library"]')).toBeVisible();
+    await expect(page.locator('[data-track-id]').first()).toBeVisible();
 
     await TestHelpers.takeScreenshot(page, 'ui-full-1280x800-library');
 
@@ -26,23 +56,16 @@ test.describe('UI Visual Verification', () => {
 
   test('medium size (900x600) - sidebar open, toolbar check', async () => {
     const { app, page } = await TestHelpers.launchApp();
-    await page.waitForTimeout(3000);
 
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].setSize(900, 600);
-    });
-    await page.waitForTimeout(500);
+    await resizeWindow(app, page, 900, 600);
 
     // Sidebar should be open
-    expect(await page.locator('[data-testid="nav-library"]').isVisible()).toBe(
-      true,
-    );
+    await expect(page.locator('[data-testid="nav-library"]')).toBeVisible();
 
     // Toolbar should be visible and not overflowing
     const toolbar = page.locator('.MuiToolbar-root, [class*="TopToolbar"]');
     if ((await toolbar.count()) > 0) {
-      const firstToolbar = toolbar.first();
-      await expect(firstToolbar).toBeVisible();
+      await expect(toolbar.first()).toBeVisible();
     }
 
     await TestHelpers.takeScreenshot(page, 'ui-medium-900x600-library');
@@ -52,50 +75,38 @@ test.describe('UI Visual Verification', () => {
 
   test('minimum size (640x400) - sidebar open and closed', async () => {
     const { app, page } = await TestHelpers.launchApp();
-    await page.waitForTimeout(3000);
 
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].setSize(640, 400);
-    });
-    await page.waitForTimeout(500);
+    await resizeWindow(app, page, 640, 400);
 
     // Screenshot with sidebar open at minimum size
     await TestHelpers.takeScreenshot(page, 'ui-min-640x400-sidebar-open');
 
     // Close sidebar
     await page.locator('[data-testid="sidebar-toggle-close"]').click();
-    await page.waitForTimeout(500);
+    await expect(page.locator('[data-testid="nav-library"]')).toBeHidden();
 
     // Screenshot with sidebar closed at minimum size
     await TestHelpers.takeScreenshot(page, 'ui-min-640x400-sidebar-closed');
 
     // Verify tracks are still visible
-    const trackCount = await page.locator('[data-track-id]').count();
-    expect(trackCount).toBeGreaterThan(0);
+    await expect(page.locator('[data-track-id]').first()).toBeVisible();
 
     await TestHelpers.closeApp(app);
   });
 
   test('settings slide-over panel', async () => {
     const { app, page } = await TestHelpers.launchApp();
-    await page.waitForTimeout(3000);
 
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].setSize(1280, 800);
-    });
-    await page.waitForTimeout(500);
+    await resizeWindow(app, page, 1280, 800);
 
     // Open settings via the gear button
     await page.locator('[data-testid="nav-settings"]').click();
-    await page.waitForTimeout(500);
 
     // Verify settings panel is visible
-    const settingsView = page.locator('[data-testid="settings-view"]');
-    await expect(settingsView).toBeVisible();
+    await expect(page.locator('[data-testid="settings-view"]')).toBeVisible();
 
     // Verify Settings heading
-    const settingsHeader = page.getByRole('heading', { name: 'Settings' });
-    await expect(settingsHeader).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 
     await TestHelpers.takeScreenshot(page, 'ui-settings-slideover');
 
@@ -104,42 +115,32 @@ test.describe('UI Visual Verification', () => {
 
   test('search bar toggle - open, type, and close', async () => {
     const { app, page } = await TestHelpers.launchApp();
-    await page.waitForTimeout(3000);
 
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].setSize(1280, 800);
-    });
-    await page.waitForTimeout(500);
+    await resizeWindow(app, page, 1280, 800);
 
     // Screenshot before opening search
     await TestHelpers.takeScreenshot(page, 'ui-search-1-before-open');
 
     // Click the search toggle button
-    const searchToggle = page.locator('[aria-label="Show/Hide search"]');
-    await expect(searchToggle).toBeVisible({ timeout: 5000 });
+    const searchToggle = page.locator(SEARCH_TOGGLE);
+    await expect(searchToggle).toBeVisible();
     await searchToggle.click();
-    await page.waitForTimeout(500);
+    await expect(page.locator(SEARCH_INPUT)).toBeVisible();
 
     // Screenshot with search bar open (empty)
     await TestHelpers.takeScreenshot(page, 'ui-search-2-open-empty');
 
     // Type into the search field
-    const searchInput = page
-      .locator(
-        'input[type="search"], input[placeholder*="Filter"], input[placeholder*="Search"]',
-      )
-      .first();
-    if (await searchInput.isVisible()) {
-      await searchInput.fill('Test');
-      await page.waitForTimeout(500);
-    }
+    const searchInput = page.locator(SEARCH_INPUT);
+    await searchInput.fill('Test');
+    await expect(searchInput).toHaveValue('Test');
 
     // Screenshot with search bar open and text typed
     await TestHelpers.takeScreenshot(page, 'ui-search-3-open-with-text');
 
     // Close search by clicking the toggle button again
     await searchToggle.click();
-    await page.waitForTimeout(500);
+    await expect(page.locator(SEARCH_INPUT)).toBeHidden();
 
     // Screenshot after closing search - check for doubling/whitespace
     await TestHelpers.takeScreenshot(page, 'ui-search-4-after-close');
@@ -149,31 +150,24 @@ test.describe('UI Visual Verification', () => {
 
   test('search bar at minimum size (640x400)', async () => {
     const { app, page } = await TestHelpers.launchApp();
-    await page.waitForTimeout(3000);
 
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].setSize(640, 400);
-    });
-    await page.waitForTimeout(500);
+    await resizeWindow(app, page, 640, 400);
 
     // Screenshot before opening search at small size
     await TestHelpers.takeScreenshot(page, 'ui-search-min-1-before');
 
     // Click the search toggle button
-    const searchToggle = page.locator('[aria-label="Show/Hide search"]');
-    if (await searchToggle.isVisible()) {
-      await searchToggle.click();
-      await page.waitForTimeout(500);
-    }
+    const searchToggle = page.locator(SEARCH_TOGGLE);
+    await expect(searchToggle).toBeVisible();
+    await searchToggle.click();
+    await expect(page.locator(SEARCH_INPUT)).toBeVisible();
 
     // Screenshot with search bar open at small size
     await TestHelpers.takeScreenshot(page, 'ui-search-min-2-open');
 
     // Close search
-    if (await searchToggle.isVisible()) {
-      await searchToggle.click();
-      await page.waitForTimeout(500);
-    }
+    await searchToggle.click();
+    await expect(page.locator(SEARCH_INPUT)).toBeHidden();
 
     // Screenshot after closing search at small size
     await TestHelpers.takeScreenshot(page, 'ui-search-min-3-after-close');
@@ -183,16 +177,13 @@ test.describe('UI Visual Verification', () => {
 
   test('compact layout - row density verification', async () => {
     const { app, page } = await TestHelpers.launchApp();
-    await page.waitForTimeout(3000);
 
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].setSize(1280, 800);
-    });
-    await page.waitForTimeout(500);
+    await resizeWindow(app, page, 1280, 800);
 
     // Verify that rows are visible (Apple Music-matched 22px rows)
-    const trackCount = await page.locator('[data-track-id]').count();
-    expect(trackCount).toBeGreaterThanOrEqual(20);
+    await expect
+      .poll(() => page.locator('[data-track-id]').count())
+      .toBeGreaterThanOrEqual(20);
 
     await TestHelpers.takeScreenshot(page, 'ui-compact-row-density');
 
@@ -201,21 +192,14 @@ test.describe('UI Visual Verification', () => {
 
   test('compact layout - sidebar density verification', async () => {
     const { app, page } = await TestHelpers.launchApp();
-    await page.waitForTimeout(3000);
 
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].setSize(1280, 800);
-    });
-    await page.waitForTimeout(500);
+    await resizeWindow(app, page, 1280, 800);
 
     // Verify sidebar is visible
-    expect(await page.locator('[data-testid="nav-library"]').isVisible()).toBe(
-      true,
-    );
+    await expect(page.locator('[data-testid="nav-library"]')).toBeVisible();
 
     // Verify playlist items are present in sidebar
-    const playlistCount = await page.locator('[data-playlist-id]').count();
-    expect(playlistCount).toBeGreaterThan(0);
+    await expect(page.locator('[data-playlist-id]').first()).toBeVisible();
 
     await TestHelpers.takeScreenshot(page, 'ui-compact-sidebar-density');
 
@@ -224,21 +208,17 @@ test.describe('UI Visual Verification', () => {
 
   test('playlist view with unified toolbar', async () => {
     const { app, page } = await TestHelpers.launchApp();
-    await page.waitForTimeout(3000);
 
     // Click on a playlist
     await page.getByText('Test Playlist', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await TestHelpers.waitForTrackCount(page, 3);
 
     // Verify sidebar stayed open (Phase 1)
-    expect(await page.locator('[data-testid="nav-library"]').isVisible()).toBe(
-      true,
-    );
+    await expect(page.locator('[data-testid="nav-library"]')).toBeVisible();
 
     // Title is hidden when sidebar is open (matches SidebarToggle pattern).
     // Close sidebar so the playlist name becomes visible for this assertion.
     await page.locator('[data-testid="sidebar-toggle-close"]').click();
-    await page.waitForTimeout(500);
 
     const playlistHeading = page.locator('h2');
     await expect(playlistHeading).toContainText('Test Playlist');

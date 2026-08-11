@@ -81,10 +81,9 @@ test.describe('Column Widths Persistence', () => {
 
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(3000);
 
     // Wait for the library table to render
-    await page.waitForSelector('.vt-table', { timeout: 10000 });
+    await page.waitForSelector('.vt-table', { timeout: 20000 });
 
     // Get the rendered width of the artist column header
     const artistWidth = await page.evaluate(() => {
@@ -155,18 +154,21 @@ test.describe('Column Widths Persistence', () => {
     await page.mouse.move(handleX + 100, handleY, { steps: 10 });
     await page.mouse.up();
 
-    await page.waitForTimeout(200);
-
     // Get the new width of the artist column
-    const newArtistWidth = await page.evaluate(() => {
-      const headers = document.querySelectorAll('th');
-      const arr = Array.from(headers);
-      const artistTh = arr.find(
-        (header) => header.textContent?.trim() === 'Artist',
-      );
-      return artistTh ? (artistTh as HTMLElement).offsetWidth : null;
-    });
+    const readArtistWidth = () =>
+      page.evaluate(() => {
+        const headers = document.querySelectorAll('th');
+        const arr = Array.from(headers);
+        const artistTh = arr.find(
+          (header) => header.textContent?.trim() === 'Artist',
+        );
+        return artistTh ? (artistTh as HTMLElement).offsetWidth : null;
+      });
 
+    // Poll the measured width: the resize commits on the next paint, so this
+    // settles immediately instead of after a guessed delay.
+    await expect.poll(readArtistWidth).toBeGreaterThan(initialWidth + 50);
+    const newArtistWidth = await readArtistWidth();
     expect(newArtistWidth).not.toBeNull();
     // The column should have gotten wider by approximately 100px
     expect(newArtistWidth!).toBeGreaterThan(initialWidth + 50);

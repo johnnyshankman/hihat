@@ -102,9 +102,11 @@ export class ElectronHelper {
     // Wait for the first window
     const page = await this.waitForWindow(app);
 
-    // Wait for React to load
+    // Wait for React to load. The library table is the first thing the app
+    // renders once the renderer has booted, so wait for it rather than
+    // guessing at an initialization delay.
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000); // Give React time to initialize
+    await page.waitForSelector('[data-track-id]', { timeout: 30000 });
 
     return { app, page };
   }

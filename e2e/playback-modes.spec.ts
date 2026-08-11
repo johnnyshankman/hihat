@@ -1,4 +1,4 @@
-/* eslint-disable no-plusplus, no-console, no-await-in-loop */
+/* eslint-disable no-plusplus, no-await-in-loop */
 import { test, expect } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
 
@@ -6,53 +6,41 @@ test.describe('Playback Modes', () => {
   test('repeat track mode replays the same song', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
-
     // Double-click first track to start playback
     const firstTrack = page.locator('[data-track-id]').first();
     const firstTrackTitle = await firstTrack
       .locator('td')
       .first()
       .textContent();
-    await firstTrack.dblclick();
-    await page.waitForTimeout(1000);
-
-    // Verify playing
-    let pauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-    await expect(pauseIcon).toBeVisible({ timeout: 5000 });
+    await TestHelpers.startPlayback(page, firstTrack);
 
     // Enable repeat-track mode by clicking repeat button
     // Cycle is: off → track → all → off
     // Click once for "track" (data-repeat-mode should become "track")
     const repeatButton = page.locator('[data-testid="repeat-button"]');
     await repeatButton.click();
-    await page.waitForTimeout(500);
 
     // Verify the button is now in track-repeat mode
-    await expect(repeatButton).toHaveAttribute('data-repeat-mode', 'track', {
-      timeout: 5000,
-    });
+    await expect(repeatButton).toHaveAttribute('data-repeat-mode', 'track');
 
-    // Wait for 10-second track to finish (~12s to be safe)
-    await page.waitForTimeout(12000);
+    // Fixture tracks are 10s. Run to the tail of the track, then wait for the
+    // clock to wrap back to the start — that wrap *is* the repeat, so we don't
+    // have to sleep past a guessed end time.
+    await TestHelpers.waitForElapsedAtLeast(page, 9);
+    await expect(
+      page.locator('[data-testid="player-elapsed-time"]'),
+    ).toHaveText('0:00', { timeout: 15000 });
 
     // Verify the SAME track is still playing (not advanced to next)
-    pauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-    await expect(pauseIcon).toBeVisible({ timeout: 5000 });
-
-    // The page should still show the first track's title in the player
-    const pageContent = await page.content();
-    expect(pageContent).toContain(firstTrackTitle!.trim());
+    await TestHelpers.waitForPlaying(page);
+    await TestHelpers.waitForNowPlaying(page, firstTrackTitle!.trim());
+    await expect(firstTrack).toHaveClass(/vt-row-playing/);
 
     await TestHelpers.closeApp(app);
   });
 
   test('shuffle mode produces non-sequential track order', async () => {
     const { app, page } = await TestHelpers.launchApp();
-
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
 
     // Get first few track titles in sequential order for comparison
     const sequentialTitles: string[] = [];
@@ -61,52 +49,30 @@ test.describe('Playback Modes', () => {
       const title = await row.locator('td').first().textContent();
       sequentialTitles.push(title!.trim());
     }
-    console.log('Sequential order:', sequentialTitles);
 
     // Double-click first track to start playback
-    await page.locator('[data-track-id]').first().dblclick();
-    await page.waitForTimeout(1000);
-
-    // Verify playing
-    const pauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-    await expect(pauseIcon).toBeVisible({ timeout: 5000 });
+    await TestHelpers.startPlayback(
+      page,
+      page.locator('[data-track-id]').first(),
+    );
 
     // Enable shuffle mode by clicking the shuffle button
     const shuffleButton = page.locator('[data-testid="shuffle-button"]');
     await shuffleButton.click();
-    await page.waitForTimeout(500);
 
     // Verify the button is now in shuffle-on mode
-    await expect(shuffleButton).toHaveAttribute('data-shuffle-mode', 'on', {
-      timeout: 5000,
-    });
+    await expect(shuffleButton).toHaveAttribute('data-shuffle-mode', 'on');
 
-    // Skip through several tracks and record what plays
+    // Skip through several tracks and record what plays. Each skip is followed
+    // by a wait for the now-playing title to actually change, so the recorded
+    // sequence is never a stale read.
     const shuffledTitles: string[] = [];
     for (let i = 0; i < 5; i++) {
+      const previousTitle = await TestHelpers.nowPlayingTitle(page);
       await page.locator('[data-testid="skip-next-button"]').click();
-      await page.waitForTimeout(1000);
-
-      // Get the title from the player area by checking page content
-      // Read the track title from the first visible typography in the player
-      const currentTitle = await page.evaluate(() => {
-        // The player shows the track title in a Typography component
-        // Look for the track info section in the player bar
-        const papers = document.querySelectorAll('.MuiPaper-root');
-        const playerPaper = papers[papers.length - 1];
-        if (!playerPaper) return '';
-        const typographies = Array.from(
-          playerPaper.querySelectorAll('.MuiTypography-body1'),
-        );
-        const match = typographies.find((t) => {
-          const text = t.textContent?.trim();
-          return text && text !== '---' && text.length > 0;
-        });
-        return match?.textContent?.trim() || '';
-      });
-      shuffledTitles.push(currentTitle);
+      await TestHelpers.waitForNowPlayingChange(page, previousTitle);
+      shuffledTitles.push(await TestHelpers.nowPlayingTitle(page));
     }
-    console.log('Shuffled order:', shuffledTitles);
 
     // With 200 tracks and shuffle enabled, the probability of 5 consecutive
     // tracks matching sequential order is negligible.
@@ -131,70 +97,59 @@ test.describe('Playback Modes', () => {
   test('playlist track management — add track and verify', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
-
     // Navigate to library view
     await page.click('[data-testid="nav-library"]');
-    await page.waitForTimeout(500);
+    await TestHelpers.waitForTracks(page);
 
     // Find a track not already in "Test Playlist" (playlist-1 has 001, 002, 003)
     // Search for a specific track to ensure it's visible
     const searchToggle = page.locator('[aria-label="Show/Hide search"]');
     if (await searchToggle.isVisible()) {
       await searchToggle.click();
-      await page.waitForTimeout(500);
     }
 
-    let searchInput = page.locator('input[type="search"]').first();
-    if (!(await searchInput.isVisible())) {
-      searchInput = page.locator('input[placeholder*="Search"]').first();
-    }
-    if (!(await searchInput.isVisible())) {
-      searchInput = page.locator('.MuiInputBase-input').first();
-    }
+    const searchInput = page.locator('[data-testid="search-input"]');
+    await searchInput.waitFor({ state: 'visible' });
 
     // Search for track test-large-005 which is not in the fixture playlist
     await searchInput.fill('Classical Masters');
-    await page.waitForTimeout(1000);
 
     // Right-click the track to open context menu
     const trackRow = page.locator('[data-track-id="test-large-005"]');
-    await trackRow.waitFor({ state: 'visible', timeout: 5000 });
+    await trackRow.waitFor({ state: 'visible' });
     await trackRow.click({ button: 'right' });
 
     // Click "Add to Playlist" in context menu
     await page.click('[data-testid="add-to-playlist-menu-item"]');
-    await page.waitForTimeout(500);
 
     // Select "Test Playlist" (playlist-1)
-    await page.click('[data-testid="playlist-option-playlist-1"]');
-    await page.waitForTimeout(1500);
+    const playlistOption = page.locator(
+      '[data-testid="playlist-option-playlist-1"]',
+    );
+    await playlistOption.waitFor({ state: 'visible' });
+    await playlistOption.click();
+    await expect(playlistOption).toBeHidden();
 
     // Clear search
-    const searchInputToClear = page.locator('input[type="search"]').first();
-    if (await searchInputToClear.isVisible()) {
-      await searchInputToClear.clear();
-      await page.waitForTimeout(500);
-    }
+    await searchInput.clear();
+    await TestHelpers.waitForTracks(page);
 
     // Re-open sidebar (it auto-closes after navigation)
     const sidebarToggle = page.locator('[data-testid="sidebar-toggle"]');
     if (await sidebarToggle.isVisible()) {
       await sidebarToggle.click();
-      await page.waitForTimeout(500);
     }
 
     // Navigate to "Test Playlist"
-    await page.click('[data-playlist-id="playlist-1"]');
-    await page.waitForTimeout(500);
+    const playlistLink = page.locator('[data-playlist-id="playlist-1"]');
+    await playlistLink.waitFor({ state: 'visible' });
+    await playlistLink.click();
 
     // Verify the track is in the playlist (originally 3 tracks, now 4)
-    const addedTrack = page.locator('[data-track-id="test-large-005"]');
-    await addedTrack.waitFor({ state: 'visible', timeout: 5000 });
-
-    const trackCount = await page.locator('[data-track-id]').count();
-    expect(trackCount).toBe(4);
+    await expect(
+      page.locator('[data-track-id="test-large-005"]'),
+    ).toBeVisible();
+    await TestHelpers.waitForTrackCount(page, 4);
 
     await TestHelpers.closeApp(app);
   });

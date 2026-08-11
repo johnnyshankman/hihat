@@ -10,10 +10,8 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
     const { app, page } = await TestHelpers.launchApp();
 
     try {
-      await page.waitForTimeout(3000);
       await page.click('[data-testid="nav-library"]');
-      await page.waitForTimeout(500);
-      await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+      await TestHelpers.waitForTracks(page);
 
       const firstRow = page.locator('[data-track-id]').first();
       const trackId = await firstRow.getAttribute('data-track-id');
@@ -23,23 +21,19 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
       expect(title).toBeTruthy();
 
       // 1. Start playing the first song.
-      await firstRow.dblclick();
-      await page.waitForTimeout(1000);
-      await expect(page.locator('svg[data-testid="PauseIcon"]')).toBeVisible();
+      await TestHelpers.startPlayback(page, firstRow);
       await expect(
         page.locator('[data-testid="now-playing-title"]'),
       ).toContainText(title!);
 
       // 2. Pause it (matches the issue's reproduction steps).
       await page.locator('button:has(svg[data-testid="PauseIcon"])').click();
-      await page.waitForTimeout(300);
       await expect(
         page.locator('svg[data-testid="PlayArrowIcon"]'),
       ).toBeVisible();
 
       // 3. Delete it via the right-click "Remove from Library" menu item.
       await firstRow.click({ button: 'right' });
-      await page.waitForTimeout(500);
       const menu = page.locator('[role="menu"]');
       await expect(menu).toBeVisible();
       await menu.getByText('Remove from Library', { exact: true }).click();
@@ -48,7 +42,7 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
       const dialog = page.locator('[role="dialog"]');
       await expect(dialog).toBeVisible();
       await dialog.getByRole('button', { name: 'Delete' }).click();
-      await page.waitForTimeout(1500);
+      await expect(dialog).toBeHidden();
 
       // 5. The now-playing UI is cleared back to the empty "nothing playing"
       // state (the `---` placeholder has no `now-playing-title` element).
@@ -73,10 +67,8 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
     const { app, page } = await TestHelpers.launchApp();
 
     try {
-      await page.waitForTimeout(3000);
       await page.click('[data-testid="nav-library"]');
-      await page.waitForTimeout(500);
-      await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+      await TestHelpers.waitForTracks(page);
 
       const rows = page.locator('[data-track-id]');
       const firstRow = rows.nth(0);
@@ -87,19 +79,17 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
       expect(title).toBeTruthy();
 
       // Play the first song (this selects it).
-      await firstRow.dblclick();
-      await page.waitForTimeout(1000);
+      await TestHelpers.startPlayback(page, firstRow);
       await expect(
         page.locator('[data-testid="now-playing-title"]'),
       ).toContainText(title!);
 
       // Extend the selection to a second row so the multi-select menu shows.
       await secondRow.click({ modifiers: ['ControlOrMeta'] });
-      await page.waitForTimeout(300);
+      await expect(secondRow).toHaveClass(/vt-row-selected/);
 
       // Right-click a selected row -> multi-select context menu.
       await firstRow.click({ button: 'right' });
-      await page.waitForTimeout(500);
       const menu = page.locator('[role="menu"]');
       await expect(menu).toBeVisible();
       await menu.getByText(/Remove From Library/i).click();
@@ -108,7 +98,7 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
       const dialog = page.locator('[role="dialog"]');
       await expect(dialog).toBeVisible();
       await dialog.getByRole('button', { name: 'Delete' }).click();
-      await page.waitForTimeout(1500);
+      await expect(dialog).toBeHidden();
 
       // Now-playing UI is cleared because the playing song was deleted.
       await expect(
@@ -132,10 +122,8 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
     const { app, page } = await TestHelpers.launchApp();
 
     try {
-      await page.waitForTimeout(3000);
       await page.click('[data-testid="nav-library"]');
-      await page.waitForTimeout(500);
-      await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+      await TestHelpers.waitForTracks(page);
 
       // Filter the library to a tiny source via search: "Digital Dreams" is an
       // album shared by 4 Aurora Synth tracks, giving a source with a real END
@@ -143,13 +131,13 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
       // Staying in the library view (not a playlist) keeps "Remove from Library"
       // available, and all 4 matched rows render so nth() lookups are safe.
       await page.locator('[aria-label="Show/Hide search"]').click();
-      await page.waitForTimeout(300);
       await page.locator('[data-testid="search-input"]').fill('Digital Dreams');
-      await page.waitForTimeout(800);
+      // 4 Aurora Synth tracks share this album — waiting for the filtered count
+      // is the signal the debounced search has landed.
+      await TestHelpers.waitForTrackCount(page, 4);
 
       const rows = page.locator('[data-track-id]');
       const count = await rows.count();
-      expect(count).toBeGreaterThanOrEqual(2);
 
       const secondToLastRow = rows.nth(count - 2);
       const lastRow = rows.nth(count - 1);
@@ -166,8 +154,7 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
 
       // Play the SECOND-TO-LAST filtered track so the next natural finish
       // auto-advances onto the LAST one.
-      await secondToLastRow.dblclick();
-      await page.waitForTimeout(1000);
+      await TestHelpers.startPlayback(page, secondToLastRow);
       await expect(
         page.locator('[data-testid="now-playing-title"]'),
       ).toContainText(secondTitle!);
@@ -190,7 +177,7 @@ test.describe('Issue #140 — deleting the playing song clears the now-playing U
       const dialog = page.locator('[role="dialog"]');
       await expect(dialog).toBeVisible();
       await dialog.getByRole('button', { name: 'Delete' }).click();
-      await page.waitForTimeout(1500);
+      await expect(dialog).toBeHidden();
 
       // Deleting the playing track clears the now-playing UI instead of
       // resurrecting the previous track (pre-fix: removePreloadedTrack restarted

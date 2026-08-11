@@ -8,15 +8,14 @@ async function searchForTrack(
   page: import('@playwright/test').Page,
   title: string,
 ) {
-  await page.waitForTimeout(3000);
   await page.click('[data-testid="nav-library"]');
-  await page.waitForTimeout(500);
-  await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+  await TestHelpers.waitForTracks(page);
 
   await page.locator('[aria-label="Show/Hide search"]').click();
-  await page.waitForTimeout(300);
   await page.locator('[data-testid="search-input"]').fill(title);
-  await page.waitForTimeout(500);
+  // These titles are unique in the fixture, so a single matching row is the
+  // signal that the debounced filter has landed.
+  await TestHelpers.waitForTrackCount(page, 1);
 
   return page.locator('[data-track-id]').first();
 }
@@ -77,11 +76,7 @@ test.describe('Audio Format Support', () => {
       const { app, page } = await TestHelpers.launchApp();
       const track = await searchForTrack(page, 'Test FLAC Song');
 
-      await track.dblclick();
-      await page.waitForTimeout(1000);
-
-      const pauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-      await expect(pauseIcon).toBeVisible({ timeout: 5000 });
+      await TestHelpers.startPlayback(page, track);
 
       await TestHelpers.closeApp(app);
     });
@@ -90,11 +85,7 @@ test.describe('Audio Format Support', () => {
       const { app, page } = await TestHelpers.launchApp();
       const track = await searchForTrack(page, 'Test WAV Song');
 
-      await track.dblclick();
-      await page.waitForTimeout(1000);
-
-      const pauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-      await expect(pauseIcon).toBeVisible({ timeout: 5000 });
+      await TestHelpers.startPlayback(page, track);
 
       await TestHelpers.closeApp(app);
     });
@@ -103,11 +94,7 @@ test.describe('Audio Format Support', () => {
       const { app, page } = await TestHelpers.launchApp();
       const track = await searchForTrack(page, 'Test OGG Song');
 
-      await track.dblclick();
-      await page.waitForTimeout(1000);
-
-      const pauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-      await expect(pauseIcon).toBeVisible({ timeout: 5000 });
+      await TestHelpers.startPlayback(page, track);
 
       await TestHelpers.closeApp(app);
     });
@@ -118,11 +105,7 @@ test.describe('Audio Format Support', () => {
       const { app, page } = await TestHelpers.launchApp();
       const track = await searchForTrack(page, 'Test AAC Song');
 
-      await track.dblclick();
-      await page.waitForTimeout(1000);
-
-      const pauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-      await expect(pauseIcon).toBeVisible({ timeout: 5000 });
+      await TestHelpers.startPlayback(page, track);
 
       await TestHelpers.closeApp(app);
     });
@@ -135,12 +118,12 @@ test.describe('Audio Format Support', () => {
 
       // Right-click and open Edit Metadata
       await track.click({ button: 'right' });
-      await page.waitForTimeout(500);
-      await page
-        .locator('[role="menu"]')
-        .getByText('Edit Metadata', { exact: true })
-        .click();
-      await page.waitForTimeout(500);
+      const menu = page.locator('[role="menu"]');
+      await expect(menu).toBeVisible();
+      await menu.getByText('Edit Metadata', { exact: true }).click();
+      await expect(
+        page.locator('[data-testid="edit-metadata-dialog"]'),
+      ).toBeVisible();
 
       // Change the title
       const titleInput = page.locator('[data-testid="metadata-title-input"]');
@@ -148,7 +131,9 @@ test.describe('Audio Format Support', () => {
 
       // Save
       await page.click('[data-testid="save-metadata-button"]');
-      await page.waitForTimeout(1500);
+      await expect(
+        page.locator('[data-testid="edit-metadata-dialog"]'),
+      ).toBeHidden();
 
       // Verify success notification
       const notificationPanel = page.locator(
@@ -166,7 +151,7 @@ test.describe('Audio Format Support', () => {
       await page
         .locator('[data-testid="search-input"]')
         .fill('Edited FLAC Title');
-      await page.waitForTimeout(500);
+      await TestHelpers.waitForTrackCount(page, 1);
       await expect(page.locator('[data-track-id]').first()).toContainText(
         'Edited FLAC Title',
       );
@@ -180,12 +165,12 @@ test.describe('Audio Format Support', () => {
 
       // Right-click and open Edit Metadata
       await track.click({ button: 'right' });
-      await page.waitForTimeout(500);
-      await page
-        .locator('[role="menu"]')
-        .getByText('Edit Metadata', { exact: true })
-        .click();
-      await page.waitForTimeout(500);
+      const menu = page.locator('[role="menu"]');
+      await expect(menu).toBeVisible();
+      await menu.getByText('Edit Metadata', { exact: true }).click();
+      await expect(
+        page.locator('[data-testid="edit-metadata-dialog"]'),
+      ).toBeVisible();
 
       // Change the title
       const titleInput = page.locator('[data-testid="metadata-title-input"]');
@@ -193,7 +178,9 @@ test.describe('Audio Format Support', () => {
 
       // Save
       await page.click('[data-testid="save-metadata-button"]');
-      await page.waitForTimeout(1500);
+      await expect(
+        page.locator('[data-testid="edit-metadata-dialog"]'),
+      ).toBeHidden();
 
       // Verify success notification
       const notificationPanel = page.locator(
@@ -211,7 +198,7 @@ test.describe('Audio Format Support', () => {
       await page
         .locator('[data-testid="search-input"]')
         .fill('Edited OGG Title');
-      await page.waitForTimeout(500);
+      await TestHelpers.waitForTrackCount(page, 1);
       await expect(page.locator('[data-track-id]').first()).toContainText(
         'Edited OGG Title',
       );

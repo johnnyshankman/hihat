@@ -72,11 +72,14 @@ test.describe('Artist column — sort by album artist (toggle on)', () => {
       timeout: 5000,
     });
     await page.fill('[data-testid="search-input"]', 'Hip Hop Legends');
-    await page.waitForTimeout(500);
+    // Every rendered row matching the term means the debounced filter landed.
+    await expect(
+      page.locator('[data-track-id]').filter({ hasNotText: 'Hip Hop Legends' }),
+    ).toHaveCount(0);
 
     const artistHeader = page.locator('th:has-text("Artist")').first();
     await artistHeader.click();
-    await page.waitForTimeout(500);
+    await expect(artistHeader).toHaveAttribute('aria-sort', 'ascending');
 
     const sortInfo = await getActiveSort(page);
     expect(sortInfo).not.toBeNull();
@@ -128,11 +131,14 @@ test.describe('Artist column — sort by raw artist (toggle off)', () => {
       timeout: 5000,
     });
     await page.fill('[data-testid="search-input"]', 'Hip Hop Legends');
-    await page.waitForTimeout(500);
+    // Every rendered row matching the term means the debounced filter landed.
+    await expect(
+      page.locator('[data-track-id]').filter({ hasNotText: 'Hip Hop Legends' }),
+    ).toHaveCount(0);
 
     const artistHeader = page.locator('th:has-text("Artist")').first();
     await artistHeader.click();
-    await page.waitForTimeout(500);
+    await expect(artistHeader).toHaveAttribute('aria-sort', 'ascending');
 
     let sortInfo = await getActiveSort(page);
     expect(sortInfo).not.toBeNull();
@@ -145,7 +151,7 @@ test.describe('Artist column — sort by raw artist (toggle off)', () => {
     // → useUpdateSettings mutation → settings:update IPC → DB write → query
     // cache update → column-defs + sorting-reference re-mint → table re-sort.
     await page.click('[data-testid="nav-settings"]');
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="settings-view"]');
 
     const toggle = page.locator(
       '[data-testid="sort-artist-by-album-artist-toggle"]',
@@ -153,8 +159,7 @@ test.describe('Artist column — sort by raw artist (toggle off)', () => {
     await expect(toggle).toBeVisible();
     expect(await toggle.isChecked()).toBe(true);
     await toggle.click();
-    await page.waitForTimeout(300);
-    expect(await toggle.isChecked()).toBe(false);
+    await expect(toggle).not.toBeChecked();
 
     // Confirm the value made it through IPC, not just the local switch state.
     const persistedAfterOff = await page.evaluate(() =>
@@ -170,8 +175,21 @@ test.describe('Artist column — sort by raw artist (toggle off)', () => {
     // intercepts pointer events for everything underneath. Press Escape to
     // dismiss it; sorting state is preserved (we never touched it).
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
     await page.waitForSelector('.vt-table', { timeout: 10000 });
+
+    // The comparator swap propagates through the settings query; poll the
+    // rendered order until the raw-artist grouping lands rather than sleeping.
+    await expect
+      .poll(async () => {
+        const ids = await getRenderedTrackIds(page);
+        const at = (id: string) => ids.indexOf(id);
+        if (ALL_PLAIN_HHL.some((id) => at(id) < 0)) return false;
+        if (ALL_FEAT.some((id) => at(id) < 0)) return false;
+        return (
+          Math.max(...ALL_PLAIN_HHL.map(at)) < Math.min(...ALL_FEAT.map(at))
+        );
+      })
+      .toBe(true);
 
     // Header still says ascending Artist — sorting state never changed,
     // only the comparator behind it. If the table failed to re-sort, the

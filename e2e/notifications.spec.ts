@@ -20,9 +20,11 @@ test.describe('Notification System', () => {
     const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
-    await page.waitForTimeout(500);
-    await page.click('[data-testid="playlist-option-playlist-1"]');
-    await page.waitForTimeout(1000);
+    const playlistOption = page.locator(
+      '[data-testid="playlist-option-playlist-1"]',
+    );
+    await expect(playlistOption).toBeVisible();
+    await playlistOption.click();
 
     // Badge should no longer have the invisible class
     await expect(badge).not.toHaveClass(/MuiBadge-invisible/);
@@ -40,9 +42,11 @@ test.describe('Notification System', () => {
 
     // Click "Add to Playlist" then select "Test Playlist"
     await page.click('[data-testid="add-to-playlist-menu-item"]');
-    await page.waitForTimeout(500);
-    await page.click('[data-testid="playlist-option-playlist-1"]');
-    await page.waitForTimeout(1000);
+    const playlistOption = page.locator(
+      '[data-testid="playlist-option-playlist-1"]',
+    );
+    await expect(playlistOption).toBeVisible();
+    await playlistOption.click();
 
     // Panel should auto-expand with the notification
     const panel = page.locator('[data-testid="notification-panel"]');
@@ -112,9 +116,11 @@ test.describe('Notification System', () => {
     const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
-    await page.waitForTimeout(500);
-    await page.click('[data-testid="playlist-option-playlist-1"]');
-    await page.waitForTimeout(1000);
+    const playlistOption = page.locator(
+      '[data-testid="playlist-option-playlist-1"]',
+    );
+    await expect(playlistOption).toBeVisible();
+    await playlistOption.click();
 
     const panel = page.locator('[data-testid="notification-panel"]');
     await panel.waitFor({ state: 'visible', timeout: 5000 });
@@ -125,10 +131,7 @@ test.describe('Notification System', () => {
       .first();
     await dismissButton.click();
 
-    // Wait for fade-out animation
-    await page.waitForTimeout(300);
-
-    // No items should remain
+    // No items should remain once the fade-out finishes
     const items = panel.locator('[data-testid="notification-item"]');
     await expect(items).toHaveCount(0);
 
@@ -187,9 +190,11 @@ test.describe('Notification System', () => {
     const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
-    await page.waitForTimeout(500);
-    await page.click('[data-testid="playlist-option-playlist-1"]');
-    await page.waitForTimeout(1000);
+    const playlistOption = page.locator(
+      '[data-testid="playlist-option-playlist-1"]',
+    );
+    await expect(playlistOption).toBeVisible();
+    await playlistOption.click();
 
     const panel = page.locator('[data-testid="notification-panel"]');
     await panel.waitFor({ state: 'visible', timeout: 5000 });
@@ -213,9 +218,11 @@ test.describe('Notification System', () => {
     const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
-    await page.waitForTimeout(500);
-    await page.click('[data-testid="playlist-option-playlist-1"]');
-    await page.waitForTimeout(1000);
+    const playlistOption = page.locator(
+      '[data-testid="playlist-option-playlist-1"]',
+    );
+    await expect(playlistOption).toBeVisible();
+    await playlistOption.click();
 
     const panel = page.locator('[data-testid="notification-panel"]');
     await panel.waitFor({ state: 'visible', timeout: 5000 });
@@ -235,9 +242,11 @@ test.describe('Notification System', () => {
     const trackRow = page.locator('[data-track-id]').first();
     await trackRow.click({ button: 'right' });
     await page.click('[data-testid="add-to-playlist-menu-item"]');
-    await page.waitForTimeout(500);
-    await page.click('[data-testid="playlist-option-playlist-1"]');
-    await page.waitForTimeout(1000);
+    const playlistOption = page.locator(
+      '[data-testid="playlist-option-playlist-1"]',
+    );
+    await expect(playlistOption).toBeVisible();
+    await playlistOption.click();
 
     const panel = page.locator('[data-testid="notification-panel"]');
     await panel.waitFor({ state: 'visible', timeout: 5000 });

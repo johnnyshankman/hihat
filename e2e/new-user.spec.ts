@@ -5,9 +5,6 @@ test.describe('New User Experience', () => {
   test('should display empty library message for brand new user', async () => {
     const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
 
-    // Wait for app to fully load
-    await page.waitForTimeout(3000);
-
     // Check that the empty library message is displayed
     const emptyLibraryMessage = await page.getByText('Your library is empty');
     expect(await emptyLibraryMessage.isVisible()).toBe(true);
@@ -27,9 +24,6 @@ test.describe('New User Experience', () => {
   test('should have default smart playlists for brand new user', async () => {
     const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
 
-    // Wait for app to fully load
-    await page.waitForTimeout(3000);
-
     // Check for the default smart playlists in the sidebar
     // These should be created automatically by the app's self-healing mechanism
     const recentlyAddedPlaylist = await page.getByText('Recently Added');
@@ -42,17 +36,13 @@ test.describe('New User Experience', () => {
     expect(await mostPlayedPlaylist.isVisible()).toBe(true);
 
     // Verify there are exactly 3 playlists (the smart playlists)
-    const playlistItems = await page.locator('[data-playlist-id]').count();
-    expect(playlistItems).toBe(3);
+    await expect(page.locator('[data-playlist-id]')).toHaveCount(3);
 
     await TestHelpers.closeApp(app);
   });
 
   test('should display basic UI components for brand new user', async () => {
     const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
-
-    // Wait for app to fully load
-    await page.waitForTimeout(3000);
 
     // 1. Check for sidebar/drawer
     const drawer = await page.locator('.MuiDrawer-root').isVisible();
@@ -91,9 +81,6 @@ test.describe('New User Experience', () => {
 
   test('should have no tracks loaded for brand new user', async () => {
     const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
-
-    // Wait for app to fully load
-    await page.waitForTimeout(3000);
 
     // Verify there are no track rows in the library
     const trackRows = await page.locator('[data-track-id]').count();
