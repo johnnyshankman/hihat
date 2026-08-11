@@ -70,6 +70,17 @@ async function dragTrackToPlaylist(
   );
 }
 
+/**
+ * Wait for the toast the drop handler raises. Every accepted drop ends in a
+ * notification, so it is the exact "the playlist mutation finished" signal —
+ * far tighter and more honest than sleeping for a second and a half.
+ */
+async function expectDropNotification(page: Page, text: RegExp) {
+  await expect(
+    page.locator('[data-testid="notification-item"]').filter({ hasText: text }),
+  ).toBeVisible();
+}
+
 test.describe('Drag and Drop Tracks to Sidebar Playlists', () => {
   test('single track drag to regular playlist', async () => {
     const { app, page } = await TestHelpers.launchApp();
@@ -87,19 +98,17 @@ test.describe('Drag and Drop Tracks to Sidebar Playlists', () => {
     expect(result).toBe(true);
 
     // Wait for the async playlist update
-    await page.waitForTimeout(1500);
+    await expectDropNotification(page, /Added .* to "Test Playlist"/);
 
     // Navigate to Test Playlist to verify the track was added
     await page.click('[data-playlist-id="playlist-1"]');
-    await page.waitForTimeout(1000);
 
-    // Verify test-large-010 is now in the playlist
-    const addedTrack = page.locator('[data-track-id="test-large-010"]');
-    await addedTrack.waitFor({ state: 'visible', timeout: 5000 });
-
-    // Should have 4 tracks now (was 3: 001, 002, 003)
-    const trackCount = await page.locator('[data-track-id]').count();
-    expect(trackCount).toBe(4);
+    // Verify test-large-010 is now in the playlist, which should now hold
+    // 4 tracks (was 3: 001, 002, 003)
+    await expect(
+      page.locator('[data-track-id="test-large-010"]'),
+    ).toBeVisible();
+    await TestHelpers.waitForTrackCount(page, 4);
 
     await TestHelpers.closeApp(app);
   });
@@ -122,20 +131,18 @@ test.describe('Drag and Drop Tracks to Sidebar Playlists', () => {
     );
     expect(result).toBe(true);
 
-    await page.waitForTimeout(1500);
+    await expectDropNotification(page, /Added 2 tracks to "Jazz Favorites"/);
 
     // Navigate to Jazz Favorites to verify
     await page.click('[data-playlist-id="playlist-2"]');
-    await page.waitForTimeout(1000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
 
     // Should have 5 tracks now (Jazz Favorites had 3: 002, 022, 042; we added 010 + 011)
-    const trackCount = await page.locator('[data-track-id]').count();
-    expect(trackCount).toBe(5);
+    await TestHelpers.waitForTrackCount(page, 5);
 
     // Verify at least one of the added tracks is present in DOM
-    const added010 = page.locator('[data-track-id="test-large-010"]');
-    await added010.waitFor({ state: 'visible', timeout: 5000 });
+    await expect(
+      page.locator('[data-track-id="test-large-010"]'),
+    ).toBeVisible();
 
     await TestHelpers.closeApp(app);
   });
@@ -146,6 +153,16 @@ test.describe('Drag and Drop Tracks to Sidebar Playlists', () => {
     await page.waitForSelector('.vt-table', { timeout: 10000 });
     await page.waitForSelector('[data-track-id]', { timeout: 5000 });
 
+    const readSmartTrackIds = () =>
+      page.evaluate(async () => {
+        const playlists = await (
+          window as Window & { electron?: any }
+        ).electron.playlists.getAll();
+        return playlists.find((p: { id: string }) => p.id === 'playlist-3')
+          ?.trackIds;
+      });
+    const beforeDrop = await readSmartTrackIds();
+
     // Attempt to drag to "Recently Added" (playlist-3, smart)
     const result = await dragTrackToPlaylist(
       page,
@@ -154,22 +171,15 @@ test.describe('Drag and Drop Tracks to Sidebar Playlists', () => {
     );
     expect(result).toBe(true); // Events dispatched, but drop should be rejected
 
-    await page.waitForTimeout(1000);
+    // The drop handler bails synchronously for smart playlists, so the stored
+    // playlist must be byte-for-byte unchanged — assert that directly rather
+    // than sleeping and hoping nothing happened.
+    expect(await readSmartTrackIds()).toEqual(beforeDrop);
 
     // Navigate to Recently Added — it's a smart playlist computed dynamically.
-    // Verify test-large-010 wasn't somehow added to the smart playlist's underlying data.
-    // Smart playlists show tracks based on SQL queries, not trackIds array,
-    // so we verify no unexpected state change by checking the playlist renders normally.
-    await page.click('[data-playlist-id="playlist-3"]');
-    await page.waitForTimeout(1000);
-
     // The smart playlist should still be functional (no errors).
-    // Since it's "Recently Added", it shows the 50 most recently added tracks.
-    // test-large-010 may or may not appear here based on dateAdded,
-    // but the key thing is no error occurred from the rejected drop.
-    const vtTable = page.locator('.vt-table');
-    const hasTable = await vtTable.count();
-    expect(hasTable).toBeGreaterThan(0);
+    await page.click('[data-playlist-id="playlist-3"]');
+    await expect(page.locator('.vt-table')).toBeVisible();
 
     await TestHelpers.closeApp(app);
   });
@@ -188,15 +198,16 @@ test.describe('Drag and Drop Tracks to Sidebar Playlists', () => {
     );
     expect(result).toBe(true);
 
-    await page.waitForTimeout(1500);
+    // The duplicate is detected in the mutation's onMutate, which toasts.
+    // Waiting for that toast means the write path has run to completion, so
+    // the count assertion below can't pass merely by being early.
+    await expectDropNotification(page, /already in this playlist/);
 
     // Navigate to Test Playlist
     await page.click('[data-playlist-id="playlist-1"]');
-    await page.waitForTimeout(1000);
 
     // Should still have exactly 3 tracks (no duplicates)
-    const trackCount = await page.locator('[data-track-id]').count();
-    expect(trackCount).toBe(3);
+    await TestHelpers.waitForTrackCount(page, 3);
 
     await TestHelpers.closeApp(app);
   });
@@ -206,8 +217,7 @@ test.describe('Drag and Drop Tracks to Sidebar Playlists', () => {
 
     // Navigate to Test Playlist first
     await page.click('[data-playlist-id="playlist-1"]');
-    await page.waitForTimeout(1000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    await TestHelpers.waitForTrackCount(page, 3);
 
     // Drag test-large-001 from Test Playlist to Jazz Favorites (playlist-2)
     const result = await dragTrackToPlaylist(
@@ -217,18 +227,16 @@ test.describe('Drag and Drop Tracks to Sidebar Playlists', () => {
     );
     expect(result).toBe(true);
 
-    await page.waitForTimeout(1500);
+    await expectDropNotification(page, /Added .* to "Jazz Favorites"/);
 
     // Navigate to Jazz Favorites to verify
     await page.click('[data-playlist-id="playlist-2"]');
-    await page.waitForTimeout(1000);
 
     // Verify test-large-001 appears (4 tracks now, was 3: 002, 022, 042)
-    const addedTrack = page.locator('[data-track-id="test-large-001"]');
-    await addedTrack.waitFor({ state: 'visible', timeout: 5000 });
-
-    const trackCount = await page.locator('[data-track-id]').count();
-    expect(trackCount).toBe(4);
+    await expect(
+      page.locator('[data-track-id="test-large-001"]'),
+    ).toBeVisible();
+    await TestHelpers.waitForTrackCount(page, 4);
 
     await TestHelpers.closeApp(app);
   });

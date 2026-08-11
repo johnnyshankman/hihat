@@ -124,12 +124,8 @@ test.describe('Column Visibility', () => {
     });
     await genreMenuItem.click();
 
-    // Wait for the column to disappear
-    await page.waitForTimeout(500);
-
-    // Verify Genre header is no longer visible
-    const updatedHeaders = await getColumnHeaders(page);
-    expect(updatedHeaders).not.toContain('Genre');
+    // Wait for the column to actually disappear from the header row
+    await expect.poll(() => getColumnHeaders(page)).not.toContain('Genre');
 
     await TestHelpers.closeApp(app);
   });
@@ -146,15 +142,13 @@ test.describe('Column Visibility', () => {
 
     const genreItem1 = page.locator('[role="menuitem"]', { hasText: 'Genre' });
     await genreItem1.click();
-    await page.waitForTimeout(500);
+
+    // Verify Genre is hidden
+    await expect.poll(() => getColumnHeaders(page)).not.toContain('Genre');
 
     // Close the menu by pressing Escape
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
-
-    // Verify Genre is hidden
-    let headers = await getColumnHeaders(page);
-    expect(headers).not.toContain('Genre');
+    await expect(page.locator('[role="menu"]')).toBeHidden();
 
     // Right-click again and re-check Genre
     const header2 = page.locator('.vt-thead th:not(.vt-th-filler)').first();
@@ -163,11 +157,9 @@ test.describe('Column Visibility', () => {
 
     const genreItem2 = page.locator('[role="menuitem"]', { hasText: 'Genre' });
     await genreItem2.click();
-    await page.waitForTimeout(500);
 
     // Verify Genre is visible again
-    headers = await getColumnHeaders(page);
-    expect(headers).toContain('Genre');
+    await expect.poll(() => getColumnHeaders(page)).toContain('Genre');
 
     await TestHelpers.closeApp(app);
   });
@@ -211,15 +203,13 @@ test.describe('Column Visibility', () => {
 
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(3000);
-
-    await page.waitForSelector('.vt-table', { timeout: 10000 });
+    await page.waitForSelector('.vt-table', { timeout: 20000 });
 
     // Verify Genre column is hidden on boot
-    const headers = await getColumnHeaders(page);
-    expect(headers).not.toContain('Genre');
+    await expect.poll(() => getColumnHeaders(page)).not.toContain('Genre');
 
     // Other columns should still be visible
+    const headers = await getColumnHeaders(page);
     expect(headers).toContain('Title');
     expect(headers).toContain('Artist');
     expect(headers).toContain('Album');

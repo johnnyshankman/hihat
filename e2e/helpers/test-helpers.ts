@@ -1,7 +1,9 @@
 /* eslint-disable import/prefer-default-export */
 import {
   _electron as electron,
+  expect,
   ElectronApplication,
+  Locator,
   Page,
 } from '@playwright/test';
 import path from 'path';
@@ -11,6 +13,12 @@ import sqlite3 from 'sqlite3';
 // All tests use the consolidated test library (200 tracks)
 const TEST_SONGS_DIR = 'test-songs-large';
 const TEST_DB_SQL = 'test-db.sql';
+
+// Generous ceiling for "the app should have settled by now" waits. These are
+// upper bounds on retrying assertions, not sleeps — a healthy app resolves them
+// in tens of milliseconds, so raising the ceiling costs nothing when passing and
+// only buys headroom on a loaded CI machine.
+const READY_TIMEOUT = 20000;
 
 export class TestHelpers {
   static async initializeTestDatabase(
@@ -134,7 +142,10 @@ export class TestHelpers {
 
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(3000); // Give time for library to render
+    // The seeded library is the readiness signal: once rows are in the DOM the
+    // renderer has booted, queries have resolved and the virtual table has laid
+    // out. No arbitrary sleep required.
+    await this.waitForTracks(page);
 
     const rootContent = await page.locator('#root').innerHTML();
     if (rootContent.length < 100) {
@@ -180,7 +191,12 @@ export class TestHelpers {
 
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000);
+    // A brand new user has no tracks, so the empty-state CTA is the readiness
+    // signal. MainLayout only renders it once the tracks/playlists queries have
+    // settled, so seeing it means the renderer is fully booted.
+    await page.waitForSelector('text=Your library is empty', {
+      timeout: READY_TIMEOUT,
+    });
 
     const rootContent = await page.locator('#root').innerHTML();
     if (rootContent.length < 100) {
@@ -201,23 +217,132 @@ export class TestHelpers {
     });
   }
 
+  /**
+   * Wait until the track table has rendered at least one row.
+   *
+   * This is the canonical "the library is on screen" signal — the virtual table
+   * only emits `data-track-id` rows after the tracks query has resolved and the
+   * virtualizer has measured the container.
+   */
+  static async waitForTracks(
+    page: Page,
+    timeout = READY_TIMEOUT,
+  ): Promise<void> {
+    await page.waitForSelector('[data-track-id]', { timeout });
+  }
+
+  /**
+   * Wait until the rendered track row count settles on `expected`.
+   *
+   * Prefer this over `count()`-after-a-sleep: it retries until the DOM agrees,
+   * so it returns the moment the table has re-rendered rather than after a
+   * guessed delay.
+   */
+  static async waitForTrackCount(
+    page: Page,
+    expected: number,
+    timeout = READY_TIMEOUT,
+  ): Promise<void> {
+    await expect(page.locator('[data-track-id]')).toHaveCount(expected, {
+      timeout,
+    });
+  }
+
   static async waitForLibraryLoad(page: Page): Promise<void> {
-    try {
-      await page.waitForTimeout(1000);
+    await this.waitForTracks(page);
+  }
 
-      const emptyMessage = page.getByText('Your library is empty');
-      const isEmptyVisible = await emptyMessage.isVisible().catch(() => false);
+  /** Locator for the transport button's "currently playing" state. */
+  static pauseIcon(page: Page): Locator {
+    return page.locator('button svg[data-testid="PauseIcon"]');
+  }
 
-      if (isEmptyVisible) {
-        throw new Error('Library is empty - no tracks loaded');
-      }
+  /** Locator for the transport button's "currently paused/stopped" state. */
+  static playIcon(page: Page): Locator {
+    return page.locator('button svg[data-testid="PlayArrowIcon"]');
+  }
 
-      // eslint-disable-next-line no-console
-      console.log('Library loaded successfully - tracks present');
-    } catch (error) {
-      console.error('Error waiting for library to load:', error);
-      throw error;
-    }
+  /** Wait until the transport reports playing. */
+  static async waitForPlaying(page: Page, timeout = READY_TIMEOUT) {
+    await expect(this.pauseIcon(page)).toBeVisible({ timeout });
+  }
+
+  /** Wait until the transport reports paused. */
+  static async waitForPaused(page: Page, timeout = READY_TIMEOUT) {
+    await expect(this.playIcon(page)).toBeVisible({ timeout });
+  }
+
+  /**
+   * Double-click a track row and wait until it is the current track and the
+   * transport reports playing. Replaces the `dblclick` + `waitForTimeout(1000)`
+   * pattern: playback state flips in tens of milliseconds, so waiting on the
+   * state itself is both faster and immune to a slow machine.
+   */
+  static async startPlayback(page: Page, row: Locator): Promise<void> {
+    await row.dblclick();
+    await expect(row).toHaveClass(/vt-row-playing/, { timeout: READY_TIMEOUT });
+    await this.waitForPlaying(page);
+  }
+
+  /** The title currently shown in the player's now-playing slot. */
+  static async nowPlayingTitle(page: Page): Promise<string> {
+    return (
+      (await page.locator('[data-testid="now-playing-title"]').textContent()) ??
+      ''
+    );
+  }
+
+  /** Wait until the player's now-playing title equals `title`. */
+  static async waitForNowPlaying(
+    page: Page,
+    title: string,
+    timeout = READY_TIMEOUT,
+  ): Promise<void> {
+    await expect(page.locator('[data-testid="now-playing-title"]')).toHaveText(
+      title,
+      { timeout },
+    );
+  }
+
+  /**
+   * Wait until the now-playing title is something other than `previous`.
+   * Used after skip/next/autoplay transitions where the destination track isn't
+   * known up front.
+   */
+  static async waitForNowPlayingChange(
+    page: Page,
+    previous: string,
+    timeout = READY_TIMEOUT,
+  ): Promise<void> {
+    await expect(
+      page.locator('[data-testid="now-playing-title"]'),
+    ).not.toHaveText(previous, { timeout });
+  }
+
+  /**
+   * Wait until the player's elapsed-time readout reaches at least `seconds`.
+   *
+   * Tests that need real playback to elapse (play-count thresholds, autoplay
+   * roll-over) should gate on the clock the app actually shows rather than
+   * sleeping for a guessed duration.
+   */
+  static async waitForElapsedAtLeast(
+    page: Page,
+    seconds: number,
+    timeout = 30000,
+  ): Promise<void> {
+    await expect
+      .poll(
+        async () => {
+          const text = await page
+            .locator('[data-testid="player-elapsed-time"]')
+            .textContent();
+          const [mins, secs] = (text ?? '0:00').split(':');
+          return parseInt(mins, 10) * 60 + parseInt(secs, 10);
+        },
+        { timeout },
+      )
+      .toBeGreaterThanOrEqual(seconds);
   }
 
   static async importSongs(page: Page): Promise<void> {
@@ -230,120 +355,23 @@ export class TestHelpers {
       throw new Error('Electron API not available');
     }, songsPath);
 
-    await page.waitForTimeout(3000);
-  }
-
-  static async createPlaylist(page: Page, name: string): Promise<void> {
-    await page.click('[data-testid="create-playlist-button"]');
-    await page.fill('[data-testid="playlist-name-input"]', name);
-    await page.click('[data-testid="save-playlist-button"]');
-    await page.waitForTimeout(500);
-  }
-
-  static async selectSong(page: Page, songTitle: string): Promise<void> {
-    await page.click(`[data-testid="song-row-${songTitle}"]`);
-  }
-
-  static async playSong(page: Page, songTitle: string): Promise<void> {
-    await this.selectSong(page, songTitle);
-    await page.dblclick(`[data-testid="song-row-${songTitle}"]`);
-    await page.waitForTimeout(1000);
-  }
-
-  static async getPlayerState(page: Page): Promise<{
-    isPlaying: boolean;
-    currentSong: string | null;
-    currentTime: number;
-    duration: number;
-  }> {
-    return page.evaluate(() => {
-      const player = document.querySelector('[data-testid="player"]');
-      if (!player)
-        return {
-          isPlaying: false,
-          currentSong: null,
-          currentTime: 0,
-          duration: 0,
-        };
-
-      const playButton = player.querySelector(
-        '[data-testid="play-pause-button"]',
-      );
-      const isPlaying = playButton?.getAttribute('aria-label') === 'Pause';
-      const songTitle =
-        player.querySelector('[data-testid="now-playing-title"]')
-          ?.textContent || null;
-      const currentTime = parseFloat(
-        player.querySelector('[data-testid="current-time"]')?.textContent ||
-          '0',
-      );
-      const duration = parseFloat(
-        player.querySelector('[data-testid="duration"]')?.textContent || '0',
-      );
-
-      return { isPlaying, currentSong: songTitle, currentTime, duration };
-    });
-  }
-
-  static async searchLibrary(page: Page, query: string): Promise<void> {
-    await page.fill('[data-testid="search-input"]', query);
-    await page.waitForTimeout(500);
+    // The scan resolves in the main process, then `scanCompleteInvalidator`
+    // refreshes the tracks query — wait for the rows, not a fixed delay.
+    await this.waitForTracks(page, 30000);
   }
 
   static async navigateToView(
     page: Page,
-    view: 'library' | 'playlists' | 'settings',
+    view: 'library' | 'settings',
   ): Promise<void> {
     await page.click(`[data-testid="nav-${view}"]`);
-    await page.waitForTimeout(500);
-  }
-
-  static async toggleShuffle(page: Page): Promise<void> {
-    await page.click('[data-testid="shuffle-button"]');
-  }
-
-  static async toggleRepeat(page: Page): Promise<void> {
-    await page.click('[data-testid="repeat-button"]');
-  }
-
-  static async skipToNext(page: Page): Promise<void> {
-    await page.click('[data-testid="next-button"]');
-    await page.waitForTimeout(500);
-  }
-
-  static async skipToPrevious(page: Page): Promise<void> {
-    await page.click('[data-testid="previous-button"]');
-    await page.waitForTimeout(500);
-  }
-
-  static async setVolume(page: Page, volume: number): Promise<void> {
-    const slider = await page.locator('[data-testid="volume-slider"]');
-    await slider.fill(volume.toString());
-  }
-
-  static async addToPlaylist(
-    page: Page,
-    songTitle: string,
-    playlistName: string,
-  ): Promise<void> {
-    await page.click(`[data-testid="song-row-${songTitle}"]`, {
-      button: 'right',
-    });
-    await page.click('[data-testid="add-to-playlist-menu"]');
-    await page.click(`[data-testid="playlist-option-${playlistName}"]`);
-    await page.waitForTimeout(500);
-  }
-
-  static async likeSong(page: Page, songTitle: string): Promise<void> {
-    await page.click(`[data-testid="like-button-${songTitle}"]`);
-    await page.waitForTimeout(300);
-  }
-
-  static async getSongCount(page: Page): Promise<number> {
-    const count = await page
-      .locator('[data-testid="song-count"]')
-      .textContent();
-    return parseInt(count || '0', 10);
+    if (view === 'settings') {
+      await page.waitForSelector('[data-testid="settings-view"]', {
+        timeout: READY_TIMEOUT,
+      });
+    } else {
+      await this.waitForTracks(page);
+    }
   }
 
   /**
@@ -437,7 +465,14 @@ export class TestHelpers {
 
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    // Either the migration dialog took over the window, or the app booted
+    // straight into the library — whichever happens first means we're ready.
+    await page.waitForSelector(
+      '[data-testid="migration-dialog"], [data-track-id]',
+      {
+        timeout: READY_TIMEOUT,
+      },
+    );
 
     const rootContent = await page.locator('#root').innerHTML();
     if (rootContent.length < 100) {

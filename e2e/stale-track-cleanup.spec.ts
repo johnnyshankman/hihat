@@ -73,7 +73,10 @@ test.describe('Stale Track Cleanup on Rescan', () => {
 
     page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    // Empty-library CTA is the readiness signal for a brand new database.
+    await page.waitForSelector('text=Your library is empty', {
+      timeout: 20000,
+    });
   });
 
   test.afterAll(async () => {

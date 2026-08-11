@@ -28,9 +28,6 @@ test.describe('Application Launch', () => {
   test('should display default main UI components', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Wait for app to fully load
-    await page.waitForTimeout(3000);
-
     // 1. Check for sidebar/drawer
     const drawer = await page.locator('.MuiDrawer-root').isVisible();
     expect(drawer).toBe(true);
@@ -65,7 +62,6 @@ test.describe('Application Launch', () => {
 
     // 8. Check for MaterialReactTable with tracks from fixture data
     // MaterialReactTable uses virtualization, so we check for track rows by data-track-id
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
     const trackRows = await page.locator('[data-track-id]').count();
     expect(trackRows).toBeGreaterThan(0);
 

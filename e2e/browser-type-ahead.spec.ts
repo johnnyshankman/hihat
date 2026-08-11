@@ -1,34 +1,61 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
+
+const ARTIST_COLUMN = '[data-testid="browser-artist-column"]';
+const ALBUM_COLUMN = '[data-testid="browser-album-column"]';
+
+/**
+ * Open the browser panel and wait for it to render.
+ */
+async function openBrowser(page: Page) {
+  await page.locator('[data-testid="browser-toggle"]').click();
+  await expect(page.locator('[data-testid="browser-panel"]')).toBeVisible();
+}
+
+/**
+ * Click a browser item and wait for its column to take focus. Type-ahead only
+ * works on the focused column, so this is the precondition every keypress test
+ * needs — waiting for the focus class is what makes the keypress deterministic.
+ */
+async function focusItem(page: Page, item: string, column: string) {
+  const target = page.locator(item);
+  await expect(target).toBeVisible();
+  await target.click();
+  await expect(page.locator(column)).toHaveClass(/browser-column-focused/);
+}
+
+/**
+ * Let one frame pass. Used before *negative* assertions (nothing should have
+ * changed): the type-ahead handler is synchronous, so if a change were coming
+ * it would already be committed by the next frame.
+ */
+async function nextFrame(page: Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      }),
+  );
+}
 
 test.describe('Browser Type-Ahead Navigation', () => {
   test('type single letter in artist column selects matching artist', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
-
-    // Open browser panel
-    await page.locator('[data-testid="browser-toggle"]').click();
-    await page.waitForTimeout(500);
+    await openBrowser(page);
 
     // Click on "Aurora Synth" to focus the artist column
-    const auroraItem = page.locator('[data-artist="Aurora Synth"]');
-    await expect(auroraItem).toBeVisible({ timeout: 5000 });
-    await auroraItem.click();
-    await page.waitForTimeout(500);
+    await focusItem(page, '[data-artist="Aurora Synth"]', ARTIST_COLUMN);
 
     // Press 'e' — first artist whose sortKey starts with 'e' is Electronic Pulse
     await page.keyboard.press('e');
-    await page.waitForTimeout(500);
 
     // Assert Electronic Pulse is selected
     const epItem = page.locator('[data-artist="Electronic Pulse"]');
     await expect(epItem).toHaveClass(/browser-item-selected/);
 
     // Assert track table is filtered to Electronic Pulse tracks (10 tracks)
-    const trackRows = page.locator('[data-track-id]');
-    await expect(trackRows).toHaveCount(10);
+    await expect(page.locator('[data-track-id]')).toHaveCount(10);
 
     await TestHelpers.closeApp(app);
   });
@@ -36,23 +63,12 @@ test.describe('Browser Type-Ahead Navigation', () => {
   test('type multiple letters quickly accumulates search', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    await openBrowser(page);
+    await focusItem(page, '[data-artist="Aurora Synth"]', ARTIST_COLUMN);
 
-    // Open browser panel
-    await page.locator('[data-testid="browser-toggle"]').click();
-    await page.waitForTimeout(500);
-
-    // Click any artist item to focus the column
-    const anyArtist = page.locator('[data-artist="Aurora Synth"]');
-    await expect(anyArtist).toBeVisible({ timeout: 5000 });
-    await anyArtist.click();
-    await page.waitForTimeout(300);
-
-    // Press 'r' then 'o' quickly (within 600ms)
+    // Press 'r' then 'o' quickly (within the 600ms type-ahead buffer window)
     await page.keyboard.press('r');
     await page.keyboard.press('o');
-    await page.waitForTimeout(500);
 
     // Assert "Rock Titans" is selected (sortKey "rock titans" starts with "ro")
     const rockItem = page.locator('[data-artist="Rock Titans"]');
@@ -68,24 +84,15 @@ test.describe('Browser Type-Ahead Navigation', () => {
   test('buffer resets after timeout', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    await openBrowser(page);
+    await focusItem(page, '[data-artist="Aurora Synth"]', ARTIST_COLUMN);
 
-    // Open browser panel
-    await page.locator('[data-testid="browser-toggle"]').click();
-    await page.waitForTimeout(500);
-
-    // Click artist to focus
-    const anyArtist = page.locator('[data-artist="Aurora Synth"]');
-    await expect(anyArtist).toBeVisible({ timeout: 5000 });
-    await anyArtist.click();
-    await page.waitForTimeout(300);
-
-    // Press 'r', wait 800ms (> 600ms timeout), then press 'a'
+    // Press 'r', outwait the buffer, then press 'a'. This delay is the feature
+    // under test — Browser.tsx clears the type-ahead buffer 600ms after the
+    // last keypress — so it is deliberately longer than that window.
     await page.keyboard.press('r');
     await page.waitForTimeout(800);
     await page.keyboard.press('a');
-    await page.waitForTimeout(500);
 
     // Buffer reset, 'a' matches "Acoustic Sessions" (first artist with sortKey starting with "a")
     const acousticItem = page.locator('[data-artist="Acoustic Sessions"]');
@@ -97,24 +104,17 @@ test.describe('Browser Type-Ahead Navigation', () => {
   test('type letter in album column works independently', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
-
-    // Open browser panel
-    await page.locator('[data-testid="browser-toggle"]').click();
-    await page.waitForTimeout(500);
+    await openBrowser(page);
 
     // Click on the first album item to focus the album column
-    const firstAlbum = page
-      .locator('[data-testid="browser-album-item"]')
-      .first();
-    await expect(firstAlbum).toBeVisible({ timeout: 5000 });
-    await firstAlbum.click();
-    await page.waitForTimeout(300);
+    await focusItem(
+      page,
+      '[data-testid="browser-album-item"] >> nth=0',
+      ALBUM_COLUMN,
+    );
 
     // Press 's' — first album whose sortKey starts with 's' is "Slow Jams"
     await page.keyboard.press('s');
-    await page.waitForTimeout(500);
 
     // Assert "Slow Jams" is selected in the album column
     const slowJamsItem = page.locator('[data-album="Slow Jams"]');
@@ -126,33 +126,28 @@ test.describe('Browser Type-Ahead Navigation', () => {
   test('clicking outside browser clears focus and typing does nothing', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
-
-    // Open browser panel
-    await page.locator('[data-testid="browser-toggle"]').click();
-    await page.waitForTimeout(500);
+    await openBrowser(page);
 
     // Click artist to focus and select Electronic Pulse
+    await focusItem(page, '[data-artist="Electronic Pulse"]', ARTIST_COLUMN);
     const epItem = page.locator('[data-artist="Electronic Pulse"]');
-    await expect(epItem).toBeVisible({ timeout: 5000 });
-    await epItem.click();
-    await page.waitForTimeout(500);
-
-    // Verify Electronic Pulse is selected
     await expect(epItem).toHaveClass(/browser-item-selected/);
 
-    // Click on the track table (outside browser)
-    const trackRow = page.locator('[data-track-id]').first();
-    await trackRow.click();
-    await page.waitForTimeout(300);
+    // Click on the track table (outside browser) — focus should clear
+    await page.locator('[data-track-id]').first().click();
+    await expect(page.locator(ARTIST_COLUMN)).not.toHaveClass(
+      /browser-column-focused/,
+    );
 
     // Press 'a' — should do nothing since focus is cleared
     await page.keyboard.press('a');
-    await page.waitForTimeout(500);
+    await nextFrame(page);
 
     // Electronic Pulse should still be selected (not changed to Acoustic Sessions)
     await expect(epItem).toHaveClass(/browser-item-selected/);
+    await expect(
+      page.locator('[data-artist="Acoustic Sessions"]'),
+    ).not.toHaveClass(/browser-item-selected/);
 
     await TestHelpers.closeApp(app);
   });
@@ -160,22 +155,11 @@ test.describe('Browser Type-Ahead Navigation', () => {
   test('sortKey matching — The Jazz Collective matches j', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
-
-    // Open browser panel
-    await page.locator('[data-testid="browser-toggle"]').click();
-    await page.waitForTimeout(500);
-
-    // Click any artist to focus
-    const anyArtist = page.locator('[data-artist="Aurora Synth"]');
-    await expect(anyArtist).toBeVisible({ timeout: 5000 });
-    await anyArtist.click();
-    await page.waitForTimeout(300);
+    await openBrowser(page);
+    await focusItem(page, '[data-artist="Aurora Synth"]', ARTIST_COLUMN);
 
     // Press 'j' — sortKey strips "the " so "The Jazz Collective" becomes "jazz collective"
     await page.keyboard.press('j');
-    await page.waitForTimeout(500);
 
     // Assert "The Jazz Collective" is selected
     const jazzItem = page.locator('[data-artist="The Jazz Collective"]');
@@ -187,33 +171,21 @@ test.describe('Browser Type-Ahead Navigation', () => {
   test('focus indicator CSS class applied to focused column', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    await openBrowser(page);
 
-    // Open browser panel
-    await page.locator('[data-testid="browser-toggle"]').click();
-    await page.waitForTimeout(500);
-
-    const artistColumn = page.locator('[data-testid="browser-artist-column"]');
-    const albumColumn = page.locator('[data-testid="browser-album-column"]');
+    const artistColumn = page.locator(ARTIST_COLUMN);
+    const albumColumn = page.locator(ALBUM_COLUMN);
 
     // Click artist column — it should get the focus class
-    const anyArtist = page.locator('[data-artist="Aurora Synth"]');
-    await expect(anyArtist).toBeVisible({ timeout: 5000 });
-    await anyArtist.click();
-    await page.waitForTimeout(300);
-
-    await expect(artistColumn).toHaveClass(/browser-column-focused/);
+    await focusItem(page, '[data-artist="Aurora Synth"]', ARTIST_COLUMN);
     await expect(albumColumn).not.toHaveClass(/browser-column-focused/);
 
     // Click album column — focus should move
-    const firstAlbum = page
-      .locator('[data-testid="browser-album-item"]')
-      .first();
-    await firstAlbum.click();
-    await page.waitForTimeout(300);
-
-    await expect(albumColumn).toHaveClass(/browser-column-focused/);
+    await focusItem(
+      page,
+      '[data-testid="browser-album-item"] >> nth=0',
+      ALBUM_COLUMN,
+    );
     await expect(artistColumn).not.toHaveClass(/browser-column-focused/);
 
     await TestHelpers.closeApp(app);

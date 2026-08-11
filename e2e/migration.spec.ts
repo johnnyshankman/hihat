@@ -135,10 +135,8 @@ test.describe('hihat v1 to v2 Migration', () => {
     const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
 
     try {
-      // App should launch with empty library (new user state)
-      await page.waitForTimeout(2000);
-
-      // Check if we're in the welcome/empty state
+      // Check if we're in the welcome/empty state (launchAppAsBrandNewUser
+      // already waited for it to render)
       const welcomeText = await page
         .locator('text="Your library is empty"')
         .count();

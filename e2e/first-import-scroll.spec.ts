@@ -5,16 +5,11 @@ test.describe('First-time Library Import Scroll', () => {
   test('should render table correctly after first-time library import', async () => {
     const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
 
-    // Wait for app to fully load and verify empty library state
-    await page.waitForTimeout(3000);
-    const emptyMessage = page.getByText('Your library is empty');
-    expect(await emptyMessage.isVisible()).toBe(true);
+    // Verify empty library state
+    await expect(page.getByText('Your library is empty')).toBeVisible();
 
-    // Trigger library scan via the electron API
+    // Trigger library scan via the electron API (waits for rows to land)
     await TestHelpers.importSongs(page);
-
-    // Wait for tracks to appear (scan complete event triggers loadLibrary)
-    await page.waitForSelector('[data-track-id]', { timeout: 30000 });
 
     // Verify tracks loaded
     const initialTrackCount = await page.locator('[data-track-id]').count();
@@ -24,21 +19,26 @@ test.describe('First-time Library Import Scroll', () => {
     const tableContainer = page.locator('[data-testid="vt-container"]').first();
     await expect(tableContainer).toBeVisible();
 
-    // Perform rapid scrolling to stress the virtualizer
-    await tableContainer.evaluate((container) => {
-      const scrollSteps = 10;
-      const scrollAmount = 500;
-      for (let i = 0; i < scrollSteps; i += 1) {
-        setTimeout(() => {
-          container.scrollTop += scrollAmount;
-        }, i * 100);
-      }
+    // Perform rapid scrolling to stress the virtualizer. Stepping on
+    // requestAnimationFrame keeps the multi-frame burst the virtualizer has to
+    // cope with, while letting the evaluate resolve when the burst is actually
+    // done — no sleeping past a guessed duration.
+    await tableContainer.evaluate(async (container) => {
+      await new Promise<void>((resolve) => {
+        let step = 0;
+        const tick = () => {
+          container.scrollTop += 500;
+          step += 1;
+          if (step < 10) {
+            requestAnimationFrame(tick);
+          } else {
+            // One extra frame so the virtualizer commits the final range.
+            requestAnimationFrame(() => resolve());
+          }
+        };
+        requestAnimationFrame(tick);
+      });
     });
-    // Wait for all scroll steps to complete
-    await page.waitForTimeout(1500);
-
-    // Give the virtualizer a moment to settle after scrolling
-    await page.waitForTimeout(500);
 
     // Verify rows are still present after scrolling
     const postScrollTrackCount = await page.locator('[data-track-id]').count();
@@ -46,22 +46,24 @@ test.describe('First-time Library Import Scroll', () => {
 
     // Key assertion: every visible row should have non-empty cell content
     // If the duplicate loadLibrary bug were present, some rows would render blank
-    const blankRows = await page.evaluate(() => {
-      const rows = document.querySelectorAll('[data-track-id]');
-      let blankCount = 0;
-      rows.forEach((row) => {
-        const cells = row.querySelectorAll('td');
-        const hasContent = Array.from(cells).some(
-          (cell) => (cell.textContent || '').trim().length > 0,
-        );
-        if (!hasContent) {
-          blankCount += 1;
-        }
-      });
-      return blankCount;
-    });
-
-    expect(blankRows).toBe(0);
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const rows = document.querySelectorAll('[data-track-id]');
+          let blankCount = 0;
+          rows.forEach((row) => {
+            const cells = row.querySelectorAll('td');
+            const hasContent = Array.from(cells).some(
+              (cell) => (cell.textContent || '').trim().length > 0,
+            );
+            if (!hasContent) {
+              blankCount += 1;
+            }
+          });
+          return blankCount;
+        }),
+      )
+      .toBe(0);
 
     await TestHelpers.closeApp(app);
   });

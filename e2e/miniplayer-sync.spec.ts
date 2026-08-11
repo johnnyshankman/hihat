@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { test, expect, Page, ElectronApplication } from '@playwright/test';
 import { TestHelpers } from './helpers/test-helpers';
 
@@ -10,7 +9,8 @@ async function closeMiniPlayerAndApp(page: Page, app: ElectronApplication) {
     await page.evaluate(() => {
       return (window as any).electron.miniPlayer.close();
     });
-    await page.waitForTimeout(1000);
+    // Wait for the window to actually go away rather than guessing at it.
+    await expect.poll(() => app.windows().length).toBe(1);
   } catch {
     // Ignore errors during cleanup
   }
@@ -19,86 +19,89 @@ async function closeMiniPlayerAndApp(page: Page, app: ElectronApplication) {
 
 /**
  * Helper to open MiniPlayer and return the MiniPlayer page.
- * Waits for the MiniPlayer window to fully load and sync state.
+ *
+ * `waitForEvent('window')` resolves the moment Electron creates the window, and
+ * the MiniPlayer's own title readout tells us when its first state sync landed
+ * — so neither step needs a fixed delay, even though the MiniPlayer polls on a
+ * 1s cadence.
  */
 async function openMiniPlayer(
   app: ElectronApplication,
   page: Page,
 ): Promise<Page> {
+  const miniWindow = app.waitForEvent('window');
+
   await page.evaluate(() => {
     return (window as any).electron.miniPlayer.open();
   });
 
-  // Wait for the MiniPlayer window to appear
-  await page.waitForTimeout(5000);
+  const miniPlayerPage = await miniWindow;
+  expect(app.windows().length).toBeGreaterThanOrEqual(2);
 
-  const windows = app.windows();
-  expect(windows.length).toBeGreaterThanOrEqual(2);
+  await miniPlayerPage.waitForLoadState('domcontentloaded');
 
-  const miniPlayerPage = windows.find((w: Page) => w !== page);
-  expect(miniPlayerPage).toBeTruthy();
+  // '---' is the MiniPlayer's "no track yet" placeholder; anything else means
+  // the state sync from the main window has arrived.
+  await expect(miniPlayerPage.locator('.MuiTypography-h6')).not.toHaveText(
+    '---',
+    { timeout: 20000 },
+  );
 
-  await miniPlayerPage!.waitForLoadState('domcontentloaded');
-  // MiniPlayer polls state every 1s — wait for several sync cycles
-  await miniPlayerPage!.waitForTimeout(5000);
-
-  return miniPlayerPage!;
+  return miniPlayerPage;
 }
 
 test.describe('MiniPlayer Synchronization', () => {
   test('MiniPlayer position sync', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
-
     // Double-click first track to start playback
     const firstTrack = page.locator('[data-track-id]').first();
-    await firstTrack.dblclick();
-    await page.waitForTimeout(2000);
-
-    // Verify it's playing
-    const pauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-    await expect(pauseIcon).toBeVisible({ timeout: 5000 });
+    await TestHelpers.startPlayback(page, firstTrack);
 
     // Open MiniPlayer and wait for state sync
     const miniPlayerPage = await openMiniPlayer(app, page);
 
-    // Wait additional time for position to advance and sync
-    await page.waitForTimeout(3000);
-
     // Verify MiniPlayer has received the track
-    const miniTrackTitle = await miniPlayerPage.evaluate(() => {
-      const h6 = document.querySelector('.MuiTypography-h6');
-      return h6?.textContent || '---';
-    });
-    console.log(`MiniPlayer track title: ${miniTrackTitle}`);
+    const miniTrackTitle = await miniPlayerPage
+      .locator('.MuiTypography-h6')
+      .textContent();
     expect(miniTrackTitle).not.toBe('---');
 
-    // Check position from main window using the PositionDisplay Slider
-    const mainSliderValue = await page.evaluate(() => {
-      const inputs = Array.from(
-        document.querySelectorAll('input[type="range"]'),
-      );
-      const seekInput = inputs.find((input) => {
-        const val = parseFloat((input as HTMLInputElement).value);
-        const max = parseFloat((input as HTMLInputElement).max);
-        return val > 0 && max > 0 && max <= 15000;
-      });
-      return seekInput ? parseFloat((seekInput as HTMLInputElement).value) : 0;
-    });
-
-    console.log(`Main slider value: ${mainSliderValue}`);
-    expect(mainSliderValue).toBeGreaterThan(0);
+    // Check position from main window using the PositionDisplay Slider.
+    // Poll: the value only becomes non-zero once playback has advanced.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const inputs = Array.from(
+              document.querySelectorAll('input[type="range"]'),
+            );
+            const seekInput = inputs.find((input) => {
+              const val = parseFloat((input as HTMLInputElement).value);
+              const max = parseFloat((input as HTMLInputElement).max);
+              return val > 0 && max > 0 && max <= 15000;
+            });
+            return seekInput
+              ? parseFloat((seekInput as HTMLInputElement).value)
+              : 0;
+          }),
+        { timeout: 20000 },
+      )
+      .toBeGreaterThan(0);
 
     // MiniPlayer should show captions with position info
-    const miniCaptions = await miniPlayerPage.evaluate(() => {
-      return Array.from(document.querySelectorAll('.MuiTypography-caption'))
-        .map((el) => el.textContent)
-        .filter(Boolean);
-    });
-    console.log(`MiniPlayer captions: ${JSON.stringify(miniCaptions)}`);
-    expect(miniCaptions.length).toBeGreaterThanOrEqual(2);
+    await expect
+      .poll(
+        () =>
+          miniPlayerPage.evaluate(
+            () =>
+              Array.from(document.querySelectorAll('.MuiTypography-caption'))
+                .map((el) => el.textContent)
+                .filter(Boolean).length,
+          ),
+        { timeout: 20000 },
+      )
+      .toBeGreaterThanOrEqual(2);
 
     await closeMiniPlayerAndApp(page, app);
   });
@@ -106,26 +109,20 @@ test.describe('MiniPlayer Synchronization', () => {
   test('MiniPlayer play/pause sync', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    await page.waitForTimeout(3000);
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
-
     // Start playback
     const firstTrack = page.locator('[data-track-id]').first();
-    await firstTrack.dblclick();
-    await page.waitForTimeout(1000);
+    await TestHelpers.startPlayback(page, firstTrack);
 
     // Open MiniPlayer and wait for state sync
     const miniPlayerPage = await openMiniPlayer(app, page);
 
     // Verify main window is playing
-    const mainPauseIcon = page.locator('button svg[data-testid="PauseIcon"]');
-    await expect(mainPauseIcon).toBeVisible({ timeout: 5000 });
+    await TestHelpers.waitForPlaying(page);
 
     // Verify MiniPlayer received the track
-    const miniTrackTitle = await miniPlayerPage.evaluate(() => {
-      const h6 = document.querySelector('.MuiTypography-h6');
-      return h6?.textContent || '---';
-    });
+    const miniTrackTitle = await miniPlayerPage
+      .locator('.MuiTypography-h6')
+      .textContent();
     expect(miniTrackTitle).not.toBe('---');
 
     // Check if MiniPlayer has a PauseIcon (playing state)
@@ -136,13 +133,7 @@ test.describe('MiniPlayer Synchronization', () => {
 
     // Pause in main window
     await page.locator('button:has(svg[data-testid="PauseIcon"])').click();
-    await page.waitForTimeout(2000);
-
-    // Verify main window paused
-    const mainPlayIcon = page.locator(
-      'button svg[data-testid="PlayArrowIcon"]',
-    );
-    await expect(mainPlayIcon).toBeVisible({ timeout: 5000 });
+    await TestHelpers.waitForPaused(page);
 
     // Verify MiniPlayer also paused
     const miniPlayIcon = miniPlayerPage.locator(
@@ -154,16 +145,12 @@ test.describe('MiniPlayer Synchronization', () => {
     await miniPlayerPage
       .locator('button:has(svg[data-testid="PlayArrowIcon"])')
       .click();
-    await page.waitForTimeout(2000);
 
     // Verify both playing again
-    const mainPauseAgain = page.locator('button svg[data-testid="PauseIcon"]');
-    await expect(mainPauseAgain).toBeVisible({ timeout: 5000 });
-
-    const miniPauseAgain = miniPlayerPage.locator(
-      'button svg[data-testid="PauseIcon"]',
-    );
-    await expect(miniPauseAgain).toBeVisible({ timeout: 15000 });
+    await TestHelpers.waitForPlaying(page);
+    await expect(
+      miniPlayerPage.locator('button svg[data-testid="PauseIcon"]'),
+    ).toBeVisible({ timeout: 15000 });
 
     await closeMiniPlayerAndApp(page, app);
   });

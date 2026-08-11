@@ -5,22 +5,13 @@ test.describe('Track Context Menu', () => {
   test('should display context menu with all options when right-clicking a track in library view', async () => {
     const { app, page } = await TestHelpers.launchApp();
 
-    // Wait for app to fully load
-    await page.waitForTimeout(3000);
-
     // Ensure we're in library view
     await page.click('[data-testid="nav-library"]');
-    await page.waitForTimeout(500);
-
-    // Wait for tracks to be visible
-    await page.waitForSelector('[data-track-id]', { timeout: 5000 });
+    await TestHelpers.waitForTracks(page);
 
     // Right-click on the first track to open the context menu
     const firstTrack = page.locator('[data-track-id]').first();
     await firstTrack.click({ button: 'right' });
-
-    // Wait for the context menu to appear
-    await page.waitForTimeout(500);
 
     // Verify the context menu is visible (MUI Menu uses role="menu")
     const contextMenu = page.locator('[role="menu"]');
