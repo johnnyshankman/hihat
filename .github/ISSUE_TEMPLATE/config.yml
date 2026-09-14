@@ -1,0 +1,10 @@
+# Controls the "New Issue" chooser.
+# https://docs.github.com/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Report a Security Vulnerability
+    url: https://github.com/johnnyshankman/hihat/security/advisories/new
+    about: Never report security issues in a public issue. Use private vulnerability reporting (see SECURITY.md).
+  - name: 📖 Read the User Guide first
+    url: https://github.com/johnnyshankman/hihat/blob/main/USER_GUIDE.md
+    about: Wondering how something works? The User Guide covers playback, playlists, search, metadata editing, settings, and shortcuts.
