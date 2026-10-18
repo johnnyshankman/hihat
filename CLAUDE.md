@@ -139,7 +139,7 @@ When a component pulls anything out of a Zustand store — whether that's readin
 - Shuffle with navigable history (up to 100 tracks)
 
 ### Gapless-5 Fork
-- hihat depends on a **permanently maintained fork** at `johnnyshankman/Gapless-5`, not on upstream `regosen/Gapless-5`. The fork adds output device routing (`sinkId` option, `setSinkId()`), which upstream won't take.
+- hihat depends on a **permanently maintained fork** at `johnnyshankman/Gapless-5`, not on upstream `regosen/Gapless-5`. The fork adds output device routing (`sinkId` option, `setSinkId()`), which won't be sent upstream: `AudioContext.setSinkId` is Chromium-only, and upstream is meant to work the same in every browser (see PR #146 discussion). Electron is Chromium, so it works fully for hihat.
 - `package.json` pins the fork by **tag** (`github:johnnyshankman/Gapless-5#v<upstream-version>-hihat.<n>`), never by branch.
 - Fork workflow: land changes on the fork's `main`, tag a new `-hihat.<n>` release, then bump the tag in hihat. Pull upstream changes into the fork with `git merge upstream/main` (no rebasing, so pinned commits stay valid).
 - After changing the tag, a plain `npm install` won't re-resolve the git dep. Run `rm -rf node_modules/@regosen/gapless-5 && npm install "@regosen/gapless-5@github:johnnyshankman/Gapless-5#<tag>" --prefer-online`.
