@@ -225,7 +225,7 @@ This pairs directly with the rebuild rule above: because e2e runs against the co
 2. **Sort JSX props alphabetically** — enforced by ESLint
 3. **IPC namespace pattern**: `window.electron.{domain}.{method}()` (e.g., `window.electron.tracks.getAll()`)
 4. **Server state lives in TanStack Query, not Zustand.** DB-backed IPC data (tracks, playlists, settings rows) is read via hooks in `src/renderer/queries/`. Stores are for UI/playback runtime only. If a feature needs both, the source of truth is the query.
-5. **Settings mutations** flow through query mutation hooks in `queries/settings.ts` — they update the DB via IPC and invalidate the cache. Don't write through stores.
+5. **Settings mutations** flow through query mutation hooks in `queries/settings.ts` — they update the DB via IPC and invalidate the cache. Don't write through stores. Exception: settings coupled to the audio engine (`volume`, `selectedAudioOutputDeviceId`) are written by `settingsAndPlaybackStore` actions (`setVolume`, `setSinkId`) so the engine and the cache update together; they still write through the TanStack Query cache, never store state.
 6. **Frameless window**: custom title bar component, `frame: false` in BrowserWindow config
 7. **Audio protocol**: files served via `hihat-audio://getfile/{encodedPath}`
 8. **Database writes are synchronous and blocking** — every `exec()` and `run()` call writes to disk immediately

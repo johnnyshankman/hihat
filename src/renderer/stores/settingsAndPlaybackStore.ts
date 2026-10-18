@@ -236,23 +236,30 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       // AudioContext), so we only mirror the settings cache + persist
       // once the engine confirms the switch. A rejection (device
       // unplugged/unavailable) propagates to the caller and leaves the
-      // persisted value untouched. Deliberately toast-free — the startup
-      // reconcile in App.tsx also drives this action and must fail
-      // silently.
+      // persisted value untouched. Deliberately toast-free — the caller
+      // owns user feedback.
+      //
+      // The persist is awaited (unlike setVolume) and mirrors
+      // useUpdateSettings: cancel in-flight settings fetches so they can't
+      // clobber the optimistic write, and roll the cache back if the IPC
+      // write fails. The rollback flips the App.tsx reconcile effect,
+      // which re-routes the engine back to the still-persisted device.
       const { player } = get();
-      if (!player) return;
+      if (!player) throw new Error('Audio player not initialized');
       await player.setSinkId(deviceId);
+      await queryClient.cancelQueries({ queryKey: queryKeys.settings });
+      const prev = queryClient.getQueryData<Settings>(queryKeys.settings);
       queryClient.setQueryData<Settings>(queryKeys.settings, (old) =>
         old ? { ...old, selectedAudioOutputDeviceId: deviceId || null } : old,
       );
-      window.electron.settings
-        .update({ selectedAudioOutputDeviceId: deviceId || null })
-        .catch((error: unknown) => {
-          console.error(
-            'Error persisting selected audio output device:',
-            error,
-          );
+      try {
+        await window.electron.settings.update({
+          selectedAudioOutputDeviceId: deviceId || null,
         });
+      } catch (error) {
+        if (prev) queryClient.setQueryData(queryKeys.settings, prev);
+        throw error;
+      }
     },
 
     selectSpecificSong: (trackId, playbackSource, playlistId = null) => {

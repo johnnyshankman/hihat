@@ -97,18 +97,34 @@ function ThemedAppContent() {
   // Reconcile the audio output device once useSettings settles, mirroring
   // the volume reconcile above. initPlayer already constructs the engine
   // with the persisted sinkId when the settings snapshot is warm; this
-  // effect covers the cold-start race and re-applies on change. If the
-  // persisted device is gone (unplugged since last launch), setSinkId
-  // rejects — fall back to the system default and clear the stored id so
-  // we don't keep retrying a dead device on future launches.
+  // effect covers the cold-start race and re-applies on change. Skipped
+  // when the engine is already on the desired device (e.g. right after
+  // the store's setSinkId routed it and mirrored the cache).
+  //
+  // If the persisted device is unavailable (Bluetooth headphones not yet
+  // connected, unplugged mid-session), route to the system default for
+  // now but keep the stored id, and retry on every devicechange so audio
+  // returns to the chosen device when it reappears. The engine-only
+  // player.setSinkId is used here (not the store action) so a transient
+  // fallback never overwrites the user's persisted choice.
   const settingsSinkId = settings?.selectedAudioOutputDeviceId;
   useEffect(() => {
-    const { player, setSinkId } = useSettingsAndPlaybackStore.getState();
-    if (!player || !player.canSetSinkId) return;
+    const { player } = useSettingsAndPlaybackStore.getState();
+    if (!player || !player.canSetSinkId) return undefined;
     const desired = settingsSinkId ?? '';
-    player.setSinkId(desired).catch(() => {
-      if (desired) setSinkId('');
-    });
+    const route = async () => {
+      try {
+        await player.setSinkId(desired);
+      } catch {
+        await player.setSinkId('').catch(() => {});
+      }
+    };
+    if (player.sinkId !== desired) route();
+    if (!desired) return undefined;
+    navigator.mediaDevices.addEventListener('devicechange', route);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', route);
+    };
   }, [settingsSinkId]);
 
   // Cold-boot reseed: the persisted librarySorting needs to land in

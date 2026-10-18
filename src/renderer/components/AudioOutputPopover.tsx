@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   List,
@@ -74,26 +74,35 @@ export default function AudioOutputPopover({
   open,
 }: AudioOutputPopoverProps) {
   const [devices, setDevices] = useState<OutputDevice[]>([]);
+  // True while a switch is in flight; the list is disabled so rapid
+  // clicks can't race two setSinkId chains and persist the wrong device.
+  const [switching, setSwitching] = useState(false);
 
   const setSinkId = useSettingsAndPlaybackStore((state) => state.setSinkId);
   const canSetSinkId = useSettingsAndPlaybackStore(
-    (state) => state.player?.canSetSinkId ?? true,
+    (state) => state.player?.canSetSinkId ?? false,
   );
   const showNotification = useUIStore((state) => state.showNotification);
-  const currentDeviceId = useSettings().data?.selectedAudioOutputDeviceId ?? '';
+  const persistedDeviceId =
+    useSettings().data?.selectedAudioOutputDeviceId ?? '';
+  // A persisted device that isn't currently present (unplugged) means the
+  // engine is playing through the system default, so mark that row.
+  const currentDeviceId = devices.some((d) => d.deviceId === persistedDeviceId)
+    ? persistedDeviceId
+    : '';
 
-  const refreshDevices = useCallback(() => {
-    navigator.mediaDevices
-      .enumerateDevices()
-      .then((infos) => setDevices(buildDeviceList(infos)))
-      .catch((error: unknown) => {
-        console.error('Failed to enumerate audio output devices:', error);
-      });
-  }, []);
-
-  // Enumerate on mount and whenever the OS device set changes (a headset
-  // is plugged in, a monitor's speakers appear, etc.).
+  // While open, enumerate immediately and again whenever the OS device set
+  // changes (a headset is plugged in, a monitor's speakers appear, etc.).
   useEffect(() => {
+    if (!open) return undefined;
+    const refreshDevices = () => {
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then((infos) => setDevices(buildDeviceList(infos)))
+        .catch((error: unknown) => {
+          console.error('Failed to enumerate audio output devices:', error);
+        });
+    };
     refreshDevices();
     navigator.mediaDevices.addEventListener('devicechange', refreshDevices);
     return () =>
@@ -101,21 +110,19 @@ export default function AudioOutputPopover({
         'devicechange',
         refreshDevices,
       );
-  }, [refreshDevices]);
-
-  // Refresh each time the popover opens so it reflects current hardware
-  // without waiting for a devicechange event.
-  useEffect(() => {
-    if (open) refreshDevices();
-  }, [open, refreshDevices]);
+  }, [open]);
 
   const handleSelect = async (device: OutputDevice) => {
+    setSwitching(true);
     try {
       await setSinkId(device.deviceId);
       showNotification(`Output set to ${device.label}`, 'success');
       onClose();
-    } catch {
+    } catch (error) {
+      console.error('Failed to switch audio output device:', error);
       showNotification('Could not switch audio output device', 'error');
+    } finally {
+      setSwitching(false);
     }
   };
 
@@ -156,6 +163,7 @@ export default function AudioOutputPopover({
                   key={device.deviceId || 'default'}
                   data-selected={selected ? 'true' : 'false'}
                   data-testid={`output-device-option-${device.deviceId || 'default'}`}
+                  disabled={switching}
                   onClick={() => handleSelect(device)}
                   selected={selected}
                   sx={{

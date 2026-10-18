@@ -217,7 +217,8 @@ export interface SettingsAndPlaybackStore {
   // ('' = system default), then mirrors the settings cache + persists
   // via IPC once the engine confirms the switch. Async because
   // Gapless-5's setSinkId applies to the shared AudioContext; the
-  // returned promise rejects if routing fails (device unavailable).
+  // returned promise rejects if there is no player, routing fails
+  // (device unavailable), or the persist fails (cache is rolled back).
   setSinkId: (deviceId: string) => Promise<void>;
 
   // Playback actions
