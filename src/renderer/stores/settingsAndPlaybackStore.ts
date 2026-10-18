@@ -231,19 +231,8 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
     },
 
     setSinkId: async (deviceId) => {
-      // Route audio to the chosen output device. Unlike setVolume,
-      // Gapless-5's setSinkId is async (it applies to the shared
-      // AudioContext), so we only mirror the settings cache + persist
-      // once the engine confirms the switch. A rejection (device
-      // unplugged/unavailable) propagates to the caller and leaves the
-      // persisted value untouched. Deliberately toast-free — the caller
-      // owns user feedback.
-      //
-      // The persist is awaited (unlike setVolume) and mirrors
-      // useUpdateSettings: cancel in-flight settings fetches so they can't
-      // clobber the optimistic write, and roll the cache back if the IPC
-      // write fails. The rollback flips the App.tsx reconcile effect,
-      // which re-routes the engine back to the still-persisted device.
+      // Persist only after the engine switches; rejects on failure (caller
+      // toasts). Persist failure rolls back the cache, and App.tsx re-routes.
       const { player } = get();
       if (!player) throw new Error('Audio player not initialized');
       await player.setSinkId(deviceId);
@@ -934,11 +923,7 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // not zero), fall back to 1.0; the reconcile-volume effect in
         // App.tsx applies the persisted value once useSettings settles.
         const initialVolume = getSettingsSnapshot()?.volume ?? 1.0;
-        // Persisted output device (sinkId). '' routes to the system
-        // default. Passing it here lets Gapless-5 apply the device as
-        // soon as the AudioContext exists; the reconcile effect in
-        // App.tsx re-applies it (and cleans up stale devices) once
-        // useSettings settles, mirroring the volume reconcile.
+        // '' = system default. App.tsx re-applies once settings load.
         const initialSinkId =
           getSettingsSnapshot()?.selectedAudioOutputDeviceId ?? '';
         const player = new Gapless5({

@@ -144,7 +144,6 @@ export default function Player() {
   const [albumArt, setAlbumArt] = useState<string | null>(null);
   const [isTitleScrolling, setIsTitleScrolling] = useState(false);
   const [isArtistAlbumScrolling, setIsArtistAlbumScrolling] = useState(false);
-  // Anchor for the audio-output-device picker popover (Speaker button).
   const [outputAnchorEl, setOutputAnchorEl] = useState<HTMLElement | null>(
     null,
   );

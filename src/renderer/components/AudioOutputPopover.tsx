@@ -18,15 +18,8 @@ interface OutputDevice {
 }
 
 /**
- * Normalize the raw MediaDeviceInfo list into the rows we render.
- *
- * The OS-reported `'default'` (and the rare empty-string) output device is
- * collapsed onto our `''` sentinel so the "System Default" row always maps
- * to the value we persist (`selectedAudioOutputDeviceId === null/''`).
- * Real devices keep their `deviceId`; empty labels (Chromium hides them
- * until media permission is granted) degrade to a generic name rather than
- * us prompting for microphone access. A System Default row is guaranteed
- * even when the platform reports no `'default'` device.
+ * Map MediaDeviceInfo to rows. OS 'default' collapses to '' (System Default),
+ * which is always present. Unlabeled devices get a generic name.
  */
 function buildDeviceList(infos: MediaDeviceInfo[]): OutputDevice[] {
   const seen = new Set<string>();
@@ -61,21 +54,13 @@ interface AudioOutputPopoverProps {
   open: boolean;
 }
 
-/**
- * Popover launched from the Player's Speaker button. Lists the available
- * audio output devices, marks the active one, and routes playback to a
- * new device on click via the store's `setSinkId` action (which persists
- * the choice). Anchored above the player bar, mirroring the MiniPlayer
- * volume popover.
- */
 export default function AudioOutputPopover({
   anchorEl,
   onClose,
   open,
 }: AudioOutputPopoverProps) {
   const [devices, setDevices] = useState<OutputDevice[]>([]);
-  // True while a switch is in flight; the list is disabled so rapid
-  // clicks can't race two setSinkId chains and persist the wrong device.
+  // Disable the list mid-switch so rapid clicks can't race.
   const [switching, setSwitching] = useState(false);
 
   const setSinkId = useSettingsAndPlaybackStore((state) => state.setSinkId);
@@ -85,14 +70,12 @@ export default function AudioOutputPopover({
   const showNotification = useUIStore((state) => state.showNotification);
   const persistedDeviceId =
     useSettings().data?.selectedAudioOutputDeviceId ?? '';
-  // A persisted device that isn't currently present (unplugged) means the
-  // engine is playing through the system default, so mark that row.
+  // Saved device missing = playing via System Default.
   const currentDeviceId = devices.some((d) => d.deviceId === persistedDeviceId)
     ? persistedDeviceId
     : '';
 
-  // While open, enumerate immediately and again whenever the OS device set
-  // changes (a headset is plugged in, a monitor's speakers appear, etc.).
+  // Enumerate while open; refresh on devicechange.
   useEffect(() => {
     if (!open) return undefined;
     const refreshDevices = () => {

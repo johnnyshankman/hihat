@@ -94,19 +94,8 @@ function ThemedAppContent() {
     if (player) player.setVolume(settingsVolume);
   }, [settingsVolume]);
 
-  // Reconcile the audio output device once useSettings settles, mirroring
-  // the volume reconcile above. initPlayer already constructs the engine
-  // with the persisted sinkId when the settings snapshot is warm; this
-  // effect covers the cold-start race and re-applies on change. Skipped
-  // when the engine is already on the desired device (e.g. right after
-  // the store's setSinkId routed it and mirrored the cache).
-  //
-  // If the persisted device is unavailable (Bluetooth headphones not yet
-  // connected, unplugged mid-session), route to the system default for
-  // now but keep the stored id, and retry on every devicechange so audio
-  // returns to the chosen device when it reappears. The engine-only
-  // player.setSinkId is used here (not the store action) so a transient
-  // fallback never overwrites the user's persisted choice.
+  // Apply the persisted output device. If unavailable, play via system
+  // default without clearing the saved id, and retry on devicechange.
   const settingsSinkId = settings?.selectedAudioOutputDeviceId;
   useEffect(() => {
     const { player } = useSettingsAndPlaybackStore.getState();

@@ -224,9 +224,7 @@ function runMigrations(): void {
       'INTEGER NOT NULL DEFAULT 1',
     );
 
-    // Migration 11: Add selectedAudioOutputDeviceId column to settings table.
-    // Stored as TEXT (the sinkId from navigator.mediaDevices.enumerateDevices);
-    // null/'' means route to the system default output device.
+    // Migration 11: selectedAudioOutputDeviceId (sinkId; null = system default).
     addColumnIfNotExists('settings', 'selectedAudioOutputDeviceId', 'TEXT');
   } catch (error) {
     console.error('Error running database migrations:', error);
@@ -1520,7 +1518,7 @@ function parseSettingsRow(raw: RawSettingsRow): Settings {
       raw.sortArtistByAlbumArtist == null
         ? true
         : Boolean(raw.sortArtistByAlbumArtist),
-    // `null`/'' both mean "use the system default output device".
+    // '' → null (system default).
     selectedAudioOutputDeviceId: raw.selectedAudioOutputDeviceId || null,
   };
 }
