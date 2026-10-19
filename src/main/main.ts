@@ -10,7 +10,15 @@
  */
 import path from 'path';
 import { pathToFileURL } from 'url';
-import { app, BrowserWindow, shell, ipcMain, net, protocol } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  net,
+  protocol,
+  session,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import electronDebug from 'electron-debug';
@@ -31,6 +39,7 @@ import {
   sendIpcEvent,
 } from './ipc/register';
 import { trustWindow } from './ipc/validateSender';
+import registerPermissionHandlers from './permissions';
 import { setMainWindow as setLibraryMainWindow } from './library/scanner';
 import {
   setMainWindow as setMiniPlayerMainWindow,
@@ -501,6 +510,8 @@ app
 
     // Install the hihat-audio:// handler once, before the first window.
     registerAudioProtocol();
+    // Deny-by-default permissions; must be in place before any window loads.
+    registerPermissionHandlers(session.defaultSession);
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the

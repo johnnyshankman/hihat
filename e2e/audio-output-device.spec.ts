@@ -74,6 +74,41 @@ test.describe('Audio output device picker', () => {
     await TestHelpers.closeApp(app);
   });
 
+  test('session permissions expose output devices and deny everything else', async () => {
+    const { app, page } = await TestHelpers.launchApp();
+
+    const result = await page.evaluate(async () => {
+      const outputs = (await navigator.mediaDevices.enumerateDevices()).filter(
+        (d) => d.kind === 'audiooutput',
+      );
+      let micCapture = 'granted';
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        stream.getTracks().forEach((t) => t.stop());
+      } catch (error) {
+        micCapture = (error as Error).name;
+      }
+      return {
+        outputs: outputs.map((d) => ({ id: d.deviceId, label: d.label })),
+        notifications: await Notification.requestPermission(),
+        micCapture,
+      };
+    });
+
+    // Without the `media` check grant, Chromium returns one blank entry
+    // and the picker degrades to an unlabeled System Default.
+    result.outputs.forEach((d) => {
+      expect(d.id).not.toBe('');
+      expect(d.label).not.toBe('');
+    });
+    expect(result.notifications).toBe('denied');
+    expect(result.micCapture).toBe('NotAllowedError');
+
+    await TestHelpers.closeApp(app);
+  });
+
   test('selecting a device persists it, toasts, closes the picker, and marks it on reopen', async () => {
     const { app, page } = await TestHelpers.launchApp();
 

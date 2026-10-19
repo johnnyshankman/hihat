@@ -29,7 +29,7 @@
  *      check in the `fileSystem:deleteFile` handler).
  */
 
-import type { BrowserWindow, IpcMainInvokeEvent } from 'electron';
+import type { BrowserWindow, IpcMainInvokeEvent, WebContents } from 'electron';
 
 const trustedWebContentsIds = new Set<number>();
 
@@ -41,6 +41,11 @@ export function trustWindow(window: BrowserWindow): void {
   window.on('closed', () => {
     trustedWebContentsIds.delete(id);
   });
+}
+
+/** Also gates session permission grants (see `permissions.ts`). */
+export function isTrustedWebContents(webContents: WebContents): boolean {
+  return trustedWebContentsIds.has(webContents.id);
 }
 
 export function assertTrustedSender(event: IpcMainInvokeEvent): void {
