@@ -510,7 +510,7 @@ app
 
     // Install the hihat-audio:// handler once, before the first window.
     registerAudioProtocol();
-    // Deny-by-default permissions; must be in place before any window loads.
+    // Before any window loads.
     registerPermissionHandlers(session.defaultSession);
     createWindow();
     app.on('activate', () => {

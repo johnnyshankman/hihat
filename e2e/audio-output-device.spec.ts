@@ -97,8 +97,7 @@ test.describe('Audio output device picker', () => {
       };
     });
 
-    // Without the `media` check grant, Chromium returns one blank entry
-    // and the picker degrades to an unlabeled System Default.
+    // Denied `media` check → one blank entry.
     result.outputs.forEach((d) => {
       expect(d.id).not.toBe('');
       expect(d.label).not.toBe('');

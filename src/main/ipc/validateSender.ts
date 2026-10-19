@@ -43,7 +43,7 @@ export function trustWindow(window: BrowserWindow): void {
   });
 }
 
-/** Also gates session permission grants (see `permissions.ts`). */
+/** Also used by `permissions.ts`. */
 export function isTrustedWebContents(webContents: WebContents): boolean {
   return trustedWebContentsIds.has(webContents.id);
 }
