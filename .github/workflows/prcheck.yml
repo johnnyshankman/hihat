@@ -69,7 +69,7 @@ jobs:
 
   e2e:
     name: E2E Tests
-    needs: [check, changes]
+    needs: [changes]
     runs-on: macos-latest
     timeout-minutes: 40
     steps:
