@@ -100,6 +100,7 @@ To install an update:
 * True gapless playback
 * Shuffle with navigable history (up to 100 tracks)
 * Repeat modes: off, single track, or all
+* Choose your audio output (speakers, headphones, DAC, and more) right from the player bar
 * Play count tracking with smart/dynamic thresholds
 * Last Played tracking
 
@@ -161,7 +162,7 @@ For detailed format information, see:
 
 **See the [hihat User Guide](USER_GUIDE.md)** for everything you can do once the app is open.
 
-The full walkthrough of hihat's features — playback, playlists, browsing and search, the Mini Player, metadata editing, right-click actions, settings, keyboard shortcuts, and tips — lives in that document so that this README stays focused on getting you up and running.
+The full walkthrough of hihat's features — playback, audio outputs, playlists, browsing and search, the Mini Player, metadata editing, right-click actions, settings, keyboard shortcuts, and tips — lives in that document so that this README stays focused on getting you up and running.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -169,7 +170,7 @@ The full walkthrough of hihat's features — playback, playlists, browsing and s
 
 - [x] Edit song metadata
 - [ ] Queue a next-up song
-- [ ] Ability to Change Audio Outputs
+- [x] Ability to Change Audio Outputs
 
 See the [open issues](https://github.com/johnnyshankman/hihat/issues) for a full list of proposed features and known issues.
 
