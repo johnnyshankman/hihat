@@ -29,7 +29,7 @@ Double-click any track in the library to start playing. The player bar at the bo
 * **Seek slider** with elapsed and remaining time below the playback controls
 * **Audio output button** (speaker icon), **volume slider**, and **mute button** on the right
 
-![hihat player bar showing album art, track title, playback controls, seek slider, and volume](screenshots/usage-player-bar.png)
+![hihat player bar showing album art, track title, playback controls, seek slider, audio output button, and volume](screenshots/usage-player-bar.png)
 
 ## Choosing an Audio Output
 
