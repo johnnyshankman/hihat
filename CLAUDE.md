@@ -18,7 +18,7 @@
 | Server state | TanStack Query 5 (`@tanstack/react-query`) — owns all DB-backed IPC data |
 | Client state | Zustand 5 (3 stores: library, settingsAndPlayback, ui) — UI/playback runtime only |
 | Table / virtualization | `@tanstack/react-table` + `@tanstack/react-virtual` (renderer-side, custom `VirtualTable`) |
-| Audio engine | Gapless-5 (custom fork `@regosen/gapless-5`, runs in renderer) |
+| Audio engine | Gapless-5 (maintained fork `johnnyshankman/Gapless-5`, installed as `@regosen/gapless-5`, runs in renderer) |
 | Tag writing | `node-taglib-sharp` (main process) |
 | Database | sql.js (in-memory SQLite compiled to WASM, persists to disk on every write) |
 | Build tooling | Webpack 5, TypeScript 5.8, Electron React Boilerplate |
@@ -138,6 +138,13 @@ When a component pulls anything out of a Zustand store — whether that's readin
 - Repeat modes: `off`, `track`, `all`. `track` is implemented via Gapless-5's native `singleMode` — we cannot replicate it on top of Gapless-5 without breaking gapless continuity (the library loops the decoded buffer directly via `AudioBufferSourceNode.loop`).
 - Shuffle with navigable history (up to 100 tracks)
 
+### Gapless-5 Fork
+- hihat depends on a **permanently maintained fork** at `johnnyshankman/Gapless-5`, not on upstream `regosen/Gapless-5`. The fork adds output device routing (`sinkId` option, `setSinkId()`), which won't be sent upstream: `AudioContext.setSinkId` is Chromium-only, and upstream is meant to work the same in every browser (see PR #146 discussion). Electron is Chromium, so it works fully for hihat.
+- `package.json` pins the fork by **tag** (`github:johnnyshankman/Gapless-5#v<upstream-version>-hihat.<n>`), never by branch.
+- Fork workflow: land changes on the fork's `main`, tag a new `-hihat.<n>` release, then bump the tag in hihat. Pull upstream changes into the fork with `git merge upstream/main` (no rebasing, so pinned commits stay valid).
+- After changing the tag, a plain `npm install` won't re-resolve the git dep. Run `rm -rf node_modules/@regosen/gapless-5 && npm install "@regosen/gapless-5@github:johnnyshankman/Gapless-5#<tag>" --prefer-online`.
+- Generic bug fixes that upstream could use should be PR'd to `regosen/Gapless-5` from a branch off `upstream/main`, so the fork-only changes don't come along.
+
 ### Smart Playlists
 - Defined in `src/types/smartPlaylists.ts` with stable IDs
 - 3 built-in: Recently Added, Recently Played, Most Played (limit 50 each)
@@ -218,7 +225,7 @@ This pairs directly with the rebuild rule above: because e2e runs against the co
 2. **Sort JSX props alphabetically** — enforced by ESLint
 3. **IPC namespace pattern**: `window.electron.{domain}.{method}()` (e.g., `window.electron.tracks.getAll()`)
 4. **Server state lives in TanStack Query, not Zustand.** DB-backed IPC data (tracks, playlists, settings rows) is read via hooks in `src/renderer/queries/`. Stores are for UI/playback runtime only. If a feature needs both, the source of truth is the query.
-5. **Settings mutations** flow through query mutation hooks in `queries/settings.ts` — they update the DB via IPC and invalidate the cache. Don't write through stores.
+5. **Settings mutations** flow through query mutation hooks in `queries/settings.ts` — they update the DB via IPC and invalidate the cache. Don't write through stores. Exception: settings coupled to the audio engine (`volume`, `selectedAudioOutputDeviceId`) are written by `settingsAndPlaybackStore` actions (`setVolume`, `setSinkId`) so the engine and the cache update together; they still write through the TanStack Query cache, never store state.
 6. **Frameless window**: custom title bar component, `frame: false` in BrowserWindow config
 7. **Audio protocol**: files served via `hihat-audio://getfile/{encodedPath}`
 8. **Database writes are synchronous and blocking** — every `exec()` and `run()` call writes to disk immediately

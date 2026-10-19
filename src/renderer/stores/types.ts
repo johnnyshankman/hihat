@@ -213,6 +213,9 @@ export interface SettingsAndPlaybackStore {
   // or getSettingsSnapshot().
   setVolume: (volume: number) => void;
 
+  // Route to device ('' = system default), then persist. Rejects on failure.
+  setSinkId: (deviceId: string) => Promise<void>;
+
   // Playback actions
   initPlayer: () => void;
   selectSpecificSong: (

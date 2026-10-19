@@ -1,7 +1,7 @@
 {
   "description": "The minimalist offline music library player for macOS",
   "license": "MIT",
-  "version": "2.3.6",
+  "version": "2.4.0",
   "name": "hihat",
   "main": "./.erb/dll/main.bundle.dev.js",
   "engines": {
@@ -87,7 +87,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
-    "@regosen/gapless-5": "github:johnnyshankman/Gapless-5",
+    "@regosen/gapless-5": "github:johnnyshankman/Gapless-5#v1.6.2-hihat.1",
     "@tanstack/react-query": "^5.100.8",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.23",

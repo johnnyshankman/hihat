@@ -94,6 +94,28 @@ function ThemedAppContent() {
     if (player) player.setVolume(settingsVolume);
   }, [settingsVolume]);
 
+  // Apply the persisted output device. If unavailable, play via system
+  // default without clearing the saved id, and retry on devicechange.
+  const settingsSinkId = settings?.selectedAudioOutputDeviceId;
+  useEffect(() => {
+    const { player } = useSettingsAndPlaybackStore.getState();
+    if (!player || !player.canSetSinkId) return undefined;
+    const desired = settingsSinkId ?? '';
+    const route = async () => {
+      try {
+        await player.setSinkId(desired);
+      } catch {
+        await player.setSinkId('').catch(() => {});
+      }
+    };
+    if (player.sinkId !== desired) route();
+    if (!desired) return undefined;
+    navigator.mediaDevices.addEventListener('devicechange', route);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', route);
+    };
+  }, [settingsSinkId]);
+
   // Cold-boot reseed: the persisted librarySorting needs to land in
   // libraryStore.libraryViewState so trackSelectionUtils sees it for
   // next/prev track math. Write-only effect.

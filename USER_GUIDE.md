@@ -7,16 +7,17 @@ This guide covers everything you can do inside hihat once it's installed and set
 ## Table of Contents
 
 1. [Playing Music](#playing-music)
-2. [Sidebar and Navigation](#sidebar-and-navigation)
-3. [Playlists](#playlists)
-4. [Browsing and Filtering](#browsing-and-filtering)
-5. [Notifications](#notifications)
-6. [Mini Player](#mini-player)
-7. [Editing Metadata](#editing-metadata)
-8. [Right-Click Actions](#right-click-actions)
-9. [Settings and Preferences](#settings-and-preferences)
-10. [Keyboard Shortcuts](#keyboard-shortcuts)
-11. [Tips](#tips)
+2. [Choosing an Audio Output](#choosing-an-audio-output)
+3. [Sidebar and Navigation](#sidebar-and-navigation)
+4. [Playlists](#playlists)
+5. [Browsing and Filtering](#browsing-and-filtering)
+6. [Notifications](#notifications)
+7. [Mini Player](#mini-player)
+8. [Editing Metadata](#editing-metadata)
+9. [Right-Click Actions](#right-click-actions)
+10. [Settings and Preferences](#settings-and-preferences)
+11. [Keyboard Shortcuts](#keyboard-shortcuts)
+12. [Tips](#tips)
 
 ## Playing Music
 
@@ -26,9 +27,24 @@ Double-click any track in the library to start playing. The player bar at the bo
 * **Track title and artist** next to the album art (click the title to scroll back to the current song)
 * **Playback controls** in the center: shuffle, previous, play/pause, next, and repeat
 * **Seek slider** with elapsed and remaining time below the playback controls
-* **Volume slider and mute button** on the right
+* **Audio output button** (speaker icon), **volume slider**, and **mute button** on the right
 
-![hihat player bar showing album art, track title, playback controls, seek slider, and volume](screenshots/usage-player-bar.png)
+![hihat player bar showing album art, track title, playback controls, seek slider, audio output button, and volume](screenshots/usage-player-bar.png)
+
+## Choosing an Audio Output
+
+hihat can play through any speaker or headphones your Mac can see — built-in speakers, wired or Bluetooth headphones, an external DAC or audio interface, or a monitor's speakers.
+
+**To change where your music plays:**
+1. Click the **speaker button** in the player bar, just left of the volume slider.
+2. A list of available outputs appears. The one currently playing has a checkmark. The list updates on its own if you plug in or unplug a device while it's open.
+3. Click the output you want. Music switches over right away, and a notification confirms the change.
+
+**System Default** follows whatever output is selected in macOS (System Settings → Sound, or the Sound menu in the menu bar). Pick it if you'd rather control hihat's output from macOS, the same way other apps work.
+
+**hihat remembers your choice.** The next time you open hihat, it plays through the same output.
+
+**If your chosen output isn't available** — say your Bluetooth headphones are turned off, or you've unplugged your DAC — hihat plays through System Default instead, and switches back automatically as soon as the device reconnects. You don't need to pick it again.
 
 ## Sidebar and Navigation
 

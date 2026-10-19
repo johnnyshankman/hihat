@@ -223,6 +223,9 @@ function runMigrations(): void {
       'sortArtistByAlbumArtist',
       'INTEGER NOT NULL DEFAULT 1',
     );
+
+    // Migration 11: selectedAudioOutputDeviceId (sinkId; null = system default).
+    addColumnIfNotExists('settings', 'selectedAudioOutputDeviceId', 'TEXT');
   } catch (error) {
     console.error('Error running database migrations:', error);
   }
@@ -371,13 +374,14 @@ function initDefaultSettings(): void {
           librarySorting: null,
           columnOrder: null,
           sortArtistByAlbumArtist: true,
+          selectedAudioOutputDeviceId: null,
         };
 
         // Insert default settings
         db.prepare(
           `
-          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder, sortArtistByAlbumArtist)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder, sortArtistByAlbumArtist, selectedAudioOutputDeviceId)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         ).run(
           defaultSettings.id,
@@ -390,6 +394,7 @@ function initDefaultSettings(): void {
           defaultSettings.librarySorting,
           defaultSettings.columnOrder,
           defaultSettings.sortArtistByAlbumArtist ? 1 : 0,
+          defaultSettings.selectedAudioOutputDeviceId,
         );
       }
     } catch (error) {
@@ -425,13 +430,14 @@ function initDefaultSettings(): void {
         librarySorting: null,
         columnOrder: null,
         sortArtistByAlbumArtist: true,
+        selectedAudioOutputDeviceId: null,
       };
 
       // Insert default settings
       db.prepare(
         `
-        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder, sortArtistByAlbumArtist)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO settings (id, libraryPath, theme, columns, lastPlayedSongId, volume, columnWidths, librarySorting, columnOrder, sortArtistByAlbumArtist, selectedAudioOutputDeviceId)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       ).run(
         defaultSettings.id,
@@ -444,6 +450,7 @@ function initDefaultSettings(): void {
         defaultSettings.librarySorting,
         defaultSettings.columnOrder,
         defaultSettings.sortArtistByAlbumArtist ? 1 : 0,
+        defaultSettings.selectedAudioOutputDeviceId,
       );
     }
   } catch (outerError) {
@@ -1458,6 +1465,7 @@ interface RawSettingsRow {
   librarySorting: string | null;
   columnOrder: string | null;
   sortArtistByAlbumArtist: number | null;
+  selectedAudioOutputDeviceId: string | null;
 }
 
 /**
@@ -1510,6 +1518,8 @@ function parseSettingsRow(raw: RawSettingsRow): Settings {
       raw.sortArtistByAlbumArtist == null
         ? true
         : Boolean(raw.sortArtistByAlbumArtist),
+    // '' → null (system default).
+    selectedAudioOutputDeviceId: raw.selectedAudioOutputDeviceId || null,
   };
 }
 
@@ -1542,6 +1552,7 @@ export function getSettings(): Settings {
         librarySorting: null,
         columnOrder: null,
         sortArtistByAlbumArtist: true,
+        selectedAudioOutputDeviceId: null,
       };
     }
 
@@ -1586,6 +1597,7 @@ export function getSettings(): Settings {
       librarySorting: null,
       columnOrder: null,
       sortArtistByAlbumArtist: true,
+      selectedAudioOutputDeviceId: null,
     };
   }
 }
@@ -1612,7 +1624,8 @@ export function updateSettings(settings: Settings): boolean {
           columnWidths = ?,
           librarySorting = ?,
           columnOrder = ?,
-          sortArtistByAlbumArtist = ?
+          sortArtistByAlbumArtist = ?,
+          selectedAudioOutputDeviceId = ?
         WHERE id = ?
       `,
         )
@@ -1628,6 +1641,7 @@ export function updateSettings(settings: Settings): boolean {
             : null,
           settings.columnOrder ? JSON.stringify(settings.columnOrder) : null,
           settings.sortArtistByAlbumArtist ? 1 : 0,
+          settings.selectedAudioOutputDeviceId || null,
           settings.id,
         );
 

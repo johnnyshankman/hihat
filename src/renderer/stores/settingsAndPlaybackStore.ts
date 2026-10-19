@@ -230,6 +230,27 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
       });
     },
 
+    setSinkId: async (deviceId) => {
+      // Persist only after the engine switches; rejects on failure (caller
+      // toasts). Persist failure rolls back the cache, and App.tsx re-routes.
+      const { player } = get();
+      if (!player) throw new Error('Audio player not initialized');
+      await player.setSinkId(deviceId);
+      await queryClient.cancelQueries({ queryKey: queryKeys.settings });
+      const prev = queryClient.getQueryData<Settings>(queryKeys.settings);
+      queryClient.setQueryData<Settings>(queryKeys.settings, (old) =>
+        old ? { ...old, selectedAudioOutputDeviceId: deviceId || null } : old,
+      );
+      try {
+        await window.electron.settings.update({
+          selectedAudioOutputDeviceId: deviceId || null,
+        });
+      } catch (error) {
+        if (prev) queryClient.setQueryData(queryKeys.settings, prev);
+        throw error;
+      }
+    },
+
     selectSpecificSong: (trackId, playbackSource, playlistId = null) => {
       set((state) => {
         if (!state.player) {
@@ -902,12 +923,16 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         // not zero), fall back to 1.0; the reconcile-volume effect in
         // App.tsx applies the persisted value once useSettings settles.
         const initialVolume = getSettingsSnapshot()?.volume ?? 1.0;
+        // '' = system default. App.tsx re-applies once settings load.
+        const initialSinkId =
+          getSettingsSnapshot()?.selectedAudioOutputDeviceId ?? '';
         const player = new Gapless5({
           useHTML5Audio: false,
           crossfade: 25, // 25ms crossfade between tracks
           exclusive: true, // Only one track can play at a time
           loadLimit: 3, // Load up to 3 tracks at a time
           volume: initialVolume,
+          sinkId: initialSinkId,
         });
 
         // E2E diagnostic hook: lets Playwright specs observe what
