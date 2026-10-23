@@ -169,7 +169,7 @@ function ThemedAppContent() {
     try {
       selectSpecificSong(lastPlayedSongId, 'library');
       setPaused(true);
-      window.hihatScrollToLibraryTrack?.(lastPlayedSongId);
+      window.hihatScrollToLibraryTrack?.(lastPlayedSongId, { immediate: true });
     } catch (error) {
       console.error('Failed to load last played song:', error);
     }

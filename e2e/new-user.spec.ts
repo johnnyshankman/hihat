@@ -5,15 +5,13 @@ test.describe('New User Experience', () => {
   test('should display empty library message for brand new user', async () => {
     const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
 
-    // Check that the empty library message is displayed
-    const emptyLibraryMessage = await page.getByText('Your library is empty');
-    expect(await emptyLibraryMessage.isVisible()).toBe(true);
-
-    // Verify the helper text is also displayed
-    const helperText = await page.getByText(
-      'Head to Settings and give hihat access to your music library folder.',
+    // The welcome panel replaces the table and offers to scan the
+    // already-configured music folder.
+    await expect(page.getByText('Welcome to hihat')).toBeVisible();
+    await expect(page.getByTestId('welcome-scan')).toBeVisible();
+    await expect(page.getByTestId('welcome-library-path')).toHaveText(
+      TestHelpers.testSongsPath(),
     );
-    expect(await helperText.isVisible()).toBe(true);
 
     // Take a screenshot for visual verification
     await TestHelpers.takeScreenshot(page, 'new-user-empty-library');
@@ -86,9 +84,8 @@ test.describe('New User Experience', () => {
     const trackRows = await page.locator('[data-track-id]').count();
     expect(trackRows).toBe(0);
 
-    // Verify the empty library message is shown instead
-    const emptyLibraryMessage = await page.getByText('Your library is empty');
-    expect(await emptyLibraryMessage.isVisible()).toBe(true);
+    // Verify the welcome panel is shown instead
+    await expect(page.getByTestId('library-welcome')).toBeVisible();
 
     await TestHelpers.closeApp(app);
   });

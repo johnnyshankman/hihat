@@ -138,7 +138,7 @@ test.describe('hihat v1 to v2 Migration', () => {
       // Check if we're in the welcome/empty state (launchAppAsBrandNewUser
       // already waited for it to render)
       const welcomeText = await page
-        .locator('text="Your library is empty"')
+        .locator('[data-testid="library-welcome"]')
         .count();
       expect(welcomeText).toBe(1);
     } finally {

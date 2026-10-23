@@ -1,3 +1,38 @@
+/*
+ * Motion tokens. Every transition/animation in the renderer pulls its
+ * duration and easing from here so the app moves with one rhythm.
+ * `styles/motion.ts` re-exports these for sx props and keyframes.
+ */
+:root {
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-slow: 320ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: ease;
+}
+
+@keyframes hihat-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Honor the OS "Reduce motion" setting across the whole renderer. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -60,7 +95,7 @@ a:hover {
 
 .play-button {
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity var(--motion-fast) var(--ease-standard);
 }
 
 tr:hover .play-button {

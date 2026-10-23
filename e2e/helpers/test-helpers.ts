@@ -106,7 +106,18 @@ export class TestHelpers {
     });
   }
 
-  static async launchApp(): Promise<{ app: ElectronApplication; page: Page }> {
+  static async launchApp(
+    options: {
+      /** Extra env vars for the main process (e.g. TEST_TRACKS_LOAD_DELAY_MS). */
+      env?: Record<string, string>;
+      /**
+       * Wait for track rows before resolving. Pass false to observe the
+       * renderer while the library is still loading.
+       */
+      waitForReady?: boolean;
+    } = {},
+  ): Promise<{ app: ElectronApplication; page: Page }> {
+    const { env: extraEnv = {}, waitForReady = true } = options;
     const testDbPath = path.join(__dirname, '../fixtures/test-db.sqlite');
     const songsPath = path.join(__dirname, `../fixtures/${TEST_SONGS_DIR}`);
 
@@ -136,12 +147,14 @@ export class TestHelpers {
         TEST_MODE: 'true',
         TEST_DB_PATH: testDbPath,
         TEST_SONGS_PATH: songsPath,
+        ...extraEnv,
       },
       timeout: 30000,
     });
 
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
+    if (!waitForReady) return { app, page };
     // The seeded library is the readiness signal: once rows are in the DOM the
     // renderer has booted, queries have resolved and the virtual table has laid
     // out. No arbitrary sleep required.
@@ -155,10 +168,20 @@ export class TestHelpers {
     return { app, page };
   }
 
-  static async launchAppAsBrandNewUser(): Promise<{
+  static async launchAppAsBrandNewUser(
+    options: {
+      /**
+       * Seed the settings row with the test songs folder as libraryPath
+       * (default). Pass false for a true first launch where the user has
+       * never chosen a music folder.
+       */
+      withLibraryPath?: boolean;
+    } = {},
+  ): Promise<{
     app: ElectronApplication;
     page: Page;
   }> {
+    const { withLibraryPath = true } = options;
     const testDbPath = path.join(__dirname, '../fixtures/new-user-db.sqlite');
     const songsPath = path.join(__dirname, `../fixtures/${TEST_SONGS_DIR}`);
 
@@ -166,7 +189,10 @@ export class TestHelpers {
       fs.unlinkSync(testDbPath);
     }
 
-    await this.initializeNewUserDatabase(testDbPath, songsPath);
+    await this.initializeNewUserDatabase(
+      testDbPath,
+      withLibraryPath ? songsPath : '',
+    );
 
     const appPath = path.join(__dirname, '../../release/app');
     const mainJsPath = path.join(appPath, 'dist/main/main.js');
@@ -191,10 +217,10 @@ export class TestHelpers {
 
     const page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    // A brand new user has no tracks, so the empty-state CTA is the readiness
-    // signal. MainLayout only renders it once the tracks/playlists queries have
-    // settled, so seeing it means the renderer is fully booted.
-    await page.waitForSelector('text=Your library is empty', {
+    // A brand new user has no tracks, so the welcome panel is the readiness
+    // signal. Library only renders it once the tracks query has settled, so
+    // seeing it means the renderer is fully booted.
+    await page.waitForSelector('[data-testid="library-welcome"]', {
       timeout: READY_TIMEOUT,
     });
 
@@ -343,6 +369,28 @@ export class TestHelpers {
         { timeout },
       )
       .toBeGreaterThanOrEqual(seconds);
+  }
+
+  /**
+   * Make the next native "choose folder" dialog resolve to `folderPath`
+   * without showing UI. Patches `dialog.showOpenDialog` in the main process.
+   */
+  static async stubDirectoryDialog(
+    app: ElectronApplication,
+    folderPath: string,
+  ): Promise<void> {
+    await app.evaluate(({ dialog }, selected) => {
+      // eslint-disable-next-line no-param-reassign
+      dialog.showOpenDialog = (async () => ({
+        canceled: false,
+        filePaths: [selected],
+      })) as unknown as typeof dialog.showOpenDialog;
+    }, folderPath);
+  }
+
+  /** Absolute path to the fixture music folder used by every spec. */
+  static testSongsPath(): string {
+    return path.join(__dirname, `../fixtures/${TEST_SONGS_DIR}`);
   }
 
   static async importSongs(page: Page): Promise<void> {

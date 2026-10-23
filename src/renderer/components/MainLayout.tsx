@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
 import { styled } from '@mui/material/styles';
-import { Box, Drawer, Typography, CssBaseline } from '@mui/material';
-import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
+import { Box, Drawer, CssBaseline } from '@mui/material';
 import { useLibraryStore, useUIStore } from '../stores';
-import { useLibraryReady, useSettings } from '../queries';
+import { useLibraryReady } from '../queries';
 import Sidebar from './Sidebar';
 import MainContent from './MainContent';
 import Settings from './Settings';
@@ -45,13 +44,14 @@ const PlayerWrapper = styled('div')(() => ({
 }));
 
 export default function MainLayout() {
-  const { isLoading, isError, error } = useLibraryReady();
-  const theme = useSettings().data?.theme ?? 'dark';
+  // No loading splash: the shell renders immediately and the track table
+  // shows a skeleton until the library queries resolve (see Library).
+  const { isError, error } = useLibraryReady();
   const showNotification = useUIStore((state) => state.showNotification);
 
-  // Surface a query error as a toast once. The query layer also stays
-  // in error state until the user re-triggers, but the splash unblocks
-  // so the user can navigate to Settings and re-scan.
+  // Surface a query error as a toast once. The query layer stays in
+  // error state until the user re-triggers; the shell is already up so
+  // the user can navigate to Settings and re-scan.
   useEffect(() => {
     if (isError && error) {
       showNotification(
@@ -121,132 +121,6 @@ export default function MainLayout() {
       );
     };
   }, []);
-
-  if (isLoading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          width: '100vw',
-          background:
-            theme === 'dark'
-              ? 'linear-gradient(135deg, #121212, #0A0A0A)'
-              : 'linear-gradient(135deg, #f5f5f5, #e0e0e0)',
-          overflow: 'hidden',
-        }}
-      >
-        <Box
-          sx={{
-            position: 'relative',
-            width: '200px',
-            height: '200px',
-            background:
-              theme === 'dark'
-                ? 'linear-gradient(to right, #1A1A1A, #121212, #0A0A0A)'
-                : 'linear-gradient(to right, #ffffff, #f5f5f5, #e8e8e8)',
-            borderRadius: '8px',
-            boxShadow:
-              theme === 'dark'
-                ? '0 8px 24px rgba(0, 0, 0, 0.5)'
-                : '0 8px 24px rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <LibraryMusicIcon
-            sx={{
-              color:
-                theme === 'dark'
-                  ? 'rgba(255, 255, 255, 0.2)'
-                  : 'rgba(0, 0, 0, 0.2)',
-              width: '40%',
-              height: '40%',
-              animation: 'pulse 2s infinite ease-in-out',
-              '@keyframes pulse': {
-                '0%, 100%': {
-                  transform: 'scale(1)',
-                  opacity: 0.2,
-                },
-                '50%': {
-                  transform: 'scale(1.1)',
-                  opacity: 0.3,
-                },
-              },
-            }}
-          />
-          <Typography
-            sx={{
-              position: 'absolute',
-              bottom: '8px',
-              left: '8px',
-              color:
-                theme === 'dark'
-                  ? 'rgba(255, 255, 255, 0.5)'
-                  : 'rgba(0, 0, 0, 0.5)',
-            }}
-            variant="caption"
-          >
-            hihat
-          </Typography>
-        </Box>
-
-        <Typography
-          sx={{
-            mt: 4,
-            color: theme === 'dark' ? 'white' : 'black',
-            fontWeight: 300,
-            letterSpacing: '0.1em',
-            animation: 'fadeInOut 2s infinite ease-in-out',
-            '@keyframes fadeInOut': {
-              '0%, 100%': {
-                opacity: 0.5,
-              },
-              '50%': {
-                opacity: 1,
-              },
-            },
-          }}
-          variant="h5"
-        >
-          music awaits
-        </Typography>
-
-        <Box
-          sx={{
-            display: 'flex',
-            mt: 2,
-            gap: 1,
-          }}
-        >
-          {[0, 1, 2].map((i) => (
-            <Box
-              key={i}
-              sx={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: 'primary.main',
-                animation: `bounce 1.4s infinite ease-in-out ${i * 0.2}s`,
-                '@keyframes bounce': {
-                  '0%, 100%': {
-                    transform: 'scale(0)',
-                  },
-                  '50%': {
-                    transform: 'scale(1)',
-                  },
-                },
-              }}
-            />
-          ))}
-        </Box>
-      </Box>
-    );
-  }
 
   return (
     <Box
