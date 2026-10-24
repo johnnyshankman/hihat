@@ -34,6 +34,7 @@ import {
   toggleIconButtonSx,
 } from '../styles/iconButtonStyles';
 import { playerSliderSx } from '../styles/sliderStyles';
+import { duration as motionDuration, fadeIn } from '../styles/motion';
 import silenceAudio from '../assets/silence.mp3';
 
 // Album art placeholder component
@@ -79,6 +80,60 @@ function AlbumArtPlaceholder() {
       >
         hihat
       </Typography>
+    </Box>
+  );
+}
+
+function AlbumArtLayer({ alt, src }: { alt: string; src: string | null }) {
+  return src ? (
+    <Box
+      alt={alt}
+      component="img"
+      src={src}
+      sx={{
+        width: '100%',
+        height: '100%',
+        aspectRatio: '1/1',
+        objectFit: 'cover',
+        display: 'block',
+      }}
+    />
+  ) : (
+    <AlbumArtPlaceholder />
+  );
+}
+
+/**
+ * Crossfades album art between tracks: the new art (or the placeholder)
+ * fades in on top of the previous art instead of hard-swapping.
+ */
+function AlbumArtCrossfade({ alt, src }: { alt: string; src: string | null }) {
+  const [layers, setLayers] = useState<{
+    current: string | null;
+    previous: string | null | undefined;
+  }>({ current: src, previous: undefined });
+  if (layers.current !== src) {
+    setLayers({ current: src, previous: layers.current });
+  }
+
+  return (
+    <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+      {layers.previous !== undefined && (
+        <Box aria-hidden sx={{ position: 'absolute', inset: 0 }}>
+          <AlbumArtLayer alt="" src={layers.previous} />
+        </Box>
+      )}
+      <Box
+        key={layers.current ?? 'placeholder'}
+        data-testid="album-art"
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          animation: fadeIn('base'),
+        }}
+      >
+        <AlbumArtLayer alt={alt} src={layers.current} />
+      </Box>
     </Box>
   );
 }
@@ -584,21 +639,10 @@ export default function Player() {
                 },
               }}
             >
-              {albumArt ? (
-                <Box
-                  alt={currentTrack?.album || 'No album'}
-                  component="img"
-                  src={albumArt}
-                  sx={{
-                    width: '100%',
-                    height: '100%',
-                    aspectRatio: '1/1',
-                    objectFit: 'cover',
-                  }}
-                />
-              ) : (
-                <AlbumArtPlaceholder />
-              )}
+              <AlbumArtCrossfade
+                alt={currentTrack?.album || 'No album'}
+                src={albumArt}
+              />
               {currentTrack && (
                 <Box
                   className="overlay"
@@ -613,7 +657,7 @@ export default function Player() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     opacity: 0,
-                    transition: 'opacity 0.2s',
+                    transition: `opacity ${motionDuration.fast}`,
                   }}
                 >
                   <OpenInNewIcon sx={{ color: 'white' }} />

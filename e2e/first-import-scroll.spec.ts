@@ -6,7 +6,7 @@ test.describe('First-time Library Import Scroll', () => {
     const { app, page } = await TestHelpers.launchAppAsBrandNewUser();
 
     // Verify empty library state
-    await expect(page.getByText('Your library is empty')).toBeVisible();
+    await expect(page.getByTestId('library-welcome')).toBeVisible();
 
     // Trigger library scan via the electron API (waits for rows to land)
     await TestHelpers.importSongs(page);

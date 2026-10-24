@@ -5,17 +5,7 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Tooltip,
-} from '@mui/material';
+import { Box, Typography, IconButton, Tooltip } from '@mui/material';
 import { keyframes } from '@mui/system';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
@@ -48,6 +38,8 @@ import Browser from './Browser';
 import SearchBar from './SearchBar';
 import VirtualTable from './VirtualTable';
 import NotificationButton from './NotificationButton';
+import TableSkeleton from './TableSkeleton';
+import LibraryWelcome from './LibraryWelcome';
 import MaterialSymbolIcon from './MaterialSymbolIcon';
 import {
   getRowClassName,
@@ -56,6 +48,7 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
+import { duration, easing, fadeIn } from '../styles/motion';
 
 const searchExpandAnimation = keyframes`
   from {
@@ -89,8 +82,9 @@ export default function Library() {
   // only UI/view state. The error path doesn't need to render inline
   // here — MainLayout already toasts the failure for both queries; the
   // empty array fallback below renders the empty-state CTA.
-  const { data: tracksData } = useTracks();
+  const { data: tracksData, isLoading: tracksLoading } = useTracks();
   const tracks = tracksData?.tracks ?? EMPTY_TRACKS;
+  const hasTracks = tracks.length > 0;
   const getTrackById = (id: string | null | undefined) =>
     id ? tracksData?.indexes.trackIndex.get(id) : undefined;
   // Mutation hooks for the bulk-delete flow at the bottom of this file.
@@ -160,8 +154,6 @@ export default function Library() {
   // Ref to track if the table is ready for scrolling (fully rendered with correct sorting)
   const tableReadyRef = useRef<boolean>(false);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [scanConfirmOpen, setScanConfirmOpen] = useState(false);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -184,7 +176,6 @@ export default function Library() {
   const browserOpen = useUIStore((state) => state.browserOpen);
   const setBrowserOpen = useUIStore((state) => state.setBrowserOpen);
   const showNotification = useUIStore((state) => state.showNotification);
-  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const [showSearch, setShowSearch] = useState(
     () => !!useLibraryStore.getState().searchFilters.library,
   );
@@ -217,37 +208,6 @@ export default function Library() {
 
   const handlePlayTrack = (trackId: string) => {
     playTrack(trackId, 'library');
-  };
-
-  const handleSelectFolder = async () => {
-    try {
-      const result = await window.electron.dialog.selectDirectory();
-      if ('error' in result) {
-        showNotification(result.error, 'error');
-        return;
-      }
-      if (result.canceled || result.filePaths.length === 0) {
-        return;
-      }
-
-      const libraryPath = result.filePaths[0];
-
-      // Persist as a partial — settings:update merges on the main side.
-      await window.electron.settings.update({ libraryPath });
-
-      // Close the dialog
-      setDialogOpen(false);
-
-      // Ask the user if they want to scan the library now
-      setScanConfirmOpen(true);
-    } catch (error) {
-      console.error('Error selecting folder:', error);
-      showNotification('Failed to select folder', 'error');
-    }
-  };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
   };
 
   const handleContextMenu = (event: React.MouseEvent, trackId: string) => {
@@ -311,9 +271,18 @@ export default function Library() {
     }
   }, []);
 
-  // Function that waits for the table to be ready before scrolling
+  // Function that waits for the table to be ready before scrolling.
+  // `immediate` skips the settle wait when rows are already rendered —
+  // used by the cold-boot restore so the scroll lands while the table's
+  // entrance fade is still transparent.
   const scrollToTrackWhenReady = useCallback(
-    (trackId: string, maxWaitMs: number = 2000) => {
+    (trackId: string, options: { immediate?: boolean } = {}) => {
+      if (options.immediate && tableRef.current?.getRowModel().rows.length) {
+        scrollToTrack(trackId);
+        return;
+      }
+
+      const maxWaitMs = 2000;
       const startTime = Date.now();
       const pollInterval = 50;
       const minWaitMs = 150;
@@ -765,79 +734,90 @@ export default function Library() {
             Library
           </Typography>
         )}
-        <Box
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            borderRadius: '8px',
-            backgroundColor: (theme) =>
-              theme.palette.mode === 'dark'
-                ? theme.palette.grey[800]
-                : theme.palette.grey[200],
-            px: 1.5,
-            height: 22,
-            justifyContent: 'center',
-            userSelect: 'none',
-            flexShrink: 0,
-          }}
-        >
-          <Typography
-            sx={{
-              color: (theme) => theme.palette.text.secondary,
-              lineHeight: 1,
-              fontSize: '13px',
-            }}
-            variant="body2"
-          >
-            {data.length.toLocaleString()}&nbsp;
-          </Typography>
+        {hasTracks && (
           <Box
-            component="span"
             sx={{
-              color: (theme) => theme.palette.text.secondary,
-              display: 'inline-flex',
+              animation: fadeIn('base'),
+              display: 'flex',
+              flexShrink: 0,
+              gap: 1,
             }}
           >
-            <MaterialSymbolIcon
-              fontSize={16}
-              icon="music_note_2"
-              weight={100}
-            />
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: '8px',
+                backgroundColor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? theme.palette.grey[800]
+                    : theme.palette.grey[200],
+                px: 1.5,
+                height: 22,
+                justifyContent: 'center',
+                userSelect: 'none',
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                sx={{
+                  color: (theme) => theme.palette.text.secondary,
+                  lineHeight: 1,
+                  fontSize: '13px',
+                }}
+                variant="body2"
+              >
+                {data.length.toLocaleString()}&nbsp;
+              </Typography>
+              <Box
+                component="span"
+                sx={{
+                  color: (theme) => theme.palette.text.secondary,
+                  display: 'inline-flex',
+                }}
+              >
+                <MaterialSymbolIcon
+                  fontSize={16}
+                  icon="music_note_2"
+                  weight={100}
+                />
+              </Box>
+            </Box>
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: '8px',
+                backgroundColor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? theme.palette.grey[800]
+                    : theme.palette.grey[200],
+                px: 1.5,
+                height: 22,
+                justifyContent: 'center',
+                userSelect: 'none',
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                sx={{
+                  color: (theme) => theme.palette.text.secondary,
+                  lineHeight: 1,
+                  fontSize: '13px',
+                }}
+                variant="body2"
+              >
+                {totalHours}&nbsp;
+              </Typography>
+              <AccessTimeIcon
+                sx={{
+                  fontSize: 14,
+                  color: (theme) => theme.palette.text.secondary,
+                }}
+              />
+            </Box>
           </Box>
-        </Box>
-        <Box
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            borderRadius: '8px',
-            backgroundColor: (theme) =>
-              theme.palette.mode === 'dark'
-                ? theme.palette.grey[800]
-                : theme.palette.grey[200],
-            px: 1.5,
-            height: 22,
-            justifyContent: 'center',
-            userSelect: 'none',
-            flexShrink: 0,
-          }}
-        >
-          <Typography
-            sx={{
-              color: (theme) => theme.palette.text.secondary,
-              lineHeight: 1,
-              fontSize: '13px',
-            }}
-            variant="body2"
-          >
-            {totalHours}&nbsp;
-          </Typography>
-          <AccessTimeIcon
-            sx={{
-              fontSize: 14,
-              color: (theme) => theme.palette.text.secondary,
-            }}
-          />
-        </Box>
+        )}
         {showSearch && (
           <Box
             sx={{
@@ -846,7 +826,7 @@ export default function Library() {
               minWidth: 0,
               overflow: 'hidden',
               marginLeft: 'auto',
-              animation: `${searchExpandAnimation} 120ms ease-out forwards`,
+              animation: `${searchExpandAnimation} ${duration.fast} ${easing.out} forwards`,
             }}
           >
             <SearchBar
@@ -905,7 +885,7 @@ export default function Library() {
                 sx={{
                   display: 'inline-flex',
                   transform: browserOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+                  transition: `transform ${duration.fast} ${easing.out}`,
                 }}
               >
                 <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
@@ -919,6 +899,7 @@ export default function Library() {
     [
       drawerOpen,
       onDrawerToggle,
+      hasTracks,
       data.length,
       totalHours,
       showSearch,
@@ -930,45 +911,31 @@ export default function Library() {
     ],
   );
 
-  // useMemo: stable element reference skips subtree reconciliation on
-  // parent re-renders where drawerOpen hasn't changed.
-  const emptyStateContent = useMemo(
-    () => (
+  // The table body shows one of three placeholders when it has no rows:
+  // a skeleton while the tracks query is on its initial fetch, the
+  // welcome/setup panel when the library is empty, or a no-results
+  // message when a search or browser filter matches nothing.
+  let emptyStateContent: React.ReactNode;
+  if (tracksLoading) {
+    emptyStateContent = <TableSkeleton />;
+  } else if (!hasTracks) {
+    emptyStateContent = <LibraryWelcome />;
+  } else {
+    emptyStateContent = (
       <Box
         sx={{
+          animation: fadeIn('fast'),
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
           justifyContent: 'center',
-          padding: 4,
-          height: '50vh',
-          width: drawerOpen ? `calc(100vw - 240px)` : '100vw',
+          pt: 6,
         }}
       >
-        <Typography
-          sx={{
-            color: 'text.secondary',
-            fontWeight: 'medium',
-            mb: 1,
-          }}
-          variant="h6"
-        >
-          Your library is empty
-        </Typography>
-        <Typography
-          sx={{
-            color: 'text.secondary',
-            textAlign: 'center',
-            maxWidth: '400px',
-          }}
-          variant="body2"
-        >
-          Head to Settings and give hihat access to your music library folder.
+        <Typography color="text.secondary" variant="body2">
+          No songs match your search.
         </Typography>
       </Box>
-    ),
-    [drawerOpen],
-  );
+    );
+  }
 
   const handleBrowserClose = useCallback(
     () => setBrowserOpen(false),
@@ -1057,22 +1024,6 @@ export default function Library() {
         />
       </Box>
 
-      {/* Library path selection dialog */}
-      <Dialog onClose={handleCloseDialog} open={dialogOpen}>
-        <DialogTitle>Set Library Path</DialogTitle>
-        <DialogContent>
-          <Typography gutterBottom>
-            Please select your music library folder:
-          </Typography>
-          <Button onClick={handleSelectFolder} variant="contained">
-            Select Folder
-          </Button>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Playlist selection dialog */}
       {selectedTrackId && (
         <PlaylistSelectionDialog
@@ -1126,21 +1077,6 @@ export default function Library() {
           trackIds={Object.keys(selectedTracks)}
         />
       )}
-
-      {/* Scan confirmation dialog */}
-      <ConfirmationDialog
-        cancelText="Later"
-        confirmButtonColor="primary"
-        confirmText="Open Settings"
-        message="Library path has been set. Would you like to go to Settings to scan your library now?"
-        onCancel={() => setScanConfirmOpen(false)}
-        onConfirm={() => {
-          setScanConfirmOpen(false);
-          setSettingsOpen(true);
-        }}
-        open={scanConfirmOpen}
-        title="Scan Library"
-      />
 
       {/* Bulk delete confirmation dialog */}
       <ConfirmationDialog

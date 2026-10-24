@@ -44,6 +44,7 @@ import {
 } from '../utils/tableConfig';
 import { getFilteredAndSortedTrackIds } from '../utils/trackSelectionUtils';
 import { calculateTotalHours } from '../utils/formatters';
+import { duration, easing, fadeIn } from '../styles/motion';
 
 const searchExpandAnimation = keyframes`
   from {
@@ -775,7 +776,7 @@ export default function Playlists() {
               minWidth: 0,
               overflow: 'hidden',
               marginLeft: 'auto',
-              animation: `${searchExpandAnimation} 120ms ease-out forwards`,
+              animation: `${searchExpandAnimation} ${duration.fast} ${easing.out} forwards`,
             }}
           >
             <SearchBar
@@ -835,7 +836,7 @@ export default function Playlists() {
                 sx={{
                   display: 'inline-flex',
                   transform: browserOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+                  transition: `transform ${duration.fast} ${easing.out}`,
                 }}
               >
                 <MaterialSymbolIcon fontSize="small" icon="top_panel_open" />
@@ -902,6 +903,7 @@ export default function Playlists() {
     () => (
       <Box
         sx={{
+          animation: fadeIn('base'),
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',

@@ -162,6 +162,11 @@ export default function VirtualTable({
 
   const { rows } = table.getRowModel();
 
+  // Tables that mount empty (cold-boot load, first scan) fade their rows
+  // in when data lands. Tables that mount with rows, e.g. on a view
+  // switch, appear immediately.
+  const mountedEmptyRef = useRef(rows.length === 0);
+
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollContainerRef.current,
@@ -318,7 +323,7 @@ export default function VirtualTable({
       >
         {rows.length > 0 ? (
           <table
-            className="vt-table"
+            className={`vt-table${mountedEmptyRef.current ? ' vt-table-enter' : ''}`}
             style={{ width: Math.max(totalColumnWidth + fillerWidth, 100) }}
           >
             <thead className="vt-thead">

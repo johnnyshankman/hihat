@@ -3,6 +3,7 @@ import { IconButton, InputAdornment, TextField } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import { useDebouncedValue } from '../utils/hooks';
+import { duration, easing } from '../styles/motion';
 
 interface SearchBarProps {
   initialValue: string;
@@ -79,7 +80,7 @@ function SearchBar({
                   padding: '2px',
                   color: 'text.secondary',
                   opacity: 0.6,
-                  transition: 'opacity 150ms ease',
+                  transition: `opacity ${duration.fast} ${easing.standard}`,
                   '&:hover': { opacity: 1, backgroundColor: 'transparent' },
                 }}
               >
@@ -101,14 +102,15 @@ function SearchBar({
             t.palette.mode === 'dark'
               ? 'rgba(255, 255, 255, 0.06)'
               : 'rgba(0, 0, 0, 0.04)',
-          transition:
-            'background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
+          transition: ['background-color', 'border-color', 'box-shadow']
+            .map((prop) => `${prop} ${duration.fast} ${easing.standard}`)
+            .join(', '),
           '& fieldset': {
             borderColor: (t) =>
               t.palette.mode === 'dark'
                 ? 'rgba(255, 255, 255, 0.1)'
                 : 'rgba(0, 0, 0, 0.12)',
-            transition: 'border-color 150ms ease',
+            transition: `border-color ${duration.fast} ${easing.standard}`,
           },
           '&:hover': {
             backgroundColor: (t) =>
