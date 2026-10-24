@@ -154,7 +154,7 @@ export default function MainLayout() {
         open={settingsOpen}
         sx={{
           '& .MuiDrawer-paper': {
-            width: 'min(480px, calc(100vw - 60px))',
+            width: 'min(380px, calc(100vw - 60px))',
             boxSizing: 'border-box',
             borderRight: '1px solid',
             borderColor: (t) => t.palette.divider,

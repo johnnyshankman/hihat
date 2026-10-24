@@ -372,20 +372,51 @@ export class TestHelpers {
   }
 
   /**
-   * Make the next native "choose folder" dialog resolve to `folderPath`
-   * without showing UI. Patches `dialog.showOpenDialog` in the main process.
+   * Replace the native open dialog in the main process so it resolves
+   * without UI: to `filePaths`, or as canceled when `filePaths` is null.
+   * Each call is recorded; read them back with `openDialogCalls`.
    */
+  static async stubOpenDialog(
+    app: ElectronApplication,
+    filePaths: string[] | null,
+  ): Promise<void> {
+    await app.evaluate(({ dialog }, selected) => {
+      // Recorded on the dialog module itself so no globals are needed.
+      const g = dialog as unknown as {
+        openDialogCalls: { hasParentWindow: boolean }[];
+      };
+      g.openDialogCalls = [];
+      // eslint-disable-next-line no-param-reassign
+      dialog.showOpenDialog = (async (...args: unknown[]) => {
+        // showOpenDialog(window, options) vs showOpenDialog(options)
+        g.openDialogCalls.push({ hasParentWindow: args.length === 2 });
+        return selected
+          ? { canceled: false, filePaths: selected }
+          : { canceled: true, filePaths: [] };
+      }) as unknown as typeof dialog.showOpenDialog;
+    }, filePaths);
+  }
+
+  /** Calls recorded by `stubOpenDialog` since it was installed. */
+  static async openDialogCalls(
+    app: ElectronApplication,
+  ): Promise<{ hasParentWindow: boolean }[]> {
+    return app.evaluate(
+      ({ dialog }) =>
+        (
+          dialog as unknown as {
+            openDialogCalls: { hasParentWindow: boolean }[];
+          }
+        ).openDialogCalls,
+    );
+  }
+
+  /** Make the next native "choose folder" dialog resolve to `folderPath`. */
   static async stubDirectoryDialog(
     app: ElectronApplication,
     folderPath: string,
   ): Promise<void> {
-    await app.evaluate(({ dialog }, selected) => {
-      // eslint-disable-next-line no-param-reassign
-      dialog.showOpenDialog = (async () => ({
-        canceled: false,
-        filePaths: [selected],
-      })) as unknown as typeof dialog.showOpenDialog;
-    }, folderPath);
+    await this.stubOpenDialog(app, [folderPath]);
   }
 
   /** Absolute path to the fixture music folder used by every spec. */
