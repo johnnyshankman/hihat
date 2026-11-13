@@ -99,7 +99,9 @@ function RunningBody({ task }: { task: LibraryTaskView }) {
         <Typography
           color="text.secondary"
           noWrap
-          sx={{ mt: 0.5 }}
+          // Caption renders a <span>; inline boxes ignore the ellipsis,
+          // so long names would run past the panel edge.
+          sx={{ display: 'block', mt: 0.5 }}
           title={task.currentFile}
           variant="caption"
         >
