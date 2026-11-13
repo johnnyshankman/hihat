@@ -358,17 +358,17 @@ export class TestHelpers {
     timeout = 30000,
   ): Promise<void> {
     await expect
-      .poll(
-        async () => {
-          const text = await page
-            .locator('[data-testid="player-elapsed-time"]')
-            .textContent();
-          const [mins, secs] = (text ?? '0:00').split(':');
-          return parseInt(mins, 10) * 60 + parseInt(secs, 10);
-        },
-        { timeout },
-      )
+      .poll(() => this.elapsedSeconds(page), { timeout })
       .toBeGreaterThanOrEqual(seconds);
+  }
+
+  /** The player's elapsed-time readout, in whole seconds. */
+  static async elapsedSeconds(page: Page): Promise<number> {
+    const text = await page
+      .locator('[data-testid="player-elapsed-time"]')
+      .textContent();
+    const [mins, secs] = (text ?? '0:00').split(':');
+    return parseInt(mins, 10) * 60 + parseInt(secs, 10);
   }
 
   /**
