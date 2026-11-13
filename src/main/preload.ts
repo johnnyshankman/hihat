@@ -7,7 +7,14 @@
  */
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import { IPCRequests, IPCResponses, PlayerPlaybackState } from '../types/ipc';
+import {
+  ActiveLibraryTask,
+  IPCRequests,
+  IPCResponses,
+  LibraryTaskEnded,
+  PlayerPlaybackState,
+  ScanCompletePayload,
+} from '../types/ipc';
 import { MetadataToWrite, Track } from '../types/dbTypes';
 
 /**
@@ -32,17 +39,65 @@ const electronHandler = {
     /**
      * Scan a directory for music files and add them to the library
      * @param libraryPath - Path to the directory to scan
+     * @param options.replaceExisting - Clear existing tracks first, as
+     *   part of the same task (music folder change)
      */
-    scan(libraryPath: string) {
-      return ipcRenderer.invoke('library:scan', { libraryPath });
+    scan(
+      libraryPath: string,
+      options: { replaceExisting?: boolean } = {},
+    ): Promise<IPCResponses['library:scan']> {
+      return ipcRenderer.invoke('library:scan', { libraryPath, ...options });
     },
 
     /**
      * Import specific files into the library
      * @param files - Array of file paths to import
      */
-    import(files: string[]) {
+    import(files: string[]): Promise<IPCResponses['library:import']> {
       return ipcRenderer.invoke('library:import', { files });
+    },
+
+    /**
+     * The running library task (if any), a task the previous run never
+     * finished, and whether the database had to be recovered at launch.
+     */
+    getTaskState(): Promise<IPCResponses['library:getTaskState']> {
+      return ipcRenderer.invoke('library:getTaskState');
+    },
+
+    /** Forget the interrupted task once the user has dealt with it. */
+    dismissInterruptedTask(): Promise<void> {
+      return ipcRenderer.invoke('library:dismissInterruptedTask');
+    },
+
+    /**
+     * Subscribe to a library task (scan, import, backup) starting.
+     * @returns Unsubscribe function.
+     */
+    onTaskStarted(callback: (task: ActiveLibraryTask) => void): () => void {
+      const subscription = (
+        _event: IpcRendererEvent,
+        task: ActiveLibraryTask,
+      ) => callback(task);
+      ipcRenderer.on('library:taskStarted', subscription);
+      return () => {
+        ipcRenderer.removeListener('library:taskStarted', subscription);
+      };
+    },
+
+    /**
+     * Subscribe to a library task finishing, failing or being stopped.
+     * @returns Unsubscribe function.
+     */
+    onTaskEnded(callback: (result: LibraryTaskEnded) => void): () => void {
+      const subscription = (
+        _event: IpcRendererEvent,
+        result: LibraryTaskEnded,
+      ) => callback(result);
+      ipcRenderer.on('library:taskEnded', subscription);
+      return () => {
+        ipcRenderer.removeListener('library:taskEnded', subscription);
+      };
     },
 
     /**
@@ -100,18 +155,10 @@ const electronHandler = {
      * Subscribe to library scan completion. Fires once per scan.
      * @returns Unsubscribe function.
      */
-    onScanComplete(
-      callback: (data: {
-        tracksAdded: number;
-        tracksRemoved: number;
-        // `error` is included for backward-compat with the existing scanner
-        // event payload (scanner emits `{ error: string }` on failure).
-        error?: string;
-      }) => void,
-    ): () => void {
+    onScanComplete(callback: (data: ScanCompletePayload) => void): () => void {
       const subscription = (
         _event: IpcRendererEvent,
-        data: { tracksAdded: number; tracksRemoved: number; error?: string },
+        data: ScanCompletePayload,
       ) => callback(data);
       ipcRenderer.on('library:scanComplete', subscription);
       return () => {

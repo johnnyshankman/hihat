@@ -33,6 +33,13 @@ import { promises as fsp } from 'fs';
 import type { IpcMainEvent } from 'electron';
 import Rsync from 'rsync';
 import * as db from '../db';
+import {
+  beginTask,
+  endTask,
+  isStopRequested,
+  recordProgress,
+  setTaskChildProcess,
+} from '../library/libraryTask';
 
 const PLANNING_EMIT_EVERY_N_FILES = 100;
 const TRANSFER_EMIT_INTERVAL_MS = 250;
@@ -89,65 +96,59 @@ async function planBackup(
 }
 
 /**
- * Backup the user's library to the specified directory using rsync.
- *
- * @param backupPath - Path to backup the library to
- * @param event - IPC event to reply with progress or completion
+ * Plan and run the rsync transfer. Resolves once the backup is complete;
+ * rejects with a user-facing message otherwise.
  */
-const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
-  try {
-    const settings = await db.getSettings();
-    const { libraryPath } = settings;
+const runBackup = async (
+  backupPath: string,
+  event: IpcMainEvent,
+): Promise<void> => {
+  const settings = await db.getSettings();
+  const { libraryPath } = settings;
 
-    if (!libraryPath) {
-      event.reply('backup-library-error', 'Library path is not set');
-      return;
-    }
+  if (!libraryPath) {
+    throw new Error('Library path is not set');
+  }
 
-    if (
-      backupPath === libraryPath ||
-      backupPath.startsWith(libraryPath + path.sep)
-    ) {
-      event.reply(
-        'backup-library-error',
-        'Cannot backup to the same folder or its subfolder',
-      );
-      return;
-    }
+  if (
+    backupPath === libraryPath ||
+    backupPath.startsWith(libraryPath + path.sep)
+  ) {
+    throw new Error('Cannot backup to the same folder or its subfolder');
+  }
 
-    // Phase 1: Plan
+  const reportPlanning = (status: string, totalFiles?: number) => {
+    recordProgress({ processed: 0, total: 0, status });
     event.reply('backup-library-progress', {
       phase: 'planning',
-      status: 'Checking files...',
+      status,
+      ...(totalFiles === undefined ? {} : { totalFiles }),
     });
+  };
 
-    const { totalFiles } = await planBackup(
-      libraryPath,
-      backupPath,
-      (checked) => {
-        event.reply('backup-library-progress', {
-          phase: 'planning',
-          status: `Checking ${checked.toLocaleString()} files...`,
-        });
-      },
-    );
+  // Phase 1: Plan
+  reportPlanning('Checking files...');
 
-    event.reply('backup-library-progress', {
-      phase: 'planning',
-      totalFiles,
-      status:
-        totalFiles === 0
-          ? 'Already up to date'
-          : `Found ${totalFiles.toLocaleString()} new file${
-              totalFiles === 1 ? '' : 's'
-            } to back up`,
-    });
+  const { totalFiles } = await planBackup(
+    libraryPath,
+    backupPath,
+    (checked) => {
+      reportPlanning(`Checking ${checked.toLocaleString()} files...`);
+    },
+  );
 
-    if (totalFiles === 0) {
-      event.reply('backup-library-success');
-      return;
-    }
+  reportPlanning(
+    totalFiles === 0
+      ? 'Already up to date'
+      : `Found ${totalFiles.toLocaleString()} new file${
+          totalFiles === 1 ? '' : 's'
+        } to back up`,
+    totalFiles,
+  );
 
+  if (totalFiles === 0) return;
+
+  await new Promise<void>((resolve, reject) => {
     // Phase 2: Transfer
     let filesCopied = 0;
     let lastEmit = 0;
@@ -161,6 +162,11 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
         100,
         Math.round((filesCopied / totalFiles) * 100),
       );
+      recordProgress({
+        processed: filesCopied,
+        total: totalFiles,
+        currentFile,
+      });
       event.reply('backup-library-progress', {
         phase: 'transferring',
         progress,
@@ -197,13 +203,13 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
       .source(libraryPath + path.sep)
       .destination(backupPath);
 
-    rsync.execute(
+    const child = rsync.execute(
       (error, _code, cmd) => {
         console.warn('rsync command:', cmd);
 
         if (error) {
           console.error('rsync error:', error);
-          event.reply('backup-library-error', error.message || 'Unknown error');
+          reject(error);
           return;
         }
 
@@ -223,7 +229,7 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
           status: 'Finishing up…',
         });
 
-        event.reply('backup-library-success');
+        resolve();
       },
       (stdout) => {
         stdoutBuf += stdout.toString();
@@ -239,12 +245,45 @@ const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
         console.warn('rsync stderr:', stderr.toString());
       },
     );
-  } catch (error: unknown) {
-    console.error('Error in backupLibrary:', error);
+    // Lets a graceful quit kill rsync. rsync writes each file to a hidden
+    // temp name and renames it when done, so a killed run never leaves a
+    // partial file under a real name in the backup.
+    setTaskChildProcess(child);
+  });
+};
+
+/**
+ * Backup the user's library to the specified directory using rsync.
+ * Runs as the single active library task; refuses to start when another
+ * task holds the lock.
+ *
+ * @param backupPath - Path to backup the library to
+ * @param event - IPC event to reply with progress or completion
+ */
+const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
+  if (!beginTask('backup', { backupPath })) {
     event.reply(
       'backup-library-error',
-      (error as Error).message || 'Unknown error occurred during backup',
+      'Another library task is running. Try again when it finishes.',
     );
+    return;
+  }
+  try {
+    await runBackup(backupPath, event);
+    endTask({ outcome: 'success' });
+    event.reply('backup-library-success');
+  } catch (error: unknown) {
+    if (isStopRequested()) {
+      // Quit asked rsync to stop; the marker stays so the next launch
+      // offers to finish the backup.
+      endTask({ outcome: 'stopped' });
+      return;
+    }
+    console.error('Error in backupLibrary:', error);
+    const message =
+      (error as Error).message || 'Unknown error occurred during backup';
+    endTask({ outcome: 'error', message });
+    event.reply('backup-library-error', message);
   }
 };
 

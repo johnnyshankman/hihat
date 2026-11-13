@@ -17,7 +17,12 @@ import {
   getSettingsSnapshot,
 } from './queries';
 import { usePlaylists } from './queries/playlists';
+import useLibraryTaskEvents from './hooks/useLibraryTaskEvents';
 import './App.css';
+
+// Module-level so its identity is stable across renders.
+const reconcilePlaybackWithLibrary = () =>
+  useSettingsAndPlaybackStore.getState().reconcileWithLibrary();
 
 const isMiniPlayerWindow =
   new URLSearchParams(window.location.search).get('miniPlayer') === 'true';
@@ -148,9 +153,11 @@ function ThemedAppContent() {
     };
   }, []);
 
-  // Bridge `library:scanComplete` → TanStack Query cache invalidation
-  // (and surface the user-facing notification with adds/removes).
-  useScanCompleteInvalidator();
+  // Bridge `library:scanComplete` → one batch cache refresh, then bring
+  // playback in line with the new library. Task progress, outcomes and
+  // recovery notices come through useLibraryTaskEvents.
+  useScanCompleteInvalidator(reconcilePlaybackWithLibrary);
+  useLibraryTaskEvents();
 
   useEffect(() => {
     if (isLoading) return;

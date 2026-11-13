@@ -13,6 +13,13 @@ import { cpus } from 'os';
 import { promisify } from 'util';
 import * as db from '../db';
 import { Track } from '../../types/dbTypes';
+import {
+  holdTracksSnapshot,
+  isStopRequested,
+  recordProgress,
+  releaseTracksSnapshot,
+  throwIfStopRequested,
+} from './libraryTask';
 
 function debugLog(message: string, data?: any): void {
   const timestamp = new Date().toISOString();
@@ -31,6 +38,22 @@ const exists = promisify(fs.exists);
 const stat = promisify(fs.stat);
 const mkdir = promisify(fs.mkdir);
 const unlink = promisify(fs.unlink);
+const rename = promisify(fs.rename);
+
+// Imports copy to `<target>.hihat-partial` and rename on completion, so
+// an interrupted copy never leaves a truncated file under a real name.
+// Scans delete any leftovers they find.
+const PARTIAL_SUFFIX = '.hihat-partial';
+
+// Progress events at most this often; the per-file stream is too chatty.
+const PROGRESS_INTERVAL_MS = 150;
+
+// E2E only: hold each batch open so specs can interact mid-scan. Read
+// per batch so a spec can slow down just the scan it's observing.
+const testBatchDelayMs = (): number =>
+  process.env.TEST_MODE === 'true'
+    ? Number(process.env.TEST_SCAN_BATCH_DELAY_MS) || 0
+    : 0;
 
 // Supported file extensions
 const SUPPORTED_EXTENSIONS = ['.mp3', '.m4a', '.flac', '.wav', '.ogg', '.aac'];
@@ -61,8 +84,65 @@ export function setMainWindow(window: BrowserWindow): void {
  * @param data - Data to send
  */
 function sendProgressEvent(channel: string, data: any): void {
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, data);
+  }
+}
+
+/**
+ * Throttled per-file progress for the running scan or import. Also
+ * records the latest numbers so a reloaded renderer can rehydrate.
+ */
+function createProgressReporter(total: number) {
+  let processed = 0;
+  let lastSentAt = 0;
+  const send = (force: boolean) => {
+    const now = Date.now();
+    if (!force && now - lastSentAt < PROGRESS_INTERVAL_MS) return;
+    lastSentAt = now;
+    recordProgress({ processed, total });
+    sendProgressEvent('library:scanProgress', {
+      total,
+      processed,
+      current: `Processed ${processed} of ${total} files`,
+    });
+  };
+  return {
+    advance: () => {
+      processed += 1;
+      send(processed === total);
+    },
+    flush: () => send(true),
+  };
+}
+
+/** Let queued IPC (audio protocol, play counts) run between DB chunks. */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+}
+
+async function holdBatchForTests(): Promise<void> {
+  const delayMs = testBatchDelayMs();
+  if (delayMs <= 0 || isStopRequested()) return;
+  await new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
+/** Copy via a partial file so the target name only ever holds a whole file. */
+async function copyFileAtomic(
+  sourcePath: string,
+  targetPath: string,
+): Promise<void> {
+  const partialPath = `${targetPath}${PARTIAL_SUFFIX}`;
+  try {
+    await copyFile(sourcePath, partialPath);
+    await rename(partialPath, targetPath);
+  } catch (error) {
+    await unlink(partialPath).catch(() => undefined);
+    throw error;
   }
 }
 
@@ -290,11 +370,11 @@ async function copyFileToLibrary(
         const newFileName = `${fileNameWithoutExt}_${timestamp}${fileExt}`;
         const newTargetPath = path.join(targetDir, newFileName);
 
-        await copyFile(sourcePath, newTargetPath);
+        await copyFileAtomic(sourcePath, newTargetPath);
         return newTargetPath;
       }
 
-      await copyFile(sourcePath, targetPath);
+      await copyFileAtomic(sourcePath, targetPath);
       return targetPath;
     }
 
@@ -346,11 +426,11 @@ async function copyFileToLibrary(
       const newFileName = `${fileNameWithoutExt}_${timestamp}${fileExt}`;
       const newTargetPath = path.join(targetDir, newFileName);
 
-      await copyFile(sourcePath, newTargetPath);
+      await copyFileAtomic(sourcePath, newTargetPath);
       return newTargetPath;
     }
 
-    await copyFile(sourcePath, targetPath);
+    await copyFileAtomic(sourcePath, targetPath);
     return targetPath;
   } catch (error) {
     console.error(`Error copying file ${sourcePath} to library:`, error);
@@ -360,13 +440,18 @@ async function copyFileToLibrary(
 }
 
 /**
- * Get all music files in a directory recursively
- * Optimized for performance with iterative approach
+ * Get all music files in a directory recursively. Async so a large tree
+ * doesn't block the main process (and the audio protocol) while walking.
  * @param dirPath - Path to the directory
+ * @param removePartials - Delete leftover partial copies found on the way
  * @returns Array of file paths
  */
-function getMusicFiles(dirPath: string): string[] {
+async function getMusicFiles(
+  dirPath: string,
+  removePartials = false,
+): Promise<string[]> {
   const files: string[] = [];
+  const partials: string[] = [];
   const dirsToScan: string[] = [dirPath];
 
   debugLog(`Starting to scan directory: ${dirPath}`);
@@ -375,13 +460,19 @@ function getMusicFiles(dirPath: string): string[] {
     const currentPath = dirsToScan.shift() as string;
 
     try {
-      const entries = fs.readdirSync(currentPath, { withFileTypes: true });
+      // Breadth-first walk; each level depends on the previous one.
+      // eslint-disable-next-line no-await-in-loop
+      const entries = await fs.promises.readdir(currentPath, {
+        withFileTypes: true,
+      });
 
       entries.forEach((entry) => {
         const entryPath = path.join(currentPath, entry.name);
 
         if (entry.isDirectory()) {
           dirsToScan.push(entryPath);
+        } else if (entry.isFile() && entry.name.endsWith(PARTIAL_SUFFIX)) {
+          partials.push(entryPath);
         } else if (entry.isFile() && isSupportedFile(entryPath)) {
           files.push(entryPath);
         }
@@ -389,6 +480,13 @@ function getMusicFiles(dirPath: string): string[] {
     } catch (error) {
       debugLog(`Error reading directory ${currentPath}:`, error);
     }
+  }
+
+  if (removePartials && partials.length > 0) {
+    debugLog(`Removing ${partials.length} interrupted partial copies`);
+    await Promise.all(
+      partials.map((partial) => unlink(partial).catch(() => undefined)),
+    );
   }
 
   // Log summary of files found
@@ -637,6 +735,7 @@ async function processFile(
  * @param libraryPath - Path to the library directory
  * @param folderRoot - Optional root folder path to preserve relative structure
  * @param isImport - Whether this is an import operation (true) or scan operation (false)
+ * @param onFileDone - Called as each file finishes, for progress
  * @returns Array of processed track data
  */
 async function processBatch(
@@ -644,8 +743,9 @@ async function processBatch(
   existingFilePaths: Set<string>,
   trackMap: Map<string, Track>,
   libraryPath: string,
-  folderRoot?: string,
-  isImport: boolean = false,
+  folderRoot: string | undefined,
+  isImport: boolean,
+  onFileDone: () => void,
 ): Promise<
   (Omit<Track, 'id'> & {
     replaceId?: string;
@@ -655,16 +755,18 @@ async function processBatch(
 > {
   // Process files in parallel
   const results = await Promise.all(
-    fileBatch.map((filePath) =>
-      processFile(
+    fileBatch.map(async (filePath) => {
+      const result = await processFile(
         filePath,
         existingFilePaths,
         trackMap,
         libraryPath,
         folderRoot,
         isImport,
-      ),
-    ),
+      );
+      onFileDone();
+      return result;
+    }),
   );
 
   // Filter out null results (skipped files)
@@ -743,13 +845,52 @@ function createTrackMap(existingTracks: Track[]): Map<string, Track> {
 }
 
 /**
+ * Add processed tracks to the database in chunks, persisting once per
+ * chunk. Between chunks the event loop gets a turn so the rest of the
+ * app stays responsive, and a requested stop takes effect: every row
+ * already written points at a complete file, so stopping here leaves a
+ * consistent library that the next rescan simply continues.
+ */
+async function addTracksInChunks(
+  processedTracks: Omit<Track, 'id'>[],
+  existingFilePaths: Set<string>,
+  trackMap: Map<string, Track>,
+): Promise<void> {
+  for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
+    const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
+
+    // Use addTrack for each track and update tracking structures
+    trackBatch.forEach((track) => {
+      try {
+        const addedTrack = db.addTrack(track);
+        existingFilePaths.add(addedTrack.filePath);
+        trackMap.set(getTrackKey(addedTrack), addedTrack);
+      } catch (error) {
+        console.error(`Error adding track to database: ${track.title}`, error);
+      }
+    });
+
+    // Persist once per sub-batch instead of once per track
+    db.persistNow();
+    // Chunks are sequential by design: each one persists before the next.
+    // eslint-disable-next-line no-await-in-loop
+    await yieldToEventLoop();
+    throwIfStopRequested();
+  }
+}
+
+/**
  * Scan a directory for music files and import them into the database
  * Optimized with parallel processing and batch operations
  * @param dirPath - Path to the directory
+ * @param options.replaceExisting - Clear existing tracks first (music
+ *   folder change). Done here, inside the task, so an interruption is
+ *   recorded and the next launch offers to finish the rescan.
  * @returns Object with the number of tracks added
  */
 export async function scanLibrary(
   dirPath: string,
+  options: { replaceExisting?: boolean } = {},
 ): Promise<{ tracksAdded: number; tracksRemoved: number }> {
   debugLog(`Beginning library scan of directory: ${dirPath}`);
 
@@ -759,16 +900,28 @@ export async function scanLibrary(
       const errMsg = `Library path is not accessible: ${dirPath}`;
       debugLog(errMsg);
       sendProgressEvent('library:scanComplete', {
+        kind: 'scan',
         tracksAdded: 0,
         tracksRemoved: 0,
         error: errMsg,
       });
-      return { tracksAdded: 0, tracksRemoved: 0 };
+      throw new Error(errMsg);
     }
 
-    // Get all music files in the directory
-    const files = getMusicFiles(dirPath);
+    // Readers keep seeing the current library until this scan finishes.
+    holdTracksSnapshot(db.getAllTracks());
+
+    if (options.replaceExisting) {
+      const reset = await db.resetTracks();
+      if (!reset) throw new Error('Failed to clear the previous library');
+    }
+
+    // Get all music files in the directory, clearing out partial copies
+    // left behind by an import that was interrupted.
+    const files = await getMusicFiles(dirPath, true);
     const totalFiles = files.length;
+    const progress = createProgressReporter(totalFiles);
+    progress.flush();
 
     debugLog(`Found ${totalFiles} total music files to process`);
 
@@ -812,8 +965,6 @@ export async function scanLibrary(
       `Created ${batches.length} batches with size ~${batchSize} for processing`,
     );
 
-    // Progress tracking
-    let processedCount = 0;
     let tracksAdded = 0;
 
     // Files to delete after processing (higher-quality replacements)
@@ -825,14 +976,8 @@ export async function scanLibrary(
       db.beginBatchMode();
       try {
         for (let i = 0; i < batches.length; i += 1) {
+          throwIfStopRequested();
           const batch = batches[i];
-
-          // Send progress event for the batch
-          sendProgressEvent('library:scanProgress', {
-            total: totalFiles,
-            processed: processedCount,
-            current: `Processing batch ${i + 1} of ${batches.length}`,
-          });
 
           // Process the batch (this is a scan, not an import)
           // eslint-disable-next-line no-await-in-loop
@@ -843,6 +988,7 @@ export async function scanLibrary(
             libraryPath,
             undefined, // folderRoot
             false, // isImport=false for scan operations
+            progress.advance,
           );
 
           // Deduplicate within the batch (parallel processing can produce dupes)
@@ -863,39 +1009,17 @@ export async function scanLibrary(
 
           // Add tracks to database in batches
           if (processedTracks.length > 0) {
-            // Add tracks in smaller batches to avoid overwhelming the database
-            for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
-              const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
-
-              // Use addTrack for each track and update tracking structures
-              trackBatch.forEach((track) => {
-                try {
-                  const addedTrack = db.addTrack(track);
-                  existingFilePaths.add(addedTrack.filePath);
-                  trackMap.set(getTrackKey(addedTrack), addedTrack);
-                } catch (error) {
-                  console.error(
-                    `Error adding track to database: ${track.title}`,
-                    error,
-                  );
-                }
-              });
-
-              // Persist once per sub-batch instead of once per track
-              db.persistNow();
-            }
-
+            // eslint-disable-next-line no-await-in-loop
+            await addTracksInChunks(
+              processedTracks,
+              existingFilePaths,
+              trackMap,
+            );
             tracksAdded += processedTracks.length;
           }
 
-          processedCount += batch.length;
-
-          // Send progress event
-          sendProgressEvent('library:scanProgress', {
-            total: totalFiles,
-            processed: processedCount,
-            current: `Processed ${processedCount} of ${totalFiles} files`,
-          });
+          // eslint-disable-next-line no-await-in-loop
+          await holdBatchForTests();
         }
       } finally {
         db.endBatchMode();
@@ -904,6 +1028,7 @@ export async function scanLibrary(
 
     // Process batches
     await processBatches();
+    throwIfStopRequested();
 
     // Delete replaced tracks from database
     if (tracksToDelete.length > 0) {
@@ -979,7 +1104,9 @@ export async function scanLibrary(
     );
 
     // Send completion event
+    releaseTracksSnapshot();
     sendProgressEvent('library:scanComplete', {
+      kind: 'scan',
       tracksAdded,
       tracksRemoved,
     });
@@ -1005,6 +1132,8 @@ export async function importFiles(
   try {
     // Get existing tracks to avoid duplicates
     const existingTracks = db.getAllTracks();
+    // Readers keep seeing the current library until this import finishes.
+    holdTracksSnapshot(existingTracks);
     const existingFilePaths = new Set(
       existingTracks.map((track) => track.filePath),
     );
@@ -1070,13 +1199,16 @@ export async function importFiles(
       `Found ${filesToProcess.length} individual files and ${foldersToProcess.length} folders to process`,
     );
 
-    // Collect all files from folders
+    // Collect all files from folders, remembering which folder root each
+    // came from so the relative structure is preserved on copy.
+    const fileToFolderRoot = new Map<string, string>();
     // eslint-disable-next-line no-restricted-syntax
-    for (const { folderPath } of foldersToProcess) {
-      const folderFiles = getMusicFiles(folderPath);
-      // Tag these files with their folder root for relative path preservation
+    for (const { folderPath, folderRoot } of foldersToProcess) {
+      // eslint-disable-next-line no-await-in-loop
+      const folderFiles = await getMusicFiles(folderPath);
       folderFiles.forEach((file) => {
         filesToProcess.push(file);
+        fileToFolderRoot.set(file, folderRoot);
       });
       debugLog(
         `Found ${folderFiles.length} music files in folder ${folderPath}`,
@@ -1089,17 +1221,9 @@ export async function importFiles(
     );
 
     const totalFiles = supportedFiles.length;
+    const progress = createProgressReporter(totalFiles);
+    progress.flush();
     debugLog(`Total files to import: ${totalFiles}`);
-
-    // Create a map to track which files belong to which folder root
-    const fileToFolderRoot = new Map<string, string>();
-    // eslint-disable-next-line no-restricted-syntax
-    for (const { folderPath, folderRoot } of foldersToProcess) {
-      const folderFiles = getMusicFiles(folderPath);
-      folderFiles.forEach((file) => {
-        fileToFolderRoot.set(file, folderRoot);
-      });
-    }
 
     // Divide files into batches for parallel processing
     const batchSize = Math.ceil(supportedFiles.length / PARALLEL_PROCESSES);
@@ -1126,8 +1250,6 @@ export async function importFiles(
       `Created ${batches.length} batches with size ~${batchSize} for processing`,
     );
 
-    // Progress tracking
-    let processedCount = 0;
     let tracksAdded = 0;
 
     // Files to delete after processing (higher-quality replacements)
@@ -1139,6 +1261,7 @@ export async function importFiles(
       db.beginBatchMode();
       try {
         for (let i = 0; i < batches.length; i += 1) {
+          throwIfStopRequested();
           const { files: batch } = batches[i];
 
           // Determine folder root for this batch
@@ -1157,6 +1280,7 @@ export async function importFiles(
             libraryPath,
             allSameRoot ? batchFolderRoots[0] : undefined,
             true, // isImport=true for import operations
+            progress.advance,
           );
 
           // Deduplicate within the batch (parallel processing can produce dupes)
@@ -1177,39 +1301,17 @@ export async function importFiles(
 
           // Add tracks to database in batches
           if (processedTracks.length > 0) {
-            // Add tracks in smaller batches to avoid overwhelming the database
-            for (let j = 0; j < processedTracks.length; j += DB_BATCH_SIZE) {
-              const trackBatch = processedTracks.slice(j, j + DB_BATCH_SIZE);
-
-              // Use addTrack for each track and update tracking structures
-              trackBatch.forEach((track) => {
-                try {
-                  const addedTrack = db.addTrack(track);
-                  existingFilePaths.add(addedTrack.filePath);
-                  trackMap.set(getTrackKey(addedTrack), addedTrack);
-                } catch (error) {
-                  console.error(
-                    `Error adding track to database: ${track.title}`,
-                    error,
-                  );
-                }
-              });
-
-              // Persist once per sub-batch instead of once per track
-              db.persistNow();
-            }
-
+            // eslint-disable-next-line no-await-in-loop
+            await addTracksInChunks(
+              processedTracks,
+              existingFilePaths,
+              trackMap,
+            );
             tracksAdded += processedTracks.length;
           }
 
-          processedCount += batch.length;
-
-          // Send progress event
-          sendProgressEvent('library:scanProgress', {
-            total: totalFiles,
-            processed: processedCount,
-            current: `Processed ${processedCount} of ${totalFiles} files`,
-          });
+          // eslint-disable-next-line no-await-in-loop
+          await holdBatchForTests();
         }
       } finally {
         db.endBatchMode();
@@ -1218,6 +1320,7 @@ export async function importFiles(
 
     // Process batches
     await processBatches();
+    throwIfStopRequested();
 
     // Delete replaced tracks from database
     if (tracksToDelete.length > 0) {
@@ -1251,7 +1354,9 @@ export async function importFiles(
     debugLog(`Final database contains ${finalTracks.length} total tracks`);
 
     // Send completion event
+    releaseTracksSnapshot();
     sendProgressEvent('library:scanComplete', {
+      kind: 'import',
       tracksAdded,
       tracksRemoved: 0,
     });

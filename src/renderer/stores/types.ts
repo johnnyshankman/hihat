@@ -235,4 +235,7 @@ export interface SettingsAndPlaybackStore {
   // Clear playback when the given tracks are deleted from the library so a
   // removed song cannot linger in the player UI or the Gapless-5 queue.
   handleDeletedTracks: (deletedIds: string[]) => void;
+  // After a rescan or import refreshed the library: stop if the current
+  // song is gone, and re-preload next-up if it changed.
+  reconcileWithLibrary: () => void;
 }
