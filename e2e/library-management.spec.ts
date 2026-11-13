@@ -224,14 +224,6 @@ test.describe('Library Management', () => {
         .filter({ hasText: 'Library scan completed' }),
     ).toBeVisible({ timeout: 60000 });
 
-    // The scan-progress dialog is bound to the mutation's pending state, which
-    // settles a moment after the push event; wait for it to unmount so it stops
-    // intercepting clicks. (The Settings panel is itself a role="dialog", so
-    // match the scan dialog by its completion title rather than by role.)
-    await expect(
-      page.getByRole('heading', { name: 'Scan Complete' }),
-    ).toBeHidden({ timeout: 60000 });
-
     // Count files after rescan
     const finalFileCount = getFileCount(testSongsDir);
     const finalFiles = getFileList(testSongsDir);
@@ -242,11 +234,9 @@ test.describe('Library Management', () => {
     expect(finalFileCount).toBe(initialFileCount);
     expect(finalFiles).toEqual(initialFiles);
 
-    // Close the Settings drawer before navigating back
-    await page.keyboard.press('Escape');
+    await TestHelpers.closeSettings(page);
 
-    // Navigate back to library (sidebar is still open). Playwright waits for
-    // the nav button to be actionable, which covers the drawer transition.
+    // Navigate back to library (sidebar is still open).
     await page.locator('[data-testid="nav-library"]').click();
 
     // Verify songs are visible in the UI (virtualization limits visible rows to ~45)

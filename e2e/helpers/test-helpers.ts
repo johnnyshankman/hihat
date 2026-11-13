@@ -591,6 +591,17 @@ export class TestHelpers {
     await this.waitForTracks(page, 30000);
   }
 
+  /**
+   * Close the Settings drawer with its close button. Escape is unreliable
+   * once a task button has been clicked: the button disables itself, focus
+   * falls to <body>, and MUI only pulls focus back into the drawer while
+   * the window has OS focus, which CI runners don't guarantee.
+   */
+  static async closeSettings(page: Page): Promise<void> {
+    await page.getByTestId('settings-close').click();
+    await expect(page.getByTestId('settings-view')).toHaveCount(0);
+  }
+
   static async navigateToView(
     page: Page,
     view: 'library' | 'settings',

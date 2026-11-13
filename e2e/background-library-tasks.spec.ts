@@ -108,8 +108,7 @@ test.describe('Background library tasks', () => {
       await TestHelpers.takeScreenshot(page, 'bg-tasks-settings-open');
 
       // Close the drawer and use the app while the scan writes rows.
-      await page.keyboard.press('Escape');
-      await expect(page.getByTestId('settings-view')).toHaveCount(0);
+      await TestHelpers.closeSettings(page);
       await expect
         .poll(dbTrackCount, { timeout: 30000 })
         .toBeGreaterThan(INITIAL_SONGS);
@@ -246,7 +245,7 @@ test.describe('Background library tasks', () => {
         timeout: 30000,
       });
       await expect(panel(page)).toContainText('Added 3 songs.');
-      await page.keyboard.press('Escape');
+      await TestHelpers.closeSettings(page);
       await TestHelpers.waitForTrackCount(page, INITIAL_SONGS + 3);
 
       const importToasts = await page.evaluate(
