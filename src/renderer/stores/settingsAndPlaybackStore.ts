@@ -86,367 +86,584 @@ function flushPlaybackTracking(state: SettingsAndPlaybackStore) {
 
 // Define the settings and playback store
 const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
-  (set, get) => ({
-    // Playback runtime state. Settings (libraryPath / theme / columns /
-    // columnWidths / librarySorting / columnOrder / lastPlayedSongId /
-    // volume) are server state owned by TanStack Query — see
-    // src/renderer/queries/settings.ts. Reads via useSettings() in
-    // components or getSettingsSnapshot() in non-React paths.
-    currentTrack: null, // the current track playing
-    paused: true, // play pause state
-    position: 0, // current position of the playing track in seconds
-    duration: 0, // duration of the playing track in seconds
-    playbackSource: 'library', // the source of the playback (library or playlist)
-    playbackSourcePlaylistId: null, // the ID of the specific playlist if playbackSource is 'playlist'
-    playbackContextBrowserFilter: null, // the browser filter that was active when playback started
-    repeatMode: 'off', // off, track, all
-    shuffleMode: false, // shuffle mode
-    shuffleHistory: [], // history of shuffled tracks
-    shuffleHistoryPosition: -1, // current position in shuffle history (-1 means at the tip)
-    canGoNext: false, // stored boundary — refreshed by refreshCanGoNext after mutations
-
-    // Internal state (from playbackStore)
-    player: null, // the gapless 5 player instance
-    lastPositionUpdateRef: 0, // helps us throttle position updates to once per second
-    lastPlaybackTimeUpdateRef: 0, // helps us track actual playback time for play count
-    lastPosition: 0, // track the last position to calculate playback time
-    silentAudioRef: null, // reference to the silent audio element for MediaSession support
-    preloadedTrack: null, // track sitting at Gapless-5 queue index 1 (store-owned)
-    preloadReady: false, // true once the preloaded track is decoded and ready
-    queueLeadingStaleCount: 0, // stale finished tracks at the front of Gapless-5's queue
-
-    // Playback actions
-    setSilentAudioRef: (ref) => {
-      set({ silentAudioRef: ref });
-    },
-
-    /**
-     * Recompute canGoNext from current state. Call this after any mutation
-     * that might change the answer (new currentTrack, repeat/shuffle toggle,
-     * library change). Holding it as a stored field avoids running the
-     * filter/sort in getFilteredAndSortedTrackIds on every store-update tick,
-     * which matters for large libraries.
-     */
-    refreshCanGoNext: () => {
-      set((state) => {
-        const canGoNext = computeCanGoNext(state);
-        if (canGoNext === state.canGoNext) {
-          return {};
-        }
-        return { canGoNext };
+  (set, get) => {
+    // Stop and fully clear playback, landing in the same empty "nothing
+    // playing" state the app shows on first boot. Used when the current
+    // song stops existing (deleted, or gone after a rescan).
+    const stopToEmpty = () => {
+      const { player, currentTrack, silentAudioRef } = get();
+      if (player) {
+        // Safe: player is being paused here, so removeAllTracks isn't
+        // mutating an in-flight auto-advance transition.
+        clearPlayerQueue(player);
+      }
+      silentAudioRef?.pause();
+      clearMediaSession();
+      // Drop any in-progress play-count timer for the vanished track.
+      if (currentTrack) playbackTracker.resetTrack(currentTrack.id);
+      set({
+        currentTrack: null,
+        preloadedTrack: null,
+        preloadReady: false,
+        paused: true,
+        position: 0,
+        lastPosition: 0,
+        duration: 0,
+        queueLeadingStaleCount: 0,
       });
-    },
+      get().refreshCanGoNext();
+    };
 
-    // React to tracks being deleted from the library so a removed song can
-    // never linger in the player. Two cases matter (issue #140):
-    //   1. The deleted track is the one currently loaded/playing -> stop and
-    //      fully clear playback. The UI falls back to the same empty
-    //      "nothing playing" state the app shows on first boot.
-    //   2. The deleted track is only the preloaded next-up song -> purge it
-    //      from the Gapless-5 buffer so neither Next nor auto-advance can
-    //      reach the still-decoded copy.
-    // Deleting any other track has no effect on playback.
-    handleDeletedTracks: (deletedIds: string[]) => {
-      const ids = new Set(deletedIds);
+    // What should follow the current song, using the playback context
+    // captured when it started. `excludeIds` hides tracks the cache may
+    // still list but that are already gone.
+    const computeNextSong = (excludeIds?: Set<string>): Track | null => {
       const state = get();
-      const { player, currentTrack, preloadedTrack } = state;
+      if (!state.currentTrack) return null;
+      try {
+        return (
+          findNextSong(
+            state.currentTrack.id,
+            state.shuffleMode,
+            state.playbackSource,
+            state.repeatMode,
+            state.playbackContextBrowserFilter?.artist || null,
+            state.shuffleHistory,
+            state.playbackContextBrowserFilter?.album || null,
+            excludeIds,
+          ) ?? null
+        );
+      } catch (error) {
+        // e.g. the source playlist was deleted; nothing to queue.
+        console.error('Error computing next song:', error);
+        return null;
+      }
+    };
 
-      if (currentTrack && ids.has(currentTrack.id)) {
-        if (player) {
-          // Safe: player is being paused here, so removeAllTracks isn't
-          // mutating an in-flight auto-advance transition.
-          clearPlayerQueue(player);
+    // Replace the preloaded next-up song in the Gapless-5 queue with
+    // `next` (or just drop it when null).
+    const requeueNext = (next: Track | null) => {
+      const { player, preloadedTrack } = get();
+      if (player) {
+        if (preloadedTrack) removePreloadedTrack(player);
+        if (next) preloadNextInQueue(player, next);
+      }
+      set({ preloadedTrack: next, preloadReady: false });
+      get().refreshCanGoNext();
+    };
+
+    return {
+      // Playback runtime state. Settings (libraryPath / theme / columns /
+      // columnWidths / librarySorting / columnOrder / lastPlayedSongId /
+      // volume) are server state owned by TanStack Query — see
+      // src/renderer/queries/settings.ts. Reads via useSettings() in
+      // components or getSettingsSnapshot() in non-React paths.
+      currentTrack: null, // the current track playing
+      paused: true, // play pause state
+      position: 0, // current position of the playing track in seconds
+      duration: 0, // duration of the playing track in seconds
+      playbackSource: 'library', // the source of the playback (library or playlist)
+      playbackSourcePlaylistId: null, // the ID of the specific playlist if playbackSource is 'playlist'
+      playbackContextBrowserFilter: null, // the browser filter that was active when playback started
+      repeatMode: 'off', // off, track, all
+      shuffleMode: false, // shuffle mode
+      shuffleHistory: [], // history of shuffled tracks
+      shuffleHistoryPosition: -1, // current position in shuffle history (-1 means at the tip)
+      canGoNext: false, // stored boundary — refreshed by refreshCanGoNext after mutations
+
+      // Internal state (from playbackStore)
+      player: null, // the gapless 5 player instance
+      lastPositionUpdateRef: 0, // helps us throttle position updates to once per second
+      lastPlaybackTimeUpdateRef: 0, // helps us track actual playback time for play count
+      lastPosition: 0, // track the last position to calculate playback time
+      silentAudioRef: null, // reference to the silent audio element for MediaSession support
+      preloadedTrack: null, // track sitting at Gapless-5 queue index 1 (store-owned)
+      preloadReady: false, // true once the preloaded track is decoded and ready
+      queueLeadingStaleCount: 0, // stale finished tracks at the front of Gapless-5's queue
+
+      // Playback actions
+      setSilentAudioRef: (ref) => {
+        set({ silentAudioRef: ref });
+      },
+
+      /**
+       * Recompute canGoNext from current state. Call this after any mutation
+       * that might change the answer (new currentTrack, repeat/shuffle toggle,
+       * library change). Holding it as a stored field avoids running the
+       * filter/sort in getFilteredAndSortedTrackIds on every store-update tick,
+       * which matters for large libraries.
+       */
+      refreshCanGoNext: () => {
+        set((state) => {
+          const canGoNext = computeCanGoNext(state);
+          if (canGoNext === state.canGoNext) {
+            return {};
+          }
+          return { canGoNext };
+        });
+      },
+
+      // React to tracks being deleted from the library so a removed song can
+      // never linger in the player. Two cases matter (issue #140):
+      //   1. The deleted track is the one currently loaded/playing -> stop and
+      //      fully clear playback. The UI falls back to the same empty
+      //      "nothing playing" state the app shows on first boot.
+      //   2. The deleted track is only the preloaded next-up song -> purge it
+      //      from the Gapless-5 buffer so neither Next nor auto-advance can
+      //      reach the still-decoded copy.
+      // Deleting any other track has no effect on playback.
+      handleDeletedTracks: (deletedIds: string[]) => {
+        const ids = new Set(deletedIds);
+        const { currentTrack, preloadedTrack } = get();
+
+        if (currentTrack && ids.has(currentTrack.id)) {
+          stopToEmpty();
+          return;
         }
-        state.silentAudioRef?.pause();
-        clearMediaSession();
-        // Drop any in-progress play-count timer for the now-deleted track.
-        playbackTracker.resetTrack(currentTrack.id);
-        set({
-          currentTrack: null,
-          preloadedTrack: null,
-          preloadReady: false,
-          paused: true,
-          position: 0,
-          lastPosition: 0,
-          duration: 0,
-          queueLeadingStaleCount: 0,
+
+        if (preloadedTrack && ids.has(preloadedTrack.id)) {
+          // The on-deck song was deleted, but the current track keeps playing —
+          // recompute what should come next and preload it so playback advances
+          // seamlessly instead of stalling when the current track ends
+          // (autoPlayNextTrack reads state.preloadedTrack and can't fall back on
+          // its own). Exclude the just-deleted ids: the tracks query invalidates
+          // asynchronously, so the snapshot findNextSong reads may still list
+          // them and would otherwise hand back the song we just removed.
+          requeueNext(computeNextSong(ids));
+        }
+      },
+
+      // Bring playback in line with a library that a rescan or import just
+      // changed. Called once the refreshed tracks and playlists are in the
+      // cache:
+      //   1. The current song no longer exists (removed from disk, or
+      //      replaced by a higher-quality copy with a new id) -> stop and
+      //      fall back to the empty "nothing playing" state.
+      //   2. The song that should play next is now a different one (new
+      //      songs sorted in between, or the preloaded one was removed) ->
+      //      swap the preloaded track so auto-advance follows the new
+      //      library. In shuffle, next-up is random, so only a removed
+      //      preload is replaced; re-rolling it on every scan would be
+      //      arbitrary.
+      //   3. Otherwise leave the Gapless-5 queue alone so gapless
+      //      continuity is untouched.
+      reconcileWithLibrary: () => {
+        const state = get();
+        const { currentTrack, preloadedTrack } = state;
+        const index = getTracksSnapshot()?.indexes.trackIndex;
+        if (!index) return;
+
+        const shuffleHistory = state.shuffleHistory.filter((t) =>
+          index.has(t.id),
+        );
+        if (shuffleHistory.length !== state.shuffleHistory.length) {
+          set({
+            shuffleHistory,
+            shuffleHistoryPosition: Math.min(
+              state.shuffleHistoryPosition,
+              shuffleHistory.length - 1,
+            ),
+          });
+        }
+
+        if (!currentTrack) {
+          get().refreshCanGoNext();
+          return;
+        }
+
+        if (!index.has(currentTrack.id)) {
+          stopToEmpty();
+          persistLastPlayedSongId(null);
+          return;
+        }
+
+        const preloadGone = !!preloadedTrack && !index.has(preloadedTrack.id);
+        if (state.shuffleMode && !preloadGone) {
+          get().refreshCanGoNext();
+          return;
+        }
+
+        const next = computeNextSong();
+        if ((next?.id ?? null) !== (preloadedTrack?.id ?? null)) {
+          requeueNext(next);
+        } else {
+          get().refreshCanGoNext();
+        }
+      },
+
+      setVolume: (volume) => {
+        // Apply to the audio engine synchronously so the user hears the
+        // change at click-time, then mirror into the TanStack Query
+        // settings cache for `useSettings()` consumers, then persist via
+        // partial-merge IPC. Fire-and-forget on the persist — the engine
+        // is already updated and the next reader sees the optimistic
+        // cache write either way.
+        const { player } = get();
+        if (player) player.setVolume(volume);
+        queryClient.setQueryData<Settings>(queryKeys.settings, (old) =>
+          old ? { ...old, volume } : old,
+        );
+        window.electron.settings.update({ volume }).catch((error: unknown) => {
+          console.error('Error updating volume in settings:', error);
+        });
+      },
+
+      setSinkId: async (deviceId) => {
+        // Persist only after the engine switches; rejects on failure (caller
+        // toasts). Persist failure rolls back the cache, and App.tsx re-routes.
+        const { player } = get();
+        if (!player) throw new Error('Audio player not initialized');
+        await player.setSinkId(deviceId);
+        await queryClient.cancelQueries({ queryKey: queryKeys.settings });
+        const prev = queryClient.getQueryData<Settings>(queryKeys.settings);
+        queryClient.setQueryData<Settings>(queryKeys.settings, (old) =>
+          old ? { ...old, selectedAudioOutputDeviceId: deviceId || null } : old,
+        );
+        try {
+          await window.electron.settings.update({
+            selectedAudioOutputDeviceId: deviceId || null,
+          });
+        } catch (error) {
+          if (prev) queryClient.setQueryData(queryKeys.settings, prev);
+          throw error;
+        }
+      },
+
+      selectSpecificSong: (trackId, playbackSource, playlistId = null) => {
+        set((state) => {
+          if (!state.player) {
+            throw new Error('No player found while selecting specific song');
+          }
+
+          // Tracks are server state owned by TanStack Query; the store
+          // doesn't keep its own copy. Reads outside React (like this
+          // playback path) go through the queryClient snapshot.
+          const library = getTracksSnapshot()?.tracks ?? [];
+
+          const selectedTrack = library.find((t) => t.id === trackId);
+
+          if (!selectedTrack) {
+            throw new Error('No track found while selecting specific song');
+          }
+
+          // Update shuffle history if needed, never longer than 100 items
+          let shuffleHistory: Track[] = [];
+          let shuffleHistoryPosition = -1;
+          if (state.shuffleMode) {
+            // Clear history if changing playback source or playlist
+            const sourceChanged =
+              playbackSource !== state.playbackSource ||
+              (playbackSource === 'playlist' &&
+                playlistId !== state.playbackSourcePlaylistId);
+
+            if (sourceChanged) {
+              // Starting fresh with new source
+              shuffleHistory = [selectedTrack];
+              shuffleHistoryPosition = 0;
+            } else {
+              // Same source, maintain history
+              // If we're in the middle of history, truncate everything after our position
+              if (
+                state.shuffleHistoryPosition >= 0 &&
+                state.shuffleHistoryPosition < state.shuffleHistory.length - 1
+              ) {
+                shuffleHistory = state.shuffleHistory.slice(
+                  0,
+                  state.shuffleHistoryPosition + 1,
+                );
+              } else {
+                shuffleHistory = [...state.shuffleHistory];
+              }
+
+              // Add the selected track
+              shuffleHistory.push(selectedTrack);
+              shuffleHistoryPosition = shuffleHistory.length - 1;
+
+              if (shuffleHistory.length > 100) {
+                shuffleHistory.shift();
+                shuffleHistoryPosition = Math.max(
+                  0,
+                  shuffleHistoryPosition - 1,
+                );
+              }
+            }
+          }
+
+          // Capture the current browser filter at the time of playback
+          const viewId =
+            playbackSource === 'library' ? 'library' : playlistId || 'library';
+          const browserFilter = useLibraryStore
+            .getState()
+            .getBrowserFilter(viewId);
+
+          const nextSong = findNextSong(
+            trackId,
+            state.shuffleMode,
+            playbackSource,
+            state.repeatMode,
+            browserFilter.artist,
+            state.shuffleHistory,
+            browserFilter.album,
+          );
+
+          syncPlayerQueue(state.player, {
+            current: selectedTrack,
+            next: nextSong,
+            shouldPlay: true,
+            pauseBeforeLoad: true,
+          });
+
+          // Play the silent audio for MediaSession
+          if (state.silentAudioRef) {
+            state.silentAudioRef.play().catch((error) => {
+              console.error('Error playing silent audio:', error);
+            });
+          }
+
+          updateMediaSession(selectedTrack);
+
+          // Start tracking play count for the new track
+          playbackTracker.startTrackingTrack(trackId);
+
+          // Save the track ID as the last played song
+          persistLastPlayedSongId(trackId);
+
+          return {
+            currentTrack: selectedTrack,
+            paused: false,
+            position: 0,
+            lastPosition: 0,
+            lastPlaybackTimeUpdateRef: Date.now(),
+            duration: selectedTrack.duration,
+            shuffleHistory,
+            shuffleHistoryPosition,
+            playbackSource,
+            playbackSourcePlaylistId:
+              playbackSource === 'playlist' ? playlistId : null,
+            playbackContextBrowserFilter: browserFilter, // Store the browser filter context
+            preloadedTrack: nextSong ?? null,
+            preloadReady: false,
+            queueLeadingStaleCount: 0,
+          };
         });
         get().refreshCanGoNext();
-        return;
-      }
+      },
 
-      if (preloadedTrack && ids.has(preloadedTrack.id)) {
-        if (player) {
-          removePreloadedTrack(player);
-        }
+      skipToNextTrack: () => {
+        set((state) => {
+          if (!state.player) {
+            throw new Error('No player found while skipping to next song');
+          }
 
-        // The on-deck song was deleted, but the current track keeps playing —
-        // recompute what should come next and preload it so playback advances
-        // seamlessly instead of stalling when the current track ends
-        // (autoPlayNextTrack reads state.preloadedTrack and can't fall back on
-        // its own). Exclude the just-deleted ids: the tracks query invalidates
-        // asynchronously, so the snapshot findNextSong reads may still list
-        // them and would otherwise hand back the song we just removed.
-        let replacement: Track | null = null;
-        if (currentTrack) {
-          const artistFilter =
-            state.playbackContextBrowserFilter?.artist || null;
-          const albumFilter = state.playbackContextBrowserFilter?.album || null;
-          replacement =
-            findNextSong(
-              currentTrack.id,
+          if (state.repeatMode === 'track') {
+            // For repeat track mode, start from the beginning
+            // invariant: update state.position alongside setPosition
+            state.player.setPosition(0);
+
+            // When restarting the same track, reset our tracking for it
+            if (state.currentTrack) {
+              playbackTracker.resetTrack(state.currentTrack.id);
+            }
+
+            return {
+              position: 0,
+              lastPosition: 0,
+              lastPlaybackTimeUpdateRef: Date.now(),
+            };
+          }
+
+          if (!state.currentTrack) {
+            throw new Error(
+              'No current track found while skipping to next song',
+            );
+          }
+
+          // If in shuffle mode
+          if (state.shuffleMode) {
+            // Check if we're navigating within history (not at the tip)
+            if (
+              state.shuffleHistoryPosition >= 0 &&
+              state.shuffleHistoryPosition < state.shuffleHistory.length - 1
+            ) {
+              // Move forward in shuffle history
+              const newPosition = state.shuffleHistoryPosition + 1;
+              const nextSong = state.shuffleHistory[newPosition];
+
+              if (nextSong) {
+                // Calculate the song after this one in history
+                const futureNextSong = state.shuffleHistory[newPosition + 1];
+
+                flushPlaybackTracking(state);
+                syncPlayerQueue(state.player, {
+                  current: nextSong,
+                  next: futureNextSong ?? null,
+                  shouldPlay: !state.paused,
+                });
+
+                if (!state.paused && state.silentAudioRef) {
+                  state.silentAudioRef.play().catch((error) => {
+                    console.error('Error playing silent audio:', error);
+                  });
+                }
+
+                updateMediaSession(nextSong);
+
+                // Start tracking play count for the new track
+                playbackTracker.startTrackingTrack(nextSong.id);
+
+                // Save the track ID as the last played song
+                persistLastPlayedSongId(nextSong.id);
+
+                return {
+                  currentTrack: nextSong,
+                  position: 0,
+                  lastPosition: 0,
+                  lastPlaybackTimeUpdateRef: Date.now(),
+                  duration: nextSong.duration,
+                  shuffleHistoryPosition: newPosition,
+                  preloadedTrack: futureNextSong ?? null,
+                  preloadReady: false,
+                  queueLeadingStaleCount: 0,
+                };
+              }
+            }
+
+            // We're at the tip of history, need to get a new random song
+            // Use the playback context artist filter, not the current one
+            const artistFilter =
+              state.playbackContextBrowserFilter?.artist || null;
+            const albumFilter =
+              state.playbackContextBrowserFilter?.album || null;
+
+            const nextSong = findNextSong(
+              state.currentTrack?.id,
               state.shuffleMode,
               state.playbackSource,
               state.repeatMode,
               artistFilter,
               state.shuffleHistory,
               albumFilter,
-              ids,
-            ) ?? null;
-        }
+            );
 
-        if (replacement && player) {
-          preloadNextInQueue(player, replacement);
-        }
-        set({ preloadedTrack: replacement, preloadReady: false });
-        get().refreshCanGoNext();
-      }
-    },
+            if (!nextSong) {
+              return {};
+            }
 
-    setVolume: (volume) => {
-      // Apply to the audio engine synchronously so the user hears the
-      // change at click-time, then mirror into the TanStack Query
-      // settings cache for `useSettings()` consumers, then persist via
-      // partial-merge IPC. Fire-and-forget on the persist — the engine
-      // is already updated and the next reader sees the optimistic
-      // cache write either way.
-      const { player } = get();
-      if (player) player.setVolume(volume);
-      queryClient.setQueryData<Settings>(queryKeys.settings, (old) =>
-        old ? { ...old, volume } : old,
-      );
-      window.electron.settings.update({ volume }).catch((error: unknown) => {
-        console.error('Error updating volume in settings:', error);
-      });
-    },
+            // Check if we need to clear history (when all songs have been played with repeat all)
+            // Get total available tracks to determine if we've played them all
+            const library = getTracksSnapshot()?.tracks ?? [];
+            const playlists = getPlaylistsSnapshot() ?? [];
+            let totalAvailableTracks = 0;
 
-    setSinkId: async (deviceId) => {
-      // Persist only after the engine switches; rejects on failure (caller
-      // toasts). Persist failure rolls back the cache, and App.tsx re-routes.
-      const { player } = get();
-      if (!player) throw new Error('Audio player not initialized');
-      await player.setSinkId(deviceId);
-      await queryClient.cancelQueries({ queryKey: queryKeys.settings });
-      const prev = queryClient.getQueryData<Settings>(queryKeys.settings);
-      queryClient.setQueryData<Settings>(queryKeys.settings, (old) =>
-        old ? { ...old, selectedAudioOutputDeviceId: deviceId || null } : old,
-      );
-      try {
-        await window.electron.settings.update({
-          selectedAudioOutputDeviceId: deviceId || null,
-        });
-      } catch (error) {
-        if (prev) queryClient.setQueryData(queryKeys.settings, prev);
-        throw error;
-      }
-    },
+            if (state.playbackSource === 'library') {
+              let filtered = library;
+              if (artistFilter) {
+                filtered = filtered.filter(
+                  (t) =>
+                    (t.albumArtist || t.artist || 'Unknown Artist') ===
+                    artistFilter,
+                );
+              }
+              if (albumFilter) {
+                filtered = filtered.filter(
+                  (t) => (t.album || 'Unknown Album') === albumFilter,
+                );
+              }
+              totalAvailableTracks = filtered.length;
+            } else if (state.playbackSource === 'playlist') {
+              const playlist = playlists.find(
+                (p) => p.id === state.playbackSourcePlaylistId,
+              );
+              totalAvailableTracks = playlist?.trackIds.length || 0;
+            }
 
-    selectSpecificSong: (trackId, playbackSource, playlistId = null) => {
-      set((state) => {
-        if (!state.player) {
-          throw new Error('No player found while selecting specific song');
-        }
+            const allTracksPlayed =
+              state.shuffleHistory.length >= totalAvailableTracks - 1;
 
-        // Tracks are server state owned by TanStack Query; the store
-        // doesn't keep its own copy. Reads outside React (like this
-        // playback path) go through the queryClient snapshot.
-        const library = getTracksSnapshot()?.tracks ?? [];
+            // Add current track to history and new track
+            let shuffleHistory =
+              allTracksPlayed && state.repeatMode === 'all'
+                ? [] // Clear history when starting over with repeat all
+                : [...state.shuffleHistory];
 
-        const selectedTrack = library.find((t) => t.id === trackId);
-
-        if (!selectedTrack) {
-          throw new Error('No track found while selecting specific song');
-        }
-
-        // Update shuffle history if needed, never longer than 100 items
-        let shuffleHistory: Track[] = [];
-        let shuffleHistoryPosition = -1;
-        if (state.shuffleMode) {
-          // Clear history if changing playback source or playlist
-          const sourceChanged =
-            playbackSource !== state.playbackSource ||
-            (playbackSource === 'playlist' &&
-              playlistId !== state.playbackSourcePlaylistId);
-
-          if (sourceChanged) {
-            // Starting fresh with new source
-            shuffleHistory = [selectedTrack];
-            shuffleHistoryPosition = 0;
-          } else {
-            // Same source, maintain history
-            // If we're in the middle of history, truncate everything after our position
+            // If we were in the middle of history, truncate everything after our position
             if (
               state.shuffleHistoryPosition >= 0 &&
-              state.shuffleHistoryPosition < state.shuffleHistory.length - 1
+              state.shuffleHistoryPosition < shuffleHistory.length - 1
             ) {
-              shuffleHistory = state.shuffleHistory.slice(
+              shuffleHistory = shuffleHistory.slice(
                 0,
                 state.shuffleHistoryPosition + 1,
               );
-            } else {
-              shuffleHistory = [...state.shuffleHistory];
             }
 
-            // Add the selected track
-            shuffleHistory.push(selectedTrack);
-            shuffleHistoryPosition = shuffleHistory.length - 1;
+            // Add the current track if not already at the end
+            if (
+              shuffleHistory.length === 0 ||
+              shuffleHistory[shuffleHistory.length - 1].id !==
+                state.currentTrack.id
+            ) {
+              shuffleHistory.push(state.currentTrack);
+            }
 
+            // Add the new next song
+            shuffleHistory.push(nextSong);
+
+            // Keep history limited to 100 items
             if (shuffleHistory.length > 100) {
               shuffleHistory.shift();
-              shuffleHistoryPosition = Math.max(0, shuffleHistoryPosition - 1);
             }
-          }
-        }
 
-        // Capture the current browser filter at the time of playback
-        const viewId =
-          playbackSource === 'library' ? 'library' : playlistId || 'library';
-        const browserFilter = useLibraryStore
-          .getState()
-          .getBrowserFilter(viewId);
+            // Calculate the song to play after this one
+            const futureNextSong = findNextSong(
+              nextSong.id,
+              state.shuffleMode,
+              state.playbackSource,
+              state.repeatMode,
+              artistFilter,
+              [...state.shuffleHistory, state.currentTrack, nextSong].filter(
+                Boolean,
+              ),
+              albumFilter,
+            );
 
-        const nextSong = findNextSong(
-          trackId,
-          state.shuffleMode,
-          playbackSource,
-          state.repeatMode,
-          browserFilter.artist,
-          state.shuffleHistory,
-          browserFilter.album,
-        );
+            flushPlaybackTracking(state);
+            syncPlayerQueue(state.player, {
+              current: nextSong,
+              next: futureNextSong ?? null,
+              shouldPlay: !state.paused,
+            });
 
-        syncPlayerQueue(state.player, {
-          current: selectedTrack,
-          next: nextSong,
-          shouldPlay: true,
-          pauseBeforeLoad: true,
-        });
-
-        // Play the silent audio for MediaSession
-        if (state.silentAudioRef) {
-          state.silentAudioRef.play().catch((error) => {
-            console.error('Error playing silent audio:', error);
-          });
-        }
-
-        updateMediaSession(selectedTrack);
-
-        // Start tracking play count for the new track
-        playbackTracker.startTrackingTrack(trackId);
-
-        // Save the track ID as the last played song
-        persistLastPlayedSongId(trackId);
-
-        return {
-          currentTrack: selectedTrack,
-          paused: false,
-          position: 0,
-          lastPosition: 0,
-          lastPlaybackTimeUpdateRef: Date.now(),
-          duration: selectedTrack.duration,
-          shuffleHistory,
-          shuffleHistoryPosition,
-          playbackSource,
-          playbackSourcePlaylistId:
-            playbackSource === 'playlist' ? playlistId : null,
-          playbackContextBrowserFilter: browserFilter, // Store the browser filter context
-          preloadedTrack: nextSong ?? null,
-          preloadReady: false,
-          queueLeadingStaleCount: 0,
-        };
-      });
-      get().refreshCanGoNext();
-    },
-
-    skipToNextTrack: () => {
-      set((state) => {
-        if (!state.player) {
-          throw new Error('No player found while skipping to next song');
-        }
-
-        if (state.repeatMode === 'track') {
-          // For repeat track mode, start from the beginning
-          // invariant: update state.position alongside setPosition
-          state.player.setPosition(0);
-
-          // When restarting the same track, reset our tracking for it
-          if (state.currentTrack) {
-            playbackTracker.resetTrack(state.currentTrack.id);
-          }
-
-          return {
-            position: 0,
-            lastPosition: 0,
-            lastPlaybackTimeUpdateRef: Date.now(),
-          };
-        }
-
-        if (!state.currentTrack) {
-          throw new Error('No current track found while skipping to next song');
-        }
-
-        // If in shuffle mode
-        if (state.shuffleMode) {
-          // Check if we're navigating within history (not at the tip)
-          if (
-            state.shuffleHistoryPosition >= 0 &&
-            state.shuffleHistoryPosition < state.shuffleHistory.length - 1
-          ) {
-            // Move forward in shuffle history
-            const newPosition = state.shuffleHistoryPosition + 1;
-            const nextSong = state.shuffleHistory[newPosition];
-
-            if (nextSong) {
-              // Calculate the song after this one in history
-              const futureNextSong = state.shuffleHistory[newPosition + 1];
-
-              flushPlaybackTracking(state);
-              syncPlayerQueue(state.player, {
-                current: nextSong,
-                next: futureNextSong ?? null,
-                shouldPlay: !state.paused,
+            if (!state.paused && state.silentAudioRef) {
+              state.silentAudioRef.play().catch((error) => {
+                console.error('Error playing silent audio:', error);
               });
-
-              if (!state.paused && state.silentAudioRef) {
-                state.silentAudioRef.play().catch((error) => {
-                  console.error('Error playing silent audio:', error);
-                });
-              }
-
-              updateMediaSession(nextSong);
-
-              // Start tracking play count for the new track
-              playbackTracker.startTrackingTrack(nextSong.id);
-
-              // Save the track ID as the last played song
-              persistLastPlayedSongId(nextSong.id);
-
-              return {
-                currentTrack: nextSong,
-                position: 0,
-                lastPosition: 0,
-                lastPlaybackTimeUpdateRef: Date.now(),
-                duration: nextSong.duration,
-                shuffleHistoryPosition: newPosition,
-                preloadedTrack: futureNextSong ?? null,
-                preloadReady: false,
-                queueLeadingStaleCount: 0,
-              };
             }
+
+            updateMediaSession(nextSong);
+
+            // Start tracking play count for the new track
+            playbackTracker.startTrackingTrack(nextSong.id);
+
+            // Save the track ID as the last played song
+            persistLastPlayedSongId(nextSong.id);
+
+            return {
+              currentTrack: nextSong,
+              position: 0,
+              lastPosition: 0,
+              lastPlaybackTimeUpdateRef: Date.now(),
+              duration: nextSong.duration,
+              shuffleHistory,
+              shuffleHistoryPosition: shuffleHistory.length - 1, // Now at the new tip
+              preloadedTrack: futureNextSong ?? null,
+              preloadReady: false,
+              queueLeadingStaleCount: 0,
+            };
           }
 
-          // We're at the tip of history, need to get a new random song
-          // Use the playback context artist filter, not the current one
+          // Non-shuffle mode - standard behavior
+          // Use the playback context browser filter, not the current one
           const artistFilter =
             state.playbackContextBrowserFilter?.artist || null;
           const albumFilter = state.playbackContextBrowserFilter?.album || null;
@@ -465,71 +682,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             return {};
           }
 
-          // Check if we need to clear history (when all songs have been played with repeat all)
-          // Get total available tracks to determine if we've played them all
-          const library = getTracksSnapshot()?.tracks ?? [];
-          const playlists = getPlaylistsSnapshot() ?? [];
-          let totalAvailableTracks = 0;
-
-          if (state.playbackSource === 'library') {
-            let filtered = library;
-            if (artistFilter) {
-              filtered = filtered.filter(
-                (t) =>
-                  (t.albumArtist || t.artist || 'Unknown Artist') ===
-                  artistFilter,
-              );
-            }
-            if (albumFilter) {
-              filtered = filtered.filter(
-                (t) => (t.album || 'Unknown Album') === albumFilter,
-              );
-            }
-            totalAvailableTracks = filtered.length;
-          } else if (state.playbackSource === 'playlist') {
-            const playlist = playlists.find(
-              (p) => p.id === state.playbackSourcePlaylistId,
-            );
-            totalAvailableTracks = playlist?.trackIds.length || 0;
-          }
-
-          const allTracksPlayed =
-            state.shuffleHistory.length >= totalAvailableTracks - 1;
-
-          // Add current track to history and new track
-          let shuffleHistory =
-            allTracksPlayed && state.repeatMode === 'all'
-              ? [] // Clear history when starting over with repeat all
-              : [...state.shuffleHistory];
-
-          // If we were in the middle of history, truncate everything after our position
-          if (
-            state.shuffleHistoryPosition >= 0 &&
-            state.shuffleHistoryPosition < shuffleHistory.length - 1
-          ) {
-            shuffleHistory = shuffleHistory.slice(
-              0,
-              state.shuffleHistoryPosition + 1,
-            );
-          }
-
-          // Add the current track if not already at the end
-          if (
-            shuffleHistory.length === 0 ||
-            shuffleHistory[shuffleHistory.length - 1].id !==
-              state.currentTrack.id
-          ) {
-            shuffleHistory.push(state.currentTrack);
-          }
-
-          // Add the new next song
-          shuffleHistory.push(nextSong);
-
-          // Keep history limited to 100 items
-          if (shuffleHistory.length > 100) {
-            shuffleHistory.shift();
-          }
-
           // Calculate the song to play after this one
           const futureNextSong = findNextSong(
             nextSong.id,
@@ -537,18 +689,49 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             state.playbackSource,
             state.repeatMode,
             artistFilter,
-            [...state.shuffleHistory, state.currentTrack, nextSong].filter(
-              Boolean,
-            ),
+            state.shuffleHistory,
             albumFilter,
           );
 
           flushPlaybackTracking(state);
-          syncPlayerQueue(state.player, {
-            current: nextSong,
-            next: futureNextSong ?? null,
-            shouldPlay: !state.paused,
-          });
+
+          // Fast path is only safe when the preloaded track is fully decoded:
+          // gotoTrack on a still-loading source silently fails (the source
+          // transitions Loading -> Stop, and play() then tries to play with
+          // no buffered data instead of queuing). state.preloadReady is
+          // flipped true by Gapless-5's onload event in initPlayer below.
+          const isFastPathEligible =
+            state.preloadedTrack?.id === nextSong.id && state.preloadReady;
+
+          if (isFastPathEligible) {
+            // FAST PATH: switch to the already-buffered preloaded track.
+            //
+            // Jump by URL (not by index) so we're robust to the known leak
+            // where Gapless-5's queue accumulates stale finished tracks at
+            // the front after each auto-advance. `gotoTrack(1)` would land
+            // on whatever sits at index 1, which after N auto-advances is
+            // NOT the preloaded track — it's one of the stale leaders.
+            //
+            // After jumping, remove every track ahead of the new current:
+            // one for each stale leading entry (queueLeadingStaleCount) plus
+            // one for the prior current that's now the old index 0 slot.
+            const nextSongUrl = getTrackUrl(nextSong.filePath);
+            state.player.gotoTrack(nextSongUrl);
+            const removalsBeforeCurrent = state.queueLeadingStaleCount + 1;
+            for (let i = 0; i < removalsBeforeCurrent; i += 1) {
+              state.player.removeTrack(0);
+            }
+            if (futureNextSong) {
+              preloadNextInQueue(state.player, futureNextSong);
+            }
+          } else {
+            // SLOW PATH: queue doesn't match, rebuild
+            syncPlayerQueue(state.player, {
+              current: nextSong,
+              next: futureNextSong ?? null,
+              shouldPlay: !state.paused,
+            });
+          }
 
           if (!state.paused && state.silentAudioRef) {
             state.silentAudioRef.play().catch((error) => {
@@ -570,544 +753,212 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             lastPosition: 0,
             lastPlaybackTimeUpdateRef: Date.now(),
             duration: nextSong.duration,
-            shuffleHistory,
-            shuffleHistoryPosition: shuffleHistory.length - 1, // Now at the new tip
             preloadedTrack: futureNextSong ?? null,
             preloadReady: false,
             queueLeadingStaleCount: 0,
           };
-        }
+        });
+        get().refreshCanGoNext();
+      },
 
-        // Non-shuffle mode - standard behavior
-        // Use the playback context browser filter, not the current one
-        const artistFilter = state.playbackContextBrowserFilter?.artist || null;
-        const albumFilter = state.playbackContextBrowserFilter?.album || null;
-
-        const nextSong = findNextSong(
-          state.currentTrack?.id,
-          state.shuffleMode,
-          state.playbackSource,
-          state.repeatMode,
-          artistFilter,
-          state.shuffleHistory,
-          albumFilter,
-        );
-
-        if (!nextSong) {
-          return {};
-        }
-
-        // Calculate the song to play after this one
-        const futureNextSong = findNextSong(
-          nextSong.id,
-          state.shuffleMode,
-          state.playbackSource,
-          state.repeatMode,
-          artistFilter,
-          state.shuffleHistory,
-          albumFilter,
-        );
-
-        flushPlaybackTracking(state);
-
-        // Fast path is only safe when the preloaded track is fully decoded:
-        // gotoTrack on a still-loading source silently fails (the source
-        // transitions Loading -> Stop, and play() then tries to play with
-        // no buffered data instead of queuing). state.preloadReady is
-        // flipped true by Gapless-5's onload event in initPlayer below.
-        const isFastPathEligible =
-          state.preloadedTrack?.id === nextSong.id && state.preloadReady;
-
-        if (isFastPathEligible) {
-          // FAST PATH: switch to the already-buffered preloaded track.
-          //
-          // Jump by URL (not by index) so we're robust to the known leak
-          // where Gapless-5's queue accumulates stale finished tracks at
-          // the front after each auto-advance. `gotoTrack(1)` would land
-          // on whatever sits at index 1, which after N auto-advances is
-          // NOT the preloaded track — it's one of the stale leaders.
-          //
-          // After jumping, remove every track ahead of the new current:
-          // one for each stale leading entry (queueLeadingStaleCount) plus
-          // one for the prior current that's now the old index 0 slot.
-          const nextSongUrl = getTrackUrl(nextSong.filePath);
-          state.player.gotoTrack(nextSongUrl);
-          const removalsBeforeCurrent = state.queueLeadingStaleCount + 1;
-          for (let i = 0; i < removalsBeforeCurrent; i += 1) {
-            state.player.removeTrack(0);
-          }
-          if (futureNextSong) {
-            preloadNextInQueue(state.player, futureNextSong);
-          }
-        } else {
-          // SLOW PATH: queue doesn't match, rebuild
-          syncPlayerQueue(state.player, {
-            current: nextSong,
-            next: futureNextSong ?? null,
-            shouldPlay: !state.paused,
-          });
-        }
-
-        if (!state.paused && state.silentAudioRef) {
-          state.silentAudioRef.play().catch((error) => {
-            console.error('Error playing silent audio:', error);
-          });
-        }
-
-        updateMediaSession(nextSong);
-
-        // Start tracking play count for the new track
-        playbackTracker.startTrackingTrack(nextSong.id);
-
-        // Save the track ID as the last played song
-        persistLastPlayedSongId(nextSong.id);
-
-        return {
-          currentTrack: nextSong,
-          position: 0,
-          lastPosition: 0,
-          lastPlaybackTimeUpdateRef: Date.now(),
-          duration: nextSong.duration,
-          preloadedTrack: futureNextSong ?? null,
-          preloadReady: false,
-          queueLeadingStaleCount: 0,
-        };
-      });
-      get().refreshCanGoNext();
-    },
-
-    skipToPreviousTrack: () => {
-      set((state) => {
-        if (!state.player) {
-          throw new Error('No player found while skipping to previous song');
-        }
-
-        // If we're less than 3 seconds into the song, go to previous track
-        // Otherwise, restart the current track
-        if (state.position <= 3) {
-          if (!state.currentTrack) {
-            throw new Error(
-              'No current track found while skipping to previous song',
-            );
+      skipToPreviousTrack: () => {
+        set((state) => {
+          if (!state.player) {
+            throw new Error('No player found while skipping to previous song');
           }
 
-          // If in shuffle mode and we can go back in history
-          if (state.shuffleMode && state.shuffleHistoryPosition > 0) {
-            // Move backward in shuffle history
-            const newPosition = state.shuffleHistoryPosition - 1;
-            const previousSong = state.shuffleHistory[newPosition];
+          // If we're less than 3 seconds into the song, go to previous track
+          // Otherwise, restart the current track
+          if (state.position <= 3) {
+            if (!state.currentTrack) {
+              throw new Error(
+                'No current track found while skipping to previous song',
+              );
+            }
 
-            if (previousSong) {
-              // Calculate the next song (which is the current position in history)
-              const futureNextSong =
-                state.shuffleHistory[state.shuffleHistoryPosition];
+            // If in shuffle mode and we can go back in history
+            if (state.shuffleMode && state.shuffleHistoryPosition > 0) {
+              // Move backward in shuffle history
+              const newPosition = state.shuffleHistoryPosition - 1;
+              const previousSong = state.shuffleHistory[newPosition];
 
-              flushPlaybackTracking(state);
-              syncPlayerQueue(state.player, {
-                current: previousSong,
-                next: futureNextSong ?? null,
-                shouldPlay: !state.paused,
-              });
+              if (previousSong) {
+                // Calculate the next song (which is the current position in history)
+                const futureNextSong =
+                  state.shuffleHistory[state.shuffleHistoryPosition];
 
-              if (!state.paused && state.silentAudioRef) {
-                state.silentAudioRef.play().catch((error) => {
-                  console.error('Error playing silent audio:', error);
+                flushPlaybackTracking(state);
+                syncPlayerQueue(state.player, {
+                  current: previousSong,
+                  next: futureNextSong ?? null,
+                  shouldPlay: !state.paused,
                 });
+
+                if (!state.paused && state.silentAudioRef) {
+                  state.silentAudioRef.play().catch((error) => {
+                    console.error('Error playing silent audio:', error);
+                  });
+                }
+
+                updateMediaSession(previousSong);
+
+                // Start tracking play count for the previous track
+                playbackTracker.startTrackingTrack(previousSong.id);
+
+                // Save the track ID as the last played song
+                persistLastPlayedSongId(previousSong.id);
+
+                return {
+                  currentTrack: previousSong,
+                  position: 0,
+                  lastPosition: 0,
+                  lastPlaybackTimeUpdateRef: Date.now(),
+                  duration: previousSong.duration,
+                  shuffleHistoryPosition: newPosition,
+                  preloadedTrack: futureNextSong ?? null,
+                  preloadReady: false,
+                  queueLeadingStaleCount: 0,
+                };
+              }
+            }
+
+            // Find the previous song (for non-shuffle or when at beginning of history)
+            // Use the playback context artist filter, not the current one
+            const artistFilter =
+              state.playbackContextBrowserFilter?.artist || null;
+            const albumFilter =
+              state.playbackContextBrowserFilter?.album || null;
+
+            const previousSong = findPreviousSong(
+              state.currentTrack.id,
+              false, // Don't use shuffle history in findPreviousSong since we handle it above
+              state.playbackSource,
+              state.repeatMode,
+              [], // Empty shuffle history since we handle it above
+              artistFilter,
+              albumFilter,
+            );
+
+            if (!previousSong) {
+              // If no previous song, restart the current one
+              // invariant: update state.position alongside setPosition
+              state.player.setPosition(0);
+              // Reset tracking for current track
+              if (state.currentTrack) {
+                playbackTracker.resetTrack(state.currentTrack.id);
               }
 
-              updateMediaSession(previousSong);
-
-              // Start tracking play count for the previous track
-              playbackTracker.startTrackingTrack(previousSong.id);
-
-              // Save the track ID as the last played song
-              persistLastPlayedSongId(previousSong.id);
-
               return {
-                currentTrack: previousSong,
                 position: 0,
                 lastPosition: 0,
                 lastPlaybackTimeUpdateRef: Date.now(),
-                duration: previousSong.duration,
-                shuffleHistoryPosition: newPosition,
-                preloadedTrack: futureNextSong ?? null,
-                preloadReady: false,
-                queueLeadingStaleCount: 0,
               };
             }
-          }
 
-          // Find the previous song (for non-shuffle or when at beginning of history)
-          // Use the playback context artist filter, not the current one
-          const artistFilter =
-            state.playbackContextBrowserFilter?.artist || null;
-          const albumFilter = state.playbackContextBrowserFilter?.album || null;
+            // We found a previous song, so play it
+            // Calculate the song to play after this one (which is the current track)
+            const futureNextSong = state.currentTrack;
 
-          const previousSong = findPreviousSong(
-            state.currentTrack.id,
-            false, // Don't use shuffle history in findPreviousSong since we handle it above
-            state.playbackSource,
-            state.repeatMode,
-            [], // Empty shuffle history since we handle it above
-            artistFilter,
-            albumFilter,
-          );
+            flushPlaybackTracking(state);
+            syncPlayerQueue(state.player, {
+              current: previousSong,
+              next: futureNextSong,
+              shouldPlay: !state.paused,
+            });
 
-          if (!previousSong) {
-            // If no previous song, restart the current one
-            // invariant: update state.position alongside setPosition
-            state.player.setPosition(0);
-            // Reset tracking for current track
-            if (state.currentTrack) {
-              playbackTracker.resetTrack(state.currentTrack.id);
+            if (!state.paused && state.silentAudioRef) {
+              state.silentAudioRef.play().catch((error) => {
+                console.error('Error playing silent audio:', error);
+              });
             }
 
+            updateMediaSession(previousSong);
+
+            // Start tracking play count for the previous track
+            playbackTracker.startTrackingTrack(previousSong.id);
+
+            // Save the track ID as the last played song
+            persistLastPlayedSongId(previousSong.id);
+
             return {
+              currentTrack: previousSong,
               position: 0,
               lastPosition: 0,
               lastPlaybackTimeUpdateRef: Date.now(),
+              duration: previousSong.duration,
+              preloadedTrack: futureNextSong,
+              preloadReady: false,
+              queueLeadingStaleCount: 0,
             };
           }
+          // Restart the current track
+          // invariant: update state.position alongside setPosition
+          state.player.setPosition(0);
 
-          // We found a previous song, so play it
-          // Calculate the song to play after this one (which is the current track)
-          const futureNextSong = state.currentTrack;
-
-          flushPlaybackTracking(state);
-          syncPlayerQueue(state.player, {
-            current: previousSong,
-            next: futureNextSong,
-            shouldPlay: !state.paused,
-          });
-
-          if (!state.paused && state.silentAudioRef) {
-            state.silentAudioRef.play().catch((error) => {
-              console.error('Error playing silent audio:', error);
-            });
+          // Reset tracking for current track
+          if (state.currentTrack) {
+            playbackTracker.resetTrack(state.currentTrack.id);
           }
 
-          updateMediaSession(previousSong);
-
-          // Start tracking play count for the previous track
-          playbackTracker.startTrackingTrack(previousSong.id);
-
-          // Save the track ID as the last played song
-          persistLastPlayedSongId(previousSong.id);
-
           return {
-            currentTrack: previousSong,
             position: 0,
             lastPosition: 0,
             lastPlaybackTimeUpdateRef: Date.now(),
-            duration: previousSong.duration,
-            preloadedTrack: futureNextSong,
-            preloadReady: false,
-            queueLeadingStaleCount: 0,
           };
-        }
-        // Restart the current track
-        // invariant: update state.position alongside setPosition
-        state.player.setPosition(0);
-
-        // Reset tracking for current track
-        if (state.currentTrack) {
-          playbackTracker.resetTrack(state.currentTrack.id);
-        }
-
-        return {
-          position: 0,
-          lastPosition: 0,
-          lastPlaybackTimeUpdateRef: Date.now(),
-        };
-      });
-      get().refreshCanGoNext();
-    },
-
-    toggleRepeatMode: () => {
-      set((state) => {
-        // Cycle through repeat modes: off -> track -> all -> off
-        const modes: ('off' | 'track' | 'all')[] = ['off', 'track', 'all'];
-        const currentIndex = modes.indexOf(state.repeatMode);
-        const nextIndex = (currentIndex + 1) % modes.length;
-
-        const repeatMode = modes[nextIndex];
-
-        /**
-         * @important Leverage the Gapless5 player's singleMode to achieve perfect
-         * repeating in single song repeat mode.
-         * We don't do this programmatically in the autoPlayNextTrack/skipToNextTrack
-         * methods like we do with repeat mode 'all' or 'none' because it would
-         * break the gapless playback.
-         */
-        if (state.player) {
-          applyRepeatModeToPlayer(state.player, repeatMode);
-        }
-
-        return { repeatMode, player: state.player };
-      });
-      get().refreshCanGoNext();
-    },
-
-    toggleShuffleMode: () => {
-      set((state) => {
-        return {
-          shuffleMode: !state.shuffleMode,
-          shuffleHistory: [],
-          shuffleHistoryPosition: -1,
-        };
-      });
-      get().refreshCanGoNext();
-    },
-
-    setPaused: (paused: boolean) => {
-      set((state) => {
-        if (!state.player) {
-          throw new Error('No player found while setting paused');
-        }
-
-        // If we're pausing, update play count tracking first
-        if (paused && !state.paused && state.currentTrack) {
-          const now = Date.now();
-          const lastUpdate = state.lastPlaybackTimeUpdateRef;
-          const secondsPlayed = Math.floor((now - lastUpdate) / 1000);
-
-          if (secondsPlayed > 0) {
-            // Update tracking with the actual playback time since last update
-            const shouldCountPlay = playbackTracker.updateListenTime(
-              state.currentTrack.id,
-              secondsPlayed,
-              state.currentTrack.duration,
-            );
-
-            // If we crossed the play count threshold, update the play count
-            if (shouldCountPlay) {
-              updatePlayCount(state.currentTrack.id);
-            }
-          }
-        }
-
-        if (paused) {
-          state.player.pause();
-          // Pause the silent audio for MediaSession
-          if (state.silentAudioRef) {
-            state.silentAudioRef.pause();
-          }
-        } else {
-          state.player.play();
-          // Play the silent audio for MediaSession
-          if (state.silentAudioRef) {
-            state.silentAudioRef.play().catch((error) => {
-              console.error('Error playing silent audio:', error);
-            });
-          }
-
-          // Reset the playback time tracker when resuming
-          return {
-            paused,
-            lastPlaybackTimeUpdateRef: Date.now(),
-            lastPosition: state.position,
-          };
-        }
-        return { paused };
-      });
-    },
-
-    // Helper function to get the player instance
-    initPlayer: () => {
-      const state = get();
-
-      // lazily initialize the player
-      if (!state.player) {
-        // Volume comes from the TanStack Query settings cache. If the
-        // query hasn't resolved yet (rare — local IPC is sub-ms but
-        // not zero), fall back to 1.0; the reconcile-volume effect in
-        // App.tsx applies the persisted value once useSettings settles.
-        const initialVolume = getSettingsSnapshot()?.volume ?? 1.0;
-        // '' = system default. App.tsx re-applies once settings load.
-        const initialSinkId =
-          getSettingsSnapshot()?.selectedAudioOutputDeviceId ?? '';
-        const player = new Gapless5({
-          useHTML5Audio: false,
-          crossfade: 25, // 25ms crossfade between tracks
-          exclusive: true, // Only one track can play at a time
-          loadLimit: 3, // Load up to 3 tracks at a time
-          volume: initialVolume,
-          sinkId: initialSinkId,
         });
+        get().refreshCanGoNext();
+      },
 
-        // E2E diagnostic hook: lets Playwright specs observe what
-        // Gapless-5 is actually playing versus what the store thinks
-        // is playing. Installed lazily on first player creation (no
-        // module-load side effects), the only legitimate consumer of
-        // player.getTracks()/getIndex() outside the dev-only invariant
-        // assert. Read-only, no mutation. Gated behind
-        // `window.electron.isTestMode` (set by preload from the
-        // main-process runtime env) so the assignment never fires in
-        // dev or production — only when the app was launched with
-        // NODE_ENV=test or TEST_MODE=true.
-        if (window.electron?.isTestMode) {
-          // eslint-disable-next-line no-underscore-dangle
-          (
-            window as unknown as Record<string, unknown>
-          ).__hihat_e2e_getPlayerState = () => {
-            const s = get();
-            const p = s.player ?? player;
-            const urlToFilePath = (url: string | undefined): string | null => {
-              if (!url) return null;
-              return decodeURIComponent(
-                url.replace('hihat-audio://getfile/', ''),
-              );
-            };
-            const tracks = p.getTracks();
-            const index = p.getIndex();
-            return {
-              storeCurrentTrackFilePath: s.currentTrack?.filePath ?? null,
-              storePreloadedTrackFilePath: s.preloadedTrack?.filePath ?? null,
-              storePreloadReady: s.preloadReady,
-              playerQueueLength: tracks.length,
-              playerIndex: index,
-              playerCurrentFilePath: urlToFilePath(tracks[index]),
-            };
-          };
-        }
+      toggleRepeatMode: () => {
+        set((state) => {
+          // Cycle through repeat modes: off -> track -> all -> off
+          const modes: ('off' | 'track' | 'all')[] = ['off', 'track', 'all'];
+          const currentIndex = modes.indexOf(state.repeatMode);
+          const nextIndex = (currentIndex + 1) % modes.length;
 
-        // Seed singleMode from the store's repeatMode so the player
-        // reflects state on first construction, not only after a toggle.
-        applyRepeatModeToPlayer(player, state.repeatMode);
+          const repeatMode = modes[nextIndex];
 
-        // Set up error handler
-        player.onerror = (error: string) => {
-          console.error('Audio player error:', error);
-        };
-
-        // Flip preloadReady when the track we preloaded at index 1
-        // finishes decoding. skipToNextTrack's fast path gates on this
-        // (gotoTrack on a still-loading source silently fails).
-        player.onload = (trackPath: string, fullyLoaded: boolean) => {
-          const { preloadedTrack } = get();
-          if (
-            preloadedTrack &&
-            getTrackUrl(preloadedTrack.filePath) === trackPath
-          ) {
-            set({ preloadReady: fullyLoaded });
+          /**
+           * @important Leverage the Gapless5 player's singleMode to achieve perfect
+           * repeating in single song repeat mode.
+           * We don't do this programmatically in the autoPlayNextTrack/skipToNextTrack
+           * methods like we do with repeat mode 'all' or 'none' because it would
+           * break the gapless playback.
+           */
+          if (state.player) {
+            applyRepeatModeToPlayer(state.player, repeatMode);
           }
-        };
 
-        // Set up event handlers
-        player.onfinishedtrack = () => {
-          // Track is finished naturally
-          // NOTE: We should NOT unconditionally update play count here
-          // We only count plays when the 30-second threshold is met
-          // Which is handled by the playbackTracker's updateListenTime method
+          return { repeatMode, player: state.player };
+        });
+        get().refreshCanGoNext();
+      },
 
-          get().autoPlayNextTrack();
-        };
+      toggleShuffleMode: () => {
+        set((state) => {
+          return {
+            shuffleMode: !state.shuffleMode,
+            shuffleHistory: [],
+            shuffleHistoryPosition: -1,
+          };
+        });
+        get().refreshCanGoNext();
+      },
 
-        player.onplay = () => {
-          set({
-            paused: false,
-            lastPlaybackTimeUpdateRef: Date.now(),
-            lastPosition: get().position,
-          });
-        };
+      setPaused: (paused: boolean) => {
+        set((state) => {
+          if (!state.player) {
+            throw new Error('No player found while setting paused');
+          }
 
-        player.onpause = () => {
-          // When pausing, update playback tracking
-          const currentState = get();
-          if (!currentState.paused && currentState.currentTrack) {
+          // If we're pausing, update play count tracking first
+          if (paused && !state.paused && state.currentTrack) {
             const now = Date.now();
-            const lastUpdate = currentState.lastPlaybackTimeUpdateRef;
+            const lastUpdate = state.lastPlaybackTimeUpdateRef;
             const secondsPlayed = Math.floor((now - lastUpdate) / 1000);
 
             if (secondsPlayed > 0) {
-              // Update tracking with the actual playback time
-              const shouldCountPlay = playbackTracker.updateListenTime(
-                currentState.currentTrack.id,
-                secondsPlayed,
-                currentState.currentTrack.duration,
-              );
-
-              // If we crossed the play count threshold, update the play count
-              if (shouldCountPlay) {
-                updatePlayCount(currentState.currentTrack.id);
-              }
-            }
-          }
-
-          set({ paused: true });
-        };
-
-        player.ontimeupdate = (time) => {
-          // Throttle position updates to once per second
-          const now = Date.now();
-          const lastUpdate = get().lastPositionUpdateRef;
-          const currentPosition = Math.floor(time / 1000);
-
-          if (now - lastUpdate >= 1000) {
-            // Update position
-            set({
-              lastPositionUpdateRef: now,
-              // Convert from milliseconds to seconds
-              position: currentPosition,
-            });
-
-            // Handle tracking actual playback time for play count
-            const currentState = get();
-            if (!currentState.paused && currentState.currentTrack) {
-              const lastPlaybackUpdate = currentState.lastPlaybackTimeUpdateRef;
-              const { lastPosition } = currentState;
-
-              // Check if at least a second has passed since the last update
-              if (now - lastPlaybackUpdate >= 1000) {
-                // Calculate actual time played - handle seeking by checking position changes
-                // Only count if position has actually increased (real playback, not seeking)
-                if (currentPosition > lastPosition) {
-                  const secondsPlayed = currentPosition - lastPosition;
-
-                  // Update tracking with the actual playback time
-                  const shouldCountPlay = playbackTracker.updateListenTime(
-                    currentState.currentTrack.id,
-                    secondsPlayed,
-                    currentState.currentTrack.duration,
-                  );
-
-                  // If we crossed the play count threshold, update the play count
-                  if (shouldCountPlay) {
-                    updatePlayCount(currentState.currentTrack.id);
-                  }
-                }
-
-                // Update our tracking state
-                set({
-                  lastPlaybackTimeUpdateRef: now,
-                  lastPosition: currentPosition,
-                });
-              }
-            }
-          }
-        };
-
-        // Set the player ref in state
-        set({ player });
-      }
-    },
-
-    seekToPosition: (position: number) => {
-      set((state) => {
-        if (!state.player) {
-          throw new Error('No player found while seeking to position');
-        }
-
-        // Before seeking, update play count tracking with time played so far
-        if (!state.paused && state.currentTrack) {
-          const now = Date.now();
-          const lastUpdate = state.lastPlaybackTimeUpdateRef;
-          const secondsPlayed = Math.floor((now - lastUpdate) / 1000);
-
-          if (secondsPlayed > 0) {
-            // Only count if position has actually increased (real playback, not seeking)
-            if (state.position > state.lastPosition) {
-              // Update tracking with the actual playback time
+              // Update tracking with the actual playback time since last update
               const shouldCountPlay = playbackTracker.updateListenTime(
                 state.currentTrack.id,
                 secondsPlayed,
@@ -1120,142 +971,498 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
               }
             }
           }
-        }
 
-        // invariant: update state.position alongside setPosition
-        state.player.setPosition(position * 1000);
-        return {
-          position,
-          lastPosition: position,
-          lastPlaybackTimeUpdateRef: Date.now(),
-        };
-      });
-    },
+          if (paused) {
+            state.player.pause();
+            // Pause the silent audio for MediaSession
+            if (state.silentAudioRef) {
+              state.silentAudioRef.pause();
+            }
+          } else {
+            state.player.play();
+            // Play the silent audio for MediaSession
+            if (state.silentAudioRef) {
+              state.silentAudioRef.play().catch((error) => {
+                console.error('Error playing silent audio:', error);
+              });
+            }
 
-    autoPlayNextTrack: async () => {
-      set((state) => {
+            // Reset the playback time tracker when resuming
+            return {
+              paused,
+              lastPlaybackTimeUpdateRef: Date.now(),
+              lastPosition: state.position,
+            };
+          }
+          return { paused };
+        });
+      },
+
+      // Helper function to get the player instance
+      initPlayer: () => {
+        const state = get();
+
+        // lazily initialize the player
         if (!state.player) {
-          throw new Error('No player found while auto playing next track');
-        }
+          // Volume comes from the TanStack Query settings cache. If the
+          // query hasn't resolved yet (rare — local IPC is sub-ms but
+          // not zero), fall back to 1.0; the reconcile-volume effect in
+          // App.tsx applies the persisted value once useSettings settles.
+          const initialVolume = getSettingsSnapshot()?.volume ?? 1.0;
+          // '' = system default. App.tsx re-applies once settings load.
+          const initialSinkId =
+            getSettingsSnapshot()?.selectedAudioOutputDeviceId ?? '';
+          const player = new Gapless5({
+            useHTML5Audio: false,
+            crossfade: 25, // 25ms crossfade between tracks
+            exclusive: true, // Only one track can play at a time
+            loadLimit: 3, // Load up to 3 tracks at a time
+            volume: initialVolume,
+            sinkId: initialSinkId,
+          });
 
-        // at this point the new song is already playing
-        if (state.repeatMode === 'track') {
-          // so go back to the track we were just playing and play it again
-          state.player.gotoTrack(0);
-          state.player.play();
-
-          // Play the silent audio for MediaSession
-          if (state.silentAudioRef) {
-            state.silentAudioRef.play().catch((error) => {
-              console.error('Error playing silent audio:', error);
-            });
-          }
-
-          // For repeat track mode, reset tracking for the current track
-          if (state.currentTrack) {
-            playbackTracker.resetTrack(state.currentTrack.id);
-          }
-
-          return {
-            position: 0,
-            lastPosition: 0,
-            paused: false,
-            lastPlaybackTimeUpdateRef: Date.now(),
-          };
-        }
-
-        // Gapless-5 has auto-advanced to queue index 1, which is the track
-        // we tracked as preloadedTrack when we last mutated the queue. No
-        // need to re-derive that from player.getTracks()/getIndex() — the
-        // store already knows what's playing.
-        //
-        // Known leak: the finished track at index 0 is never cleaned up.
-        // Every preloadNextInQueue below grows the Gapless-5 queue by one
-        // entry instead of rotating it. See `assertQueueInvariant` in
-        // playerQueue.ts for the full story — short version is that
-        // removing index 0 mid-transition triggers a Gapless-5 bug that
-        // pauses playback instead of auto-advancing.
-        const currentTrackThatIsAudiblyPlaying = state.preloadedTrack;
-
-        if (!currentTrackThatIsAudiblyPlaying) {
-          // Nothing was preloaded (e.g., reached the end of the source with
-          // no repeat). Let the caller fall through — the downstream
-          // branches will either compute a new song via findNextSong or
-          // bail out cleanly.
-          throw new Error('No next track found while auto playing next track');
-        }
-
-        // End of source (repeat off): Gapless-5 already auto-advanced onto the
-        // final playing track with no successor to preload. Commit it as
-        // now-playing rather than bailing with `return {}` — else a stale
-        // currentTrack (still pointing at the finished song) makes
-        // handleDeletedTracks mis-route a delete of the playing track through
-        // removePreloadedTrack and kill playback. preloadedTrack is null; stale
-        // count still grows by one for the lingering finished track.
-        const commitFinalTrackAsNowPlaying = () => {
-          updateMediaSession(currentTrackThatIsAudiblyPlaying);
-          playbackTracker.startTrackingTrack(
-            currentTrackThatIsAudiblyPlaying.id,
-          );
-          persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
-          return {
-            currentTrack: currentTrackThatIsAudiblyPlaying,
-            duration: currentTrackThatIsAudiblyPlaying.duration,
-            paused: false,
-            position: 0,
-            lastPosition: 0,
-            lastPlaybackTimeUpdateRef: Date.now() - 1000,
-            preloadedTrack: null,
-            preloadReady: false,
-            queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
-          };
-        };
-
-        // Handle shuffle mode with history
-        if (state.shuffleMode) {
-          // Check if we're navigating within history
-          if (
-            state.shuffleHistoryPosition >= 0 &&
-            state.shuffleHistoryPosition < state.shuffleHistory.length - 1
-          ) {
-            // We're in the middle of history, move forward
-            const newPosition = state.shuffleHistoryPosition + 1;
-            const nextTrackInHistory = state.shuffleHistory[newPosition];
-
-            // Add the next song from history
-            if (nextTrackInHistory) {
-              const futureNextSong = state.shuffleHistory[newPosition + 1];
-              if (futureNextSong) {
-                preloadNextInQueue(state.player, futureNextSong);
-              }
-
-              // Update media session
-              updateMediaSession(currentTrackThatIsAudiblyPlaying);
-
-              // Start tracking play count for the new track
-              playbackTracker.startTrackingTrack(
-                currentTrackThatIsAudiblyPlaying.id,
-              );
-
-              // Save the track ID as the last played song
-              persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
-
-              return {
-                currentTrack: currentTrackThatIsAudiblyPlaying,
-                duration: currentTrackThatIsAudiblyPlaying.duration,
-                paused: false,
-                position: 0,
-                lastPosition: 0,
-                lastPlaybackTimeUpdateRef: Date.now() - 1000,
-                shuffleHistoryPosition: newPosition,
-                preloadedTrack: futureNextSong ?? null,
-                preloadReady: false,
-                queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
+          // E2E diagnostic hook: lets Playwright specs observe what
+          // Gapless-5 is actually playing versus what the store thinks
+          // is playing. Installed lazily on first player creation (no
+          // module-load side effects), the only legitimate consumer of
+          // player.getTracks()/getIndex() outside the dev-only invariant
+          // assert. Read-only, no mutation. Gated behind
+          // `window.electron.isTestMode` (set by preload from the
+          // main-process runtime env) so the assignment never fires in
+          // dev or production — only when the app was launched with
+          // NODE_ENV=test or TEST_MODE=true.
+          if (window.electron?.isTestMode) {
+            // eslint-disable-next-line no-underscore-dangle
+            (
+              window as unknown as Record<string, unknown>
+            ).__hihat_e2e_getPlayerState = () => {
+              const s = get();
+              const p = s.player ?? player;
+              const urlToFilePath = (
+                url: string | undefined,
+              ): string | null => {
+                if (!url) return null;
+                return decodeURIComponent(
+                  url.replace('hihat-audio://getfile/', ''),
+                );
               };
+              const tracks = p.getTracks();
+              const index = p.getIndex();
+              return {
+                storeCurrentTrackFilePath: s.currentTrack?.filePath ?? null,
+                storePreloadedTrackFilePath: s.preloadedTrack?.filePath ?? null,
+                storePreloadReady: s.preloadReady,
+                playerQueueLength: tracks.length,
+                playerIndex: index,
+                playerCurrentFilePath: urlToFilePath(tracks[index]),
+              };
+            };
+          }
+
+          // Seed singleMode from the store's repeatMode so the player
+          // reflects state on first construction, not only after a toggle.
+          applyRepeatModeToPlayer(player, state.repeatMode);
+
+          // Set up error handler
+          player.onerror = (error: string) => {
+            console.error('Audio player error:', error);
+          };
+
+          // Flip preloadReady when the track we preloaded at index 1
+          // finishes decoding. skipToNextTrack's fast path gates on this
+          // (gotoTrack on a still-loading source silently fails).
+          player.onload = (trackPath: string, fullyLoaded: boolean) => {
+            const { preloadedTrack } = get();
+            if (
+              preloadedTrack &&
+              getTrackUrl(preloadedTrack.filePath) === trackPath
+            ) {
+              set({ preloadReady: fullyLoaded });
+            }
+          };
+
+          // Set up event handlers
+          player.onfinishedtrack = () => {
+            // Track is finished naturally
+            // NOTE: We should NOT unconditionally update play count here
+            // We only count plays when the 30-second threshold is met
+            // Which is handled by the playbackTracker's updateListenTime method
+
+            get().autoPlayNextTrack();
+          };
+
+          player.onplay = () => {
+            set({
+              paused: false,
+              lastPlaybackTimeUpdateRef: Date.now(),
+              lastPosition: get().position,
+            });
+          };
+
+          player.onpause = () => {
+            // When pausing, update playback tracking
+            const currentState = get();
+            if (!currentState.paused && currentState.currentTrack) {
+              const now = Date.now();
+              const lastUpdate = currentState.lastPlaybackTimeUpdateRef;
+              const secondsPlayed = Math.floor((now - lastUpdate) / 1000);
+
+              if (secondsPlayed > 0) {
+                // Update tracking with the actual playback time
+                const shouldCountPlay = playbackTracker.updateListenTime(
+                  currentState.currentTrack.id,
+                  secondsPlayed,
+                  currentState.currentTrack.duration,
+                );
+
+                // If we crossed the play count threshold, update the play count
+                if (shouldCountPlay) {
+                  updatePlayCount(currentState.currentTrack.id);
+                }
+              }
+            }
+
+            set({ paused: true });
+          };
+
+          player.ontimeupdate = (time) => {
+            // Throttle position updates to once per second
+            const now = Date.now();
+            const lastUpdate = get().lastPositionUpdateRef;
+            const currentPosition = Math.floor(time / 1000);
+
+            if (now - lastUpdate >= 1000) {
+              // Update position
+              set({
+                lastPositionUpdateRef: now,
+                // Convert from milliseconds to seconds
+                position: currentPosition,
+              });
+
+              // Handle tracking actual playback time for play count
+              const currentState = get();
+              if (!currentState.paused && currentState.currentTrack) {
+                const lastPlaybackUpdate =
+                  currentState.lastPlaybackTimeUpdateRef;
+                const { lastPosition } = currentState;
+
+                // Check if at least a second has passed since the last update
+                if (now - lastPlaybackUpdate >= 1000) {
+                  // Calculate actual time played - handle seeking by checking position changes
+                  // Only count if position has actually increased (real playback, not seeking)
+                  if (currentPosition > lastPosition) {
+                    const secondsPlayed = currentPosition - lastPosition;
+
+                    // Update tracking with the actual playback time
+                    const shouldCountPlay = playbackTracker.updateListenTime(
+                      currentState.currentTrack.id,
+                      secondsPlayed,
+                      currentState.currentTrack.duration,
+                    );
+
+                    // If we crossed the play count threshold, update the play count
+                    if (shouldCountPlay) {
+                      updatePlayCount(currentState.currentTrack.id);
+                    }
+                  }
+
+                  // Update our tracking state
+                  set({
+                    lastPlaybackTimeUpdateRef: now,
+                    lastPosition: currentPosition,
+                  });
+                }
+              }
+            }
+          };
+
+          // Set the player ref in state
+          set({ player });
+        }
+      },
+
+      seekToPosition: (position: number) => {
+        set((state) => {
+          if (!state.player) {
+            throw new Error('No player found while seeking to position');
+          }
+
+          // Before seeking, update play count tracking with time played so far
+          if (!state.paused && state.currentTrack) {
+            const now = Date.now();
+            const lastUpdate = state.lastPlaybackTimeUpdateRef;
+            const secondsPlayed = Math.floor((now - lastUpdate) / 1000);
+
+            if (secondsPlayed > 0) {
+              // Only count if position has actually increased (real playback, not seeking)
+              if (state.position > state.lastPosition) {
+                // Update tracking with the actual playback time
+                const shouldCountPlay = playbackTracker.updateListenTime(
+                  state.currentTrack.id,
+                  secondsPlayed,
+                  state.currentTrack.duration,
+                );
+
+                // If we crossed the play count threshold, update the play count
+                if (shouldCountPlay) {
+                  updatePlayCount(state.currentTrack.id);
+                }
+              }
             }
           }
 
-          // We're at the tip of history, get a new random song
+          // invariant: update state.position alongside setPosition
+          state.player.setPosition(position * 1000);
+          return {
+            position,
+            lastPosition: position,
+            lastPlaybackTimeUpdateRef: Date.now(),
+          };
+        });
+      },
+
+      autoPlayNextTrack: async () => {
+        set((state) => {
+          if (!state.player) {
+            throw new Error('No player found while auto playing next track');
+          }
+
+          // at this point the new song is already playing
+          if (state.repeatMode === 'track') {
+            // so go back to the track we were just playing and play it again
+            state.player.gotoTrack(0);
+            state.player.play();
+
+            // Play the silent audio for MediaSession
+            if (state.silentAudioRef) {
+              state.silentAudioRef.play().catch((error) => {
+                console.error('Error playing silent audio:', error);
+              });
+            }
+
+            // For repeat track mode, reset tracking for the current track
+            if (state.currentTrack) {
+              playbackTracker.resetTrack(state.currentTrack.id);
+            }
+
+            return {
+              position: 0,
+              lastPosition: 0,
+              paused: false,
+              lastPlaybackTimeUpdateRef: Date.now(),
+            };
+          }
+
+          // Gapless-5 has auto-advanced to queue index 1, which is the track
+          // we tracked as preloadedTrack when we last mutated the queue. No
+          // need to re-derive that from player.getTracks()/getIndex() — the
+          // store already knows what's playing.
+          //
+          // Known leak: the finished track at index 0 is never cleaned up.
+          // Every preloadNextInQueue below grows the Gapless-5 queue by one
+          // entry instead of rotating it. See `assertQueueInvariant` in
+          // playerQueue.ts for the full story — short version is that
+          // removing index 0 mid-transition triggers a Gapless-5 bug that
+          // pauses playback instead of auto-advancing.
+          const currentTrackThatIsAudiblyPlaying = state.preloadedTrack;
+
+          if (!currentTrackThatIsAudiblyPlaying) {
+            // Nothing was preloaded (e.g., reached the end of the source with
+            // no repeat). Let the caller fall through — the downstream
+            // branches will either compute a new song via findNextSong or
+            // bail out cleanly.
+            throw new Error(
+              'No next track found while auto playing next track',
+            );
+          }
+
+          // End of source (repeat off): Gapless-5 already auto-advanced onto the
+          // final playing track with no successor to preload. Commit it as
+          // now-playing rather than bailing with `return {}` — else a stale
+          // currentTrack (still pointing at the finished song) makes
+          // handleDeletedTracks mis-route a delete of the playing track through
+          // removePreloadedTrack and kill playback. preloadedTrack is null; stale
+          // count still grows by one for the lingering finished track.
+          const commitFinalTrackAsNowPlaying = () => {
+            updateMediaSession(currentTrackThatIsAudiblyPlaying);
+            playbackTracker.startTrackingTrack(
+              currentTrackThatIsAudiblyPlaying.id,
+            );
+            persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
+            return {
+              currentTrack: currentTrackThatIsAudiblyPlaying,
+              duration: currentTrackThatIsAudiblyPlaying.duration,
+              paused: false,
+              position: 0,
+              lastPosition: 0,
+              lastPlaybackTimeUpdateRef: Date.now() - 1000,
+              preloadedTrack: null,
+              preloadReady: false,
+              queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
+            };
+          };
+
+          // Handle shuffle mode with history
+          if (state.shuffleMode) {
+            // Check if we're navigating within history
+            if (
+              state.shuffleHistoryPosition >= 0 &&
+              state.shuffleHistoryPosition < state.shuffleHistory.length - 1
+            ) {
+              // We're in the middle of history, move forward
+              const newPosition = state.shuffleHistoryPosition + 1;
+              const nextTrackInHistory = state.shuffleHistory[newPosition];
+
+              // Add the next song from history
+              if (nextTrackInHistory) {
+                const futureNextSong = state.shuffleHistory[newPosition + 1];
+                if (futureNextSong) {
+                  preloadNextInQueue(state.player, futureNextSong);
+                }
+
+                // Update media session
+                updateMediaSession(currentTrackThatIsAudiblyPlaying);
+
+                // Start tracking play count for the new track
+                playbackTracker.startTrackingTrack(
+                  currentTrackThatIsAudiblyPlaying.id,
+                );
+
+                // Save the track ID as the last played song
+                persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
+
+                return {
+                  currentTrack: currentTrackThatIsAudiblyPlaying,
+                  duration: currentTrackThatIsAudiblyPlaying.duration,
+                  paused: false,
+                  position: 0,
+                  lastPosition: 0,
+                  lastPlaybackTimeUpdateRef: Date.now() - 1000,
+                  shuffleHistoryPosition: newPosition,
+                  preloadedTrack: futureNextSong ?? null,
+                  preloadReady: false,
+                  queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
+                };
+              }
+            }
+
+            // We're at the tip of history, get a new random song
+            // Use the playback context browser filter, not the current one
+            const artistFilter =
+              state.playbackContextBrowserFilter?.artist || null;
+            const albumFilter =
+              state.playbackContextBrowserFilter?.album || null;
+
+            const nextSong = findNextSong(
+              currentTrackThatIsAudiblyPlaying.id,
+              state.shuffleMode,
+              state.playbackSource,
+              state.repeatMode,
+              artistFilter,
+              state.shuffleHistory,
+              albumFilter,
+            );
+
+            if (!nextSong) {
+              return commitFinalTrackAsNowPlaying();
+            }
+
+            // Check if we need to clear history (when all songs have been played with repeat all)
+            // Get total available tracks to determine if we've played them all
+            const library = getTracksSnapshot()?.tracks ?? [];
+            const playlists = getPlaylistsSnapshot() ?? [];
+            let totalAvailableTracks = 0;
+
+            if (state.playbackSource === 'library') {
+              let filtered = library;
+              if (artistFilter) {
+                filtered = filtered.filter(
+                  (t) =>
+                    (t.albumArtist || t.artist || 'Unknown Artist') ===
+                    artistFilter,
+                );
+              }
+              if (albumFilter) {
+                filtered = filtered.filter(
+                  (t) => (t.album || 'Unknown Album') === albumFilter,
+                );
+              }
+              totalAvailableTracks = filtered.length;
+            } else if (state.playbackSource === 'playlist') {
+              const playlist = playlists.find(
+                (p) => p.id === state.playbackSourcePlaylistId,
+              );
+              totalAvailableTracks = playlist?.trackIds.length || 0;
+            }
+
+            const allTracksPlayed =
+              state.shuffleHistory.length >= totalAvailableTracks - 1;
+
+            // Update shuffle history
+            let shuffleHistory =
+              allTracksPlayed && state.repeatMode === 'all'
+                ? [] // Clear history when starting over with repeat all
+                : [...state.shuffleHistory];
+
+            // If we were in the middle of history, truncate everything after our position
+            if (
+              state.shuffleHistoryPosition >= 0 &&
+              state.shuffleHistoryPosition < shuffleHistory.length - 1
+            ) {
+              shuffleHistory = shuffleHistory.slice(
+                0,
+                state.shuffleHistoryPosition + 1,
+              );
+            }
+
+            // Add the track that just finished if not already at the end
+            if (
+              state.currentTrack &&
+              (shuffleHistory.length === 0 ||
+                shuffleHistory[shuffleHistory.length - 1].id !==
+                  state.currentTrack.id)
+            ) {
+              shuffleHistory.push(state.currentTrack);
+            }
+
+            // Add the currently playing track
+            shuffleHistory.push(currentTrackThatIsAudiblyPlaying);
+
+            // Keep history limited to 100 items
+            if (shuffleHistory.length > 100) {
+              shuffleHistory.shift();
+            }
+
+            // Add the FUTURE next song to the player queue
+            preloadNextInQueue(state.player, nextSong);
+
+            // Update media session
+            updateMediaSession(currentTrackThatIsAudiblyPlaying);
+
+            // Start tracking play count for the new track
+            playbackTracker.startTrackingTrack(
+              currentTrackThatIsAudiblyPlaying.id,
+            );
+
+            // Save the track ID as the last played song
+            persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
+
+            return {
+              currentTrack: currentTrackThatIsAudiblyPlaying,
+              duration: currentTrackThatIsAudiblyPlaying.duration,
+              paused: false,
+              position: 0,
+              lastPosition: 0,
+              lastPlaybackTimeUpdateRef: Date.now() - 1000,
+              shuffleHistory,
+              shuffleHistoryPosition: shuffleHistory.length - 1, // At the new tip
+              preloadedTrack: nextSong,
+              preloadReady: false,
+              queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
+            };
+          }
+
+          // Non-shuffle mode - standard behavior
           // Use the playback context browser filter, not the current one
           const artistFilter =
             state.playbackContextBrowserFilter?.artist || null;
@@ -1275,72 +1482,6 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
             return commitFinalTrackAsNowPlaying();
           }
 
-          // Check if we need to clear history (when all songs have been played with repeat all)
-          // Get total available tracks to determine if we've played them all
-          const library = getTracksSnapshot()?.tracks ?? [];
-          const playlists = getPlaylistsSnapshot() ?? [];
-          let totalAvailableTracks = 0;
-
-          if (state.playbackSource === 'library') {
-            let filtered = library;
-            if (artistFilter) {
-              filtered = filtered.filter(
-                (t) =>
-                  (t.albumArtist || t.artist || 'Unknown Artist') ===
-                  artistFilter,
-              );
-            }
-            if (albumFilter) {
-              filtered = filtered.filter(
-                (t) => (t.album || 'Unknown Album') === albumFilter,
-              );
-            }
-            totalAvailableTracks = filtered.length;
-          } else if (state.playbackSource === 'playlist') {
-            const playlist = playlists.find(
-              (p) => p.id === state.playbackSourcePlaylistId,
-            );
-            totalAvailableTracks = playlist?.trackIds.length || 0;
-          }
-
-          const allTracksPlayed =
-            state.shuffleHistory.length >= totalAvailableTracks - 1;
-
-          // Update shuffle history
-          let shuffleHistory =
-            allTracksPlayed && state.repeatMode === 'all'
-              ? [] // Clear history when starting over with repeat all
-              : [...state.shuffleHistory];
-
-          // If we were in the middle of history, truncate everything after our position
-          if (
-            state.shuffleHistoryPosition >= 0 &&
-            state.shuffleHistoryPosition < shuffleHistory.length - 1
-          ) {
-            shuffleHistory = shuffleHistory.slice(
-              0,
-              state.shuffleHistoryPosition + 1,
-            );
-          }
-
-          // Add the track that just finished if not already at the end
-          if (
-            state.currentTrack &&
-            (shuffleHistory.length === 0 ||
-              shuffleHistory[shuffleHistory.length - 1].id !==
-                state.currentTrack.id)
-          ) {
-            shuffleHistory.push(state.currentTrack);
-          }
-
-          // Add the currently playing track
-          shuffleHistory.push(currentTrackThatIsAudiblyPlaying);
-
-          // Keep history limited to 100 items
-          if (shuffleHistory.length > 100) {
-            shuffleHistory.shift();
-          }
-
           // Add the FUTURE next song to the player queue
           preloadNextInQueue(state.player, nextSong);
 
@@ -1355,72 +1496,27 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
           // Save the track ID as the last played song
           persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
 
+          // We need to create a small delay between track changes to avoid the 2-second offset issue
+          // The player is already playing the next track at this point
+          // This ensures we start tracking from the proper position
+          const timeUpdateDelay = Date.now() - 1000; // Small delay of 100ms
+
           return {
             currentTrack: currentTrackThatIsAudiblyPlaying,
             duration: currentTrackThatIsAudiblyPlaying.duration,
             paused: false,
             position: 0,
             lastPosition: 0,
-            lastPlaybackTimeUpdateRef: Date.now() - 1000,
-            shuffleHistory,
-            shuffleHistoryPosition: shuffleHistory.length - 1, // At the new tip
+            lastPlaybackTimeUpdateRef: timeUpdateDelay,
             preloadedTrack: nextSong,
             preloadReady: false,
             queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
           };
-        }
-
-        // Non-shuffle mode - standard behavior
-        // Use the playback context browser filter, not the current one
-        const artistFilter = state.playbackContextBrowserFilter?.artist || null;
-        const albumFilter = state.playbackContextBrowserFilter?.album || null;
-
-        const nextSong = findNextSong(
-          currentTrackThatIsAudiblyPlaying.id,
-          state.shuffleMode,
-          state.playbackSource,
-          state.repeatMode,
-          artistFilter,
-          state.shuffleHistory,
-          albumFilter,
-        );
-
-        if (!nextSong) {
-          return commitFinalTrackAsNowPlaying();
-        }
-
-        // Add the FUTURE next song to the player queue
-        preloadNextInQueue(state.player, nextSong);
-
-        // Update media session
-        updateMediaSession(currentTrackThatIsAudiblyPlaying);
-
-        // Start tracking play count for the new track
-        playbackTracker.startTrackingTrack(currentTrackThatIsAudiblyPlaying.id);
-
-        // Save the track ID as the last played song
-        persistLastPlayedSongId(currentTrackThatIsAudiblyPlaying.id);
-
-        // We need to create a small delay between track changes to avoid the 2-second offset issue
-        // The player is already playing the next track at this point
-        // This ensures we start tracking from the proper position
-        const timeUpdateDelay = Date.now() - 1000; // Small delay of 100ms
-
-        return {
-          currentTrack: currentTrackThatIsAudiblyPlaying,
-          duration: currentTrackThatIsAudiblyPlaying.duration,
-          paused: false,
-          position: 0,
-          lastPosition: 0,
-          lastPlaybackTimeUpdateRef: timeUpdateDelay,
-          preloadedTrack: nextSong,
-          preloadReady: false,
-          queueLeadingStaleCount: state.queueLeadingStaleCount + 1,
-        };
-      });
-      get().refreshCanGoNext();
-    },
-  }),
+        });
+        get().refreshCanGoNext();
+      },
+    };
+  },
 );
 
 export default useSettingsAndPlaybackStore;

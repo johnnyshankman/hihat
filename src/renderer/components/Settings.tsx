@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -11,10 +11,6 @@ import {
   TextField,
   InputAdornment,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  LinearProgress,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -23,19 +19,21 @@ import AddIcon from '@mui/icons-material/Add';
 import BackupIcon from '@mui/icons-material/Backup';
 import CloseIcon from '@mui/icons-material/Close';
 import { useUIStore } from '../stores';
+import useLibraryTaskStore, {
+  selectTaskRunning,
+} from '../stores/libraryTaskStore';
 import {
-  useScanLibrary,
-  useImportFiles,
   useResetDatabase,
-  useResetTracks,
   useSettings,
   useUpdateSettings,
   getSettingsSnapshot,
   DEFAULT_COLUMNS,
 } from '../queries';
-import { formatEta } from '../utils/formatters';
+import { startBackup, startImport, startRescan } from '../utils/libraryTasks';
 import { mutedIconButtonSx } from '../styles/iconButtonStyles';
 import ConfirmationDialog from './ConfirmationDialog';
+
+const TASK_LABELS = { scan: 'rescan', import: 'import', backup: 'backup' };
 
 // Define the props for the Settings component
 interface SettingsProps {
@@ -51,217 +49,24 @@ export default function Settings({ onClose }: SettingsProps) {
   const columns = settings?.columns ?? DEFAULT_COLUMNS;
   const sortArtistByAlbumArtist = settings?.sortArtistByAlbumArtist ?? true;
   const updateSettings = useUpdateSettings();
-  // Library / scan / reset mutations via TanStack Query. Each hook
-  // owns success/error toasts and cache invalidation so the rest of
-  // this component just drives UI off `isPending`.
-  const scanLibraryMutation = useScanLibrary();
-  const importFilesMutation = useImportFiles();
   const resetDatabaseMutation = useResetDatabase();
-  const resetTracksMutation = useResetTracks();
-  const isScanning =
-    scanLibraryMutation.isPending || importFilesMutation.isPending;
+
+  // Rescans, imports and backups run in the background with progress in
+  // LibraryTaskPanel. One runs at a time, and the music folder and reset
+  // controls are locked while it does: changing either mid-task would
+  // pull the library out from under it.
+  const taskRunning = useLibraryTaskStore(selectTaskRunning);
+  const runningKind = useLibraryTaskStore((state) =>
+    selectTaskRunning(state) ? state.task?.kind : undefined,
+  );
 
   // ui store stuff
   const showNotification = useUIStore((state) => state.showNotification);
 
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [pathDialogOpen, setPathDialogOpen] = useState(false);
-  const [backupDialogOpen, setBackupDialogOpen] = useState(false);
-  const [isBackupInProgress, setIsBackupInProgress] = useState(false);
   // Reference to store the original path for restoration if canceled
   const originalPathRef = useRef('');
-
-  // Scanning state
-  const [scanProgress, setScanProgress] = useState(0);
-  const [_scanStatus, setScanStatus] = useState('');
-  const [scanPhase, setScanPhase] = useState('preparing');
-  const [scanCurrentFile, setScanCurrentFile] = useState('');
-  const [scanTransferInfo, setScanTransferInfo] = useState<{
-    current: number;
-    total: number;
-    remaining: number;
-    estimatedTimeRemaining: string;
-  } | null>(null);
-  const [_scanProcessedFiles, setScanProcessedFiles] = useState<string[]>([]);
-  const scanProcessedFilesRef = useRef<string[]>([]);
-  const scanStartTime = useRef<number>(0);
-
-  const [backupStatus, setBackupStatus] = useState('');
-  // Add backup progress state
-  const [backupProgress, setBackupProgress] = useState(0);
-  const [backupCurrentFile, setBackupCurrentFile] = useState('');
-  const [backupPhase, setBackupPhase] = useState('preparing');
-  const [backupTransferInfo, setBackupTransferInfo] = useState<{
-    current: number;
-    total: number;
-    remaining: number;
-    estimatedTimeRemaining: string;
-  } | null>(null);
-  // Wall-clock anchor for ETA. Set when the first file finishes copying
-  // (transfer phase, currentTransfer === 1). Reset to 0 between runs.
-  const backupStartTime = useRef<number>(0);
-  // Track the last processed file for display in the completed log
-  const [_processedFiles, setProcessedFiles] = useState<string[]>([]);
-  const processedFilesRef = useRef<string[]>([]);
-
-  // Add a ref to track the last time we updated the UI for scan progress
-  const lastUpdateTime = useRef(0);
-
-  // Listen for scan progress events
-  useEffect(() => {
-    // Throttle updates to once every 1000ms (1 second)
-    const updateThreshold = 1000; // milliseconds
-
-    const handleScanProgress = (data: {
-      total: number;
-      processed: number;
-      current: string;
-    }) => {
-      const now = Date.now();
-
-      // Only update the UI if enough time has passed since the last update
-      // or if this is the first file, every 50th file, or the last file
-      if (
-        now - lastUpdateTime.current > updateThreshold ||
-        data.processed === 1 ||
-        data.processed % 50 === 0 ||
-        data.processed === data.total
-      ) {
-        // Set scan phase to processing
-        if (scanPhase === 'preparing' && data.processed > 0) {
-          setScanPhase('processing');
-          scanStartTime.current = now;
-        }
-
-        // Update progress
-        setScanProgress((data.processed / data.total) * 100); // Convert to percentage
-        setScanStatus(`Scanning: ${data.processed} of ${data.total} files`);
-
-        // Update current file
-        setScanCurrentFile(data.current);
-
-        // Add to processed files (but limit to last 20 for performance)
-        if (!scanProcessedFilesRef.current.includes(data.current)) {
-          const updatedFiles = [
-            data.current,
-            ...scanProcessedFilesRef.current,
-          ].slice(0, 20);
-          scanProcessedFilesRef.current = updatedFiles;
-          setScanProcessedFiles(updatedFiles);
-        }
-
-        if (data.processed > 0 && scanStartTime.current > 0) {
-          const elapsedMs = now - scanStartTime.current;
-          setScanTransferInfo({
-            current: data.processed,
-            total: data.total,
-            remaining: data.total - data.processed,
-            estimatedTimeRemaining: formatEta(
-              elapsedMs,
-              data.processed,
-              data.total,
-            ),
-          });
-        }
-
-        lastUpdateTime.current = now;
-      }
-    };
-
-    const handleScanComplete = () => {
-      setScanStatus('Complete');
-      setScanProgress(100);
-      setScanPhase('complete');
-
-      // Reset scan state after a delay
-      setTimeout(() => {
-        setScanProcessedFiles([]);
-        scanProcessedFilesRef.current = [];
-        setScanCurrentFile('');
-        setScanTransferInfo(null);
-      }, 3000);
-    };
-
-    // Register event listeners via the typed preload wrappers.
-    const unsubScanProgress =
-      window.electron.library.onScanProgress(handleScanProgress);
-    const unsubScanComplete =
-      window.electron.library.onScanComplete(handleScanComplete);
-
-    // Listen for backup success or failure
-    const unsubBackupSuccess = window.electron.backup.onSuccess(() => {
-      setBackupDialogOpen(false);
-      setIsBackupInProgress(false);
-      setBackupStatus('');
-      setBackupProgress(100);
-      setProcessedFiles([]);
-      processedFilesRef.current = [];
-      showNotification('Library backup completed successfully', 'success');
-    });
-
-    const unsubBackupError = window.electron.backup.onError((message) => {
-      setIsBackupInProgress(false);
-      setBackupStatus('');
-      showNotification(`Backup failed: ${message}`, 'error');
-    });
-
-    // Listen for backup progress updates
-    const unsubBackupProgress = window.electron.backup.onProgress((data) => {
-      setBackupStatus(data.status);
-      setBackupPhase(data.phase);
-
-      if (data.phase === 'transferring') {
-        if (data.currentFile) {
-          setBackupCurrentFile(data.currentFile);
-
-          if (!processedFilesRef.current.includes(data.currentFile)) {
-            const updatedFiles = [
-              data.currentFile,
-              ...processedFilesRef.current,
-            ].slice(0, 20);
-            processedFilesRef.current = updatedFiles;
-            setProcessedFiles(updatedFiles);
-          }
-        }
-
-        if (data.progress !== undefined) {
-          setBackupProgress(data.progress);
-        }
-
-        if (
-          data.currentTransfer !== undefined &&
-          data.total !== undefined &&
-          data.remaining !== undefined
-        ) {
-          if (backupStartTime.current === 0 && data.currentTransfer >= 1) {
-            backupStartTime.current = Date.now();
-          }
-          const elapsedMs =
-            backupStartTime.current === 0
-              ? 0
-              : Date.now() - backupStartTime.current;
-          setBackupTransferInfo({
-            current: data.currentTransfer,
-            total: data.total,
-            remaining: data.remaining,
-            estimatedTimeRemaining: formatEta(
-              elapsedMs,
-              data.currentTransfer,
-              data.total,
-            ),
-          });
-        }
-      }
-    });
-
-    return () => {
-      unsubScanProgress();
-      unsubScanComplete();
-      unsubBackupSuccess();
-      unsubBackupError();
-      unsubBackupProgress();
-    };
-  }, [scanPhase, showNotification]);
 
   const handleThemeChange = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -284,33 +89,12 @@ export default function Settings({ onClose }: SettingsProps) {
     });
   };
 
-  const handleRescanLibrary = async () => {
+  const handleRescanLibrary = () => {
     if (!libraryPath) {
       showNotification('Please set a library path first', 'warning');
       return;
     }
-
-    try {
-      // Reset scan state
-      setScanProgress(0);
-      setScanStatus('Preparing to scan...');
-      setScanPhase('preparing');
-      setScanCurrentFile('');
-      setScanTransferInfo(null);
-      setScanProcessedFiles([]);
-      scanProcessedFilesRef.current = [];
-      scanStartTime.current = 0;
-
-      // Start the scan via the mutation. isScanning above flips on
-      // automatically; the scan-complete push event invalidates the
-      // tracks query and shows the success notification.
-      await scanLibraryMutation.mutateAsync(libraryPath);
-    } catch (error) {
-      console.error('Error scanning library:', error);
-      setScanStatus('Failed');
-      setScanPhase('error');
-      // Hook already toasts via uiStore on failure.
-    }
+    startRescan(libraryPath);
   };
 
   const handleAddSongs = async () => {
@@ -328,25 +112,10 @@ export default function Settings({ onClose }: SettingsProps) {
       ) {
         return;
       }
-
-      // Reset scan state
-      setScanProgress(0);
-      setScanStatus('Preparing to import...');
-      setScanPhase('preparing');
-      setScanCurrentFile('');
-      setScanTransferInfo(null);
-      setScanProcessedFiles([]);
-      scanProcessedFilesRef.current = [];
-      scanStartTime.current = 0;
-
-      // Import the selected files via the mutation. Hook invalidates
-      // tracks + playlists on success.
-      await importFilesMutation.mutateAsync(result.filePaths);
+      startImport(result.filePaths);
     } catch (error) {
       console.error('Error importing files:', error);
-      setScanStatus('Failed');
-      setScanPhase('error');
-      // Hook already toasts via uiStore on failure.
+      showNotification('Failed to import files', 'error');
     }
   };
 
@@ -376,24 +145,9 @@ export default function Settings({ onClose }: SettingsProps) {
         return;
       }
 
-      // Reset run-scoped state so a second backup in the same session
-      // doesn't show stale counts/ETA from the previous run.
-      setBackupDialogOpen(true);
-      setIsBackupInProgress(true);
-      setBackupStatus('Backing up library...');
-      setBackupPhase('preparing');
-      setBackupProgress(0);
-      setBackupCurrentFile('');
-      setBackupTransferInfo(null);
-      backupStartTime.current = 0;
-
-      // Trigger the backup; progress / success / error arrive via the
-      // backup.on* subscriptions above.
-      window.electron.backup.start(backupPath);
+      startBackup(backupPath);
     } catch (error) {
       console.error('Error backing up library:', error);
-      setIsBackupInProgress(false);
-      setBackupStatus('');
       showNotification(
         error instanceof Error ? error.message : 'Error backing up library',
         'error',
@@ -402,6 +156,7 @@ export default function Settings({ onClose }: SettingsProps) {
   };
 
   const handleSelectLibraryPath = async () => {
+    if (taskRunning) return;
     originalPathRef.current = libraryPath;
     try {
       const result = await window.electron.dialog.selectDirectory();
@@ -433,42 +188,13 @@ export default function Settings({ onClose }: SettingsProps) {
     }
   };
 
-  // New function to handle confirmation of library path change
-  const handleConfirmPathChange = async () => {
-    try {
-      setPathDialogOpen(false);
-
-      showNotification('Library path saved successfully', 'success');
-
-      try {
-        // Reset scan state
-        setScanProgress(0);
-        setScanStatus('');
-
-        // First, reset tracks in the database via the mutation.
-        const resetResult = await resetTracksMutation.mutateAsync();
-        if (!resetResult.success) {
-          console.error('Failed to reset tracks:', resetResult.message);
-          showNotification(
-            `Failed to reset tracks: ${resetResult.message}`,
-            'error',
-          );
-          return;
-        }
-
-        await scanLibraryMutation.mutateAsync(libraryPath);
-      } catch (error) {
-        console.error('Error scanning library:', error);
-        setScanStatus('Failed');
-        showNotification(
-          error instanceof Error ? error.message : 'Error scanning library',
-          'error',
-        );
-      }
-    } catch (error) {
-      console.error('Error saving library path:', error);
-      showNotification('Error saving library path', 'error');
-    }
+  // Confirming a music folder change clears the old library and scans
+  // the new folder as one background task. The current library stays on
+  // screen until the new one is ready.
+  const handleConfirmPathChange = () => {
+    setPathDialogOpen(false);
+    showNotification('Library path saved successfully', 'success');
+    startRescan(libraryPath, { replaceExisting: true });
   };
 
   // New function to handle cancellation of library path change
@@ -513,79 +239,16 @@ export default function Settings({ onClose }: SettingsProps) {
     setResetDialogOpen(false);
   };
 
-  const getScanStatusText = () => {
-    if (scanPhase === 'error') return 'Scan Failed';
-    if (scanPhase === 'complete') return 'Scan Complete';
-
-    switch (scanPhase) {
-      case 'preparing':
-        return 'Preparing...';
-      case 'processing':
-        return 'Scanning...';
-      default:
-        return 'In Progress...';
-    }
-  };
-
-  // Function to generate the backup status text
-  const getBackupStatusText = () => {
-    if (!isBackupInProgress) return 'Complete';
-
-    switch (backupPhase) {
-      case 'preparing':
-        return 'Preparing...';
-      case 'planning':
-        return 'Checking files...';
-      case 'transferring':
-        return 'Copying files...';
-      case 'error':
-        return 'Error';
-      default:
-        return 'In Progress...';
-    }
-  };
-
-  // Function to extract just the filename for display
-  const getFileName = (filePath: string) => {
-    const parts = filePath.split('/');
-    return parts[parts.length - 1] || filePath;
-  };
-
-  // Helper functions for backup progress
-  const getProgressValue = () => {
-    if (!isBackupInProgress) {
-      return 100;
-    }
-
-    if (backupPhase === 'transferring') {
-      return backupProgress;
-    }
-
-    return undefined;
-  };
-
-  const getProgressVariant = () => {
-    if (isBackupInProgress && backupPhase !== 'transferring') {
-      return 'indeterminate';
-    }
-    return 'determinate';
-  };
-
-  // Helper functions for scan progress
-  const getScanProgressValue = () => {
-    if (scanPhase === 'complete' || scanPhase === 'error') {
-      return 100;
-    }
-
-    return scanProgress;
-  };
-
-  const getScanProgressVariant = () => {
-    if (scanPhase === 'preparing') {
-      return 'indeterminate';
-    }
-    return 'determinate';
-  };
+  const busyCaption = taskRunning && (
+    <Typography
+      color="text.secondary"
+      data-testid="settings-task-locked"
+      sx={{ display: 'block', fontSize: '0.75rem', fontStyle: 'italic' }}
+    >
+      Available when the current{' '}
+      {runningKind ? TASK_LABELS[runningKind] : 'task'} finishes.
+    </Typography>
+  );
 
   return (
     <Box
@@ -643,13 +306,19 @@ export default function Settings({ onClose }: SettingsProps) {
           </Typography>
           <FormControl fullWidth sx={{ mt: 1 }}>
             <TextField
+              disabled={taskRunning}
               label="Folder"
               onChange={handleSelectLibraryPath}
               slotProps={{
                 input: {
                   endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton edge="end" onClick={handleSelectLibraryPath}>
+                      <IconButton
+                        aria-label="Choose music folder"
+                        disabled={taskRunning}
+                        edge="end"
+                        onClick={handleSelectLibraryPath}
+                      >
                         <FolderIcon />
                       </IconButton>
                     </InputAdornment>
@@ -659,6 +328,7 @@ export default function Settings({ onClose }: SettingsProps) {
               value={libraryPath}
             />
           </FormControl>
+          {busyCaption && <Box sx={{ mt: 1 }}>{busyCaption}</Box>}
         </Paper>
 
         <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
@@ -676,13 +346,13 @@ export default function Settings({ onClose }: SettingsProps) {
             </Typography>
             <Button
               color="primary"
-              disabled={!libraryPath || isScanning}
+              disabled={!libraryPath || taskRunning}
               fullWidth
               onClick={handleAddSongs}
               startIcon={<AddIcon />}
               variant="contained"
             >
-              Add Songs
+              {runningKind === 'import' ? 'Importing…' : 'Add Songs'}
             </Button>
           </Box>
         </Paper>
@@ -701,13 +371,13 @@ export default function Settings({ onClose }: SettingsProps) {
             </Typography>
             <Button
               color="primary"
-              disabled={!libraryPath || isScanning}
+              disabled={!libraryPath || taskRunning}
               fullWidth
               onClick={handleRescanLibrary}
               startIcon={<RefreshIcon />}
               variant="contained"
             >
-              {isScanning ? 'Scanning...' : 'Rescan Library'}
+              {runningKind === 'scan' ? 'Scanning…' : 'Rescan Library'}
             </Button>
           </Box>
         </Paper>
@@ -728,12 +398,12 @@ export default function Settings({ onClose }: SettingsProps) {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Button
               color="primary"
-              disabled={!libraryPath || isScanning || isBackupInProgress}
+              disabled={!libraryPath || taskRunning}
               onClick={handleBackupLibrary}
               startIcon={<BackupIcon />}
               variant="contained"
             >
-              {isBackupInProgress ? 'Backing Up...' : 'Backup Library'}
+              {runningKind === 'backup' ? 'Backing Up…' : 'Backup Library'}
             </Button>
           </Box>
         </Paper>
@@ -897,6 +567,7 @@ export default function Settings({ onClose }: SettingsProps) {
           <Box sx={{ mt: 2 }}>
             <Button
               color="error"
+              disabled={taskRunning}
               onClick={handleResetDatabase}
               startIcon={<WarningIcon />}
               sx={{ mb: 2 }}
@@ -909,104 +580,10 @@ export default function Settings({ onClose }: SettingsProps) {
               playlists, and settings will be removed. Your actual music files
               are never touched.
             </Typography>
+            {busyCaption && <Box sx={{ mt: 1 }}>{busyCaption}</Box>}
           </Box>
         </Paper>
       </Paper>
-
-      {/* Scanning progress dialog */}
-      <Dialog fullWidth maxWidth="sm" open={isScanning}>
-        <DialogTitle>
-          {scanPhase === 'complete' ? 'Scan Complete' : getScanStatusText()}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2 }}>
-            <LinearProgress
-              sx={{ mt: 1, mb: 2 }}
-              value={getScanProgressValue()}
-              variant={getScanProgressVariant()}
-            />
-
-            {scanPhase === 'processing' && scanTransferInfo && (
-              <Typography color="text.secondary" variant="body2">
-                {scanTransferInfo.current.toLocaleString()} of{' '}
-                {scanTransferInfo.total.toLocaleString()} songs
-              </Typography>
-            )}
-
-            {scanPhase === 'processing' && scanCurrentFile && (
-              <Typography
-                color="text.secondary"
-                sx={{
-                  mt: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                variant="body2"
-              >
-                {getFileName(scanCurrentFile)}
-              </Typography>
-            )}
-
-            {scanPhase === 'complete' && scanTransferInfo && (
-              <Typography color="text.secondary" variant="body2">
-                Added {scanTransferInfo.total.toLocaleString()} songs.
-              </Typography>
-            )}
-          </Box>
-        </DialogContent>
-      </Dialog>
-
-      {/* Backup progress dialog */}
-      <Dialog fullWidth maxWidth="sm" open={backupDialogOpen}>
-        <DialogTitle>
-          {!isBackupInProgress ? 'Backup Complete' : getBackupStatusText()}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2 }}>
-            <LinearProgress
-              sx={{ mt: 1, mb: 2 }}
-              value={getProgressValue()}
-              variant={getProgressVariant()}
-            />
-
-            {backupPhase === 'planning' && backupStatus && (
-              <Typography color="text.secondary" variant="body2">
-                {backupStatus}
-              </Typography>
-            )}
-
-            {backupPhase === 'transferring' && backupTransferInfo && (
-              <Typography color="text.secondary" variant="body2">
-                {backupTransferInfo.current.toLocaleString()} of{' '}
-                {backupTransferInfo.total.toLocaleString()} files
-              </Typography>
-            )}
-
-            {backupPhase === 'transferring' &&
-              backupTransferInfo?.estimatedTimeRemaining && (
-                <Typography color="text.secondary" variant="body2">
-                  About {backupTransferInfo.estimatedTimeRemaining} remaining
-                </Typography>
-              )}
-
-            {backupPhase === 'transferring' && backupCurrentFile && (
-              <Typography
-                color="text.secondary"
-                sx={{
-                  mt: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                variant="body2"
-              >
-                {getFileName(backupCurrentFile)}
-              </Typography>
-            )}
-          </Box>
-        </DialogContent>
-      </Dialog>
 
       {/* Library path confirmation dialog */}
       <ConfirmationDialog

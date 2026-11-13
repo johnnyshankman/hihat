@@ -10,7 +10,16 @@
  */
 import path from 'path';
 import { pathToFileURL } from 'url';
-import { app, BrowserWindow, shell, ipcMain, net, protocol } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  shell,
+  ipcMain,
+  net,
+  protocol,
+  MessageBoxOptions,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import electronDebug from 'electron-debug';
@@ -23,6 +32,7 @@ import {
   bulkImportPlaylistsAsync,
   updateSettingsFromMigration,
   getSettings,
+  persistNow,
 } from './db';
 import { ipcHandlers } from './ipc/handlers';
 import {
@@ -32,6 +42,13 @@ import {
 } from './ipc/register';
 import { trustWindow } from './ipc/validateSender';
 import { setMainWindow as setLibraryMainWindow } from './library/scanner';
+import {
+  getActiveTask,
+  loadInterruptedTask,
+  setMainWindow as setLibraryTaskMainWindow,
+  stopActiveTask,
+} from './library/libraryTask';
+import type { LibraryTaskKind } from '../types/ipc';
 import {
   setMainWindow as setMiniPlayerMainWindow,
   setupMiniPlayerHandlers,
@@ -199,8 +216,73 @@ const cleanupResources = () => {
     log.info('=== Application Shutting Down ===');
   }
 
+  // Flush writes that batch mode was holding back (a scan defers other
+  // writes to its next checkpoint) before the connection goes away.
+  persistNow();
+
   // Close database connection
   closeDatabase();
+};
+
+// How long a quit waits for a running library task to reach a
+// checkpoint. Everything on disk is consistent either way; this only
+// lets the task record a little more progress.
+const TASK_STOP_TIMEOUT_MS = 5000;
+
+const QUIT_PROMPTS: Record<
+  LibraryTaskKind,
+  { message: string; detail: string }
+> = {
+  scan: {
+    message: 'Your library is still being rescanned.',
+    detail:
+      'If you quit now, the songs found so far are kept and hihat will offer to finish the rescan next time it opens.',
+  },
+  import: {
+    message: 'Songs are still being imported.',
+    detail:
+      'If you quit now, the songs already imported are kept and hihat will offer to finish up next time it opens.',
+  },
+  backup: {
+    message: 'Your library is still being backed up.',
+    detail:
+      'If you quit now, the files already copied stay in your backup and you can run it again next time.',
+  },
+};
+
+let quitConfirmed = false;
+let quitPromptOpen = false;
+
+/** Stop the running task at its next checkpoint, then quit for real. */
+const stopTaskAndQuit = async () => {
+  quitConfirmed = true;
+  await stopActiveTask(TASK_STOP_TIMEOUT_MS);
+  app.quit();
+};
+
+/**
+ * Ask before quitting while a library task runs. Keep Running is the
+ * default so an accidental Cmd+Q doesn't cut a long scan short.
+ */
+const confirmQuitDuringTask = async (kind: LibraryTaskKind) => {
+  quitPromptOpen = true;
+  const options: MessageBoxOptions = {
+    type: 'warning',
+    buttons: ['Keep Running', 'Quit'],
+    defaultId: 0,
+    cancelId: 0,
+    message: QUIT_PROMPTS[kind].message,
+    detail: QUIT_PROMPTS[kind].detail,
+  };
+  try {
+    const { response } =
+      mainWindow && !mainWindow.isDestroyed()
+        ? await dialog.showMessageBox(mainWindow, options)
+        : await dialog.showMessageBox(options);
+    if (response === 1) await stopTaskAndQuit();
+  } finally {
+    quitPromptOpen = false;
+  }
 };
 
 /**
@@ -357,6 +439,29 @@ const createWindow = async () => {
   // Initialize database
   initDatabase();
 
+  // Note a task the previous run never finished, before a new task can
+  // overwrite its marker.
+  loadInterruptedTask();
+
+  // A crashed renderer leaves a blank window. Reload it: the main process
+  // (and any running library task) is unaffected, and the reloaded
+  // renderer rehydrates task progress from `library:getTaskState`.
+  // Capped so a renderer that crashes on load can't loop forever.
+  const recentRendererCrashes: number[] = [];
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    if (details.reason === 'clean-exit' || !mainWindow) return;
+    const now = Date.now();
+    while (
+      recentRendererCrashes.length &&
+      now - recentRendererCrashes[0] > 60000
+    ) {
+      recentRendererCrashes.shift();
+    }
+    recentRendererCrashes.push(now);
+    console.error(`Renderer process gone (${details.reason})`);
+    if (recentRendererCrashes.length <= 3) mainWindow.reload();
+  });
+
   // Check and run v1 to v2 migration if needed
   if (needsMigration()) {
     // Run migration in background after window is ready
@@ -465,6 +570,7 @@ const createWindow = async () => {
 
   // Set main window reference for scanner and mini player
   setLibraryMainWindow(mainWindow);
+  setLibraryTaskMainWindow(mainWindow);
   setMiniPlayerMainWindow(mainWindow);
 
   // Setup MiniPlayer handlers
@@ -509,6 +615,23 @@ app
     });
   })
   .catch(console.log);
+
+app.on('before-quit', (event) => {
+  const task = getActiveTask();
+  if (!task || quitConfirmed) return;
+  event.preventDefault();
+  if (!quitPromptOpen) confirmQuitDuringTask(task.kind);
+});
+
+// A termination signal (logout, `kill`, Activity Monitor's Quit) can't
+// show a prompt. Stop the task at a checkpoint and quit cleanly so
+// deferred writes are flushed. SIGKILL can't be caught; atomic writes
+// and the interrupted-task marker cover that case.
+['SIGTERM', 'SIGINT'].forEach((signal) => {
+  process.on(signal, () => {
+    stopTaskAndQuit();
+  });
+});
 
 app.on('will-quit', () => {
   cleanupResources();

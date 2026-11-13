@@ -41,6 +41,8 @@ playwright-report/
 test-results/
 .test-data/
 e2e/fixtures/*.sqlite
+e2e/fixtures/*.sqlite.*
+e2e/fixtures/library-task.json
 e2e/fixtures/test-userConfig.json
 e2e/fixtures/test-userConfig.json.migrated
 
