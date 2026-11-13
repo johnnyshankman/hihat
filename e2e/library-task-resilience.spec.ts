@@ -29,19 +29,32 @@ async function launch(seedLibraryPath?: string) {
 /**
  * Seed a library of INITIAL_SONGS, then drop ADDED_SONGS more into the
  * folder and start a slow rescan. Resolves once the rescan has written
- * some (not all) of the new songs.
+ * new songs to disk but is still running. How many of them have landed
+ * by then depends on the runner's core count (it sets the batch size).
+ *
+ * With `removeFirstSong`, the first seeded song's file is deleted before
+ * the rescan. A scan only drops missing songs at its very end, so that
+ * song still being in the library proves the scan never finished.
  */
-async function startSlowRescanMidway(): Promise<{
+async function startSlowRescanMidway(
+  options: { removeFirstSong?: boolean } = {},
+): Promise<{
   app: ElectronApplication;
   page: Page;
   libraryDir: string;
+  removedPath: string | null;
 }> {
   const libraryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hihat-resil-'));
-  TestHelpers.copyFixtureSongs(libraryDir, INITIAL_SONGS);
+  const [firstSong] = TestHelpers.copyFixtureSongs(libraryDir, INITIAL_SONGS);
   const { app, page } = await launch(libraryDir);
   await page.getByTestId('welcome-scan').click();
   await TestHelpers.waitForTrackCount(page, INITIAL_SONGS, 30000);
 
+  let removedPath: string | null = null;
+  if (options.removeFirstSong) {
+    removedPath = path.join(libraryDir, firstSong);
+    fs.unlinkSync(removedPath);
+  }
   TestHelpers.copyFixtureSongs(libraryDir, ADDED_SONGS, INITIAL_SONGS);
   await TestHelpers.setScanBatchDelay(app, SLOW_BATCH_MS);
   // Not awaited: the scan is meant to be cut short.
@@ -52,7 +65,15 @@ async function startSlowRescanMidway(): Promise<{
   await expect
     .poll(dbTrackCount, { timeout: 30000 })
     .toBeGreaterThan(INITIAL_SONGS);
-  return { app, page, libraryDir };
+  return { app, page, libraryDir, removedPath };
+}
+
+async function libraryFilePaths(page: Page): Promise<string[]> {
+  return page.evaluate(async () =>
+    (await (window as any).electron.tracks.getAll()).map(
+      (t: { filePath: string }) => t.filePath,
+    ),
+  );
 }
 
 /** Relaunch on the same database and wait for the library rows. */
@@ -77,22 +98,25 @@ test.describe('Library task resilience', () => {
   });
 
   test('force quit mid-rescan: library intact, interrupted rescan offered and finishes', async () => {
-    const { app, libraryDir } = await startSlowRescanMidway();
+    const { app, libraryDir, removedPath } = await startSlowRescanMidway({
+      removeFirstSong: true,
+    });
 
     // SIGKILL: no quit handlers run at all.
     app.process().kill('SIGKILL');
     await app.waitForEvent('close');
     expect(fs.existsSync(`${DB_PATH}.tmp`)).toBe(false);
 
-    // Partway: some new songs were written, not all of them.
+    // Killed partway: new songs were written, but the removed song is
+    // still listed because stale cleanup only runs at the end.
     const countAtKill = await dbTrackCount();
     expect(countAtKill).toBeGreaterThan(INITIAL_SONGS);
-    expect(countAtKill).toBeLessThan(INITIAL_SONGS + ADDED_SONGS);
 
     const next = await relaunch();
     try {
       // Every song written before the kill survived, with whole files.
       await TestHelpers.waitForTrackCount(next.page, countAtKill);
+      expect(await libraryFilePaths(next.page)).toContain(removedPath);
       await expect(panel(next.page)).toHaveAttribute(
         'data-phase',
         'interrupted',
@@ -103,12 +127,14 @@ test.describe('Library task resilience', () => {
       await TestHelpers.settleAnimations(next.page);
       await TestHelpers.takeScreenshot(next.page, 'resilience-interrupted');
 
+      // Finishing the rescan adds anything missed and drops the removed song.
       await next.page.getByTestId('library-task-retry').click();
       await TestHelpers.waitForTrackCount(
         next.page,
-        INITIAL_SONGS + ADDED_SONGS,
+        INITIAL_SONGS + ADDED_SONGS - 1,
         30000,
       );
+      expect(await libraryFilePaths(next.page)).not.toContain(removedPath);
       await expect(panel(next.page)).toHaveCount(0, { timeout: 10000 });
       // A finished rescan clears the marker: nothing to offer next time.
       expect(
