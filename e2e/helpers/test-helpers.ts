@@ -510,17 +510,17 @@ export class TestHelpers {
     timeout = 30000,
   ): Promise<void> {
     await expect
-      .poll(
-        async () => {
-          const text = await page
-            .locator('[data-testid="player-elapsed-time"]')
-            .textContent();
-          const [mins, secs] = (text ?? '0:00').split(':');
-          return parseInt(mins, 10) * 60 + parseInt(secs, 10);
-        },
-        { timeout },
-      )
+      .poll(() => this.elapsedSeconds(page), { timeout })
       .toBeGreaterThanOrEqual(seconds);
+  }
+
+  /** The player's elapsed-time readout, in whole seconds. */
+  static async elapsedSeconds(page: Page): Promise<number> {
+    const text = await page
+      .locator('[data-testid="player-elapsed-time"]')
+      .textContent();
+    const [mins, secs] = (text ?? '0:00').split(':');
+    return parseInt(mins, 10) * 60 + parseInt(secs, 10);
   }
 
   /**
@@ -589,6 +589,17 @@ export class TestHelpers {
     // The scan resolves in the main process, then `scanCompleteInvalidator`
     // refreshes the tracks query — wait for the rows, not a fixed delay.
     await this.waitForTracks(page, 30000);
+  }
+
+  /**
+   * Close the Settings drawer with its close button. Escape is unreliable
+   * once a task button has been clicked: the button disables itself, focus
+   * falls to <body>, and MUI only pulls focus back into the drawer while
+   * the window has OS focus, which CI runners don't guarantee.
+   */
+  static async closeSettings(page: Page): Promise<void> {
+    await page.getByTestId('settings-close').click();
+    await expect(page.getByTestId('settings-view')).toHaveCount(0);
   }
 
   static async navigateToView(

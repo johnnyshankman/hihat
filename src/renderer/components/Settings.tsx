@@ -283,6 +283,8 @@ export default function Settings({ onClose }: SettingsProps) {
           Settings
         </Typography>
         <IconButton
+          aria-label="Close settings"
+          data-testid="settings-close"
           onClick={onClose}
           size="small"
           sx={{ ...mutedIconButtonSx, WebkitAppRegion: 'no-drag' }}
