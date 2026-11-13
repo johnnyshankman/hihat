@@ -31,11 +31,13 @@
 src/
   main/                     # Electron main process
     db/index.ts             # sql.js database wrapper (adapts to better-sqlite3-like API)
+    db/atomicWrite.ts       # Crash-safe file replace (temp + fsync + rename)
     ipc/handlers.ts         # Domain handler implementations (tracks, playlists, settings, etc.)
     ipc/register.ts         # Typed IPC dispatch — single source of truth for channel registration
     ipc/validateSender.ts   # Sender-frame validation for every ipcMain.handle call
     ipc/backupHandlers.ts   # Library backup via rsync
     library/scanner.ts      # Music file scanner and metadata extractor
+    library/libraryTask.ts  # One-at-a-time lock for scan/import/backup, interrupted-task marker
     migration/v1ToV2.ts     # v1 -> v2 data migration
     main.ts                 # App entry, window creation, protocol registration
     menu.ts                 # macOS menu bar
@@ -44,6 +46,7 @@ src/
     util.ts                 # Path resolution utilities
   renderer/                 # React renderer process
     components/             # React components (Library, Player, Settings, VirtualTable, etc.)
+    hooks/                  # App-level hooks (useLibraryTaskEvents)
     queries/                # TanStack Query hooks — server state owner
       client.ts             # QueryClient setup
       keys.ts               # Centralized query key factory
@@ -56,6 +59,7 @@ src/
       settingsAndPlaybackStore.ts    # Playback runtime (currentTrack, position, shuffle/repeat),
                                      # Gapless-5 player instance, in-memory settings cache
       uiStore.ts                     # Notifications, currentView, artistBrowserOpen
+      libraryTaskStore.ts            # Mirror of the running scan/import/backup for LibraryTaskPanel
       types.ts                       # Store type definitions
     utils/                  # Utility modules
       audioPlayer.ts        # Audio player utilities
@@ -127,6 +131,14 @@ When a component pulls anything out of a Zustand store — whether that's readin
 **If a value is read in both render-driving code and inside an effect, declare it once as a top-level selector and use the variable inside the effect.** Add it to the effect's dep array — Zustand action references are stable, so the effect still only runs once on mount for action-only deps, and ESLint stays happy. Splitting the same action between a top-level selector and a `getState()` call in the same component is a smell — pick one.
 
 **Cross-store reads:** stores access other stores exclusively via `useXStore.getState()` (lazy `require()` if a circular import is involved — see `uiStore.setBrowserOpen`). React hooks aren't available inside store modules, so `getState()` is the only option there.
+
+### Background Library Tasks (rescan, import, backup)
+- Run in the main process without blocking the UI; progress shows in `LibraryTaskPanel` (bottom-right, above the player). No modal dialogs.
+- **One at a time**, enforced in `library/libraryTask.ts` (`runExclusive` / `beginTask`). While one runs, the main process also rejects music folder changes and `resetTracks`/`resetDatabase`; the UI disables the same controls.
+- **The visible library changes once, at the end.** During a scan/import, `tracks:getAll` serves a snapshot taken when the task started, and renderer track mutations patch the cache instead of refetching. `library:scanComplete` triggers the single refresh, then `reconcileWithLibrary()` stops playback if the current song is gone and re-preloads next-up if it changed.
+- Renderer state mirrors main-process events (`library:taskStarted` / `library:taskEnded` / progress); `useLibraryTaskEvents` rehydrates from `library:getTaskState` after a reload.
+- **Crash safety:** every DB write goes through `writeFileAtomic`; a last-known-good `.bak` is refreshed each launch and used if the DB can't be opened (the bad file is moved aside, never deleted). A marker file records a running task; if it survives to the next launch the panel offers to finish it. Imports copy via `*.hihat-partial` + rename. Quitting mid-task prompts first, then stops the task at a checkpoint and flushes writes.
+- E2E: `TEST_SCAN_BATCH_DELAY_MS` (TEST_MODE only, read per batch) slows scans so specs can act mid-task; `TestHelpers.setScanBatchDelay` changes it at runtime.
 
 ### Audio Playback
 - Gapless-5 player runs in the **renderer process** (owned by `settingsAndPlaybackStore`); there is no main-process playback service.

@@ -8,6 +8,7 @@ import MainContent from './MainContent';
 import Settings from './Settings';
 import Player from './Player';
 import NotificationSystem from './NotificationSystem';
+import LibraryTaskPanel from './LibraryTaskPanel';
 
 const drawerWidth = 200;
 
@@ -170,6 +171,7 @@ export default function MainLayout() {
         <Player />
       </PlayerWrapper>
 
+      <LibraryTaskPanel />
       <NotificationSystem />
     </Box>
   );
