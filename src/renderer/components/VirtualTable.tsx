@@ -118,11 +118,25 @@ export default function VirtualTable({
     () => initialColumnSizing || {},
   );
 
-  // Debounced persistence of column sizing
-  const isInitialRender = useRef(true);
+  // Saved widths can arrive after mount (settings and tracks load in
+  // parallel at boot). Adopt them when they change, and don't echo the
+  // adopted widths back as a persist.
+  const initialSizingKey = JSON.stringify(initialColumnSizing || {});
+  const seededSizingKey = useRef(initialSizingKey);
+  const skipNextPersist = useRef(true);
   useEffect(() => {
-    if (isInitialRender.current) {
-      isInitialRender.current = false;
+    if (initialSizingKey === seededSizingKey.current) return;
+    seededSizingKey.current = initialSizingKey;
+    if (initialSizingKey === JSON.stringify(columnSizing)) return;
+    skipNextPersist.current = true;
+    setColumnSizing(JSON.parse(initialSizingKey));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSizingKey]);
+
+  // Debounced persistence of column sizing
+  useEffect(() => {
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false;
       return undefined;
     }
     if (!onColumnSizingPersist) return undefined;

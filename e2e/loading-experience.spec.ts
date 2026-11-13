@@ -72,10 +72,10 @@ test.describe('Loading experience', () => {
       await TestHelpers.takeScreenshot(page, 'loading-first-run-scanning');
 
       // Rows replace the welcome panel once the scan completes, and the
-      // table fades in rather than popping.
+      // table runs its entrance fade rather than popping. (Checked via the
+      // class: sampling opacity races the 220ms fade on a slow runner.)
       await TestHelpers.waitForTracks(page, 30000);
-      const samples = await sampleTableEntrance(page, 3);
-      expect(samples[0].opacity).toBeLessThan(1);
+      await expect(page.locator('.vt-table')).toHaveClass(/vt-table-enter/);
       await expect(page.getByTestId('library-welcome')).toHaveCount(0);
       await expect(page.locator('.vt-table')).toHaveCSS('opacity', '1');
       await settleAnimations(page);
@@ -125,8 +125,7 @@ test.describe('Loading experience', () => {
       await TestHelpers.takeScreenshot(page, 'loading-returning-skeleton');
 
       await TestHelpers.waitForTracks(page);
-      const samples = await sampleTableEntrance(page, 3);
-      expect(samples[0].opacity).toBeLessThan(1);
+      await expect(page.locator('.vt-table')).toHaveClass(/vt-table-enter/);
       await expect(skeleton).toHaveCount(0);
       await expect(page.locator('.vt-table')).toHaveCSS('opacity', '1');
       await settleAnimations(page);
