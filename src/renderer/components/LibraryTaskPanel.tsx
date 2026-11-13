@@ -106,15 +106,6 @@ function RunningBody({ task }: { task: LibraryTaskView }) {
           {fileName(task.currentFile)}
         </Typography>
       )}
-      <Typography
-        color="text.secondary"
-        sx={{ display: 'block', mt: 1, opacity: 0.8 }}
-        variant="caption"
-      >
-        {task.kind === 'backup'
-          ? 'You can keep listening while this runs.'
-          : 'Keep listening and browsing. Your library updates when this finishes.'}
-      </Typography>
     </>
   );
 }
