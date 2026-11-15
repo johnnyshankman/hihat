@@ -18,7 +18,7 @@ import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
 import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import type { InterruptedLibraryTask, LibraryTaskKind } from '../../types/ipc';
-import { getSettingsSnapshot, useTracks } from '../queries';
+import { useSettings, useTracks } from '../queries';
 import useLibraryTaskStore, {
   LibraryTaskView,
 } from '../stores/libraryTaskStore';
@@ -117,13 +117,14 @@ function InterruptedBody({
 }: {
   interrupted: InterruptedLibraryTask;
 }) {
+  const setInterrupted = useLibraryTaskStore((state) => state.setInterrupted);
+  const libraryPath = useSettings().data?.libraryPath;
   const dismiss = () => {
-    useLibraryTaskStore.getState().setInterrupted(null);
+    setInterrupted(null);
     window.electron.library.dismissInterruptedTask().catch((error) => {
       console.error('Error dismissing interrupted task:', error);
     });
   };
-  const libraryPath = getSettingsSnapshot()?.libraryPath;
   const isBackup = interrupted.kind === 'backup';
   const canRetry = isBackup ? !!interrupted.backupPath : !!libraryPath;
   const retry = () => {
@@ -183,9 +184,11 @@ export default function LibraryTaskPanel() {
   const dismiss = useLibraryTaskStore((state) => state.dismiss);
   const libraryIsEmpty = useTracks().data?.tracks.length === 0;
 
-  // The welcome screen shows the first scan's progress inline; don't
-  // repeat it here.
-  const welcomeShowsTask = libraryIsEmpty && task?.kind === 'scan';
+  // The welcome screen shows the first scan's progress and errors
+  // inline; don't repeat them here. The done state still shows here,
+  // since the panel is the only place a task's outcome is reported.
+  const welcomeShowsTask =
+    libraryIsEmpty && task?.kind === 'scan' && task.phase !== 'done';
   const content = task && !welcomeShowsTask ? task : null;
   const visible = !!content || (!task && !!interrupted);
 

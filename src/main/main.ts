@@ -41,7 +41,6 @@ import {
   sendIpcEvent,
 } from './ipc/register';
 import { trustWindow } from './ipc/validateSender';
-import { setMainWindow as setLibraryMainWindow } from './library/scanner';
 import {
   getActiveTask,
   loadInterruptedTask,
@@ -568,8 +567,7 @@ const createWindow = async () => {
   // Setup IPC handlers before setting window references and initializing playback
   setupIpcHandlers();
 
-  // Set main window reference for scanner and mini player
-  setLibraryMainWindow(mainWindow);
+  // Set main window reference for library tasks and mini player
   setLibraryTaskMainWindow(mainWindow);
   setMiniPlayerMainWindow(mainWindow);
 

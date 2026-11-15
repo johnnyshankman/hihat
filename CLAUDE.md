@@ -134,7 +134,7 @@ When a component pulls anything out of a Zustand store — whether that's readin
 
 ### Background Library Tasks (rescan, import, backup)
 - Run in the main process without blocking the UI; progress shows in `LibraryTaskPanel` (bottom-right, above the player). No modal dialogs.
-- **One at a time**, enforced in `library/libraryTask.ts` (`runExclusive` / `beginTask`). While one runs, the main process also rejects music folder changes and `resetTracks`/`resetDatabase`; the UI disables the same controls.
+- **One at a time**, enforced in `library/libraryTask.ts` (`runExclusive`). While one runs, the main process also rejects music folder changes and `resetTracks`/`resetDatabase`; the UI disables the same controls.
 - **The visible library changes once, at the end.** During a scan/import, `tracks:getAll` serves a snapshot taken when the task started, and renderer track mutations patch the cache instead of refetching. `library:scanComplete` triggers the single refresh, then `reconcileWithLibrary()` stops playback if the current song is gone and re-preloads next-up if it changed.
 - Renderer state mirrors main-process events (`library:taskStarted` / `library:taskEnded` / progress); `useLibraryTaskEvents` rehydrates from `library:getTaskState` after a reload.
 - **Crash safety:** every DB write goes through `writeFileAtomic`; a last-known-good `.bak` is refreshed each launch and used if the DB can't be opened (the bad file is moved aside, never deleted). A marker file records a running task; if it survives to the next launch the panel offers to finish it. Imports copy via `*.hihat-partial` + rename. Quitting mid-task prompts first, then stops the task at a checkpoint and flushes writes.

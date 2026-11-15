@@ -35,12 +35,18 @@ import type { Track } from '../../types/dbTypes';
 import type {
   ActiveLibraryTask,
   InterruptedLibraryTask,
+  IPCEventPayloads,
+  IPCEvents,
   LibraryTaskEnded,
   LibraryTaskKind,
   LibraryTaskProgress,
 } from '../../types/ipc';
 
 const MARKER_FILE = 'library-task.json';
+
+/** Shown when a task is refused because another one holds the lock. */
+export const BUSY_MESSAGE =
+  'Another library task is running. Try again when it finishes.';
 
 /** Thrown at a checkpoint once a stop has been requested. */
 export class LibraryTaskStoppedError extends Error {
@@ -73,6 +79,14 @@ function removeMarker(): void {
 
 export function setMainWindow(window: BrowserWindow): void {
   mainWindow = window;
+}
+
+/** Push a library event (progress, completion) to the main window. */
+export function sendLibraryEvent<E extends IPCEvents>(
+  channel: E,
+  ...payload: IPCEventPayloads[E] extends void ? [] : [IPCEventPayloads[E]]
+): void {
+  sendIpcEvent(mainWindow, channel, ...payload);
 }
 
 /**
@@ -119,7 +133,7 @@ export function getActiveTask(): ActiveLibraryTask | null {
  * Take the lock for `kind`. Returns false when another task holds it.
  * The caller must pair a successful begin with `endTask`.
  */
-export function beginTask(
+function beginTask(
   kind: LibraryTaskKind,
   details: { backupPath?: string } = {},
 ): boolean {
@@ -139,7 +153,7 @@ export function beginTask(
     // The task still runs; we only lose interrupted-run detection.
     console.error('Error writing library task marker:', error);
   }
-  sendIpcEvent(mainWindow, 'library:taskStarted', active);
+  sendLibraryEvent('library:taskStarted', active);
   return true;
 }
 
@@ -174,34 +188,42 @@ export function recordProgress(progress: LibraryTaskProgress): void {
  * Release the lock. A stopped task keeps its marker so the next launch
  * reports it as interrupted; any other outcome clears it.
  */
-export function endTask(result: Omit<LibraryTaskEnded, 'kind'>): void {
+function endTask(result: Omit<LibraryTaskEnded, 'kind'>): void {
   if (!active) return;
   const { kind } = active;
   if (result.outcome !== 'stopped') removeMarker();
   active = null;
   childProcess = null;
   tracksSnapshot = null;
-  sendIpcEvent(mainWindow, 'library:taskEnded', { kind, ...result });
+  sendLibraryEvent('library:taskEnded', { kind, ...result });
   settle?.();
   settle = null;
 }
 
+/** Outcome of `runExclusive`: whether it ran, and the value if it did. */
+export type ExclusiveResult<T> = { ran: false } | { ran: true; value: T };
+
 /**
- * Run `fn` under the lock. Resolves to null without running it when
- * another task is in progress.
+ * Run `fn` under the lock. Resolves to `{ ran: false }` without running
+ * it when another task is in progress. Throwing `LibraryTaskStoppedError`
+ * from `fn` ends the task as stopped (marker kept); any other error ends
+ * it as failed. Errors are rethrown for the caller to report.
  */
 export async function runExclusive<T>(
   kind: LibraryTaskKind,
   fn: () => Promise<T>,
-  describe: (
-    value: T,
-  ) => Omit<LibraryTaskEnded, 'kind' | 'outcome'> = () => ({}),
-): Promise<T | null> {
-  if (!beginTask(kind)) return null;
+  options: {
+    /** Recorded in the marker so an interrupted run can be retried. */
+    details?: { backupPath?: string };
+    /** Counts to report with a successful `library:taskEnded`. */
+    describe?: (value: T) => Omit<LibraryTaskEnded, 'kind' | 'outcome'>;
+  } = {},
+): Promise<ExclusiveResult<T>> {
+  if (!beginTask(kind, options.details)) return { ran: false };
   try {
     const value = await fn();
-    endTask({ outcome: 'success', ...describe(value) });
-    return value;
+    endTask({ outcome: 'success', ...options.describe?.(value) });
+    return { ran: true, value };
   } catch (error) {
     if (error instanceof LibraryTaskStoppedError) {
       endTask({ outcome: 'stopped' });

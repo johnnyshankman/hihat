@@ -7,7 +7,6 @@
 
 import fs from 'fs';
 import path from 'path';
-import { BrowserWindow } from 'electron';
 import * as mm from 'music-metadata';
 import { cpus } from 'os';
 import { promisify } from 'util';
@@ -18,6 +17,7 @@ import {
   isStopRequested,
   recordProgress,
   releaseTracksSnapshot,
+  sendLibraryEvent,
   throwIfStopRequested,
 } from './libraryTask';
 
@@ -67,28 +67,6 @@ const DB_BATCH_SIZE = 100;
 // Cache for directory existence checks to avoid repeated fs.existsSync calls
 const directoryExistsCache = new Map<string, boolean>();
 
-// Main window reference for sending progress events
-let mainWindow: BrowserWindow | null = null;
-
-/**
- * Set the main window reference for sending progress events
- * @param window - Main window reference
- */
-export function setMainWindow(window: BrowserWindow): void {
-  mainWindow = window;
-}
-
-/**
- * Send a progress event to the renderer process
- * @param channel - Channel to send the event on
- * @param data - Data to send
- */
-function sendProgressEvent(channel: string, data: any): void {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(channel, data);
-  }
-}
-
 /**
  * Throttled per-file progress for the running scan or import. Also
  * records the latest numbers so a reloaded renderer can rehydrate.
@@ -101,7 +79,7 @@ function createProgressReporter(total: number) {
     if (!force && now - lastSentAt < PROGRESS_INTERVAL_MS) return;
     lastSentAt = now;
     recordProgress({ processed, total });
-    sendProgressEvent('library:scanProgress', {
+    sendLibraryEvent('library:scanProgress', {
       total,
       processed,
       current: `Processed ${processed} of ${total} files`,
@@ -899,7 +877,7 @@ export async function scanLibrary(
     if (!fs.existsSync(dirPath)) {
       const errMsg = `Library path is not accessible: ${dirPath}`;
       debugLog(errMsg);
-      sendProgressEvent('library:scanComplete', {
+      sendLibraryEvent('library:scanComplete', {
         kind: 'scan',
         tracksAdded: 0,
         tracksRemoved: 0,
@@ -1105,7 +1083,7 @@ export async function scanLibrary(
 
     // Send completion event
     releaseTracksSnapshot();
-    sendProgressEvent('library:scanComplete', {
+    sendLibraryEvent('library:scanComplete', {
       kind: 'scan',
       tracksAdded,
       tracksRemoved,
@@ -1355,7 +1333,7 @@ export async function importFiles(
 
     // Send completion event
     releaseTracksSnapshot();
-    sendProgressEvent('library:scanComplete', {
+    sendLibraryEvent('library:scanComplete', {
       kind: 'import',
       tracksAdded,
       tracksRemoved: 0,

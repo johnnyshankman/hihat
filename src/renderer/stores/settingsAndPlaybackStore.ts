@@ -253,16 +253,23 @@ const useSettingsAndPlaybackStore = create<SettingsAndPlaybackStore>(
         const index = getTracksSnapshot()?.indexes.trackIndex;
         if (!index) return;
 
-        const shuffleHistory = state.shuffleHistory.filter((t) =>
-          index.has(t.id),
-        );
+        // Drop songs that no longer exist from shuffle history. The
+        // position indexes into the history, so shift it back by however
+        // many entries were removed at or before it; it then points at the
+        // same song, or the closest earlier one if that song is gone.
+        // -1 ("at the tip") stays -1.
+        const position = state.shuffleHistoryPosition;
+        let removedUpToPosition = 0;
+        const shuffleHistory = state.shuffleHistory.filter((t, i) => {
+          const keep = index.has(t.id);
+          if (!keep && i <= position) removedUpToPosition += 1;
+          return keep;
+        });
         if (shuffleHistory.length !== state.shuffleHistory.length) {
           set({
             shuffleHistory,
-            shuffleHistoryPosition: Math.min(
-              state.shuffleHistoryPosition,
-              shuffleHistory.length - 1,
-            ),
+            shuffleHistoryPosition:
+              position < 0 ? -1 : Math.max(-1, position - removedUpToPosition),
           });
         }
 

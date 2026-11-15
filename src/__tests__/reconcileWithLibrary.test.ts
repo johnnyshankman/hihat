@@ -184,4 +184,25 @@ describe('reconcileWithLibrary', () => {
     expect(state.shuffleHistory.map((t) => t.id)).toEqual(['a']);
     expect(state.shuffleHistoryPosition).toBe(0);
   });
+
+  test('keeps the shuffle history position on the same song after pruning', () => {
+    setLibrary(['a', 'b', 'c']);
+    playing('a', 'b');
+    // Navigated back to 'a'; 'c' is ahead in history.
+    useSettingsAndPlaybackStore.setState({
+      shuffleHistory: [
+        makeTrack('b'),
+        makeTrack('gone'),
+        makeTrack('a'),
+        makeTrack('c'),
+      ],
+      shuffleHistoryPosition: 2,
+    });
+
+    useSettingsAndPlaybackStore.getState().reconcileWithLibrary();
+
+    const state = useSettingsAndPlaybackStore.getState();
+    expect(state.shuffleHistory.map((t) => t.id)).toEqual(['b', 'a', 'c']);
+    expect(state.shuffleHistory[state.shuffleHistoryPosition].id).toBe('a');
+  });
 });

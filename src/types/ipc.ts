@@ -9,7 +9,7 @@
  *   - `IPCEventPayloads`             — main → renderer push channels (no response).
  *
  * Note on naming inconsistency: the backup-related channels use kebab-case
- * (`backup-library-success`/`-error`/`-progress`, `menu-backup-library`)
+ * (`backup-library-error`/`-progress`, `menu-backup-library`)
  * instead of the `domain:method` colon convention used elsewhere. Renaming
  * is cosmetic only and would require lockstep main+renderer changes, so the
  * legacy names are preserved.
@@ -102,7 +102,6 @@ export type Channels =
   | 'library:getTaskState'
   | 'library:dismissInterruptedTask'
   | 'menu-backup-library'
-  | 'backup-library-success'
   | 'backup-library-error'
   | 'backup-library-progress'
 
@@ -318,7 +317,6 @@ export interface IPCRequests {
 
   // Backup channels (kebab-case for legacy reasons)
   'menu-backup-library': string;
-  'backup-library-success': void;
   'backup-library-error': string;
   'backup-library-progress': {
     phase: string;
@@ -468,7 +466,6 @@ export interface IPCResponses {
 
   // Backup channels
   'menu-backup-library': void;
-  'backup-library-success': void;
   'backup-library-error': void;
   'backup-library-progress': void;
 
@@ -510,7 +507,6 @@ export type IPCEvents =
   | 'library:scanComplete'
   | 'library:taskStarted'
   | 'library:taskEnded'
-  | 'backup-library-success'
   | 'backup-library-error'
   | 'backup-library-progress'
   | 'ui:toggleSidebar'
@@ -553,7 +549,6 @@ export interface IPCEventPayloads {
   'library:scanComplete': ScanCompletePayload;
   'library:taskStarted': ActiveLibraryTask;
   'library:taskEnded': LibraryTaskEnded;
-  'backup-library-success': void;
   'backup-library-error': string;
   'backup-library-progress': {
     phase: string;

@@ -34,10 +34,11 @@ import type { IpcMainEvent } from 'electron';
 import Rsync from 'rsync';
 import * as db from '../db';
 import {
-  beginTask,
-  endTask,
+  BUSY_MESSAGE,
   isStopRequested,
+  LibraryTaskStoppedError,
   recordProgress,
+  runExclusive,
   setTaskChildProcess,
 } from '../library/libraryTask';
 
@@ -208,6 +209,11 @@ const runBackup = async (
         console.warn('rsync command:', cmd);
 
         if (error) {
+          // A graceful quit kills rsync; that's a stop, not a failure.
+          if (isStopRequested()) {
+            reject(new LibraryTaskStoppedError());
+            return;
+          }
           console.error('rsync error:', error);
           reject(error);
           return;
@@ -261,29 +267,22 @@ const runBackup = async (
  * @param event - IPC event to reply with progress or completion
  */
 const backupLibrary = async (backupPath: string, event: IpcMainEvent) => {
-  if (!beginTask('backup', { backupPath })) {
+  try {
+    const result = await runExclusive(
+      'backup',
+      () => runBackup(backupPath, event),
+      { details: { backupPath } },
+    );
+    if (!result.ran) event.reply('backup-library-error', BUSY_MESSAGE);
+  } catch (error: unknown) {
+    // A stopped backup keeps its marker so the next launch offers to
+    // finish it; there's nothing to report now.
+    if (error instanceof LibraryTaskStoppedError) return;
+    console.error('Error in backupLibrary:', error);
     event.reply(
       'backup-library-error',
-      'Another library task is running. Try again when it finishes.',
+      (error as Error).message || 'Unknown error occurred during backup',
     );
-    return;
-  }
-  try {
-    await runBackup(backupPath, event);
-    endTask({ outcome: 'success' });
-    event.reply('backup-library-success');
-  } catch (error: unknown) {
-    if (isStopRequested()) {
-      // Quit asked rsync to stop; the marker stays so the next launch
-      // offers to finish the backup.
-      endTask({ outcome: 'stopped' });
-      return;
-    }
-    console.error('Error in backupLibrary:', error);
-    const message =
-      (error as Error).message || 'Unknown error occurred during backup';
-    endTask({ outcome: 'error', message });
-    event.reply('backup-library-error', message);
   }
 };
 

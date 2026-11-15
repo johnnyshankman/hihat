@@ -73,9 +73,9 @@ async function launchWithTempLibrary(): Promise<{
   });
   await page.getByTestId('welcome-scan').click();
   await TestHelpers.waitForTrackCount(page, INITIAL_SONGS, 30000);
-  // The first scan's "done" state isn't shown in the panel (the welcome
-  // screen covered it), so nothing should be on screen now.
-  await expect(panel(page)).toHaveCount(0);
+  // The first scan's outcome shows briefly in the panel, then clears, so
+  // each spec starts with nothing on screen.
+  await expect(panel(page)).toHaveCount(0, { timeout: 10000 });
   return { app, page, libraryDir };
 }
 
@@ -248,13 +248,14 @@ test.describe('Background library tasks', () => {
       await TestHelpers.closeSettings(page);
       await TestHelpers.waitForTrackCount(page, INITIAL_SONGS + 3);
 
+      // The panel is the only place the outcome is reported: no toast.
       const importToasts = await page.evaluate(
         () =>
           (window as any).HIHAT_E2E_UI_STORE.getState().notifications.filter(
-            (n: { message: string }) => /Import/.test(n.message),
+            (n: { message: string }) => /Import|song/i.test(n.message),
           ).length,
       );
-      expect(importToasts).toBe(1);
+      expect(importToasts).toBe(0);
     } finally {
       await cleanup(app, libraryDir, importDir);
     }

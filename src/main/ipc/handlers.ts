@@ -29,6 +29,7 @@ import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
 import { scanLibrary, importFiles } from '../library/scanner';
 import {
+  BUSY_MESSAGE,
   dismissInterruptedTask,
   getActiveTask,
   getInterruptedTask,
@@ -37,9 +38,6 @@ import {
 } from '../library/libraryTask';
 import { writeMetadataToFile } from '../library/tagWriter';
 import { assertHttpUrl, assertTrustedSender } from './validateSender';
-
-const BUSY_MESSAGE =
-  'Another library task is running. Try again when it finishes.';
 
 /**
  * UI-related IPC handlers
@@ -301,9 +299,14 @@ export const libraryHandlers = {
       const result = await runExclusive(
         'scan',
         () => scanLibrary(libraryPath, { replaceExisting }),
-        (value) => value,
+        {
+          describe: ({ tracksAdded, tracksRemoved }) => ({
+            tracksAdded,
+            tracksRemoved,
+          }),
+        },
       );
-      if (!result) {
+      if (!result.ran) {
         return {
           success: false,
           message: BUSY_MESSAGE,
@@ -314,8 +317,8 @@ export const libraryHandlers = {
       return {
         success: true,
         message: `Successfully scanned library at ${libraryPath}`,
-        tracksAdded: result.tracksAdded,
-        tracksRemoved: result.tracksRemoved,
+        tracksAdded: result.value.tracksAdded,
+        tracksRemoved: result.value.tracksRemoved,
       };
     } catch (error: unknown) {
       console.error(`Error scanning library at ${libraryPath}:`, error);
@@ -330,18 +333,17 @@ export const libraryHandlers = {
 
   'library:import': (async ({ files }) => {
     try {
-      const result = await runExclusive(
-        'import',
-        () => importFiles(files),
-        (value) => value,
-      );
-      if (!result) {
+      const result = await runExclusive('import', () => importFiles(files), {
+        describe: ({ tracksAdded }) => ({ tracksAdded }),
+      });
+      if (!result.ran) {
         return { success: false, message: BUSY_MESSAGE, tracksAdded: 0 };
       }
+      const { tracksAdded } = result.value;
       return {
         success: true,
-        message: `Successfully imported ${result.tracksAdded} files`,
-        tracksAdded: result.tracksAdded,
+        message: `Successfully imported ${tracksAdded} files`,
+        tracksAdded,
       };
     } catch (error: unknown) {
       console.error('Error importing files:', error);

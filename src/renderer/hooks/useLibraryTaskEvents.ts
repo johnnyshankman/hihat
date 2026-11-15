@@ -89,10 +89,6 @@ export default function useLibraryTaskEvents(): void {
         tasks().taskEnded(result, doneMessage(result));
       }),
 
-      window.electron.backup.onSuccess(() => {
-        showNotification('Library backup completed successfully', 'success');
-      }),
-
       window.electron.backup.onError((message) => {
         // A backup that started and failed is shown in the panel; this
         // only covers one refused before it began.

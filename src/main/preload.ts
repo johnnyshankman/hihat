@@ -178,17 +178,6 @@ const electronHandler = {
     },
 
     /**
-     * Subscribe to backup completion (success). @returns Unsubscribe.
-     */
-    onSuccess(callback: () => void): () => void {
-      const subscription = () => callback();
-      ipcRenderer.on('backup-library-success', subscription);
-      return () => {
-        ipcRenderer.removeListener('backup-library-success', subscription);
-      };
-    },
-
-    /**
      * Subscribe to backup errors. @returns Unsubscribe.
      */
     onError(callback: (message: string) => void): () => void {

@@ -1,26 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import useUIStore from '../stores/uiStore';
-import type { ScanCompletePayload } from '../../types/ipc';
 import { queryKeys } from './keys';
-
-function completionMessage(data: ScanCompletePayload): string {
-  const added = data.tracksAdded || 0;
-  if (data.kind === 'import') {
-    return added > 0
-      ? `Imported ${added} new song${added !== 1 ? 's' : ''}`
-      : 'Import finished: no new songs';
-  }
-  const removed = data.tracksRemoved || 0;
-  const parts: string[] = [];
-  if (added > 0)
-    parts.push(`${added} new track${added !== 1 ? 's' : ''} added`);
-  if (removed > 0)
-    parts.push(`${removed} stale track${removed !== 1 ? 's' : ''} removed`);
-  return `Library scan completed: ${
-    parts.length > 0 ? parts.join(', ') : 'no changes'
-  }`;
-}
 
 /**
  * Bridge between the main-process `library:scanComplete` push event and
@@ -35,7 +15,9 @@ function completionMessage(data: ScanCompletePayload): string {
  *   the new library (a playing song that no longer exists stops, and the
  *   preloaded next-up song is recomputed). Passed in rather than imported
  *   because the playback store already depends on this module's barrel.
- * - Surfaces one user-facing notification with the outcome.
+ *
+ * The outcome itself is shown in the progress panel from the
+ * `library:taskEnded` event (see `useLibraryTaskEvents`), not here.
  */
 export function useScanCompleteInvalidator(onRefreshed: () => void): void {
   const qc = useQueryClient();
@@ -53,10 +35,6 @@ export function useScanCompleteInvalidator(onRefreshed: () => void): void {
         qc.invalidateQueries({ queryKey: queryKeys.playlists }),
       ]);
       onRefreshed();
-
-      const message = completionMessage(data);
-      console.warn(message);
-      useUIStore.getState().showNotification(message, 'success');
     });
   }, [qc, onRefreshed]);
 }
