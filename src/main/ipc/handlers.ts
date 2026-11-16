@@ -18,6 +18,8 @@ import {
   BrowserWindow,
   shell,
   IpcMainInvokeEvent,
+  OpenDialogOptions,
+  OpenDialogReturnValue,
 } from 'electron';
 import fs from 'fs';
 import path from 'path';
@@ -54,6 +56,14 @@ export const uiHandlers = {
 export const trackHandlers = {
   'tracks:getAll': (async () => {
     try {
+      // E2E hook: lets specs hold the library load open long enough to
+      // screenshot the renderer's loading state. Inert outside TEST_MODE.
+      const testDelayMs = Number(process.env.TEST_TRACKS_LOAD_DELAY_MS);
+      if (process.env.TEST_MODE === 'true' && testDelayMs > 0) {
+        await new Promise((resolve) => {
+          setTimeout(resolve, testDelayMs);
+        });
+      }
       return db.getAllTracks();
     } catch (error) {
       console.error('Error getting all tracks:', error);
@@ -362,12 +372,28 @@ export const libraryHandlers = {
 };
 
 /**
+ * Show a native open dialog as a sheet attached to the window that asked
+ * for it. A parentless dialog floats free and leaves the app clickable
+ * behind it (e.g. the Settings drawer while choosing files to import).
+ */
+function showOpenDialogFor(
+  event: unknown,
+  options: OpenDialogOptions,
+): Promise<OpenDialogReturnValue> {
+  const sender = (event as IpcMainInvokeEvent | undefined)?.sender;
+  const win = sender ? BrowserWindow.fromWebContents(sender) : null;
+  return win
+    ? dialog.showOpenDialog(win, options)
+    : dialog.showOpenDialog(options);
+}
+
+/**
  * Dialog-related IPC handlers
  */
 export const dialogHandlers = {
-  'dialog:select-directory': (async (_args) => {
+  'dialog:select-directory': (async (_args, event) => {
     try {
-      const result = await dialog.showOpenDialog({
+      const result = await showOpenDialogFor(event, {
         properties: ['openDirectory'],
       });
       return result;
@@ -377,9 +403,9 @@ export const dialogHandlers = {
     }
   }) as IPCHandler<'dialog:select-directory'>,
 
-  'dialog:select-files': (async () => {
+  'dialog:select-files': (async (_args, event) => {
     try {
-      const result = await dialog.showOpenDialog({
+      const result = await showOpenDialogFor(event, {
         properties: ['openFile', 'openDirectory', 'multiSelections'],
       });
       return result;

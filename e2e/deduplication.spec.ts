@@ -83,7 +83,7 @@ test.describe('Deduplication on Fresh Scan', () => {
     page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
     // Empty-library CTA is the readiness signal for a brand new database.
-    await page.waitForSelector('text=Your library is empty', {
+    await page.waitForSelector('[data-testid="library-welcome"]', {
       timeout: 20000,
     });
   });

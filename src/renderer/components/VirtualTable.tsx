@@ -118,11 +118,25 @@ export default function VirtualTable({
     () => initialColumnSizing || {},
   );
 
-  // Debounced persistence of column sizing
-  const isInitialRender = useRef(true);
+  // Saved widths can arrive after mount (settings and tracks load in
+  // parallel at boot). Adopt them when they change, and don't echo the
+  // adopted widths back as a persist.
+  const initialSizingKey = JSON.stringify(initialColumnSizing || {});
+  const seededSizingKey = useRef(initialSizingKey);
+  const skipNextPersist = useRef(true);
   useEffect(() => {
-    if (isInitialRender.current) {
-      isInitialRender.current = false;
+    if (initialSizingKey === seededSizingKey.current) return;
+    seededSizingKey.current = initialSizingKey;
+    if (initialSizingKey === JSON.stringify(columnSizing)) return;
+    skipNextPersist.current = true;
+    setColumnSizing(JSON.parse(initialSizingKey));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSizingKey]);
+
+  // Debounced persistence of column sizing
+  useEffect(() => {
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false;
       return undefined;
     }
     if (!onColumnSizingPersist) return undefined;
@@ -161,6 +175,11 @@ export default function VirtualTable({
   });
 
   const { rows } = table.getRowModel();
+
+  // Tables that mount empty (cold-boot load, first scan) fade their rows
+  // in when data lands. Tables that mount with rows, e.g. on a view
+  // switch, appear immediately.
+  const mountedEmptyRef = useRef(rows.length === 0);
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -318,7 +337,7 @@ export default function VirtualTable({
       >
         {rows.length > 0 ? (
           <table
-            className="vt-table"
+            className={`vt-table${mountedEmptyRef.current ? ' vt-table-enter' : ''}`}
             style={{ width: Math.max(totalColumnWidth + fillerWidth, 100) }}
           >
             <thead className="vt-thead">

@@ -33,6 +33,7 @@ import WindowControls from './WindowControls';
 import RenamePlaylistDialog from './RenamePlaylistDialog';
 import CreatePlaylistDialog from './CreatePlaylistDialog';
 import { mutedIconButtonSx } from '../styles/iconButtonStyles';
+import { fadeIn } from '../styles/motion';
 
 const drawerWidth = 200;
 
@@ -458,7 +459,14 @@ export default function Sidebar() {
                 </Tooltip>
               </Box>
 
-              <List component="div" disablePadding>
+              <List
+                // Remount once playlists arrive so the list fades in
+                // instead of popping in under the header.
+                key={playlistsData ? 'loaded' : 'loading'}
+                component="div"
+                disablePadding
+                sx={{ animation: fadeIn('base') }}
+              >
                 {playlists.map((playlist) => (
                   <ListItemButton
                     key={playlist.id}

@@ -23,13 +23,21 @@ test.describe('Playback Modes', () => {
     // Verify the button is now in track-repeat mode
     await expect(repeatButton).toHaveAttribute('data-repeat-mode', 'track');
 
-    // Fixture tracks are 10s. Run to the tail of the track, then wait for the
-    // clock to wrap back to the start — that wrap *is* the repeat, so we don't
-    // have to sleep past a guessed end time.
-    await TestHelpers.waitForElapsedAtLeast(page, 9);
-    await expect(
-      page.locator('[data-testid="player-elapsed-time"]'),
-    ).toHaveText('0:00', { timeout: 15000 });
+    // Fixture tracks are 10s. Wait for the clock to run late into the track
+    // and then jump back: that wrap *is* the repeat. Don't wait for a specific
+    // reading like 0:09 or 0:00 — the clock updates about once a second, so
+    // on a slow runner it can skip either one.
+    let peak = 0;
+    await expect
+      .poll(
+        async () => {
+          const elapsed = await TestHelpers.elapsedSeconds(page);
+          peak = Math.max(peak, elapsed);
+          return peak >= 6 && elapsed <= peak - 3;
+        },
+        { intervals: [250], timeout: 30000 },
+      )
+      .toBe(true);
 
     // Verify the SAME track is still playing (not advanced to next)
     await TestHelpers.waitForPlaying(page);

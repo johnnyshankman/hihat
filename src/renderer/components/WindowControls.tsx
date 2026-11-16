@@ -4,6 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import MinimizeIcon from '@mui/icons-material/Remove';
 import MaximizeIcon from '@mui/icons-material/CropSquare';
 import RestoreIcon from '@mui/icons-material/FilterNone';
+import { duration } from '../styles/motion';
 
 export default function WindowControls() {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -32,7 +33,7 @@ export default function WindowControls() {
             sx={{
               fontSize: '8px',
               opacity: 0,
-              transition: 'opacity 0.2s',
+              transition: `opacity ${duration.fast}`,
             }}
           />
         </IconButton>
@@ -59,7 +60,7 @@ export default function WindowControls() {
             sx={{
               fontSize: '8px',
               opacity: 0,
-              transition: 'opacity 0.2s',
+              transition: `opacity ${duration.fast}`,
             }}
           />
         </IconButton>
@@ -91,7 +92,7 @@ export default function WindowControls() {
               sx={{
                 fontSize: '8px',
                 opacity: 0,
-                transition: 'opacity 0.2s',
+                transition: `opacity ${duration.fast}`,
               }}
             />
           ) : (
@@ -99,7 +100,7 @@ export default function WindowControls() {
               sx={{
                 fontSize: '8px',
                 opacity: 0,
-                transition: 'opacity 0.2s',
+                transition: `opacity ${duration.fast}`,
               }}
             />
           )}
