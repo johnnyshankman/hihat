@@ -215,14 +215,13 @@ test.describe('Library Management', () => {
     await expect(rescanButton).toBeVisible();
     await rescanButton.click();
 
-    // The main process pushes `library:scanComplete` when the scan finishes,
-    // which surfaces this notification. Waiting on it means the test returns
-    // the instant the scan is done rather than after a fixed 30s fallback.
-    await expect(
-      page
-        .locator('[data-testid="notification-item"]')
-        .filter({ hasText: 'Library scan completed' }),
-    ).toBeVisible({ timeout: 60000 });
+    // The rescan runs in the background; its outcome is reported only in
+    // the library task panel, which shows a "done" state when it finishes.
+    await expect(page.getByTestId('library-task-panel')).toHaveAttribute(
+      'data-phase',
+      'done',
+      { timeout: 60000 },
+    );
 
     // Count files after rescan
     const finalFileCount = getFileCount(testSongsDir);
