@@ -9,7 +9,7 @@
  *   - `IPCEventPayloads`             — main → renderer push channels (no response).
  *
  * Note on naming inconsistency: the backup-related channels use kebab-case
- * (`backup-library-success`/`-error`/`-progress`, `menu-backup-library`)
+ * (`backup-library-error`/`-progress`, `menu-backup-library`)
  * instead of the `domain:method` colon convention used elsewhere. Renaming
  * is cosmetic only and would require lockstep main+renderer changes, so the
  * legacy names are preserved.
@@ -32,6 +32,60 @@ export interface PlayerPlaybackState {
   canGoNext: boolean;
 }
 
+/** Long-running library operations. Only one runs at a time. */
+export type LibraryTaskKind = 'scan' | 'import' | 'backup';
+
+/** Latest progress of the running library task. */
+export interface LibraryTaskProgress {
+  processed: number;
+  /** 0 while the total isn't known yet (e.g. backup planning). */
+  total: number;
+  currentFile?: string;
+  status?: string;
+}
+
+export interface ActiveLibraryTask {
+  kind: LibraryTaskKind;
+  startedAt: number;
+  progress: LibraryTaskProgress | null;
+}
+
+/** A task whose run never finished (crash, force quit, quit mid-task). */
+export interface InterruptedLibraryTask {
+  kind: LibraryTaskKind;
+  startedAt: number;
+  /** Destination of an interrupted backup, so it can be run again. */
+  backupPath?: string;
+}
+
+export interface LibraryTaskEnded {
+  kind: LibraryTaskKind;
+  outcome: 'success' | 'error' | 'stopped';
+  message?: string;
+  tracksAdded?: number;
+  tracksRemoved?: number;
+}
+
+/** Set when the database file couldn't be opened at launch. */
+export interface DatabaseRecovery {
+  outcome: 'restoredFromBackup' | 'startedFresh';
+  /** Where the unreadable file was moved; it is never deleted. */
+  corruptCopyPath: string;
+}
+
+export interface LibraryTaskState {
+  active: ActiveLibraryTask | null;
+  interrupted: InterruptedLibraryTask | null;
+  databaseRecovery: DatabaseRecovery | null;
+}
+
+export interface ScanCompletePayload {
+  kind: 'scan' | 'import';
+  tracksAdded: number;
+  tracksRemoved: number;
+  error?: string;
+}
+
 /**
  * All available IPC channels for the application
  */
@@ -45,8 +99,9 @@ export type Channels =
   | 'library:scanComplete'
   | 'library:resetDatabase'
   | 'library:resetTracks'
+  | 'library:getTaskState'
+  | 'library:dismissInterruptedTask'
   | 'menu-backup-library'
-  | 'backup-library-success'
   | 'backup-library-error'
   | 'backup-library-progress'
 
@@ -148,7 +203,11 @@ export type Channels =
  */
 export interface IPCRequests {
   // Library operations
-  'library:scan': { libraryPath: string };
+  'library:scan': {
+    libraryPath: string;
+    /** Clear existing tracks inside the task first (music folder change). */
+    replaceExisting?: boolean;
+  };
   'library:import': { files: string[] };
   'library:backup': { backupPath: string };
   'library:restore': { restorePath: string };
@@ -157,9 +216,11 @@ export interface IPCRequests {
     total: number;
     current: string;
   };
-  'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
+  'library:scanComplete': ScanCompletePayload;
   'library:resetDatabase': void;
   'library:resetTracks': void;
+  'library:getTaskState': void;
+  'library:dismissInterruptedTask': void;
 
   // Track operations
   'tracks:getAll': void;
@@ -256,7 +317,6 @@ export interface IPCRequests {
 
   // Backup channels (kebab-case for legacy reasons)
   'menu-backup-library': string;
-  'backup-library-success': void;
   'backup-library-error': string;
   'backup-library-progress': {
     phase: string;
@@ -299,9 +359,11 @@ export interface IPCResponses {
     total: number;
     current: string;
   };
-  'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
+  'library:scanComplete': ScanCompletePayload;
   'library:resetDatabase': { success: boolean; message: string };
   'library:resetTracks': { success: boolean; message: string };
+  'library:getTaskState': LibraryTaskState;
+  'library:dismissInterruptedTask': void;
 
   // Track operations
   'tracks:getAll': Track[];
@@ -404,7 +466,6 @@ export interface IPCResponses {
 
   // Backup channels
   'menu-backup-library': void;
-  'backup-library-success': void;
   'backup-library-error': void;
   'backup-library-progress': void;
 
@@ -444,7 +505,8 @@ export type IPCInvoker<C extends Channels> = (
 export type IPCEvents =
   | 'library:scanProgress'
   | 'library:scanComplete'
-  | 'backup-library-success'
+  | 'library:taskStarted'
+  | 'library:taskEnded'
   | 'backup-library-error'
   | 'backup-library-progress'
   | 'ui:toggleSidebar'
@@ -484,8 +546,9 @@ export interface IPCEventPayloads {
     total: number;
     current: string;
   };
-  'library:scanComplete': { tracksAdded: number; tracksRemoved: number };
-  'backup-library-success': void;
+  'library:scanComplete': ScanCompletePayload;
+  'library:taskStarted': ActiveLibraryTask;
+  'library:taskEnded': LibraryTaskEnded;
   'backup-library-error': string;
   'backup-library-progress': {
     phase: string;

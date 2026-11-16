@@ -28,6 +28,14 @@ import log from 'electron-log';
 import * as db from '../db';
 import { IPCHandler } from '../../types/ipc';
 import { scanLibrary, importFiles } from '../library/scanner';
+import {
+  BUSY_MESSAGE,
+  dismissInterruptedTask,
+  getActiveTask,
+  getInterruptedTask,
+  getTracksSnapshot,
+  runExclusive,
+} from '../library/libraryTask';
 import { writeMetadataToFile } from '../library/tagWriter';
 import { assertHttpUrl, assertTrustedSender } from './validateSender';
 
@@ -64,7 +72,7 @@ export const trackHandlers = {
           setTimeout(resolve, testDelayMs);
         });
       }
-      return db.getAllTracks();
+      return getTracksSnapshot() ?? db.getAllTracks();
     } catch (error) {
       console.error('Error getting all tracks:', error);
       return [];
@@ -263,6 +271,16 @@ export const settingsHandlers = {
       // concurrent partial writes can no longer overwrite each other's
       // untouched fields.
       const current = db.getSettings();
+      // Moving the music folder under a running scan, import or backup
+      // would point it at the wrong files. The UI disables the control;
+      // this is the backstop.
+      if (
+        getActiveTask() &&
+        settings.libraryPath !== undefined &&
+        settings.libraryPath !== current.libraryPath
+      ) {
+        throw new Error(BUSY_MESSAGE);
+      }
       const merged = { ...current, ...settings };
       return db.updateSettings(merged);
     } catch (error) {
@@ -276,14 +294,31 @@ export const settingsHandlers = {
  * Library-related IPC handlers
  */
 export const libraryHandlers = {
-  'library:scan': (async ({ libraryPath }) => {
+  'library:scan': (async ({ libraryPath, replaceExisting }) => {
     try {
-      const result = await scanLibrary(libraryPath);
+      const result = await runExclusive(
+        'scan',
+        () => scanLibrary(libraryPath, { replaceExisting }),
+        {
+          describe: ({ tracksAdded, tracksRemoved }) => ({
+            tracksAdded,
+            tracksRemoved,
+          }),
+        },
+      );
+      if (!result.ran) {
+        return {
+          success: false,
+          message: BUSY_MESSAGE,
+          tracksAdded: 0,
+          tracksRemoved: 0,
+        };
+      }
       return {
         success: true,
         message: `Successfully scanned library at ${libraryPath}`,
-        tracksAdded: result.tracksAdded,
-        tracksRemoved: result.tracksRemoved,
+        tracksAdded: result.value.tracksAdded,
+        tracksRemoved: result.value.tracksRemoved,
       };
     } catch (error: unknown) {
       console.error(`Error scanning library at ${libraryPath}:`, error);
@@ -298,11 +333,17 @@ export const libraryHandlers = {
 
   'library:import': (async ({ files }) => {
     try {
-      const result = await importFiles(files);
+      const result = await runExclusive('import', () => importFiles(files), {
+        describe: ({ tracksAdded }) => ({ tracksAdded }),
+      });
+      if (!result.ran) {
+        return { success: false, message: BUSY_MESSAGE, tracksAdded: 0 };
+      }
+      const { tracksAdded } = result.value;
       return {
         success: true,
-        message: `Successfully imported ${result.tracksAdded} files`,
-        tracksAdded: result.tracksAdded,
+        message: `Successfully imported ${tracksAdded} files`,
+        tracksAdded,
       };
     } catch (error: unknown) {
       console.error('Error importing files:', error);
@@ -334,6 +375,7 @@ export const libraryHandlers = {
 
   'library:resetDatabase': (async (_req: void, event: IpcMainInvokeEvent) => {
     assertTrustedSender(event);
+    if (getActiveTask()) return { success: false, message: BUSY_MESSAGE };
     try {
       const success = await db.resetDatabase();
       return {
@@ -353,6 +395,7 @@ export const libraryHandlers = {
 
   'library:resetTracks': (async (_req: void, event: IpcMainInvokeEvent) => {
     assertTrustedSender(event);
+    if (getActiveTask()) return { success: false, message: BUSY_MESSAGE };
     try {
       const success = await db.resetTracks();
       return {
@@ -369,6 +412,16 @@ export const libraryHandlers = {
       };
     }
   }) as IPCHandler<'library:resetTracks'>,
+
+  'library:getTaskState': (async () => ({
+    active: getActiveTask(),
+    interrupted: getInterruptedTask(),
+    databaseRecovery: db.getDatabaseRecovery(),
+  })) as IPCHandler<'library:getTaskState'>,
+
+  'library:dismissInterruptedTask': (async () => {
+    dismissInterruptedTask();
+  }) as IPCHandler<'library:dismissInterruptedTask'>,
 };
 
 /**

@@ -20,6 +20,25 @@ const TEST_DB_SQL = 'test-db.sql';
 // only buys headroom on a loaded CI machine.
 const READY_TIMEOUT = 20000;
 
+/**
+ * Remove a test database and the files the app keeps beside it (atomic
+ * write temp file, last-known-good backup, moved-aside corrupt copies,
+ * interrupted-task marker), so one spec's leftovers can't leak into the
+ * next launch.
+ */
+function removeDatabaseAndSidecars(dbPath: string): void {
+  const dir = path.dirname(dbPath);
+  const base = path.basename(dbPath);
+  fs.readdirSync(dir)
+    .filter(
+      (name) =>
+        name === base ||
+        name.startsWith(`${base}.`) ||
+        name === 'library-task.json',
+    )
+    .forEach((name) => fs.rmSync(path.join(dir, name), { force: true }));
+}
+
 export class TestHelpers {
   static async initializeTestDatabase(
     dbPath: string,
@@ -122,9 +141,7 @@ export class TestHelpers {
     const songsPath = path.join(__dirname, `../fixtures/${TEST_SONGS_DIR}`);
 
     // Clean test database for fresh start
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
+    removeDatabaseAndSidecars(testDbPath);
 
     // Initialize the test database with seed data
     await this.initializeTestDatabase(testDbPath, songsPath);
@@ -185,9 +202,7 @@ export class TestHelpers {
     const testDbPath = path.join(__dirname, '../fixtures/new-user-db.sqlite');
     const songsPath = path.join(__dirname, `../fixtures/${TEST_SONGS_DIR}`);
 
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
+    removeDatabaseAndSidecars(testDbPath);
 
     await this.initializeNewUserDatabase(
       testDbPath,
@@ -232,8 +247,145 @@ export class TestHelpers {
     return { app, page };
   }
 
+  /**
+   * Launch against `dbPath`. With `seedLibraryPath` the database is
+   * recreated as a brand-new user whose music folder is that path;
+   * without it the existing database and its sidecar files are reused,
+   * as on a relaunch after a quit or crash. Resolves once the DOM is
+   * loaded; callers wait for their own readiness signal.
+   */
+  static async launchWithDatabase(options: {
+    dbPath: string;
+    seedLibraryPath?: string;
+    env?: Record<string, string>;
+  }): Promise<{ app: ElectronApplication; page: Page }> {
+    const { dbPath, seedLibraryPath, env: extraEnv = {} } = options;
+    if (seedLibraryPath !== undefined) {
+      removeDatabaseAndSidecars(dbPath);
+      await this.initializeNewUserDatabase(dbPath, seedLibraryPath);
+    }
+
+    const appPath = path.join(__dirname, '../../release/app');
+    if (!fs.existsSync(path.join(appPath, 'dist/main/main.js'))) {
+      throw new Error(
+        'Application not built. Please run "npm run build" first.',
+      );
+    }
+
+    const app = await electron.launch({
+      args: [appPath],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        TEST_MODE: 'true',
+        TEST_DB_PATH: dbPath,
+        ...extraEnv,
+      },
+      timeout: 30000,
+    });
+    const page = await app.firstWindow();
+    await page.waitForLoadState('domcontentloaded');
+    return { app, page };
+  }
+
+  /**
+   * Copy `count` fixture songs (starting at `offset`, in file name order)
+   * into `dir`, creating it if needed. Returns the copied file names.
+   */
+  static copyFixtureSongs(dir: string, count: number, offset = 0): string[] {
+    fs.mkdirSync(dir, { recursive: true });
+    const source = this.testSongsPath();
+    const names = fs
+      .readdirSync(source)
+      .filter((name) => name.endsWith('.mp3'))
+      .sort()
+      .slice(offset, offset + count);
+    names.forEach((name) =>
+      fs.copyFileSync(path.join(source, name), path.join(dir, name)),
+    );
+    return names;
+  }
+
+  /**
+   * Tracks persisted in the database file on disk. Unlike
+   * `tracks.getAll()`, which serves the pre-task snapshot while a scan
+   * runs, this sees what has actually been written.
+   */
+  static async countTracksOnDisk(dbPath: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        db.get('SELECT COUNT(*) AS n FROM tracks', (queryErr, row) => {
+          db.close();
+          if (queryErr) reject(queryErr);
+          else resolve((row as { n: number }).n);
+        });
+      });
+    });
+  }
+
+  /** Slow every scan/import batch from now on (0 restores full speed). */
+  static async setScanBatchDelay(
+    app: ElectronApplication,
+    delayMs: number,
+  ): Promise<void> {
+    await app.evaluate((_electron, ms) => {
+      process.env.TEST_SCAN_BATCH_DELAY_MS = String(ms);
+    }, delayMs);
+  }
+
   static async closeApp(app: ElectronApplication): Promise<void> {
+    // Quitting while a library task runs asks for confirmation; answer
+    // "Quit" so a spec that ends mid-scan can't hang on the prompt.
+    await this.stubQuitPrompt(app, 'quit').catch(() => undefined);
     await app.close();
+  }
+
+  /**
+   * Answer the "a library task is still running" quit prompt without UI.
+   * Records each prompt shown; read them back with `quitPromptCalls`.
+   */
+  static async stubQuitPrompt(
+    app: ElectronApplication,
+    answer: 'quit' | 'keepRunning',
+  ): Promise<void> {
+    await app.evaluate(
+      ({ dialog }, response) => {
+        const g = dialog as unknown as { quitPromptCalls: string[] };
+        g.quitPromptCalls = g.quitPromptCalls ?? [];
+        // eslint-disable-next-line no-param-reassign
+        dialog.showMessageBox = (async (...args: unknown[]) => {
+          const options = args[args.length - 1] as { message?: string };
+          g.quitPromptCalls.push(options.message ?? '');
+          return { response, checkboxChecked: false };
+        }) as unknown as typeof dialog.showMessageBox;
+      },
+      answer === 'quit' ? 1 : 0,
+    );
+  }
+
+  /** Messages of the quit prompts shown since `stubQuitPrompt`. */
+  static async quitPromptCalls(app: ElectronApplication): Promise<string[]> {
+    return app.evaluate(
+      ({ dialog }) =>
+        (dialog as unknown as { quitPromptCalls?: string[] }).quitPromptCalls ??
+        [],
+    );
+  }
+
+  /** Resolve once every finite CSS animation and transition has finished. */
+  static async settleAnimations(page: Page): Promise<void> {
+    await page.evaluate(() =>
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+          .map((a) => a.finished.catch(() => undefined)),
+      ),
+    );
   }
 
   static async takeScreenshot(page: Page, name: string): Promise<void> {
@@ -439,6 +591,17 @@ export class TestHelpers {
     await this.waitForTracks(page, 30000);
   }
 
+  /**
+   * Close the Settings drawer with its close button. Escape is unreliable
+   * once a task button has been clicked: the button disables itself, focus
+   * falls to <body>, and MUI only pulls focus back into the drawer while
+   * the window has OS focus, which CI runners don't guarantee.
+   */
+  static async closeSettings(page: Page): Promise<void> {
+    await page.getByTestId('settings-close').click();
+    await expect(page.getByTestId('settings-view')).toHaveCount(0);
+  }
+
   static async navigateToView(
     page: Page,
     view: 'library' | 'settings',
@@ -512,9 +675,7 @@ export class TestHelpers {
       '../fixtures/test-userConfig.json',
     );
 
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
+    removeDatabaseAndSidecars(testDbPath);
     this.cleanupMigrationFiles(legacyConfigPath);
 
     this.prepareMigrationFixture(legacyConfigPath, songsPath);

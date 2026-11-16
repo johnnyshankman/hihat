@@ -1,18 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
 import { Box, Button, LinearProgress, Typography } from '@mui/material';
 import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
 import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
-import { useScanLibrary, useSettings, useUpdateSettings } from '../queries';
+import { useSettings, useUpdateSettings } from '../queries';
 import { useUIStore } from '../stores';
+import useLibraryTaskStore from '../stores/libraryTaskStore';
 import { fadeIn } from '../styles/motion';
-
-// Scan progress fires once per file; repaint at most this often.
-const PROGRESS_THROTTLE_MS = 100;
-
-interface ScanProgress {
-  processed: number;
-  total: number;
-}
+import { startRescan } from '../utils/libraryTasks';
 
 /**
  * Empty-library state for the Library view. Walks a new user through
@@ -22,33 +15,24 @@ interface ScanProgress {
 export default function LibraryWelcome() {
   const libraryPath = useSettings().data?.libraryPath ?? '';
   const updateSettings = useUpdateSettings();
-  const scanLibrary = useScanLibrary();
   const showNotification = useUIStore((state) => state.showNotification);
-  const [progress, setProgress] = useState<ScanProgress | null>(null);
-  const lastProgressAt = useRef(0);
+  // The first scan runs as a background library task like any other; its
+  // progress shows here instead of in LibraryTaskPanel.
+  const scanTask = useLibraryTaskStore((state) =>
+    state.task?.kind === 'scan' ? state.task : null,
+  );
+  const isScanning = scanTask?.phase === 'running';
+  const scanError = scanTask?.phase === 'error' ? scanTask.message : null;
+  const progress =
+    isScanning && scanTask.total > 0
+      ? { processed: scanTask.processed, total: scanTask.total }
+      : null;
 
-  const isScanning = scanLibrary.isPending;
-
-  useEffect(() => {
-    if (!isScanning) return undefined;
-    return window.electron.library.onScanProgress((data) => {
-      const now = Date.now();
-      if (
-        data.processed < data.total &&
-        now - lastProgressAt.current < PROGRESS_THROTTLE_MS
-      ) {
-        return;
-      }
-      lastProgressAt.current = now;
-      setProgress(data);
-    });
-  }, [isScanning]);
-
+  // The scan-complete push event refreshes the tracks query, which swaps
+  // this panel for the table.
   const startScan = (path: string) => {
-    setProgress(null);
-    // Errors toast from the mutation hook; the scan-complete push event
-    // refreshes the tracks query, which swaps this panel for the table.
-    scanLibrary.mutate(path);
+    useLibraryTaskStore.getState().dismiss();
+    startRescan(path);
   };
 
   const handleChooseFolder = async () => {
@@ -104,6 +88,16 @@ export default function LibraryWelcome() {
             ? 'Your music folder is set. Scan it to build your library.'
             : 'Choose the folder where your music lives and hihat will build your library from it.'}
         </Typography>
+        {scanError && (
+          <Typography
+            color="error"
+            data-testid="welcome-scan-error"
+            sx={{ maxWidth: 380, mx: 'auto', mb: 2 }}
+            variant="body2"
+          >
+            {scanError}
+          </Typography>
+        )}
         {libraryPath && (
           <Typography
             color="text.secondary"

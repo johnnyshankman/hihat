@@ -36,14 +36,12 @@ export {
   DEFAULT_COLUMNS,
 } from './settings';
 
-// Library scan / import / backup / restore / reset
+// Library database backup / restore / reset. Rescans and imports run as
+// background library tasks; see utils/libraryTasks.ts.
 export {
-  useScanLibrary,
-  useImportFiles,
   useBackupLibrary,
   useRestoreLibrary,
   useResetDatabase,
-  useResetTracks,
 } from './library';
 
 // Album art

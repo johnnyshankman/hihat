@@ -18,6 +18,8 @@ import {
   PlaylistRule,
 } from '../../types/dbTypes';
 import { SMART_PLAYLISTS } from '../../types/smartPlaylists';
+import type { DatabaseRecovery } from '../../types/ipc';
+import writeFileAtomic from './atomicWrite';
 
 // Import BrowserWindow for sending events
 
@@ -56,10 +58,96 @@ const DB_PATH = (() => {
   return path.join(getUserDataPath(), 'library.db');
 })();
 
+// Last-known-good copy, refreshed after every successful launch. Used to
+// recover when the primary file can't be opened.
+const BACKUP_DB_PATH = `${DB_PATH}.bak`;
+
 // Database instance
 let db: any;
 let useMockDb = false;
 let batchMode = false;
+// Set when this launch had to recover the database; reported to the
+// renderer once so the user knows.
+let databaseRecovery: DatabaseRecovery | null = null;
+
+/** Directory holding the database and its sidecar files. */
+export function getDatabaseDir(): string {
+  return path.dirname(DB_PATH);
+}
+
+/** How this launch's database was obtained, or null when it opened normally. */
+export function getDatabaseRecovery(): DatabaseRecovery | null {
+  return databaseRecovery;
+}
+
+/**
+ * Open a database buffer and confirm it is readable. A file truncated by
+ * an interrupted write can still open, so run a quick integrity check
+ * rather than trusting the constructor.
+ */
+function openVerifiedDatabase(SQL: any, buffer: Buffer): any | null {
+  let candidate: any = null;
+  try {
+    candidate = new SQL.Database(buffer);
+    const result = candidate.exec('PRAGMA quick_check');
+    if (result[0]?.values?.[0]?.[0] === 'ok') return candidate;
+  } catch (error) {
+    console.error('Database failed its integrity check:', error);
+  }
+  try {
+    candidate?.close();
+  } catch {
+    // Already unusable; nothing to release.
+  }
+  return null;
+}
+
+/**
+ * Open the database file, falling back to the last-known-good copy when
+ * the primary is unreadable. The unreadable file is moved aside, never
+ * deleted, so nothing is lost even when recovery falls back to empty.
+ */
+function openDatabaseWithRecovery(SQL: any): any {
+  // A leftover temp file means a write was interrupted before its
+  // rename; the primary file still holds the previous complete copy.
+  [`${DB_PATH}.tmp`, `${BACKUP_DB_PATH}.tmp`].forEach((tmp) => {
+    if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+  });
+
+  if (!fs.existsSync(DB_PATH)) {
+    console.warn('Creating new database with sql.js');
+    return new SQL.Database();
+  }
+
+  console.warn('Loading existing database with sql.js');
+  const primary = openVerifiedDatabase(SQL, fs.readFileSync(DB_PATH));
+  if (primary) return primary;
+
+  const corruptCopyPath = `${DB_PATH}.corrupt-${Date.now()}`;
+  fs.renameSync(DB_PATH, corruptCopyPath);
+  console.error(`Unreadable database moved to ${corruptCopyPath}`);
+
+  if (fs.existsSync(BACKUP_DB_PATH)) {
+    const backup = openVerifiedDatabase(SQL, fs.readFileSync(BACKUP_DB_PATH));
+    if (backup) {
+      fs.copyFileSync(BACKUP_DB_PATH, DB_PATH);
+      databaseRecovery = { outcome: 'restoredFromBackup', corruptCopyPath };
+      return backup;
+    }
+  }
+
+  databaseRecovery = { outcome: 'startedFresh', corruptCopyPath };
+  return new SQL.Database();
+}
+
+/** Refresh the last-known-good copy from the database just written. */
+function refreshDatabaseBackup(): void {
+  try {
+    writeFileAtomic(BACKUP_DB_PATH, fs.readFileSync(DB_PATH));
+  } catch (error) {
+    console.error('Error refreshing database backup:', error);
+  }
+}
 
 // Mock database for development when SQLite fails to load
 const mockDb = {
@@ -540,7 +628,7 @@ function initDefaultPlaylists(): void {
         try {
           const data = getExportableDb().export();
           const buffer = Buffer.from(data);
-          fs.writeFileSync(DB_PATH, buffer);
+          writeFileAtomic(DB_PATH, buffer);
           console.warn('Database saved to disk after updating smart playlists');
         } catch (saveError) {
           console.error(
@@ -588,7 +676,7 @@ function initDefaultPlaylists(): void {
           try {
             const data = getExportableDb().export();
             const buffer = Buffer.from(data);
-            fs.writeFileSync(DB_PATH, buffer);
+            writeFileAtomic(DB_PATH, buffer);
             console.warn('Database saved after creating playlists table');
           } catch (saveErr) {
             console.error(
@@ -644,20 +732,7 @@ export function initDatabase(): void {
       initSqlJs()
         .then((SQL: any) => {
           console.warn('Successfully initialized sql.js');
-          // Check if database file exists
-          let dbBuffer;
-          if (fs.existsSync(DB_PATH)) {
-            console.warn('Loading existing database with sql.js');
-            // Load existing database
-            dbBuffer = fs.readFileSync(DB_PATH);
-            db = new SQL.Database(dbBuffer);
-            console.warn('Successfully loaded existing database with sql.js');
-          } else {
-            console.warn('Creating new database with sql.js');
-            // Create new database
-            db = new SQL.Database();
-            console.warn('Successfully created new database with sql.js');
-          }
+          db = openDatabaseWithRecovery(SQL);
 
           // Save the original db reference first
           const originalDb = db;
@@ -674,7 +749,7 @@ export function initDatabase(): void {
                 if (!batchMode) {
                   const data = originalDb.export();
                   const buffer = Buffer.from(data);
-                  fs.writeFileSync(DB_PATH, buffer);
+                  writeFileAtomic(DB_PATH, buffer);
                 }
                 return result;
               } catch (error) {
@@ -778,7 +853,7 @@ export function initDatabase(): void {
                     if (!batchMode) {
                       const data = originalDb.export();
                       const buffer = Buffer.from(data);
-                      fs.writeFileSync(DB_PATH, buffer);
+                      writeFileAtomic(DB_PATH, buffer);
                     }
 
                     return { changes: 1 };
@@ -855,8 +930,9 @@ export function initDatabase(): void {
           // Save the database to disk after all initialization
           const finalData = originalDb.export();
           const finalBuffer = Buffer.from(finalData);
-          fs.writeFileSync(DB_PATH, finalBuffer);
+          writeFileAtomic(DB_PATH, finalBuffer);
           console.warn('Database saved to disk after initialization');
+          refreshDatabaseBackup();
 
           console.warn(
             'SQLite database loaded and initialized successfully using sql.js',
@@ -2045,7 +2121,7 @@ export function persistNow(): void {
   try {
     const data = getExportableDb().export();
     const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
+    writeFileAtomic(DB_PATH, buffer);
   } catch (error) {
     console.error('Error persisting database to disk:', error);
   }
